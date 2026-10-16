@@ -33,6 +33,8 @@ Los esperados son contratos independientes: introducir Mult7 conserva el Green9 
 
 ## Continuación: OBS01b / CAP01a
 
+Actualización: [OBS01b entrega cartas y consumibles por instancia](cambios-inventario-obs01b.md). Las limitaciones siguientes describen lo pendiente al cerrar OBS01a; comodines, bases e historial parcial siguen abiertos.
+
 Todavía falta conciliar cambios internos por instancia: añadir/quitar/mejorar una carta, cambios concretos de comodines/consumibles, bases de manos e historial parcial. Un grupo marcado se conserva como desconocido hasta transcribirlo; esta entrega no fabrica las otras 51 cartas si solo se observó una. La edición de mazo existente sigue disponible, pero no se declara terminado el editor incremental.
 
 También falta distinguir capacidades por operación para todo el catálogo y priorizar las preguntas que realmente cambian una comparación particular. Esta primera lista cubre hechos numéricos implementados del inventario actual; no es un diagnóstico de supervivencia ni prueba de soporte completo de cada comodín. DEC00/DEC01 y SURV01 siguen pendientes; TAG01, sobres y simulación mantienen sus dependencias anteriores.

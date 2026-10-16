@@ -484,3 +484,18 @@ dialog[open] { animation: panel-arrival .14s ease-out; }
  .store-add-offer { flex-basis: 68px; font-size: 17px; min-height: 95px; }
  .store-item-editor, .shop-advice-dialog { padding: 16px; }
 }
+
+/* Observed inventory: compact controls, the staged editor never writes on selection. */
+.inventory-changes-toolbar { display:flex; gap:8px; flex-wrap:wrap; margin:0 0 12px; }
+.inventory-changes-toolbar[hidden] { display:none; }
+.inventory-change-dialog { display:grid; gap:14px; min-width:0; }
+.inventory-change-dialog small { line-height:1.5; color:var(--muted,#b6c9bf); }
+.inventory-change-dialog label { margin:0; }
+.inventory-change-dialog label:not(.check) { display:grid; gap:5px; min-width:0; }
+.inventory-change-dialog select,.inventory-change-dialog input[type=number] { width:100%; min-width:0; box-sizing:border-box; }
+.inventory-change-fields { display:grid; gap:12px; min-width:0; }
+.inventory-fields-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; }
+.inventory-change-queue { margin:0; padding-left:22px; max-height:150px; overflow:auto; overflow-wrap:anywhere; }
+.inventory-change-queue li { padding:5px 0; }
+.inventory-change-queue button { padding:5px 8px; font-size:12px; }
+@media(max-width:480px) { .inventory-change-dialog button { min-height:42px; } }

@@ -178,4 +178,6 @@ El modelo existente ya admite estado `0.2` y registro `confirmed-2`, con datos d
 
 **OBS01a entregado:** [grupos independientes y hechos numéricos pendientes](observaciones-obs01a.md). No cierra OBS01 ni la matriz CAP01a.
 
-**Siguiente tarea ejecutable: OBS01b/CAP01a.** Conciliar cambios por instancia/carta, consumibles, bases e historial parcial sin reconstruir los datos que faltan. Definir capacidades separadas para mostrar, valorar, puntuar, aplicar y confirmar cada efecto, y priorizar las preguntas por la comparación concreta. DEC00 puede concretar en paralelo el contrato de recomendación sobre la revisión y fase actuales; DEC01/SURV01 incorpora después consecuencias incrementales y evidencia de supervivencia. TAG01 y SHOP02a continúan sin depender de Monte Carlo.
+**OBS01b entregado para cartas y consumibles:** [registro por instancia y referencia real](cambios-inventario-obs01b.md). No aplica efectos de uso ni restaura historia obsoleta.
+
+**Siguiente tarea ejecutable: OBS01c/CAP01a.** Conciliar identidades de comodines, bases e historial parcial sin reconstruir los datos que faltan. Definir capacidades separadas para mostrar, valorar, puntuar, aplicar y confirmar cada efecto, y priorizar las preguntas por la comparación concreta. DEC00 puede concretar en paralelo el contrato de recomendación sobre la revisión y fase actuales; DEC01/SURV01 incorpora después consecuencias incrementales y evidencia de supervivencia. TAG01 y SHOP02a continúan sin depender de Monte Carlo.

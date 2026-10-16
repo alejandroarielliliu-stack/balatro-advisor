@@ -45,3 +45,5 @@ export type {HorizonAdvice,HorizonAssessment} from './advisor/horizon-advisor.js
 
 export {DECK_PROFILES,resolveDeck,startingComposition,startingShopDistribution} from './catalog/decks.js';
 export type {DeckId,DeckCondition} from './catalog/decks.js';
+export {inventoryChanges,inventoryCards,inventoryReference} from './state/inventory-changes.js';
+export type {InventoryChangeRequest,InventoryChangeResult,CardOperation,ConsumableOperation} from './state/inventory-changes.js';
