@@ -163,3 +163,46 @@ test('T10 transcripción de progreso valida estructuras e invalida análisis sin
   assert.deepEqual(undone.state.observed,state.observed);assert.equal(undone.state.revision,2);
 });
 
+test('SHOP03a corrección explícita de dinero y contexto acepta transcripción completa y conserva los demás datos',()=>{
+  const original=fixture();original.observed.jokerContext=known({tarotsUsed:known(3),blindsSkipped:known(2)});
+  const {state,store}=setup(original);
+  const before=structuredClone(state),context=known({tarotsUsed:known(4),blindsSkipped:known(2)});
+  const corrected=success(store.correct({...header(state,'context-edit'),
+    patch:{...state.observed,money:known(12),jokerContext:context},reason:'Transcribí el saldo y un Tarot utilizado.'}));
+  assert.equal(corrected.state.revision,state.revision+1);
+  assert.deepEqual(corrected.state.observed.money,known(12));assert.deepEqual(corrected.state.observed.jokerContext,context);
+  const {money:_oldMoney,jokerContext:_oldContext,...oldFields}=before.observed;
+  const {money:_newMoney,jokerContext:_newContext,...newFields}=corrected.state.observed;
+  assert.deepEqual(newFields,oldFields);assert.deepEqual(corrected.state.assumptions,before.assumptions);
+  assert.deepEqual(state,before);assert.equal(corrected.history.length,1);assert.equal(corrected.history[0]!.kind,'correction');
+  assert.equal(corrected.history[0]!.evidence,null);assert.deepEqual(success(store.load()),corrected);
+});
+
+test('SHOP03a contexto mal formado se rechaza sin escribir estado ni historial',()=>{
+  const {state,store,memory}=setup();const raw=memory.getItem(CONFIRMED_STORAGE_KEY),writes=memory.writes;
+  for(const jokerContext of [
+    known({tarotsUsed:known(-1)}),
+    known({blindsSkipped:known(1.5)}),
+    known({inventedEffect:known(100)}),
+    {status:'known',value:{tarotsUsed:known(1)}}
+  ]) {
+    const result=store.correct({...header(state,'invalid-context'),patch:{jokerContext},reason:'Intento de transcripción inválida.'});
+    assert.equal(result.ok,false);assert.equal(memory.writes,writes);assert.equal(memory.getItem(CONFIRMED_STORAGE_KEY),raw);
+  }
+  assert.deepEqual(success(store.load())!.state,state);
+});
+
+test('SHOP03a recibo admite deuda legal y sigue rechazando discrepancias sin guardar',()=>{
+  const input=fixture();input.observed.money=known(0);
+  input.observed.jokers=known([{instanceId:'credit',catalogId:'credit_card',edition:known('base'),stickers:known([]),sellValue:known(1),counters:{}}]);
+  const {state,store,memory}=setup(input),raw=memory.getItem(CONFIRMED_STORAGE_KEY);
+  const request={...header(state,'credit-purchase'),action:{type:'buy' as const,offerId:'o1',instanceId:'new'},
+    observedAfter:{money:-3,jokerIds:['credit','new'],offerIds:['o2']}};
+  const mismatch=store.confirm(request);assert.equal(mismatch.ok,false);if(!mismatch.ok)assert.equal(mismatch.errors[0]!.code,'model_discrepancy');
+  assert.equal(memory.getItem(CONFIRMED_STORAGE_KEY),raw);
+  const result=success(store.confirm({...request,observedAfter:{...request.observedAfter,money:-2}}));
+  // Existing Credit Card rule permits debt; the Joker costs $2: $0 − $2 = −$2.
+  assert.deepEqual(result.state.observed.money,known(-2));assert.equal(result.history.length,1);
+  assert.deepEqual(success(store.load()),result);
+});
+

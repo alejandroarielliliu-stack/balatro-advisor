@@ -53,10 +53,12 @@ export function validateConfirmedRecord(input:unknown):Result<ConfirmedRecord>{
   return result;
 }
 const header={confirmationId:text(),confirmed:boolean,expected:bindingSchema,updatedAt:text()};
-const receiptSchema=object({money:integer(0),jokerIds:array(text(),100),offerIds:array(text(),100)});
+// The observed balance has the same integer domain as H1. H2, not the receipt
+// schema, determines whether a negative balance is legal (e.g. Credit Card).
+const receiptSchema=object({money:integer(),jokerIds:array(text(),100),offerIds:array(text(),100)});
 const confirmSchema=object({...header,action:actionSchema},{observedAfter:receiptSchema});
 const undoSchema=object({...header,targetEntryId:text(),reason:text(2000)});
-const observedFields=['gameVersion','gamePlatform','deckId','stakeId','modsPresent','money','lastCleared','nextBlind','visibleBoss','resources','deck','handBases','jokers','shop','outOfScope'];
+const observedFields=['gameVersion','gamePlatform','deckId','stakeId','modsPresent','money','lastCleared','nextBlind','visibleBoss','resources','deck','handBases','jokers','shop','outOfScope','jokerContext'];
 const patchSchema:Schema<Partial<GameState['observed']>>={check(v,p,e){
   if(!v || typeof v!=='object' || Array.isArray(v) || !Object.keys(v).length || Object.keys(v).some(k=>!observedFields.includes(k))){e.push({path:p,code:'invalid_patch',message:'Transcribe campos observados explícitos; no se admiten estados completos ni escenarios.'});return false;}return true;
 }};

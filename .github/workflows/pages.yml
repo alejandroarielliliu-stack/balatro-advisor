@@ -32,6 +32,8 @@ jobs:
         run: npm run build:site
       - name: Instalar Chrome para la prueba estática
         run: npx --no-install playwright install --with-deps chrome
+      - name: Comprobar registro desde la tienda
+        run: node tools/shop-session-test.mjs
       - name: Comprobar la web bajo una subruta
         run: node tools/static-site-test.mjs
       - name: Preparar el artefacto público

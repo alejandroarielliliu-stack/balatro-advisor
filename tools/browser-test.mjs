@@ -16,6 +16,11 @@ const revealDetails=async(p,selector)=>{const d=p.locator(selector);if(await d.c
 const go=async(p,screen)=>{const link=p.locator('[data-screen="'+screen+'"]');if(await link.getAttribute('aria-current')!=='page')await link.click();};
 const storage=async p=>{if(!await p.locator('.storage-status').evaluate(e=>e.open))await p.locator('.storage-status > summary').click();};
 const check=(name,fn)=>fn().then(()=>{results.push(name);console.log('PASS',name);});
+const observeOffer=async(p,id)=>{
+  await p.locator('#bay-search').fill(id);await p.locator(`[data-bay-joker="${id}"]`).click();await p.locator('#bay-candidate').click();await p.locator('#bay-dialog').waitFor({state:'hidden'});
+  await p.locator(`.candidate-card[data-candidate="${id}"]`).waitFor();
+};
+let observationCount=0;
 try{
   context=await browser.newContext({viewport:{width:1280,height:900},acceptDownloads:true});
   const page=await context.newPage();page.on('pageerror',e=>errors.push(e.message));
@@ -25,10 +30,10 @@ try{
     await go(page,'table');await revealDetails(page,'.coverage-note');await page.locator('#coverage').check();await go(page,'table');await page.locator('#money').fill('-21'); // Debt through -20 is structurally supported.
     await go(page,'archive');await page.getByRole('button',{name:'Crear y guardar mi partida'}).click();await go(page,'table');assert.match(await page.locator('#money-error').innerText(),/entero/);assert.equal(await raw(page),null);
     await go(page,'table');await page.locator('#money').fill('7');await page.locator('#blind-kind').selectOption('big');assert.equal(await page.locator('#target').inputValue(),'450');assert.equal(await page.locator('#reward').inputValue(),'4');
-    await page.locator('.registered-offers > summary').click();await page.getByRole('button',{name:'Añadir oferta',exact:true}).click();await page.getByRole('button',{name:'Añadir oferta',exact:true}).click();
-    await page.locator('select[id^="offer-"]').nth(1).selectOption('half_joker');
     await go(page,'archive');await page.getByRole('button',{name:'Crear y guardar mi partida'}).click();await go(page,'table');
     assert.equal((await state(page)).state.observed.money.value,7);assert.equal((await state(page)).state.revision,0);
+    await observeOffer(page,'j_joker');await observeOffer(page,'j_half');observationCount=(await state(page)).history.length;
+    assert.equal(observationCount,2);assert.equal((await state(page)).state.observed.shop.value.cardOffers.length,2);
   });
   await check('consulta real H3 con escenario explícito no modifica el registro',async()=>{
     await go(page,'evaluation');await page.getByRole('button',{name:'Añadir plantilla hipotética: dos parejas'}).click();await page.locator('.scenario').waitFor();
@@ -42,7 +47,7 @@ try{
     await page.locator('#dialog-accept').click();assert.match(await page.locator('#dialog-error').innerText(),/Marca la confirmación/);
     await page.locator('#performed').check();await page.locator('#observed-balance').fill('2');
     await page.locator('#dialog-accept').evaluate(b=>{b.click();b.click();});
-    const saved=await state(page);firstId=saved.history[0].id;assert.equal(saved.state.revision,1);assert.equal(saved.history.length,1);assert.equal(saved.state.observed.money.value,2);
+    const saved=await state(page);firstId=saved.history.at(-1).id;assert.equal(saved.state.revision,observationCount+1);assert.equal(saved.history.length,observationCount+1);assert.equal(saved.state.observed.money.value,2);
     assert.equal(saved.state.observed.jokers.value[0].catalogId,'half_joker');assert.match(await page.locator('#advice').innerText(),/Vuelve a consultar/);
   });
   await check('revisión antigua y duplicado rechazados sobre almacenamiento real',async()=>{
@@ -50,21 +55,21 @@ try{
       const {createConfirmedStore,analysisBinding}=await import('/dist/src/storage/confirmed-store.js');const store=createConfirmedStore(()=>localStorage);
       const base={confirmed:true,expected:analysisBinding(oldState),updatedAt:new Date().toISOString(),action:{type:'hold'}};
       return [store.confirm({...base,confirmationId:'old-ui'}),store.confirm({...base,confirmationId:firstId})];
-    },{oldState,firstId});assert.equal(result[0].errors[0].code,'stale_revision');assert.equal(result[1].errors[0].code,'duplicate_confirmation');assert.equal((await state(page)).history.length,1);
+    },{oldState,firstId});assert.equal(result[0].errors[0].code,'stale_revision');assert.equal(result[1].errors[0].code,'duplicate_confirmation');assert.equal((await state(page)).history.length,observationCount+1);
   });
   await check('recarga recupera partida y permite corregir/deshacer sin borrar historial',async()=>{
     await page.reload();await page.waitForFunction(()=>document.querySelector('#ownership').textContent.includes('Esta pestaña tiene'));
     assert.equal(await page.locator('#money').inputValue(),'2');await go(page,'table');await page.locator('#money').fill('3');await go(page,'archive');await page.locator('#edit-reason').fill('Corregí el saldo transcrito');
-    await go(page,'archive');await page.getByRole('button',{name:'Guardar actualización que transcribí'}).click();await go(page,'table');assert.equal((await state(page)).state.revision,2);
+    await go(page,'archive');await page.getByRole('button',{name:'Guardar actualización que transcribí'}).click();await go(page,'table');assert.equal((await state(page)).state.revision,observationCount+2);
     await go(page,'archive');await page.getByRole('button',{name:'Deshacer la última entrada'}).click();await page.locator('#undo-reason').fill('La corrección fue un error');await page.locator('#dialog-accept').click();
-    assert.equal((await state(page)).state.revision,3);assert.equal((await state(page)).state.observed.money.value,2);assert.equal((await state(page)).history.length,3);
+    assert.equal((await state(page)).state.revision,observationCount+3);assert.equal((await state(page)).state.observed.money.value,2);assert.equal((await state(page)).history.length,observationCount+3);
   });
   await check('exportar e importar: validación, confirmación previa y cancelación conserva registro',async()=>{
     const before=await raw(page);const downloaded=page.waitForEvent('download');await go(page,'archive');await page.locator('#export').click();const download=await downloaded;assert.equal(download.suggestedFilename(),'balatro-partida.json');
     await go(page,'archive');await page.locator('#import-file').setInputFiles({name:'invalid.json',mimeType:'application/json',buffer:Buffer.from('{bad')});assert.equal(await raw(page),before);assert.match(await page.locator('#message').innerText(),/JSON inválido/);
     await go(page,'archive');await page.locator('#import-file').setInputFiles({name:'copy.json',mimeType:'application/json',buffer:Buffer.from(before)});await page.locator('#confirmation').waitFor({state:'visible'});assert.equal(await raw(page),before);
     await page.locator('#dialog-cancel').click();assert.equal(await raw(page),before);
-    await go(page,'archive');await page.locator('#import-file').setInputFiles({name:'copy.json',mimeType:'application/json',buffer:Buffer.from(before)});await page.locator('#confirmation').waitFor({state:'visible'});await page.locator('#dialog-accept').click();assert.equal((await state(page)).history.length,3);
+    await go(page,'archive');await page.locator('#import-file').setInputFiles({name:'copy.json',mimeType:'application/json',buffer:Buffer.from(before)});await page.locator('#confirmation').waitFor({state:'visible'});await page.locator('#dialog-accept').click();assert.equal((await state(page)).history.length,observationCount+3);
   });
   await check('fallo de almacenamiento no anuncia éxito ni cambia estado/historial',async()=>{
     const before=await raw(page);await page.evaluate(()=>{window.originalSetItem=Storage.prototype.setItem;Storage.prototype.setItem=function(){throw new DOMException('test quota','QuotaExceededError');};});
@@ -81,7 +86,7 @@ try{
     await storage(page);await page.getByRole('button',{name:'Liberar control'}).click();await second.waitForFunction(()=>document.querySelector('#ownership').textContent.includes('Esta pestaña tiene'));
     await go(page,'archive');assert.equal(await page.getByRole('button',{name:'Guardar actualización que transcribí'}).isDisabled(),true);
     await go(second,'table');await second.locator('#money').fill('6');await go(second,'archive');await second.locator('#edit-reason').fill('Registro desde pestaña nueva');await go(second,'archive');await second.getByRole('button',{name:'Guardar actualización que transcribí'}).click();await go(second,'table');
-    await page.waitForFunction(()=>document.querySelector('#money').value==='6');assert.equal((await state(page)).state.revision,4);
+    await page.waitForFunction(()=>document.querySelector('#money').value==='6');assert.equal((await state(page)).state.revision,observationCount+4);
   });
   await check('cierre del escritor libera bloqueo y permite continuar',async()=>{
     await storage(page);await page.getByRole('button',{name:'Solicitar control'}).click();await second.close();await page.waitForFunction(()=>document.querySelector('#ownership').textContent.includes('Esta pestaña tiene'));
@@ -122,12 +127,12 @@ try{
       const p=await ctx.newPage();p.on('pageerror',e=>errors.push(e.message));await p.goto(base);
       await p.waitForFunction(()=>document.querySelector('#ownership').textContent.includes('Esta pestaña tiene'));
       await go(p,'table');await revealDetails(p,'.coverage-note');await p.locator('#coverage').tap();await go(p,'table');await p.locator('#money').fill('7');await p.locator('#blind-kind').selectOption('big');assert.equal(await p.locator('#target').inputValue(),'450');assert.equal(await p.locator('#reward').inputValue(),'4');
-      await p.locator('.registered-offers > summary').tap();await p.getByRole('button',{name:'Añadir oferta',exact:true}).tap();await p.locator('select[id^="offer-"]').selectOption('half_joker');
       await go(p,'archive');await p.getByRole('button',{name:'Crear y guardar mi partida'}).tap();await go(p,'table');
+      await observeOffer(p,'j_half');
       await go(p,'evaluation');await p.getByRole('button',{name:'Añadir plantilla hipotética: dos parejas'}).tap();await p.locator('.scenario').waitFor();
       const before=await raw(p);await p.locator('#analyze').tap();assert.equal(await raw(p),before);assert.match(await p.locator('#advice').innerText(),/572 puntos/);
       await p.locator('#advice .preferred').getByRole('button',{name:'Registrar que hice esta acción'}).tap();await p.locator('#performed').tap();await p.locator('#dialog-accept').tap();
-      assert.equal((await state(p)).state.observed.money.value,2);await p.reload();assert.equal((await state(p)).history.length,1);
+      assert.equal((await state(p)).state.observed.money.value,2);await p.reload();assert.equal((await state(p)).history.length,2);
       assert.equal(await p.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
     }finally{await ctx.close();}
   });

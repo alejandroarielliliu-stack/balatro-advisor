@@ -77,13 +77,17 @@ try {
     await page.locator('#dialog-accept').click();
     await go('table');
     await page.waitForFunction(() => document.querySelectorAll('.bay-mini').length === 150);
-    const original = await stored(), writeCount = await writes(), submitCount = await submits();
+    const original = await stored();
+    let expectedRecord = original, writeCount = await writes(), submitCount = await submits();
+    // Transcribing an observed joker is now a persisted correction. Checkpoints
+    // are explicit and only taken after edits, never after an advice operation.
+    const checkpoint = async () => { expectedRecord = await stored(); writeCount = await writes(); submitCount = await submits(); };
     const inventory = () => page.locator('.inventory-panel .joker-editor select[id^="joker-"]').evaluateAll(rows => rows.map(row => row.value));
     const originalInventory = await inventory();
     const voucherInventory = () => page.locator('#vouchers [data-owned="true"]').evaluateAll(rows => rows.map(row => row.dataset.voucher));
     const originalVouchers = await voucherInventory();
     const unchanged = async () => {
-      assert.equal(await stored(), original, 'Shop consultation must preserve the exact confirmed record.');
+      assert.equal(await stored(), expectedRecord, 'Shop consultation must preserve the exact confirmed record since the last observed edit.');
       assert.equal(await writes(), writeCount, 'Shop consultation must make zero confirmed-record writes.');
       assert.equal(await submits(), submitCount, 'Shop consultation must never submit the real-state form.');
       assert.deepEqual(await inventory(), originalInventory, 'Shop offers never acquire a joker.');
@@ -96,6 +100,7 @@ try {
       assert.equal(await page.locator('#bay-candidate').innerText(), 'Poner en tienda');
       await page.locator('#bay-candidate').click();
       await page.locator('#bay-dialog').waitFor({ state: 'hidden' });
+      await checkpoint();
       return page.locator(`.candidate-card[data-candidate="${id}"]`);
     };
     const advice = async () => {
@@ -113,7 +118,7 @@ try {
       await page.locator('#store-item-editor').waitFor({ state: 'hidden' });
       return page.locator(`.store-extra-tile[data-store-kind="${kind}"]`).last();
     };
-    return { context, page, go, stored, writes, submits, inventory, original, originalVouchers, unchanged, addJoker, advice, close, addExtra };
+    return { context, page, go, stored, writes, submits, inventory, original, originalVouchers, unchanged, checkpoint, addJoker, advice, close, addExtra };
   }
 
   const main = await session(fixture());
@@ -132,7 +137,6 @@ try {
   let price = p.locator('.candidate-dialog[open] input[id^="store-price-"]');
   assert.equal(await price.inputValue(), '2', 'Joker starts with its catalogue suggestion $2.');
   await price.fill('1');
-  await p.waitForFunction(() => document.querySelector('.candidate-card[data-candidate="j_joker"] .store-joker-price')?.textContent === '$1');
   const submitsBeforeEnter = await main.submits();
   await price.press('Enter');
   assert.equal(await main.submits(), submitsBeforeEnter, 'Enter in a store price cannot implicitly submit the real-state form.');
@@ -141,6 +145,9 @@ try {
   await main.unchanged();
   pass('price-enter', 'Enter in observed-price input preserves the open editor and makes no state-form submit or confirmed write', { stateFormSubmits: 0, confirmedWrites: 0 });
   assert.equal(await p.locator('.candidate-dialog[open] .bay-score-value').count(), 0);
+  await price.press('Tab'); // Completed observed-price edit persists separately.
+  await p.waitForFunction(() => document.querySelector('.candidate-card[data-candidate="j_joker"] .store-joker-price')?.textContent === '$1');
+  await main.checkpoint();
   await main.close();
   // The shop recomputes automatically from current run inputs.
   await p.locator('#money').fill('26');
@@ -159,6 +166,13 @@ try {
   await main.close();
   await main.unchanged();
   pass('observed-joker-price', 'Joker $2 suggestion → observed $1; $25 → $24 after recomputation; no acquisition', { suggested: 2, observed: 1, projectedMoney: 24, realMoney: 25 });
+
+  // Recalculation above used an explicitly unsaved base-field edit. Discard it
+  // before recording another observation; SHOP03a must not merge a dirty draft.
+  await p.reload();
+  await p.waitForFunction(() => document.querySelector('#ownership')?.textContent.includes('Esta pestaña tiene'));
+  await p.waitForFunction(() => document.querySelectorAll('.bay-mini').length === 150);
+  await main.checkpoint();
 
   const steel = await main.addJoker('j_steel_joker');
   await steel.locator('.candidate-hero').click();
@@ -251,7 +265,7 @@ try {
   assert.equal(await shop.getByRole('button', { name: /^(?:Actualizar|Renovar(?: ofertas)?|Reroll|Next Round|Siguiente ronda)$/i }).count(), 0);
   assert.equal(await shop.getByRole('button', { name: 'Buscar comodín', exact: true }).count(), 1);
   assert.equal(await p.locator('#shop-recommendation').count(), 1);
-  assert.equal(await p.locator('#store-new-shop').innerText(), 'Vaciar ofertas');
+  assert.equal(await p.locator('#store-new-shop').innerText(), 'Vaciar ofertas visibles');
   assert.equal(await shop.locator('.store-controls > button').count(), 2);
   const layout = await shop.evaluate(panel => {
     const box = selector => {
@@ -336,6 +350,7 @@ try {
   await main.unchanged();
   pass('responsive', 'Shop/advice fit 360, 390 and 1440px without page overflow; full joker art/name/index and other cards share the upper row', { widths: [360, 390, 1440], completeJokerCards: true, upperRowOffers: 3, physicalMobileTest: false });
   await p.locator('#store-new-shop').click();
+  await main.checkpoint();
   assert.equal(await p.locator('.candidate-card,.store-extra-tile').count(), 0, 'New shop clears all temporary offer categories.');
   assert.equal(await p.locator('#store-reroll-cost').count(), 0);
   assert.equal(await p.locator('#shop-recommendation').isDisabled(), true, 'Clearing the shop also disables advice.');
@@ -345,19 +360,21 @@ try {
   assert.equal(await p.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
   await p.locator('#joker-candidates').screenshot({ path: `${dir}/shop-reset-390.png` });
   await p.setViewportSize({ width: 1440, height: 900 });
-  pass('clear-offers', 'Clear offers removes temporary jokers/voucher/packs/other and disables advice while preserving $25, inventory and the confirmed record', { temporaryOffers: 0, adviceDisabled: true, realMoney: 25, confirmedWrites: 0 });
-  // Refill after reset so reload independently proves session-only persistence.
+  pass('clear-offers', 'Clear offers persists removal of observed jokers, clears session extras and disables advice while preserving $25 and inventory', { offers: 0, adviceDisabled: true, realMoney: 25, purchased: false });
+  // Refill after reset: joker observations persist; extras remain session-only.
   await main.addJoker('j_joker');
   await main.addExtra('voucher', 'v_seed_money', 4);
   assert.equal(await p.locator('.candidate-card,.store-extra-tile').count(), 2);
   await main.unchanged();
+  const beforeReload = await main.stored();
   await p.reload();
   await p.waitForFunction(() => document.querySelectorAll('.bay-mini').length === 150);
   await main.go('table');
-  assert.equal(await main.stored(), main.original);
-  assert.equal(await p.locator('.candidate-card,.store-extra-tile').count(), 0, 'Session shop transcription is not restored as a saved acquisition or offer.');
+  assert.equal(await main.stored(), beforeReload, 'Reload itself must not rewrite the record.');
+  assert.equal(await p.locator('.candidate-card[data-candidate="j_joker"]').count(), 1, 'Observed joker offer is restored without being acquired.');
+  assert.equal(await p.locator('.store-extra-tile').count(), 0, 'Pack/voucher/other observations remain session-only in this delivery.');
   assert.deepEqual(await main.inventory(), []);
-  pass('session-only-offers', 'Reload preserves the confirmed run while discarding temporary store offers', { persistedOffers: 0, confirmedRecordChanged: false });
+  pass('observed-offers-reload', 'Reload restores the observed Joker offer, discards session voucher and never acquires it', { persistedJokers: 1, sessionExtras: 0, acquiredJokers: 0, reloadWrites: 0 });
   await main.context.close();
 
   const prerequisite = await session(fixture());

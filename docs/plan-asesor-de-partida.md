@@ -2,6 +2,8 @@
 
 Propuesta del 15 de octubre de 2026, basada en el [informe del código](reporte-codigo-2026-10-15.md) y el [recorrido verificado de la build 1.0.1o](evidencia/ciclo-partida-1.0.1o.md). Es un plan de desarrollo, no funcionalidad ya implementada. La [hoja de ruta de ejecución](hoja-de-ruta-asesor.md) concreta entregas, contratos, dependencias y evaluación del resultado final.
 
+Actualización del 16: [SHOP03a](tienda-persistente.md) ya conecta ofertas de comodines y acciones confirmadas al registro. Los demás pasos de este recorrido siguen como objetivo; la integración de tienda no implementa el ciclo de ciegas ni valida la eficacia estratégica.
+
 **Objetivo:** que una persona empiece o continúe una partida, introduzca solo datos nuevos y reciba una acción contextual explicable: jugar/saltar, comprar/ahorrar/vender, elegir contenido o preparar el jefe. La web no controla Balatro ni conoce la semilla. «Mejor» debe significar la mejor opción entre las alternativas y condiciones realmente evaluadas, no una garantía de victoria.
 
 ## 1. El recorrido que el asesor necesita acompañar

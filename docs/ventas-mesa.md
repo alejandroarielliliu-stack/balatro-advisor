@@ -1,5 +1,7 @@
 # Venta desde un comodín propio
 
+**Contrato vigente desde 2026-10-16:** [SHOP03a](tienda-persistente.md) registra **Vendí** como acción realmente realizada, tras confirmación, y guarda estado/historial mediante H2/T09b. Recargar conserva la venta; Deshacer corrige el registro. El flujo de venta solo en borrador descrito a continuación es el antecedente UI-SELL, sustituido en la interfaz; `previewMesaSale` permanece como helper hipotético y no autoriza confirmar bajo un perfil asumido.
+
 Corrección2026-10-13. Pulsar una ilustración de Tus comodines abre **Vender · $importe** y **Editar**. Las fichas del catálogo conservan Añadir. La venta actualiza dinero, inventario, huecos, recursos y efectos sobre los comodines restantes mediante `applyShopAction`, y recalcula candidatos y composición. No hace falta guardar, introducir una mano ni conocer la próxima ciega para vender un Joker básico.
 
 ## Mesa y registro

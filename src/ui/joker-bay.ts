@@ -33,8 +33,8 @@ export function mountJokerBay(panel:HTMLElement,preview:PreviewRenderer,replacem
   const addNote=el('small',FIT_PROFILES[j.id]?'Se añade a tu vista y actualiza el encaje.':'No se puede añadir: falta el perfil.');addNote.id='bay-add-note';addNote.setAttribute('role','status');add.setAttribute('aria-describedby',addNote.id);
   add.onclick=()=>{const error=addJoker(j);if(error){addNote.textContent=error;return;}dialog.close();panel.querySelector<HTMLElement>('.joker-editor:last-of-type .joker-portrait')?.focus();};
   if(ownedId&&ownedSale){
-   const sale=ownedSale.describe(ownedId);add.id='bay-sell';add.textContent=`Vender · $${sale.price??'?'}`;add.disabled=!!sale.blocked;
-   addNote.textContent=sale.blocked??'Actualiza la Mesa. La copia guardada queda intacta.';
+   const sale=ownedSale.describe(ownedId);add.id='bay-sell';add.textContent=`Vendí · $${sale.price??'?'}`;add.disabled=!!sale.blocked;
+   addNote.textContent=sale.blocked??'Registra la venta que realizaste. Se guardará al confirmar.';
    add.onclick=()=>{const error=ownedSale.sell(ownedId);if(error){addNote.textContent=error;return;}dialog.close();panel.querySelector<HTMLElement>('.joker-portrait')?.focus();};
   }
   const addSection=el('div','','bay-add-section');addSection.append(add,addNote);

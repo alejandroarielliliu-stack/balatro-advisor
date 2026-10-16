@@ -1,5 +1,7 @@
 # Tienda de la Mesa — primera entrega
 
+**Actualización 2026-10-16:** [SHOP03a](tienda-persistente.md) sustituye el contrato de sesión descrito aquí para los comodines: sus ofertas ahora se guardan en `observed.shop`, y las acciones realizadas pueden confirmarse desde Mesa. Vales, sobres y otras cartas ofertadas siguen temporales. Esta página conserva la política contextual y el antecedente SHOP01; sus menciones de tienda independiente/no persistida son históricas.
+
 Implementación2026-10-14. Sustituye Candidatos por la transcripción de una tienda, con ofertas de comodines, vales, sobres y otras cartas visibles. Reutiliza los perfiles, composición y H2; consultar no compra ni guarda nada. Se mantiene separado el cálculo exacto por manos y el registro confirmado.
 
 ## Plan aplicado y alcance

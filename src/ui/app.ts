@@ -3,7 +3,6 @@ import {evaluateJokerFit,evaluateOwnedFits} from '../advisor/quick-fit.js';
 import {renderQuickFit,fitLabel,fitReason,fitTone} from './quick-fit-view.js';
 import {evaluateComposition} from '../advisor/composition.js';
 import {mountComposition} from './composition-view.js';
-import {previewMesaSale} from './sale-preview.js';
 import {markPreview,previewIssueStatus} from './preview-state.js';
 import {historyResourceDelta} from '../rules/history-jokers.js';
 import {mountCounterFields} from './joker-counters.js';
@@ -20,6 +19,9 @@ import {DECK_PROFILES,resolveDeck,deckDefinition} from '../catalog/decks.js';
 import {mountCollection} from './collection.js';
 import {createConfirmedStore,CONFIRMED_STORAGE_KEY,analysisBinding,MAX_RECORD_BYTES,validateConfirmedRecord} from '../storage/confirmed-store.js';
 import type {ConfirmedRecord} from '../storage/confirmed-store.js';
+import {createShopSessionStore} from '../storage/shop-session.js';
+import type {ShopOffer} from '../storage/shop-session.js';
+import type {ShopSnapshot} from '../advisor/shop-context.js';
 import {createDraft} from '../state/model.js';
 import type {GameState,Fact,Result,Issue,JokerInstance} from '../state/model.js';
 import {validateState,parseState} from '../state/validation.js';
@@ -56,6 +58,7 @@ function liveState(quick=false){quietRead=true;try{if(!readLiveState)throw new E
 let dialogAction:(()=>boolean)|null=null;
 const lock=new WriterLock(()=>updateOwnership());
 const store=createConfirmedStore(()=>({getItem:k=>localStorage.getItem(k),setItem:(k,v)=>{lock.assert();localStorage.setItem(k,v);}}));
+const shopSession=createShopSessionStore(()=>({getItem:k=>localStorage.getItem(k),setItem:(k,v)=>{lock.assert();localStorage.setItem(k,v);}}));
 function message(text:string,error=false){$('message').textContent=text;$('message').className=error?'error':'';}
 function problem(errors:Issue[]){message(errors.map(e=>`${e.message} (${e.path})`).join(' '),true);}
 function field(id:string,label:string,type='text',initial=''){
@@ -71,7 +74,7 @@ function select(id:string,label:string,choices:Record<string,string>,selected=''
 function checkbox(id:string,label:string,checked=false){const wrap=node('label','','check');const input=node('input');input.type='checkbox';input.id=id;input.checked=checked;wrap.append(input,node('span',label));return {wrap,input};}
 function button(text:string,fn:()=>void,className='secondary'){const b=node('button',text,className);b.type='button';b.onclick=fn;return b;}
 function details(title:string,data:unknown){const d=node('details');d.append(node('summary',title),node('pre',typeof data==='string'?data:JSON.stringify(data,null,2)));return d;}
-function invalidate(text='Los datos cambiaron. Vuelve a consultar las recomendaciones.') {handRequest++;invalidateCandidates();refreshOwnedFits();$('hand-results')?.replaceChildren();clearTimeout(cashoutTimer);cashoutTimer=setTimeout(()=>refreshCashout(),230);$('draft-status').hidden=!dirty;advice=null;demoMode=false;$('advice').replaceChildren(node('p',text,'empty'));$('bounds')?.replaceChildren();$('horizon-results')?.replaceChildren();$('exit-demo').hidden=true;}
+function invalidate(text='Los datos cambiaron. Vuelve a consultar las recomendaciones.',refreshShop=true) {handRequest++;if(refreshShop)invalidateCandidates();refreshOwnedFits();$('hand-results')?.replaceChildren();clearTimeout(cashoutTimer);cashoutTimer=setTimeout(()=>refreshCashout(),230);$('draft-status').hidden=!dirty;advice=null;demoMode=false;$('advice').replaceChildren(node('p',text,'empty'));$('bounds')?.replaceChildren();$('horizon-results')?.replaceChildren();$('exit-demo').hidden=true;}
 function canWrite(){
   if(!lock.owned){message('Esta pestaña es de lectura. Solicita el control para guardar.',true);return false;}
   try{if(localStorage.getItem(CONFIRMED_STORAGE_KEY)!==seenRaw){reload();message('La partida cambió. Revisa los datos y vuelve a calcular.',true);return false;}}
@@ -89,7 +92,7 @@ function updateOwnership(){
   area.append(node('span',!lock.supported?'Solo lectura: este navegador no ofrece Web Locks en este origen. Usa un navegador compatible en localhost.':lock.owned?'Esta pestaña tiene el control de escritura.':lock.waiting?'Esperando control: libera la pestaña escritora o ciérrala.':'Modo lectura: otra pestaña puede tener el control de escritura.'));
   area.append(button(lock.owned?'Liberar control':lock.waiting?'Cancelar solicitud':'Solicitar control',()=>lock.owned||lock.waiting?lock.release():lock.acquire(true)));
   if(!lock.owned && $('confirmation')?.hasAttribute('open')){$<HTMLDialogElement>('confirmation').close();dialogAction=null;}
-  document.querySelectorAll<HTMLButtonElement>('[data-write]').forEach(b=>b.disabled=!lock.owned||loadFailed);
+  document.querySelectorAll<HTMLButtonElement>('[data-write]').forEach(b=>b.disabled=!lock.owned||loadFailed||b.dataset.localDisabled==='true');
   // Import can explicitly replace a corrupt document, with validation and confirmation.
   $<HTMLInputElement>('import-file').disabled=!lock.owned;
 }
@@ -118,7 +121,8 @@ function unsupportedForEditor(s:GameState){
   if(s.rulesetId!==ENGINE_RULESET || value(o.gameVersion)!==GAME_VERSION || value(o.modsPresent)!==false || !deckDefinition(value(o.deckId)??'') || value(o.stakeId)!=='white' || value(o.gamePlatform)!=='pc-steam')return true;
   const d=value(o.deck),extra=value(o.outOfScope);
   if(d && ('preset'in d?d.preset!=='standard52-unmodified':d.cards.some(c=>!['base','foil','holographic','polychrome'].includes(c.edition)||!['none','bonus','mult','wild','glass','steel','stone','gold','lucky'].includes(c.enhancement)||!['none','red','blue','gold','purple'].includes(c.seal)||c.extraChips<0)) || extra && (!cataloguedVouchers(extra.vouchers)||extra.consumables.length||extra.pendingTags.length||extra.otherModifiers.length))return true;
-  if(value(o.shop)?.cardOffers.some(offer=>offer.kind!=='joker'||!names[offer.catalogId]||!['base','foil','holographic','polychrome','negative'].includes(value(offer.edition)??'')||(value(offer.stickers)?.some(s=>s!=='eternal')??true)))return true;
+  // Shop observations are preserved even when a particular offer cannot be
+  // rendered or purchased. H2 limits that operation, not the whole editor.
   return !!value(o.jokers)?.some(j=>!names[j.catalogId]||!['base','foil','holographic','polychrome','negative'].includes(value(j.edition)??'')||(value(j.stickers)?.some(s=>s!=='eternal')??true));
 }
 function renderRecord(){
@@ -227,12 +231,8 @@ function renderRecord(){
     addOwned({instanceId:uuid(),catalogId:engine,edition:known('base'),stickers:known([]),sellValue:known(jokerDefinition(engine)!.sell),counters:engine==='green_joker'?{greenMult:unknown()}:{}});
     updateVoucherResources();dirty=true;invalidate('Comodín añadido a la vista actual. Candidatos recalculados automáticamente.');return null;
   };
-  fieldset.append(node('h3','Ofertas de la tienda'));const shopKnown=checkbox('shop-known','Conozco las ofertas actuales (sin filas = ninguna)',s?s.observed.shop.status==='known':true);fieldset.append(shopKnown.wrap);
-  const offersHost=node('div');fieldset.append(offersHost);type Offer=NonNullable<ReturnType<typeof value<GameState['observed']['shop'] extends Fact<infer T>?T:never>>>['cardOffers'][number];
-  const offerReaders:(()=>Offer|null)[]=[];
-  function addOffer(o?:Offer){const id=o?.offerId??uuid();const row=node('div','','row');const g=node('div','','grid two');const name=select('offer-'+id,'Oferta de comodín',names,o?.catalogId??'joker');const price=field('price-'+id,'Precio ($)','number',String(o?value(o.price)??'':jokerDefinition('joker')!.price));name.input.onchange=()=>price.input.value=String(jokerDefinition(name.input.value)!.price);g.append(name.wrap,price.wrap);row.append(g,button('Quitar oferta',()=>row.remove()));decorateJoker(row,name.input,true,!!o);offersHost.append(row);offerReaders.push(()=>row.isConnected?{offerId:id,catalogId:name.input.value,label:names[name.input.value]!,kind:'joker',price:numFact(price.input,0),edition:o?.edition??known('base'),stickers:o?.stickers??known([])}:null);}
-  (value(s?.observed.shop)?.cardOffers??[]).forEach(o=>{if(o.kind==='joker'&&names[o.catalogId])addOffer(o);});
-  fieldset.append(button('Añadir oferta',()=>{if(offersHost.children.length<2)addOffer();else message('La cobertura admite dos ofertas.',true);}));
+  fieldset.append(node('h3','Ofertas de la tienda'));
+  const shopReadout=node('p','Registra los comodines en la Tienda de la Mesa. Esas mismas ofertas se utilizan en Análisis.','muted');fieldset.append(shopReadout);
   const reason=s?field('edit-reason','Motivo de corrección o actualización'):null;if(reason){reason.wrap.dataset.saveControl='true';fieldset.append(reason.wrap);}
   const submit=node('button',s?'Guardar actualización que transcribí':'Crear y guardar mi partida');submit.type='submit';submit.dataset.write='true';submit.dataset.saveControl='true';fieldset.append(submit);
   form.oninput=event=>{if((event.target as HTMLElement).dataset.counter==='hSize')updateVoucherResources();fillJokerSlots(ownedHost,Math.min(6,Number($<HTMLInputElement>('slots').value)||0));dirty=true;invalidate('Vista actual modificada. Candidatos en actualización.');};
@@ -246,7 +246,7 @@ function renderRecord(){
     o.resources={handsPerRound:numFact($<HTMLInputElement>('hands'),0),discardsPerRound:numFact($<HTMLInputElement>('discards'),0),handSize:numFact($<HTMLInputElement>('size'),0),jokerSlots:numFact($<HTMLInputElement>('slots'),0)};
     if(kind.input.value){const a=number(ante.input,1);if(a>8)throwField('ante','Solo se admiten antes 1 a 8.');o.nextBlind=known({ante:a,kind:kind.input.value as 'small'|'big'|'boss',bossId:kind.input.value==='boss'?(boss.input.value?known(boss.input.value):unknown()):known('none'),target:!manualTarget.input.checked&&targetCalculated&&target.input.value!==''?{status:'known',source:'confirmedPreset',value:number(target.input,1)}:numFact(target.input,1),reward:!manualReward.input.checked&&rewardCalculated&&reward.input.value!==''?{status:'known',source:'confirmedPreset',value:number(reward.input,0)}:numFact(reward.input,0)});}else o.nextBlind=unknown();
     o.jokers=jokerKnown.input.checked?known(Array.from(ownedHost.querySelectorAll<HTMLElement>(':scope > .joker-editor')).map(row=>ownedReaders.get(row)!())):unknown();
-    o.shop=shopKnown.input.checked?known({shopId:value(s?.observed.shop)?.shopId??uuid(),cardOffers:offerReaders.map(r=>r()).filter((a):a is Offer=>a!==null),ignoredOtherOffers:value(s?.observed.shop)?.ignoredOtherOffers??[]}):unknown();
+    o.shop=structuredClone(record?.state.runId===workingBase.runId?record.state.observed.shop:workingBase.observed.shop);
     if(levels.input.value==='unknown')o.handBases=unknown();else if(levels.input.value==='preset')o.handBases=known({preset:'all-standard-level1'});else {const values=Object.fromEntries(Object.keys(HAND_BASES).map(id=>{const inputs=['level-','chips-','mult-'].map(prefix=>$<HTMLInputElement>(prefix+id));return [id,inputs.some(input=>input.value.trim()==='')?unknown():known({level:number(inputs[0]!,1),chips:number(inputs[1]!,1),mult:number(inputs[2]!,1)})];}));o.handBases=known({values} as Exclude<NonNullable<ReturnType<typeof value<GameState['observed']['handBases'] extends Fact<infer T>?T:never>>>,{preset:string}>);}
     if(deckEditor.discardSavedScenarios()){state.assumptions.probes=[];state.assumptions.roundPlans=[];}
     const valid=validateState(state);if(!valid.ok)throw new Error(valid.errors.map(e=>e.message).join(' '));return valid.value;
@@ -255,26 +255,55 @@ function renderRecord(){
     if(!deckDefinition(startingDeck.input.value)){message(resolveDeck(startingDeck.input.value).limitation+' No se ha cambiado la partida.',true);return;}
     if(!coverage.input.checked){message('Confirma la cobertura antes de guardar; no se asumen modificadores ausentes.',true);coverage.input.focus();return;}
     const state=readLiveState!(),o=state.observed;
-    if(s){const reasonText=reason?.input.value??'';if(!reasonText.trim())throwField('edit-reason','Describe por qué actualizas los datos.');commit(()=>store.correct({confirmationId:uuid(),confirmed:true,expected:analysisBinding(s),updatedAt:now(),patch:o,reason:reasonText,discardSavedScenarios:deckEditor.discardSavedScenarios()}));}
+    if(s){const reasonText=reason?.input.value??'';if(!reasonText.trim())throwField('edit-reason','Describe por qué actualizas los datos.');commit(()=>store.correct({confirmationId:uuid(),confirmed:true,expected:analysisBinding(record?.state??s),updatedAt:now(),patch:o,reason:reasonText,discardSavedScenarios:deckEditor.discardSavedScenarios()}));}
     else commit(()=>store.initialize(state));
   }catch(err){if(err instanceof Error)message(err.message,true);}};
+  const observeShelf=(snapshot:ShopSnapshot):string|null=>{
+    if(record&&dirty)return 'Hay otros datos editados sin guardar. Guarda la transcripción o recárgala antes de registrar ofertas.';
+    if(demoMode)return 'Sal de la demostración antes de registrar ofertas reales.';
+    if(!canWrite())return $('message').textContent??'No se pudo guardar.';
+    try{
+      const previous=value(record?.state.observed.shop),previousOffers=previous?.cardOffers??[];
+      const offers:ShopOffer[]=snapshot.jokers.map(offer=>{
+        const old=previousOffers.find(o=>o.offerId===offer.offerId);
+        const catalogId=ALL_JOKER_FACTS[offer.catalogId]?offer.catalogId:Object.keys(ALL_JOKER_FACTS).find(id=>ALL_JOKER_FACTS[id]!.artId===offer.catalogId)??offer.catalogId;
+        return {offerId:offer.offerId,catalogId,label:names[catalogId]??old?.label??catalogId,kind:'joker',
+          price:offer.price===null?(old?.price.status==='unknown'?structuredClone(old.price):unknown()):known(offer.price),
+          edition:offer.edition==='unknown'?(old?.edition.status==='unknown'?structuredClone(old.edition):unknown()):known(offer.edition??'base'),
+          stickers:old?structuredClone(old.stickers):known(offer.stickers??[])};
+      });
+      // Unsupported/unrenderable observations are never silently discarded by
+      // an editor that can only display the known catalogue.
+      const rendered=(offer:ShopOffer)=>offer.kind==='joker'&&(!!ALL_JOKER_FACTS[offer.catalogId]||Object.values(ALL_JOKER_FACTS).some(j=>j.artId===offer.catalogId));
+      offers.push(...previousOffers.filter(o=>!rendered(o)&&!offers.some(visible=>visible.offerId===o.offerId)).map(o=>structuredClone(o)));
+      let saved:Result<ConfirmedRecord>;
+      const initialized=record===null;
+      if(!record){
+        const initial=liveState();
+        initial.observed.shop=known({shopId:uuid(),cardOffers:offers,ignoredOtherOffers:['Vales, sobres y otras cartas: solo consulta de esta sesión.']});
+        saved=store.initialize(initial);
+      }else saved=shopSession.observeJokerOffers({confirmationId:uuid(),confirmed:true,expected:analysisBinding(record.state),updatedAt:now(),shopId:previous?.shopId??uuid(),offers});
+      if(!saved.ok){problem(saved.errors);return saved.errors.map(e=>e.message).join(' ');}
+      record=saved.value;Object.assign(workingBase,structuredClone(record.state));
+      try{seenRaw=localStorage.getItem(CONFIRMED_STORAGE_KEY);}catch{loadFailed=true;}
+      $('revision').textContent=`Revisión ${record.state.revision}`;
+      invalidate('Ofertas observadas guardadas. Vuelve a consultar Análisis.',false);renderHistory();renderActions();updateOwnership();
+      message('Ofertas de comodines guardadas. Comprar requiere confirmar que lo hiciste.');
+      if(initialized)setTimeout(()=>reload(),0);
+      return null;
+    }catch(error){return error instanceof Error?error.message:'No se pudo registrar la oferta. La copia anterior se conserva.';}
+  };
   const compositionHost=node('section');
   organizeRecord(host,!!s,renderJokerPreview,()=>{try{return (value(liveState(true).observed.jokers)??[]).map(j=>({id:j.instanceId,name:names[j.catalogId]??j.catalogId}));}catch{return [];}},addFromGallery,vouchers.host,compositionHost,{
    edit:id=>{const row=Array.from(ownedHost.querySelectorAll<HTMLElement>(':scope > .joker-editor')).find(row=>row.dataset.instanceId===id);const settings=row?.querySelector<HTMLDetailsElement>('.card-settings');if(settings)settings.open=true;},
    describe:id=>{try{const j=value(liveState(true).observed.jokers)?.find(j=>j.instanceId===id);return {price:value(j?.sellValue)??null,...(value(j?.stickers)?.includes('eternal')?{blocked:'Eternal: no se puede vender.'}:{})};}catch{return {price:null};}},
-   sell:id=>{try{
-    const state=liveState(true),sale=previewMesaSale(state,id,{expectedRevision:state.revision,updatedAt:now()});
-    if(!sale.ok)return sale.errors.map(e=>e.code==='unknown_data'&&e.path==='$.observed.money'?'Introduce tu dinero actual antes de vender.':e.message).join(' ');
-    // Apply the complete H2 transition only to the current draft. Includes effects
-    // on remaining jokers/consumables/resources; never read a simulated round end.
-    Object.assign(workingBase,sale.state);money.input.value=String(value(sale.state.observed.money)??'');
-    ownedHost.replaceChildren();ownedReaders.clear();(value(sale.state.observed.jokers)??[]).forEach(addOwned);
-    for(const [id,fact] of [['hands',sale.state.observed.resources.handsPerRound],['discards',sale.state.observed.resources.discardsPerRound],['size',sale.state.observed.resources.handSize],['slots',sale.state.observed.resources.jokerSlots]] as const)$<HTMLInputElement>(id).value=String(value(fact)??'');
-    fillJokerSlots(ownedHost,Number($<HTMLInputElement>('slots').value)||0);dirty=true;invalidate('Venta aplicada a la Mesa. La copia guardada no cambió.');
-    const assumptions=sale.assumptions.length?' Modelo 1.0.1o/Steam/White sin mods; configuración sin confirmar.':'';
-    message(`Venta en Mesa: ${names[value(state.observed.jokers)?.find(j=>j.instanceId===id)?.catalogId??'']??'comodín'} · saldo $${value(sale.state.observed.money)}.${assumptions} Reglas provisionales. No se guardó.`);return null;
-   }catch(error){return error instanceof Error?error.message:'Revisa los datos de la partida.';}}
-  },{state:()=>liveState(true),ante:()=>Number(ante.input.value),changed:()=>{handRequest++;$('hand-results')?.replaceChildren();}});
+   sell:id=>requestMesaAction({type:'sell',instanceId:id})
+  },{state:()=>liveState(true),ante:()=>Number(ante.input.value),changed:()=>{handRequest++;$('hand-results')?.replaceChildren();},
+    observe:observeShelf,confirm:(offerId,sellId)=>requestMesaAction(sellId?{type:'replace',sellInstanceId:sellId,offerId,instanceId:uuid()}:{type:'buy',offerId,instanceId:uuid()}),
+    // Ownership is applied centrally by updateOwnership; do not cache it as a
+    // local disabled reason or gaining the lock would leave these buttons inert.
+    status:()=>dirty?'Guarda o recarga los otros datos editados antes de confirmar.':!record?'Configura y registra tu partida antes de confirmar acciones.':null,
+    canUndo:()=>!!record&&record.history.length>0&&record.history.at(-1)?.kind!=='undo',undo:undoMesaChange,controlsChanged:updateOwnership});
   const compositionView=mountComposition(compositionHost);
   refreshOwnedFits=()=>{
    const rows=Array.from(ownedHost.querySelectorAll<HTMLElement>(':scope > .joker-editor'));let fits:ReturnType<typeof evaluateOwnedFits>=[];
@@ -395,10 +424,22 @@ function renderAdvice(result:Result<Advice>,state:GameState,isDemo=false){
 $('analyze').onclick=()=>{resetFormErrors();if(dirty){message('Hay datos de partida sin guardar. Guarda la actualización antes de analizar.',true);return;}if(!record){message('Primero registra una partida o abre la demostración independiente.',true);return;}try{const scenarios=scenarioReaders.map(r=>r()).filter(Boolean);const result=adviseShop(record.state,scenarios,{expectedRevision:record.state.revision,updatedAt:now()});renderAdvice(result,record.state);if(result.ok)message('Análisis hipotético generado. La partida registrada no cambió.');}catch(e){message(String(e),true);}};
 $('demo').onclick=()=>{void fetch('./examples/shop-purchase.json').then(r=>r.text()).then(text=>{const loaded=parseState(text);if(!loaded.ok){problem(loaded.errors);return;}const demo=comparisonDemoScenarios(loaded.value)[0]!;renderAdvice(adviseShop(demo.state,[{role:'favorable',plan:demo.plan}],{expectedRevision:demo.state.revision,updatedAt:now()}),demo.state,true);}).catch(e=>message(String(e),true));};
 $('exit-demo').onclick=()=>{invalidate('De vuelta a tu partida. Consulta con tus escenarios.');renderActions();};
-function confirmAction(action:ShopAction,state:GameState){
-  if(dirty){message('Guarda o recarga los datos editados antes de confirmar una acción.',true);return;}
-  if(demoMode){message('Sal de la demostración para registrar acciones de tu partida.',true);return;}
-  if(!canWrite())return;const expected=analysisBinding(state);const preview=applyShopAction(state,action,{expectedRevision:state.revision,updatedAt:now()});if(!preview.ok){problem(preview.errors);return;}
+function requestMesaAction(action:ShopAction):string|null{
+  if(!record)return 'Configura y guarda la partida antes de registrar acciones reales. No se usa una hipótesis como partida.';
+  return confirmAction(action,record.state);
+}
+function undoMesaChange():string|null{
+  if(dirty)return 'Guarda o recarga los otros datos editados antes de deshacer.';
+  if(!record)return 'No hay una partida registrada.';
+  const current=record,last=current.history.at(-1);
+  if(!last||last.kind==='undo')return 'No hay un último cambio que se pueda deshacer. Puedes corregir datos desde Registro.';
+  return commit(()=>shopSession.undo({confirmationId:uuid(),confirmed:true,expected:analysisBinding(current.state),updatedAt:now(),targetEntryId:last.id,reason:'Deshacer el último registro desde la Mesa; no cambia Balatro.'}))?null:$('message').textContent??'No se pudo deshacer.';
+}
+function confirmAction(action:ShopAction,state:GameState):string|null{
+  if(dirty){const text='Guarda o recarga los datos editados antes de confirmar una acción.';message(text,true);return text;}
+  if(demoMode){const text='Sal de la demostración para registrar acciones de tu partida.';message(text,true);return text;}
+  if(!canWrite())return $('message').textContent??'No se puede guardar.';
+  const expected=analysisBinding(state);const preview=applyShopAction(state,action,{expectedRevision:state.revision,updatedAt:now()});if(!preview.ok){problem(preview.errors);return preview.errors.map(e=>e.message).join(' ');}
   const body=node('div');body.append(node('p',actionText(action,state)),node('p',`Saldo calculado tras la acción: $${value(preview.value.state.observed.money)??'desconocido'}. Se validará de nuevo al confirmar.`));
   if(action.type==='replace')body.append(node('p','Confirma solo si hiciste la venta Y la compra. Si solo vendiste, cancela y elige «Vender» en acciones manuales.'));
   const performed=checkbox('performed','Confirmo que realicé esta acción completa en Balatro, no solo que quiero hacerla.');body.append(performed.wrap);
@@ -408,8 +449,9 @@ function confirmAction(action:ShopAction,state:GameState){
     const jokers=value(preview.value.state.observed.jokers),shop=value(preview.value.state.observed.shop);
     if(balance.input.value.trim()!=='' && (!jokers || !shop)){message('Completa inventario y tienda para contrastar el recibo; también puedes omitir el saldo opcional.',true);return false;}
     const receipt=balance.input.value.trim()===''?{}:{observedAfter:{money:Number(balance.input.value),jokerIds:jokers!.map(j=>j.instanceId),offerIds:shop!.cardOffers.map(o=>o.offerId)}};
-    return commit(()=>store.confirm({confirmationId:id,confirmed:true,expected,updatedAt:now(),action,...receipt}));
+    return commit(()=>shopSession.confirm({confirmationId:id,confirmed:true,expected,updatedAt:now(),action,...receipt}));
   });
+  return null;
 }
 function renderActions(){const host=$('actions');host.replaceChildren();if(!record)return;const state=record.state;const actions=enumerateActions(state,{expectedRevision:state.revision,updatedAt:now()});const d=node('details');d.append(node('summary','Registrar otra acción de tienda (incluida venta sola)'));host.append(d);if(!actions.ok){d.append(node('p',actions.errors.map(e=>e.message).join(' '),'error'));return;}
   for(const a of actions.value){if(!a.legal){d.append(node('p',actionText(a.action,state)+': '+a.errors.map(e=>e.message).join(' '),'muted'));continue;}const b=button(actionText(a.action,state),()=>confirmAction(a.action,state));b.dataset.write='true';const row=node('div','','toolbar');row.append(b);d.append(row);}

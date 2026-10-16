@@ -1,6 +1,8 @@
-# Backlog — T08c completado como software; T01/H2 y T11 abiertos
+# Backlog — seguimiento de partida en desarrollo
 
-**Plan vigente del asesor (2026-10-15):** [hoja de ruta de ejecución](hoja-de-ruta-asesor.md), [informe del código](reporte-codigo-2026-10-15.md) y [recorrido/entradas mínimas](plan-asesor-de-partida.md). Primero SHOP03a (tienda visual → acción confirmada/autoguardado, sin esperar sobres), con diseño RUN01a en paralelo; después recorrido RUN01b, comparación incremental DEC00/DEC01/SURV01 y jugar/saltar TAG01. OBS01, capacidades y banco de evaluación empiezan en paralelo. Sobres/consumibles SHOP02a/DECK04 y capacidad automática SURV02/PG02/PG03 amplían el flujo; EVAL01/PG04 separa software correcto de política útil. Son tareas propuestas, no entregas implementadas. Primera prueba: comprar Joker de $2 con $25, conservar $23 al recargar y poder deshacer, sin que consultar escriba.
+**SHOP03a (2026-10-16) completado como software:** [tienda persistente y confirmaciones desde Mesa](tienda-persistente.md), con demostración `demo:shop-session` y [verificación reproducible](evidencia/shop-session/README.md). Ofertas de comodines en el mismo `observed.shop` que H2/H3; compra/venta/reemplazo confirmados, guardado atómico, recarga y deshacer. Consulta y reemplazo hipotético no escriben. Se conserva el formato de copias; corrección de `jokerContext` ya admitido por H1. Extras de tienda siguen temporales y las demás ediciones requieren guardar. No amplía reglas ni cierra su evidencia empírica. Siguiente entrega: RUN01a, esquema de fases y migración de todos los snapshots del historial; OBS01 y pruebas de política pueden avanzar en paralelo.
+
+**Plan vigente del asesor (actualizado 2026-10-16):** [hoja de ruta](hoja-de-ruta-asesor.md), [auditoría anterior](reporte-codigo-2026-10-15.md) y [recorrido/entradas mínimas](plan-asesor-de-partida.md). SHOP03a ya entregó tienda visual → acción confirmada/autoguardado. Continúan RUN01a/RUN01b, comparación incremental DEC00/DEC01/SURV01 y jugar/saltar TAG01. OBS01, capacidades y banco de evaluación avanzan en paralelo. Sobres/consumibles SHOP02a/DECK04 y capacidad automática SURV02/PG02/PG03 amplían el flujo; EVAL01/PG04 separa software correcto de política útil. Salvo SHOP03a, esas tareas permanecen pendientes.
 
 **PUB02 completado:** [GitHub Pages público](https://alejandroarielliliu-stack.github.io/balatro-advisor/) y workflow por actualización de `main`, con build/pruebas antes de desplegar. No exige ChatGPT para visitar la web. La migración de alojamiento no cerró T01/H2 ni la eficacia estratégica.
 
@@ -8,7 +10,7 @@
 
 | Continuación de tienda | Dependencia real | Aceptación |
 |---|---|---|
-| SHOP03a — siguiente | SHOP01 + H1/H2/T09b; independiente de SHOP02 | Tienda observada única, compra/venta desde Mesa, autoguardado y deshacer; recarga conserva acciones reales, consultar no modifica registro. |
+| SHOP03a — completado como software | SHOP01 + H1/H2/T09b; independiente de SHOP02 | Tienda observada de comodines única, compra/venta desde Mesa, autoguardado y deshacer; recarga conserva acciones reales, consultar no modifica registro. |
 | SHOP02a / DECK04 | SHOP03a + fase/contexto de sobre + catálogos/eventos concretos | Contenido observado de Buffoon/Celestial, elecciones restantes, opciones visibles; pagar/abrir/elegir/usar/omitir separados, sin inventar cartas. |
 | SHOP03 — continuación | SHOP03a + operaciones de SHOP02a que se integren | Confirmación y persistencia atómicas también de apertura/elección; las operaciones no implementadas limitan su rama. |
 | SHOP04 | Operaciones específicas + datos de efectos | Descuentos, stickers fuera de White, vales22 restantes, Tarot/Spectral y renovaciones con nuevo stock transcrito. Regla pendiente limita solo su dependencia. |
