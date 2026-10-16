@@ -1,0 +1,24 @@
+import type {EffectChoice} from '../rules/full-joker-contract.js';
+import {validateEffectChoices} from '../state/effect-choices.js';
+const el=<K extends keyof HTMLElementTagNameMap>(tag:K,text='',className='')=>{const e=document.createElement(tag);e.textContent=text;e.className=className;return e;};
+function field(label:string,input:HTMLElement){const f=el('label',label);input.setAttribute('aria-label',label);f.append(input);return f;}
+function select(options:readonly (readonly[string,string])[]){const s=el('select');for(const [value,label] of options)s.append(new Option(label,value));return s;}
+/** Concrete branches of an explicit scenario; no RNG and no probabilities invented. */
+export function mountEffectChoices(host:HTMLElement,label:string,initial:readonly EffectChoice[]=[]):()=>EffectChoice[]{
+ const panel=el('details','','effect-choices');panel.append(el('summary',label||'Resultados del escenario'));host.append(panel);const rows=el('div'),add=el('button','Añadir resultado','secondary');add.type='button';panel.append(rows,add);
+ type Row={box:HTMLElement;key:HTMLInputElement;kind:HTMLSelectElement;knowledge:HTMLSelectElement;basis:HTMLInputElement;readValue:()=>EffectChoice['value']};const fields:Row[]=[];
+ const changed=()=>host.dispatchEvent(new Event('input',{bubbles:true}));
+ const row=(value?:EffectChoice)=>{
+  const box=el('div','','row'),grid=el('div','','grid'),key=el('input'),kind=select([['boolean','Éxito / fallo'],['integer','Número entero'],['target','ID objetivo'],['card','Carta generada · JSON'],['joker','Comodín generado · JSON'],['consumable','Consumible generado · JSON']]),knowledge=select([['hypothetical','Hipótesis del escenario'],['known','Resultado observado']]),basis=el('input');key.value=value?.key??'';key.placeholder='before:space:instancia:-:1';kind.value=value?.kind??'boolean';knowledge.value=value?.knowledge??'hypothetical';basis.value=value?.basis??'';basis.placeholder='Origen del dato o supuesto';grid.append(field('Clave del efecto',key),field('Tipo de resultado',kind),field('Origen',knowledge),field('Fundamento',basis));
+  const valueHost=el('div'),remove=el('button','Quitar resultado','secondary');remove.type='button';box.append(grid,valueHost,remove);rows.append(box);const entry:Row={box,key,kind,knowledge,basis,readValue:()=>false};fields.push(entry);
+  const render=(saved?:EffectChoice['value'])=>{
+   valueHost.replaceChildren();if(kind.value==='boolean'){const input=select([['true','Éxito'],['false','Fallo']]);input.value=typeof saved==='boolean'?String(saved):'true';valueHost.append(field('Resultado',input));entry.readValue=()=>input.value==='true';}
+   else if(kind.value==='integer'){const input=el('input');input.type='number';input.step='1';input.value=typeof saved==='number'?String(saved):'';valueHost.append(field('Resultado entero',input));entry.readValue=()=>{if(!input.value.trim()||!Number.isSafeInteger(Number(input.value)))throw new Error('Resultado '+key.value+': escribe un entero seguro.');return Number(input.value);};}
+   else if(kind.value==='target'){const input=el('input');input.value=typeof saved==='string'?saved:'';input.placeholder='ID de carta, comodín o consumible';valueHost.append(field('ID objetivo',input));entry.readValue=()=>{if(!input.value.trim())throw new Error('Resultado '+key.value+': falta el ID objetivo.');return input.value.trim();};}
+   else {const input=el('textarea');input.rows=4;input.value=typeof saved==='object'?JSON.stringify(saved,null,2):'';input.placeholder=kind.value==='card'?'{"instanceId":"nueva", "rank":"2", "suit":"S", "edition":"base", "enhancement":"stone", "seal":"none", "extraChips":0}':'Objeto completo con instanceId y propiedades';valueHost.append(field('Objeto del resultado',input));entry.readValue=()=>{let parsed:unknown;try{parsed=JSON.parse(input.value);}catch{throw new Error('Resultado '+key.value+': JSON inválido.');}if(!parsed||typeof parsed!=='object'||Array.isArray(parsed))throw new Error('Resultado '+key.value+': necesita un objeto JSON.');return parsed as EffectChoice['value'];};}
+  };
+  kind.addEventListener('change',()=>{render();changed();});remove.onclick=()=>{fields.splice(fields.indexOf(entry),1);box.remove();changed();};render(value?.value);
+ };
+ for(const c of initial)row(c);add.onclick=()=>{row();changed();};
+ return ()=>{const values:EffectChoice[]=fields.map((r,index)=>{if(!r.key.value.trim())throw new Error('Resultado '+(index+1)+': falta la clave del efecto.');if(!r.basis.value.trim())throw new Error('Resultado '+r.key.value+': indica su fundamento.');return {key:r.key.value.trim(),kind:r.kind.value as EffectChoice['kind'],value:r.readValue(),knowledge:r.knowledge.value as EffectChoice['knowledge'],basis:r.basis.value.trim()};});const checked=validateEffectChoices(values);if(!checked.ok)throw new Error(checked.errors[0]!.message);return checked.value;};
+}

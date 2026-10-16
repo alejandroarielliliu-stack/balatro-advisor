@@ -1,0 +1,231 @@
+{
+  "schemaVersion": "0.1",
+  "rulesetId": "balatro-pc-1.0.1o-blue-white-v1",
+  "runId": "synthetic-s03-horizon",
+  "revision": 0,
+  "updatedAt": "2026-10-08T12:00:00Z",
+  "phase": "shop",
+  "observed": {
+    "gameVersion": {
+      "status": "known",
+      "value": "1.0.1o-FULL",
+      "source": "manual"
+    },
+    "gamePlatform": {
+      "status": "known",
+      "value": "pc-steam",
+      "source": "manual"
+    },
+    "deckId": {
+      "status": "known",
+      "value": "blue",
+      "source": "manual"
+    },
+    "stakeId": {
+      "status": "known",
+      "value": "white",
+      "source": "manual"
+    },
+    "modsPresent": {
+      "status": "known",
+      "value": false,
+      "source": "manual"
+    },
+    "money": {
+      "status": "known",
+      "source": "manual",
+      "value": 25
+    },
+    "lastCleared": {
+      "status": "known",
+      "source": "manual",
+      "value": {
+        "ante": 1,
+        "kind": "boss"
+      }
+    },
+    "nextBlind": {
+      "status": "known",
+      "source": "manual",
+      "value": {
+        "ante": 2,
+        "kind": "small",
+        "bossId": {
+          "status": "known",
+          "source": "manual",
+          "value": "none"
+        },
+        "target": {
+          "status": "known",
+          "source": "manual",
+          "value": 800
+        },
+        "reward": {
+          "status": "known",
+          "source": "manual",
+          "value": 3
+        }
+      }
+    },
+    "visibleBoss": {
+      "status": "unknown",
+      "reason": "Fuera de las dos ciegas declaradas."
+    },
+    "resources": {
+      "handsPerRound": {
+        "status": "known",
+        "value": 5,
+        "source": "confirmedPreset"
+      },
+      "discardsPerRound": {
+        "status": "known",
+        "value": 3,
+        "source": "confirmedPreset"
+      },
+      "handSize": {
+        "status": "known",
+        "value": 8,
+        "source": "confirmedPreset"
+      },
+      "jokerSlots": {
+        "status": "known",
+        "value": 5,
+        "source": "confirmedPreset"
+      }
+    },
+    "deck": {
+      "status": "known",
+      "value": {
+        "preset": "standard52-unmodified"
+      },
+      "source": "confirmedPreset"
+    },
+    "handBases": {
+      "status": "known",
+      "value": {
+        "preset": "all-standard-level1"
+      },
+      "source": "confirmedPreset"
+    },
+    "jokers": {
+      "status": "known",
+      "source": "manual",
+      "value": [
+        {
+          "instanceId": "half_joker",
+          "catalogId": "half_joker",
+          "edition": {
+            "status": "known",
+            "source": "manual",
+            "value": "base"
+          },
+          "stickers": {
+            "status": "known",
+            "source": "manual",
+            "value": []
+          },
+          "sellValue": {
+            "status": "known",
+            "source": "manual",
+            "value": 2
+          },
+          "counters": {}
+        },
+        {
+          "instanceId": "banner",
+          "catalogId": "banner",
+          "edition": {
+            "status": "known",
+            "source": "manual",
+            "value": "base"
+          },
+          "stickers": {
+            "status": "known",
+            "source": "manual",
+            "value": []
+          },
+          "sellValue": {
+            "status": "known",
+            "source": "manual",
+            "value": 2
+          },
+          "counters": {}
+        }
+      ]
+    },
+    "shop": {
+      "status": "known",
+      "source": "manual",
+      "value": {
+        "shopId": "s01-shop",
+        "cardOffers": [
+          {
+            "offerId": "golden",
+            "catalogId": "golden_joker",
+            "label": "Golden Joker",
+            "kind": "joker",
+            "price": {
+              "status": "known",
+              "source": "manual",
+              "value": 6
+            },
+            "edition": {
+              "status": "known",
+              "source": "manual",
+              "value": "base"
+            },
+            "stickers": {
+              "status": "known",
+              "source": "manual",
+              "value": []
+            }
+          }
+        ],
+        "ignoredOtherOffers": [
+          "paquetes y vale fuera de comparación"
+        ]
+      }
+    },
+    "outOfScope": {
+      "status": "known",
+      "source": "manual",
+      "value": {
+        "vouchers": [],
+        "consumables": [],
+        "pendingTags": [],
+        "otherModifiers": []
+      }
+    }
+  },
+  "assumptions": {
+    "probes": [
+      {
+        "probeId": "pair8",
+        "label": "Pareja de ochos",
+        "playedCardIds": [
+          "8S",
+          "8H"
+        ],
+        "discardsRemaining": 3,
+        "role": "favorable"
+      },
+      {
+        "probeId": "king",
+        "label": "Rey solo",
+        "playedCardIds": [
+          "KS"
+        ],
+        "discardsRemaining": 3,
+        "role": "adverse"
+      }
+    ],
+    "roundPlans": [],
+    "horizonRounds": 1,
+    "cashflow": {
+      "assumeRoundWon": false,
+      "handsUsedByRound": [],
+      "noSpendingBetweenRounds": false,
+      "noMoneyChangesDuringRound": true
+    }
+  }
+}

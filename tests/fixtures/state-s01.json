@@ -1,0 +1,64 @@
+{
+  "schemaVersion": "0.1",
+  "rulesetId": "balatro-pc-1.0.1f-blue-white-v1",
+  "runId": "synthetic-s01",
+  "revision": 0,
+  "updatedAt": "2026-10-08T12:00:00Z",
+  "phase": "shop",
+  "observed": {
+    "gameVersion": {"status":"known","value":"1.0.1f-FULL","source":"manual"},
+    "gamePlatform": {"status":"known","value":"pc-steam","source":"manual"},
+    "deckId": {"status":"known","value":"blue","source":"manual"},
+    "stakeId": {"status":"known","value":"white","source":"manual"},
+    "modsPresent": {"status":"known","value":false,"source":"manual"},
+    "money": {"status":"known","value":7,"source":"manual"},
+    "lastCleared": {"status":"known","value":{"ante":1,"kind":"small"},"source":"manual"},
+    "nextBlind": {"status":"known","source":"manual","value":{
+      "ante":1,"kind":"big",
+      "bossId":{"status":"known","value":"none","source":"manual"},
+      "target":{"status":"known","value":450,"source":"manual"},
+      "reward":{"status":"known","value":4,"source":"manual"}
+    }},
+    "visibleBoss": {"status":"known","source":"manual","value":{
+      "ante":1,"kind":"boss",
+      "bossId":{"status":"known","value":"the_psychic","source":"manual"},
+      "target":{"status":"known","value":600,"source":"manual"},
+      "reward":{"status":"known","value":5,"source":"manual"}
+    }},
+    "resources": {
+      "handsPerRound":{"status":"known","value":5,"source":"confirmedPreset"},
+      "discardsPerRound":{"status":"known","value":3,"source":"confirmedPreset"},
+      "handSize":{"status":"known","value":8,"source":"confirmedPreset"},
+      "jokerSlots":{"status":"known","value":5,"source":"confirmedPreset"}
+    },
+    "deck":{"status":"known","value":{"preset":"standard52-unmodified"},"source":"confirmedPreset"},
+    "handBases":{"status":"known","value":{"preset":"all-standard-level1"},"source":"confirmedPreset"},
+    "jokers":{"status":"known","value":[],"source":"manual"},
+    "shop":{"status":"known","source":"manual","value":{
+      "shopId":"s01-shop",
+      "cardOffers":[
+        {"offerId":"o1","catalogId":"joker","label":"Joker","kind":"joker",
+         "price":{"status":"known","value":2,"source":"manual"},
+         "edition":{"status":"known","value":"base","source":"manual"},
+         "stickers":{"status":"known","value":[],"source":"manual"}},
+        {"offerId":"o2","catalogId":"half_joker","label":"Half Joker","kind":"joker",
+         "price":{"status":"known","value":5,"source":"manual"},
+         "edition":{"status":"known","value":"base","source":"manual"},
+         "stickers":{"status":"known","value":[],"source":"manual"}}
+      ],
+      "ignoredOtherOffers":["paquetes y vale fuera de comparación"]
+    }},
+    "outOfScope":{"status":"known","source":"manual","value":{
+      "vouchers":[],"consumables":[],"pendingTags":[],"otherModifiers":[]
+    }}
+  },
+  "assumptions": {
+    "probes":[
+      {"probeId":"pair8","label":"Pareja de ochos","playedCardIds":["8S","8H"],"discardsRemaining":3,"role":"favorable"},
+      {"probeId":"king","label":"Rey solo","playedCardIds":["KS"],"discardsRemaining":3,"role":"adverse"}
+    ],
+    "roundPlans":[],
+    "horizonRounds":1,
+    "cashflow":{"assumeRoundWon":false,"handsUsedByRound":[],"noSpendingBetweenRounds":false,"noMoneyChangesDuringRound":true}
+  }
+}

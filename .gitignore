@@ -1,0 +1,14 @@
+node_modules/
+dist/
+out/
+out.pending/
+coverage/
+.browser-runtime/
+
+.openai/
+__pycache__/
+*.local.json
+docs/evidencia/**/*.png
+docs/evidencia/**/*.jpg
+docs/evidencia/**/*.log
+docs/evidencia/**/*.json

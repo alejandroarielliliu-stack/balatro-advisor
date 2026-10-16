@@ -1,0 +1,90 @@
+{
+  "schemaVersion": "scenario-1",
+  "planId": "pair-two-plays",
+  "description": "Pareja de ochos y después pareja de doses si la ronda continúa.",
+  "initialHand": [
+    {
+      "cardId": "8S",
+      "knowledge": "hypothetical",
+      "basis": "Escenario sintético; no observación ni predicción del robo."
+    },
+    {
+      "cardId": "8H",
+      "knowledge": "hypothetical",
+      "basis": "Escenario sintético; no observación ni predicción del robo."
+    },
+    {
+      "cardId": "KS",
+      "knowledge": "hypothetical",
+      "basis": "Escenario sintético; no observación ni predicción del robo."
+    },
+    {
+      "cardId": "QH",
+      "knowledge": "hypothetical",
+      "basis": "Escenario sintético; no observación ni predicción del robo."
+    },
+    {
+      "cardId": "JD",
+      "knowledge": "hypothetical",
+      "basis": "Escenario sintético; no observación ni predicción del robo."
+    },
+    {
+      "cardId": "4C",
+      "knowledge": "hypothetical",
+      "basis": "Escenario sintético; no observación ni predicción del robo."
+    },
+    {
+      "cardId": "5S",
+      "knowledge": "hypothetical",
+      "basis": "Escenario sintético; no observación ni predicción del robo."
+    },
+    {
+      "cardId": "6H",
+      "knowledge": "hypothetical",
+      "basis": "Escenario sintético; no observación ni predicción del robo."
+    }
+  ],
+  "events": [
+    {
+      "type": "play",
+      "cardIds": [
+        "8S",
+        "8H"
+      ],
+      "drawIfContinues": [
+        {
+          "cardId": "2S",
+          "knowledge": "hypothetical",
+          "basis": "Escenario sintético; no observación ni predicción del robo."
+        },
+        {
+          "cardId": "2H",
+          "knowledge": "hypothetical",
+          "basis": "Escenario sintético; no observación ni predicción del robo."
+        }
+      ]
+    },
+    {
+      "type": "play",
+      "cardIds": [
+        "2S",
+        "2H"
+      ],
+      "drawIfContinues": [
+        {
+          "cardId": "3S",
+          "knowledge": "hypothetical",
+          "basis": "Escenario sintético; no observación ni predicción del robo."
+        },
+        {
+          "cardId": "3H",
+          "knowledge": "hypothetical",
+          "basis": "Escenario sintético; no observación ni predicción del robo."
+        }
+      ]
+    }
+  ],
+  "assumptions": {
+    "noMoneyChangesDuringRound": true
+  }
+}

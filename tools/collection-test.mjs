@@ -1,0 +1,46 @@
+import assert from 'node:assert/strict';
+import {chromium,firefox} from 'playwright';
+import {spawn} from 'node:child_process';
+import {mkdir,writeFile} from 'node:fs/promises';
+const engine=process.env.TEST_BROWSER==='firefox'?'firefox':'chromium';
+const dir=`docs/evidencia/collection/${engine}`;await mkdir(dir,{recursive:true});
+const server=spawn(process.execPath,['dist/src/server.js'],{env:{...process.env,PORT:'4177'},stdio:'pipe',windowsHide:true});
+await new Promise((resolve,reject)=>{server.stdout.on('data',d=>String(d).includes('Balatro Advisor local')&&resolve());server.on('error',reject);});
+let browser;
+try{
+ browser=await(engine==='firefox'?firefox:chromium).launch({headless:true,...(engine==='chromium'?{channel:'chrome'}:{})});
+ const ctx=await browser.newContext({viewport:{width:1440,height:1000}}),p=await ctx.newPage(),errors=[];
+ p.on('pageerror',e=>errors.push(e.message));p.on('console',m=>{if(m.type()==='error')errors.push(m.text());});
+ await p.goto('http://127.0.0.1:4177/#collection');await p.waitForSelector('.collection-card');
+ const raw=()=>p.evaluate(()=>JSON.stringify(localStorage));const original=await raw();
+ assert.equal(await p.locator('.collection-card').count(),150);assert.match(await p.locator('#collection-view > p.muted').innerText(),/82 compatibles con cálculo de jugadas.*Encaje contextual en la Mesa/);assert.equal(await p.locator('.collection-support').filter({hasText:'Cálculo con jugadas'}).count(),82);assert.equal(await p.locator('.collection-card .bay-score-value').count(),0);assert.doesNotMatch(await p.locator('#collection-view').innerText(),/Con cálculo|Encaje.*\/10|meta: pendiente/);
+ const atlas=await p.request.get('http://127.0.0.1:4177/web/assets/jokers/atlas.png');assert.equal(atlas.headers()['content-type'],'image/png');
+ await p.evaluate(()=>new Promise((resolve,reject)=>{const i=new Image();i.onload=()=>i.naturalWidth===1420?resolve():reject('width');i.onerror=reject;i.src='/web/assets/jokers/atlas.png';}));
+ await p.screenshot({path:`${dir}/desktop.png`});
+ await p.locator('#joker-search').fill('perkeo');assert.equal(await p.locator('.collection-card').count(),1);
+ await p.locator('.collection-card').click();assert.match(await p.locator('#joker-detail').innerText(),/Solo catálogo de cálculo exacto/);assert.match(await p.locator('#joker-detail .quick-rating-status').innerText(),/Valora su encaje con tu construcción en la Mesa.*colección es de referencia/);assert.equal(await p.locator('#joker-detail .bay-score-value').count(),0);
+ assert.match(await p.locator('#joker-detail').innerText(),/Legendario/);await p.screenshot({path:`${dir}/legendary.png`});await p.keyboard.press('Escape');
+ await p.locator('#joker-search').fill('');await p.locator('#joker-rarity').selectOption('4');assert.equal(await p.locator('.collection-card').count(),5);
+ await p.locator('#joker-rarity').selectOption('');await p.locator('#joker-support').selectOption('implemented');assert.equal(await p.locator('.collection-card').count(),82);
+ await p.locator('#joker-support').selectOption('catalog-only');assert.equal(await p.locator('.collection-card').count(),68);
+ await p.locator('#joker-search').fill('no existe');assert.match(await p.locator('#joker-collection').innerText(),/Sin coincidencias/);
+ await p.locator('#joker-search').fill('');await p.locator('#joker-support').selectOption('');
+ for(const width of [360,390,768,1280,1440]){await p.setViewportSize({width,height:844});assert.equal(await p.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true,`overflow ${width}`);}
+ await p.setViewportSize({width:390,height:844});await p.screenshot({path:`${dir}/mobile.png`});
+ await p.locator('[data-joker="j_scholar"]').click();assert.match(await p.locator('#joker-detail').innerText(),/20 fichas/);assert.match(await p.locator('#joker-detail .coverage-status').innerText(),/Puede calcular puntos con jugadas de prueba en Análisis/);assert.match(await p.locator('#joker-detail .quick-rating-status').innerText(),/Valora su encaje con tu construcción en la Mesa.*colección es de referencia/);assert.equal(await p.locator('#joker-detail .bay-score-value').count(),0);assert.doesNotMatch(await p.locator('#joker-detail').innerText(),/Encaje.*\/10|meta y sinergias: pendiente/);assert.equal(await p.evaluate(()=>document.querySelector('#joker-detail').scrollWidth<=document.querySelector('#joker-detail').clientWidth),true);await p.screenshot({path:`${dir}/detail-mobile.png`});await p.keyboard.press('Escape');
+ await p.locator('#collection-view > div > .synergy-library > summary').click();
+ await p.locator('#synergy-search').fill('acero');assert.ok(await p.locator('#collection-view > div .synergy-entry').count()>0);
+ await p.locator('#collection-view > div [data-synergy="mime-steel"] > summary').click();
+ assert.match(await p.locator('#collection-view > div [data-synergy="mime-steel"]').innerText(),/En mano al puntuar/);
+ await p.screenshot({path:`${dir}/synergies-mobile.png`});
+ await p.locator('#collection-view > div > .synergy-library > summary').click();
+ await p.locator('#joker-search').fill('mime');await p.locator('[data-joker="j_mime"]').click();
+ await p.locator('#joker-detail .synergy-library > summary').click();
+ await p.locator('#joker-detail [data-synergy="mime-gold-seal-false"] > summary').click();
+ assert.match(await p.locator('#joker-detail [data-synergy="mime-gold-seal-false"]').innerText(),/No se activa así/);
+ assert.equal(await p.evaluate(()=>document.querySelector('#joker-detail').scrollWidth<=document.querySelector('#joker-detail').clientWidth),true);
+ await p.keyboard.press('Escape');
+ assert.equal(await raw(),original);assert.deepEqual(errors,[]);
+ await writeFile(`${dir}/report.json`,JSON.stringify({date:'2026-10-13',engine,browser:await browser.version(),jokers:150,implemented:82,catalogOnlyExactCalculation:68,readOnly:true,checks:['bilingual search','rarity and support filters','unchanged exact hand coverage82/68','contextual fit in Mesa; hand calculations in Analysis','no context-free scores in reference details','empty result','legendary layers','image loaded with PNG MIME','keyboard dialog','5 widths without overflow','unchanged storage','no browser/CSP errors','synergy search, Mime detail, gold seal counterexample'],physicalAndroid:false},null,2));
+ console.log('PASS collection: 150 reference cards, exact coverage82/68 unchanged, fit in Mesa and hand calculations in Analysis, filters, art, detail, responsive, read-only, no CSP errors');
+}finally{await browser?.close();server.kill();}

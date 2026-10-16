@@ -1,0 +1,176 @@
+{
+  "schemaVersion": "horizon-1",
+  "horizonId": "s03-two-rounds",
+  "description": "S03: Golden recupera el gasto en dos cobros bajo estos supuestos.",
+  "firstPlan": {
+    "schemaVersion": "scenario-1",
+    "planId": "small-pair",
+    "description": "Pareja de ochos con Half y Banner; sin descartar.",
+    "initialHand": [
+      {
+        "cardId": "8S",
+        "knowledge": "hypothetical",
+        "basis": "Caso sintético S03; no observación ni predicción."
+      },
+      {
+        "cardId": "8H",
+        "knowledge": "hypothetical",
+        "basis": "Caso sintético S03; no observación ni predicción."
+      },
+      {
+        "cardId": "KS",
+        "knowledge": "hypothetical",
+        "basis": "Caso sintético S03; no observación ni predicción."
+      },
+      {
+        "cardId": "QH",
+        "knowledge": "hypothetical",
+        "basis": "Caso sintético S03; no observación ni predicción."
+      },
+      {
+        "cardId": "JD",
+        "knowledge": "hypothetical",
+        "basis": "Caso sintético S03; no observación ni predicción."
+      },
+      {
+        "cardId": "4C",
+        "knowledge": "hypothetical",
+        "basis": "Caso sintético S03; no observación ni predicción."
+      },
+      {
+        "cardId": "5S",
+        "knowledge": "hypothetical",
+        "basis": "Caso sintético S03; no observación ni predicción."
+      },
+      {
+        "cardId": "6H",
+        "knowledge": "hypothetical",
+        "basis": "Caso sintético S03; no observación ni predicción."
+      }
+    ],
+    "events": [
+      {
+        "type": "play",
+        "cardIds": [
+          "8S",
+          "8H"
+        ],
+        "drawIfContinues": [
+          {
+            "cardId": "2S",
+            "knowledge": "hypothetical",
+            "basis": "Caso sintético S03; no observación ni predicción."
+          },
+          {
+            "cardId": "2H",
+            "knowledge": "hypothetical",
+            "basis": "Caso sintético S03; no observación ni predicción."
+          }
+        ]
+      }
+    ],
+    "assumptions": {
+      "noMoneyChangesDuringRound": true
+    }
+  },
+  "continuations": [
+    {
+      "blind": {
+        "ante": 2,
+        "kind": "big",
+        "bossId": {
+          "status": "known",
+          "source": "manual",
+          "value": "none"
+        },
+        "target": {
+          "status": "known",
+          "source": "manual",
+          "value": 1200
+        },
+        "reward": {
+          "status": "known",
+          "source": "manual",
+          "value": 4
+        }
+      },
+      "knowledge": "hypothetical",
+      "basis": "Se juega Big inmediatamente después de Small, sin operaciones intermedias.",
+      "plan": {
+        "schemaVersion": "scenario-1",
+        "planId": "big-pair",
+        "description": "Pareja de ochos con Half y Banner; sin descartar.",
+        "initialHand": [
+          {
+            "cardId": "8S",
+            "knowledge": "hypothetical",
+            "basis": "Caso sintético S03; no observación ni predicción."
+          },
+          {
+            "cardId": "8H",
+            "knowledge": "hypothetical",
+            "basis": "Caso sintético S03; no observación ni predicción."
+          },
+          {
+            "cardId": "KS",
+            "knowledge": "hypothetical",
+            "basis": "Caso sintético S03; no observación ni predicción."
+          },
+          {
+            "cardId": "QH",
+            "knowledge": "hypothetical",
+            "basis": "Caso sintético S03; no observación ni predicción."
+          },
+          {
+            "cardId": "JD",
+            "knowledge": "hypothetical",
+            "basis": "Caso sintético S03; no observación ni predicción."
+          },
+          {
+            "cardId": "4C",
+            "knowledge": "hypothetical",
+            "basis": "Caso sintético S03; no observación ni predicción."
+          },
+          {
+            "cardId": "5S",
+            "knowledge": "hypothetical",
+            "basis": "Caso sintético S03; no observación ni predicción."
+          },
+          {
+            "cardId": "6H",
+            "knowledge": "hypothetical",
+            "basis": "Caso sintético S03; no observación ni predicción."
+          }
+        ],
+        "events": [
+          {
+            "type": "play",
+            "cardIds": [
+              "8S",
+              "8H"
+            ],
+            "drawIfContinues": [
+              {
+                "cardId": "2S",
+                "knowledge": "hypothetical",
+                "basis": "Caso sintético S03; no observación ni predicción."
+              },
+              {
+                "cardId": "2H",
+                "knowledge": "hypothetical",
+                "basis": "Caso sintético S03; no observación ni predicción."
+              }
+            ]
+          }
+        ],
+        "assumptions": {
+          "noMoneyChangesDuringRound": true
+        }
+      }
+    }
+  ],
+  "assumptions": {
+    "noBetweenRoundActions": true,
+    "unchangedDeckAndHandBases": true
+  }
+}

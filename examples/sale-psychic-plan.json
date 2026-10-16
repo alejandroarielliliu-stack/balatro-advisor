@@ -1,0 +1,89 @@
+{
+  "schemaVersion": "scenario-1",
+  "planId": "psychic-five",
+  "description": "Pareja de ochos con cinco cartas jugadas ante Psychic.",
+  "initialHand": [
+    {
+      "cardId": "8S",
+      "knowledge": "hypothetical",
+      "basis": "Caso sintético, no predicción del robo."
+    },
+    {
+      "cardId": "8H",
+      "knowledge": "hypothetical",
+      "basis": "Caso sintético, no predicción del robo."
+    },
+    {
+      "cardId": "2D",
+      "knowledge": "hypothetical",
+      "basis": "Caso sintético, no predicción del robo."
+    },
+    {
+      "cardId": "5C",
+      "knowledge": "hypothetical",
+      "basis": "Caso sintético, no predicción del robo."
+    },
+    {
+      "cardId": "KS",
+      "knowledge": "hypothetical",
+      "basis": "Caso sintético, no predicción del robo."
+    },
+    {
+      "cardId": "3S",
+      "knowledge": "hypothetical",
+      "basis": "Caso sintético, no predicción del robo."
+    },
+    {
+      "cardId": "4H",
+      "knowledge": "hypothetical",
+      "basis": "Caso sintético, no predicción del robo."
+    },
+    {
+      "cardId": "6D",
+      "knowledge": "hypothetical",
+      "basis": "Caso sintético, no predicción del robo."
+    }
+  ],
+  "events": [
+    {
+      "type": "play",
+      "cardIds": [
+        "8S",
+        "8H",
+        "2D",
+        "5C",
+        "KS"
+      ],
+      "drawIfContinues": [
+        {
+          "cardId": "7S",
+          "knowledge": "hypothetical",
+          "basis": "Caso sintético, no predicción del robo."
+        },
+        {
+          "cardId": "7H",
+          "knowledge": "hypothetical",
+          "basis": "Caso sintético, no predicción del robo."
+        },
+        {
+          "cardId": "9D",
+          "knowledge": "hypothetical",
+          "basis": "Caso sintético, no predicción del robo."
+        },
+        {
+          "cardId": "JC",
+          "knowledge": "hypothetical",
+          "basis": "Caso sintético, no predicción del robo."
+        },
+        {
+          "cardId": "QS",
+          "knowledge": "hypothetical",
+          "basis": "Caso sintético, no predicción del robo."
+        }
+      ]
+    }
+  ],
+  "assumptions": {
+    "noMoneyChangesDuringRound": true
+  }
+}

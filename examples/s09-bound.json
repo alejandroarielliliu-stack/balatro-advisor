@@ -1,0 +1,294 @@
+{
+  "schemaVersion": "0.1",
+  "rulesetId": "balatro-pc-1.0.1o-blue-white-v1",
+  "runId": "synthetic-s09",
+  "revision": 0,
+  "updatedAt": "2026-10-08T12:00:00Z",
+  "phase": "shop",
+  "observed": {
+    "gameVersion": {
+      "status": "known",
+      "value": "1.0.1o-FULL",
+      "source": "manual"
+    },
+    "gamePlatform": {
+      "status": "known",
+      "value": "pc-steam",
+      "source": "manual"
+    },
+    "deckId": {
+      "status": "known",
+      "value": "blue",
+      "source": "manual"
+    },
+    "stakeId": {
+      "status": "known",
+      "value": "white",
+      "source": "manual"
+    },
+    "modsPresent": {
+      "status": "known",
+      "value": false,
+      "source": "manual"
+    },
+    "money": {
+      "status": "known",
+      "value": 30,
+      "source": "manual"
+    },
+    "lastCleared": {
+      "status": "known",
+      "value": {
+        "ante": 8,
+        "kind": "big"
+      },
+      "source": "manual"
+    },
+    "nextBlind": {
+      "status": "known",
+      "value": {
+        "ante": 8,
+        "kind": "boss",
+        "bossId": {
+          "status": "known",
+          "value": "violet_vessel",
+          "source": "manual"
+        },
+        "target": {
+          "status": "known",
+          "value": 300000,
+          "source": "manual"
+        },
+        "reward": {
+          "status": "known",
+          "value": 8,
+          "source": "manual"
+        }
+      },
+      "source": "manual"
+    },
+    "visibleBoss": {
+      "status": "known",
+      "value": {
+        "ante": 8,
+        "kind": "boss",
+        "bossId": {
+          "status": "known",
+          "value": "violet_vessel",
+          "source": "manual"
+        },
+        "target": {
+          "status": "known",
+          "value": 300000,
+          "source": "manual"
+        },
+        "reward": {
+          "status": "known",
+          "value": 8,
+          "source": "manual"
+        }
+      },
+      "source": "manual"
+    },
+    "resources": {
+      "handsPerRound": {
+        "status": "known",
+        "value": 5,
+        "source": "confirmedPreset"
+      },
+      "discardsPerRound": {
+        "status": "known",
+        "value": 3,
+        "source": "confirmedPreset"
+      },
+      "handSize": {
+        "status": "known",
+        "value": 8,
+        "source": "confirmedPreset"
+      },
+      "jokerSlots": {
+        "status": "known",
+        "value": 5,
+        "source": "confirmedPreset"
+      }
+    },
+    "deck": {
+      "status": "known",
+      "value": {
+        "preset": "standard52-unmodified"
+      },
+      "source": "confirmedPreset"
+    },
+    "handBases": {
+      "status": "known",
+      "value": {
+        "preset": "all-standard-level1"
+      },
+      "source": "confirmedPreset"
+    },
+    "jokers": {
+      "status": "known",
+      "value": [
+        {
+          "instanceId": "joker",
+          "catalogId": "joker",
+          "edition": {
+            "status": "known",
+            "value": "base",
+            "source": "manual"
+          },
+          "stickers": {
+            "status": "known",
+            "value": [],
+            "source": "manual"
+          },
+          "sellValue": {
+            "status": "known",
+            "value": 1,
+            "source": "manual"
+          },
+          "counters": {}
+        },
+        {
+          "instanceId": "half_joker",
+          "catalogId": "half_joker",
+          "edition": {
+            "status": "known",
+            "value": "base",
+            "source": "manual"
+          },
+          "stickers": {
+            "status": "known",
+            "value": [],
+            "source": "manual"
+          },
+          "sellValue": {
+            "status": "known",
+            "value": 2,
+            "source": "manual"
+          },
+          "counters": {}
+        },
+        {
+          "instanceId": "banner",
+          "catalogId": "banner",
+          "edition": {
+            "status": "known",
+            "value": "base",
+            "source": "manual"
+          },
+          "stickers": {
+            "status": "known",
+            "value": [],
+            "source": "manual"
+          },
+          "sellValue": {
+            "status": "known",
+            "value": 2,
+            "source": "manual"
+          },
+          "counters": {}
+        },
+        {
+          "instanceId": "scholar",
+          "catalogId": "scholar",
+          "edition": {
+            "status": "known",
+            "value": "base",
+            "source": "manual"
+          },
+          "stickers": {
+            "status": "known",
+            "value": [],
+            "source": "manual"
+          },
+          "sellValue": {
+            "status": "known",
+            "value": 2,
+            "source": "manual"
+          },
+          "counters": {}
+        },
+        {
+          "instanceId": "green_joker",
+          "catalogId": "green_joker",
+          "edition": {
+            "status": "known",
+            "value": "base",
+            "source": "manual"
+          },
+          "stickers": {
+            "status": "known",
+            "value": [],
+            "source": "manual"
+          },
+          "sellValue": {
+            "status": "known",
+            "value": 2,
+            "source": "manual"
+          },
+          "counters": {
+            "greenMult": {
+              "status": "known",
+              "value": 40,
+              "source": "manual"
+            }
+          }
+        }
+      ],
+      "source": "manual"
+    },
+    "shop": {
+      "status": "known",
+      "value": {
+        "shopId": "s09-shop",
+        "cardOffers": [
+          {
+            "offerId": "abstract",
+            "kind": "joker",
+            "catalogId": "abstract_joker",
+            "label": "Abstract Joker",
+            "price": {
+              "status": "known",
+              "value": 4,
+              "source": "manual"
+            },
+            "edition": {
+              "status": "known",
+              "value": "base",
+              "source": "manual"
+            },
+            "stickers": {
+              "status": "known",
+              "value": [],
+              "source": "manual"
+            }
+          }
+        ],
+        "ignoredOtherOffers": []
+      },
+      "source": "manual"
+    },
+    "outOfScope": {
+      "status": "known",
+      "source": "manual",
+      "value": {
+        "vouchers": [],
+        "consumables": [],
+        "pendingTags": [],
+        "otherModifiers": []
+      }
+    }
+  },
+  "assumptions": {
+    "probes": [],
+    "roundPlans": [],
+    "horizonRounds": 1,
+    "cashflow": {
+      "assumeRoundWon": false,
+      "handsUsedByRound": [],
+      "noSpendingBetweenRounds": false,
+      "noMoneyChangesDuringRound": false
+    }
+  }
+}

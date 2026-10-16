@@ -1,0 +1,46 @@
+{
+  "name": "balatro-strategic-advisor",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=24 <25"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "build": "tsc",
+    "build:site": "npm run build && node tools/build-static-site.mjs",
+    "test:site": "npm run build:site && node tools/static-site-test.mjs",
+    "test": "npm run build && node --test dist/tests/*.test.js",
+    "check": "npm run typecheck && npm test",
+    "demo": "npm run build && node dist/src/demo.js",
+    "demo:compare": "npm run build && node dist/src/demo-comparison.js",
+    "demo:advisor": "npm run build && node dist/src/demo-advisor.js",
+    "demo:confirm": "npm run build && node dist/src/demo-confirmation.js",
+    "start": "npm run build && node dist/src/server.js",
+    "test:web": "npm run build && node tools/browser-test.mjs",
+    "test:reference": "npm run build && node tools/compare-efhiii.mjs",
+    "demo:bound": "npm run build && node dist/src/demo-bound.js",
+    "demo:sales": "npm run build && node dist/src/demo-sales.js",
+    "demo:horizon": "npm run build && node dist/src/demo-horizon.js",
+    "test:scenarios": "npm run build && node --test dist/tests/product-scenarios.test.js dist/tests/horizon.test.js dist/tests/bounds.test.js",
+    "benchmark:web": "npm run build && node tools/benchmark-web.mjs",
+    "test:design": "npm run build && node tools/design-test.mjs",
+    "test:cashout": "npm run build && node tools/cashout-test.mjs",
+    "test:live": "npm run build && node tools/live-table-test.mjs",
+    "test:candidates": "npm run build && node tools/candidates-test.mjs",
+    "test:shop": "npm run build && node tools/shop-test.mjs",
+    "test:target": "npm run build && node tools/target-test.mjs",
+    "test:bay": "npm run build && node tools/bay-test.mjs",
+    "test:catalog": "npm run build && node tools/collection-test.mjs",
+    "test:vouchers": "npm run build && node tools/vouchers-test.mjs",
+    "test:fit": "npm run build && node tools/quick-fit-test.mjs",
+    "test:composition": "npm run build && node tools/composition-test.mjs",
+    "test:sale": "npm run build && node tools/sale-test.mjs"
+  },
+  "devDependencies": {
+    "@types/node": "24.19.1",
+    "playwright": "1.62.1",
+    "typescript": "7.0.2"
+  }
+}

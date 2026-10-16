@@ -1,0 +1,38 @@
+{
+  "version": "1.0.1o-FULL",
+  "source": "Installed Balatro.exe: resources/textures/2x/boosters.png",
+  "sha256": "d68e8c3b01b567ac13066a26d95d33fa94120809dd3ba912604d122ab5ec1e63",
+  "atlas": {
+    "width": 568,
+    "height": 1710,
+    "cellWidth": 142,
+    "cellHeight": 190
+  },
+  "catalogEntries": 15,
+  "illustratedVariants": 32,
+  "selectedVariantById": {
+    "arcana-normal": "p_arcana_normal_1",
+    "arcana-jumbo": "p_arcana_jumbo_1",
+    "arcana-mega": "p_arcana_mega_1",
+    "celestial-normal": "p_celestial_normal_1",
+    "celestial-jumbo": "p_celestial_jumbo_1",
+    "celestial-mega": "p_celestial_mega_1",
+    "standard-normal": "p_standard_normal_1",
+    "standard-jumbo": "p_standard_jumbo_1",
+    "standard-mega": "p_standard_mega_1",
+    "spectral-normal": "p_spectral_normal_1",
+    "spectral-jumbo": "p_spectral_jumbo_1",
+    "spectral-mega": "p_spectral_mega_1",
+    "buffoon-normal": "p_buffoon_normal_1",
+    "buffoon-jumbo": "p_buffoon_jumbo_1",
+    "buffoon-mega": "p_buffoon_mega_1"
+  },
+  "factsSource": "Installed game.lua: p_* literal Booster tables",
+  "factsSha256": "bbc67bd3fbadd1ea3f3f0aba07ef8596118d89ff1e9758718f9e17c07a96e912",
+  "namesSource": "Installed localization/es_419.lua: descriptions.Other.p_*",
+  "namesSha256": "ce9b2187aae86982b9df994786aa688765860ec3583d80d183922f6fc458a4e1",
+  "versionSourceSha256": "a0525225e93bc81acd291aa4661e6648c8f3591ff34761bb3bee5319a766aaa3",
+  "attribution": "Balatro artwork © LocalThunk / Playstack; local advisor reference assets.",
+  "verification": "Static inspection, not observed gameplay. Base prices; unknown pack contents.",
+  "reproduce": "python tools/import-boosters.py [path/to/Balatro.exe]"
+}

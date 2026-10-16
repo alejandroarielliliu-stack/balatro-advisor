@@ -1,0 +1,17 @@
+{
+  "gameVersion": "1.0.1o-FULL",
+  "sourceCommit": "f081d0e41508d9dcc7a01cba5bffcccfbb115af1",
+  "atlasUrl": "https://raw.githubusercontent.com/Jofr3/balatro-source/f081d0e41508d9dcc7a01cba5bffcccfbb115af1/resources/textures/2x/Jokers.png",
+  "referenceRepository": "https://github.com/Jofr3/balatro-source",
+  "method": "Local static literal data and localization; internet atlas byte-identical to installation. No gameplay verification.",
+  "sha256": {
+    "version.jkr": "a0525225e93bc81acd291aa4661e6648c8f3591ff34761bb3bee5319a766aaa3",
+    "game.lua": "bbc67bd3fbadd1ea3f3f0aba07ef8596118d89ff1e9758718f9e17c07a96e912",
+    "card.lua": "5073d834e08119da9516f1795a8c3d93110669aeb409c29ad1b308e0eb0be453",
+    "localization/en-us.lua": "a346c3ffbb39886694868b832c7d748e156a78740446ce3f7fd9bcdbf90a1b98",
+    "localization/es_419.lua": "ce9b2187aae86982b9df994786aa688765860ec3583d80d183922f6fc458a4e1",
+    "resources/textures/2x/Jokers.png": "17930fef361f9ffa72d882cab62ba85b1f90b83c83b899a17ad7c170b8e95648"
+  },
+  "catalogSha256": "367022289b0b21664d8c5426b18a58911b16ed5a976ac6be6d3a4edc968d8754",
+  "copyright": "Balatro artwork and game text: LocalThunk / Playstack. Third-party mirror is not an official source or a license grant."
+}

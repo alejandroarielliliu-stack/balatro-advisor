@@ -1,0 +1,26 @@
+{
+  "retrievedDate": "2026-10-10",
+  "repository": "https://github.com/EFHIII/balatro-calculator",
+  "commit": "55322d59197ba08c16874a54b59ac0d443c8ab32",
+  "files": [
+    "balatro-sim.js",
+    "LICENSE",
+    "README.md",
+    "cards.js"
+  ],
+  "upstreamSha256": {
+    "cards.js": "4ff113b9c7c867a82f14a861c9099430241408fea8b288ba7f12b59086c8d1af",
+    "LICENSE": "d8aa41d3131bfa811bb095a7b55a59763f3798be4f5d805ac71b1ff3572736c4",
+    "README.md": "a8b03d96cd616b5caf72d7738f7267985d81b072c1a4898c5c7c2801d8e4a5b8",
+    "balatro-sim.js": "27ada8d35202a698ebd30b803e13dd1c765222f2e36ba54e806b5d69f69302a8"
+  },
+  "runtimeSha256": {
+    "balatro-sim.js": "db9fce1d68cf47a841b938fcf0991242f7b1c62f955f86b9fb4ddf26a9ab173c",
+    "LICENSE": "d8aa41d3131bfa811bb095a7b55a59763f3798be4f5d805ac71b1ff3572736c4"
+  },
+  "modifications": [
+    "MIT notice and pinned-source attribution prefixed; export { Hand } appended. No scoring formulas changed.",
+    "Production imports compiled src/reference/vendor/efhiii-sim.ts; TypeScript annotation only at constructor boundary.",
+    "Adapter never calls simulateRandomHand; unsupported effects fall back to the local rules engine."
+  ]
+}

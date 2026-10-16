@@ -1,0 +1,27 @@
+{
+  "schemaVersion": "1",
+  "purpose": "Preparación documental para pruebas contra el juego; no ejecuta un motor de reglas.",
+  "proposedRuleset": "balatro-pc-1.0.1f-blue-white-v1",
+  "requiredContext": ["versión completa", "plataforma", "mods", "Blue/White", "modificadores declarados"],
+  "expectationOrigin": {
+    "method": "Valores literales derivados manualmente de hipótesis documentadas en H0/T01 antes de implementar H1. No importados ni generados desde funciones del motor.",
+    "protocol": "docs/evidencia/t01-reglas.md",
+    "sources": {
+      "D01": "https://teemo.dev/game-design/balatro/systems/economy-money-interest-and-the-shop/",
+      "D02": "https://balatrogame.fandom.com/wiki/Guide%3A_Activation_Sequence",
+      "D03": "https://balatrogame.fandom.com/wiki/Green_Joker"
+    }
+  },
+  "cases": [
+    { "id":"I01", "ruleIds":["interest.formula","interest.timing"], "input":{"balanceBeforeCashout":19,"goldenCount":0,"reward":3,"unusedHands":2}, "hypothesisExpected":{"interest":3,"balanceAfter":27}, "basis":"D01; saldo previo al cobro, sin otras fuentes de dinero.", "status":"pending_game_observation", "observed":null },
+    { "id":"I02", "ruleIds":["interest.formula","interest.timing","golden_joker.effect"], "input":{"balanceBeforeCashout":19,"goldenCount":1,"reward":3,"unusedHands":2}, "hypothesisExpected":{"interest":3,"goldenPayout":4,"balanceAfter":31}, "basis":"D01; Golden no forma parte de la base del interés del mismo cobro.", "status":"pending_game_observation", "observed":null },
+    { "id":"I03", "ruleIds":["interest.formula"], "input":{"balanceBeforeCashout":24,"goldenCount":0}, "hypothesisExpected":{"interest":4}, "basis":"D01; frontera inferior, sin vales ni modificadores.", "status":"pending_game_observation", "observed":null },
+    { "id":"I04", "ruleIds":["interest.formula"], "input":{"balanceBeforeCashout":25,"goldenCount":0}, "hypothesisExpected":{"interest":5}, "basis":"D01; umbral, sin vales ni modificadores.", "status":"pending_game_observation", "observed":null },
+    { "id":"I05", "ruleIds":["interest.formula"], "input":{"balanceBeforeCashout":30,"goldenCount":0}, "hypothesisExpected":{"interest":5}, "basis":"D01; caso que distingue el tope de una división sin límite.", "status":"pending_game_observation", "observed":null },
+    { "id":"G01", "ruleIds":["green.changes","green.timing","score.base"], "input":{"greenBefore":0,"playedRanks":["K"],"baseChips":5,"baseMult":1,"otherScoringEffects":false}, "hypothesisExpected":{"greenAfter":1,"handChips":15,"handMult":2,"handScore":30}, "basis":"D02/D03 y R-BASE: incremento previo; posterior daría 15 puntos.", "status":"pending_game_observation", "observed":null },
+    { "id":"G02", "ruleIds":["green.changes","green.timing","score.base"], "input":{"greenBefore":1,"playedRanks":["Q"],"baseChips":5,"baseMult":1,"otherScoringEffects":false}, "hypothesisExpected":{"greenAfter":2,"handScore":45}, "basis":"D02/D03; continuación de G01 sin efectos adicionales.", "status":"pending_game_observation", "observed":null },
+    { "id":"G03", "ruleIds":["green.changes"], "input":{"greenBefore":2,"discardActions":[3]}, "hypothesisExpected":{"greenAfter":1}, "basis":"D03; tres cartas en una acción, no tres decrementos.", "status":"pending_game_observation", "observed":null },
+    { "id":"G04", "ruleIds":["green.changes"], "input":{"greenBefore":1,"discardActions":[1,1]}, "hypothesisExpected":{"greenAfterEachAction":[0,0]}, "basis":"D03; suelo cero aplicado por evento.", "status":"pending_game_observation", "observed":null },
+    { "id":"G05", "ruleIds":["green.changes","green.timing","score.base"], "input":{"greenBefore":0,"playedRanks":["J"],"baseChips":5,"baseMult":1,"otherScoringEffects":false}, "hypothesisExpected":{"greenAfter":1,"handScore":30}, "basis":"D02/D03; volver a crecer después del suelo cero de G04.", "status":"pending_game_observation", "observed":null }
+  ]
+}

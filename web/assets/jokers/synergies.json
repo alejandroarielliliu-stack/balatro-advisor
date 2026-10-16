@@ -1,0 +1,1218 @@
+{
+  "schemaVersion": 1,
+  "gameVersion": "1.0.1o-FULL",
+  "researchedAt": "2026-10-11",
+  "scope": "Colección inicial curada, no exhaustiva. Consulta documental; no activa efectos ni recomienda compras.",
+  "sources": {
+    "catalog": {
+      "type": "static-installation",
+      "path": "web/assets/jokers/catalog.json",
+      "version": "1.0.1o-FULL"
+    },
+    "L02": {
+      "type": "static-installation",
+      "path": "docs/evidencia/sinergias-l02.md",
+      "version": "1.0.1o-FULL"
+    },
+    "web-mime": {
+      "type": "secondary-search-excerpt",
+      "url": "https://balatrohq.com/jokers/mime/",
+      "note": "Solo orientación; contiene confusión entre Gold Card y Gold Seal. No aceptar esa afirmación."
+    },
+    "web-bloodstone": {
+      "type": "secondary-search-excerpt",
+      "url": "https://balatrogame.fandom.com/wiki/Bloodstone"
+    },
+    "web-pareidolia": {
+      "type": "secondary-search-excerpt",
+      "url": "https://balatrogame.fandom.com/wiki/Pareidolia"
+    },
+    "web-midas": {
+      "type": "secondary-search-excerpt",
+      "url": "https://teemo.dev/game-design/balatro/wiki/jokers/midas-mask/"
+    },
+    "web-dna": {
+      "type": "secondary-search-excerpt",
+      "url": "https://balatrogame.fandom.com/wiki/DNA"
+    },
+    "web-egg": {
+      "type": "secondary-search-excerpt",
+      "url": "https://balatrogame.fandom.com/wiki/Egg?theme=falseCampfire"
+    },
+    "web-green": {
+      "type": "secondary-search-excerpt",
+      "url": "https://balatrogame.fandom.com/wiki/Green_Joker"
+    },
+    "web-modifiers": {
+      "type": "secondary-search-excerpt",
+      "url": "https://balatrogame.fandom.com/wiki/Card_Modifiers"
+    },
+    "web-activation": {
+      "type": "secondary-search-excerpt",
+      "url": "https://balatrogame.fandom.com/wiki/Activation_Type"
+    }
+  },
+  "synergies": [
+    {
+      "id": "mime-steel",
+      "title": "Mimo + cartas de Acero",
+      "kind": "synergy",
+      "jokerIds": [
+        "j_mime"
+      ],
+      "deckRequirements": [
+        {
+          "zone": "held",
+          "traits": [
+            "enhancement:steel"
+          ],
+          "minimum": 1
+        }
+      ],
+      "mechanism": "Mimo repite el efecto de Acero de las cartas conservadas en mano.",
+      "conditions": [
+        "El acero debe permanecer en mano al puntuar; jugarlo no activa su efecto de retención.",
+        "Cartas y Mimo activos, sin debuff."
+      ],
+      "risks": [
+        "Tener acero en el mazo no garantiza robarlo ni poder conservarlo.",
+        "No confundir cartas de Acero con el comodín Steel Joker."
+      ],
+      "order": "Sin requisito adicional de orden en esta ficha.",
+      "example": {
+        "setup": "Una carta de Acero retenida, sin otros efectos.",
+        "expected": "Su contribución multiplicativa pasa de 1.5 a 1.5 × 1.5 = 2.25. No es la puntuación total.",
+        "basis": "Deducción documental; no resultado del motor ni observación en juego."
+      },
+      "sourceIds": [
+        "catalog",
+        "L02",
+        "web-mime"
+      ],
+      "evidenceStatus": "static-supported",
+      "engineSupport": "reference-only",
+      "observedInGame": false
+    },
+    {
+      "id": "baron-mime",
+      "title": "Barón + Mimo",
+      "kind": "synergy",
+      "jokerIds": [
+        "j_baron",
+        "j_mime"
+      ],
+      "deckRequirements": [
+        {
+          "zone": "held",
+          "traits": [
+            "rank:K"
+          ],
+          "minimum": 1
+        }
+      ],
+      "mechanism": "Repite la contribución de Barón para cada rey retenido.",
+      "conditions": [
+        "Conservar reyes al jugar otra mano."
+      ],
+      "risks": [
+        "Una figura que no sea rey no sirve para Barón."
+      ],
+      "order": "Sin requisito adicional de orden en esta ficha.",
+      "example": {
+        "setup": "Un rey normal retenido.",
+        "expected": "Contribución de Barón: 1.5 × 1.5 = 2.25.",
+        "basis": "Deducción documental; no resultado del motor ni observación en juego."
+      },
+      "sourceIds": [
+        "catalog",
+        "L02",
+        "web-mime"
+      ],
+      "evidenceStatus": "static-supported",
+      "engineSupport": "reference-only",
+      "observedInGame": false
+    },
+    {
+      "id": "steel-king-mime",
+      "title": "Rey de Acero + Barón + Mimo",
+      "kind": "synergy",
+      "jokerIds": [
+        "j_baron",
+        "j_mime"
+      ],
+      "deckRequirements": [
+        {
+          "zone": "held",
+          "traits": [
+            "rank:K",
+            "enhancement:steel"
+          ],
+          "minimum": 1
+        }
+      ],
+      "mechanism": "En un mismo rey, Acero y Barón aportan dos efectos que Mimo vuelve a activar.",
+      "conditions": [
+        "El mismo rey debe tener Acero y quedar retenido."
+      ],
+      "risks": [
+        "Requiere preparar y robar cartas concretas; no demuestra consistencia."
+      ],
+      "order": "Sin requisito adicional de orden en esta ficha.",
+      "example": {
+        "setup": "Un rey de Acero retenido, sin sello ni copias.",
+        "expected": "1.5^4 = 5.0625 sobre el Mult que llega a esta fase.",
+        "basis": "Deducción documental; no resultado del motor ni observación en juego."
+      },
+      "sourceIds": [
+        "catalog",
+        "L02"
+      ],
+      "evidenceStatus": "static-supported",
+      "engineSupport": "reference-only",
+      "observedInGame": false
+    },
+    {
+      "id": "red-steel-mime",
+      "title": "Sello rojo + Acero + Mimo",
+      "kind": "synergy",
+      "jokerIds": [
+        "j_mime"
+      ],
+      "deckRequirements": [
+        {
+          "zone": "held",
+          "traits": [
+            "enhancement:steel",
+            "seal:red"
+          ],
+          "minimum": 1
+        }
+      ],
+      "mechanism": "El sello rojo y Mimo añaden repeticiones; no se repiten entre sí.",
+      "conditions": [
+        "Acero y sello rojo en la misma carta retenida."
+      ],
+      "risks": [
+        "Las repeticiones se suman, no se multiplican unas a otras."
+      ],
+      "order": "Sin requisito adicional de orden en esta ficha.",
+      "example": {
+        "setup": "Una carta de Acero con sello rojo, más Mimo.",
+        "expected": "Tres activaciones de Acero: 1.5^3 = 3.375.",
+        "basis": "Deducción documental; no resultado del motor ni observación en juego."
+      },
+      "sourceIds": [
+        "catalog",
+        "L02"
+      ],
+      "evidenceStatus": "static-supported",
+      "engineSupport": "reference-only",
+      "observedInGame": false
+    },
+    {
+      "id": "mime-gold",
+      "title": "Mimo + cartas de Oro",
+      "kind": "synergy",
+      "jokerIds": [
+        "j_mime"
+      ],
+      "deckRequirements": [
+        {
+          "zone": "held-end-round",
+          "traits": [
+            "enhancement:gold"
+          ],
+          "minimum": 1
+        }
+      ],
+      "mechanism": "Repite el ingreso de la mejora Oro al terminar la ronda.",
+      "conditions": [
+        "La carta debe estar en mano al finalizar la ronda."
+      ],
+      "risks": [
+        "Un sello dorado no es la mejora Oro."
+      ],
+      "order": "Sin requisito adicional de orden en esta ficha.",
+      "example": {
+        "setup": "Una carta Oro retenida y un Mimo.",
+        "expected": "Ingreso propio de esa carta: 3 + 3 = 6 dólares, antes de otros ingresos.",
+        "basis": "Deducción documental; no resultado del motor ni observación en juego."
+      },
+      "sourceIds": [
+        "catalog",
+        "L02"
+      ],
+      "evidenceStatus": "static-supported",
+      "engineSupport": "reference-only",
+      "observedInGame": false
+    },
+    {
+      "id": "mime-blue",
+      "title": "Mimo + sello azul",
+      "kind": "synergy",
+      "jokerIds": [
+        "j_mime"
+      ],
+      "deckRequirements": [
+        {
+          "zone": "held-end-round",
+          "traits": [
+            "seal:blue"
+          ],
+          "minimum": 1
+        }
+      ],
+      "mechanism": "Puede repetir la creación de planeta al terminar la ronda.",
+      "conditions": [
+        "Sello azul retenido; tipo de última mano conocido; espacio de consumibles disponible para cada creación."
+      ],
+      "risks": [
+        "Con solo un espacio libre no prometer dos planetas."
+      ],
+      "order": "Sin requisito adicional de orden en esta ficha.",
+      "example": {
+        "setup": "Una carta con sello azul retenida y dos huecos libres.",
+        "expected": "Dos intentos de creación del planeta de la última mano, sujetos a espacio.",
+        "basis": "Deducción documental; no resultado del motor ni observación en juego."
+      },
+      "sourceIds": [
+        "catalog",
+        "L02"
+      ],
+      "evidenceStatus": "static-supported",
+      "engineSupport": "reference-only",
+      "observedInGame": false
+    },
+    {
+      "id": "photo-chad",
+      "title": "Fotografía + Hanging Chad",
+      "kind": "synergy",
+      "jokerIds": [
+        "j_photograph",
+        "j_hanging_chad"
+      ],
+      "deckRequirements": [
+        {
+          "zone": "scoring",
+          "traits": [
+            "face:true",
+            "position:first"
+          ],
+          "minimum": 1
+        }
+      ],
+      "mechanism": "Chad repite dos veces la primera carta puntuada; si es figura, vuelve a activar Fotografía.",
+      "conditions": [
+        "La primera carta puntuada debe ser también la primera figura puntuada."
+      ],
+      "risks": [
+        "Una figura posterior no recibe las repeticiones de Chad."
+      ],
+      "order": "Sin requisito adicional de orden en esta ficha.",
+      "example": {
+        "setup": "Primera carta puntuada: rey sin mejoras, ambos comodines activos.",
+        "expected": "Fotografía aporta tres factores X2: X8 en esas activaciones; no multiplica efectos que se añadan después.",
+        "basis": "Deducción documental; no resultado del motor ni observación en juego."
+      },
+      "sourceIds": [
+        "catalog",
+        "L02"
+      ],
+      "evidenceStatus": "static-supported",
+      "engineSupport": "reference-only",
+      "observedInGame": false
+    },
+    {
+      "id": "photo-buskin",
+      "title": "Fotografía + Sock and Buskin",
+      "kind": "synergy",
+      "jokerIds": [
+        "j_photograph",
+        "j_sock_and_buskin"
+      ],
+      "deckRequirements": [
+        {
+          "zone": "scoring",
+          "traits": [
+            "face:true"
+          ],
+          "minimum": 1
+        }
+      ],
+      "mechanism": "La repetición de figuras vuelve a activar Fotografía en su primera figura elegible.",
+      "conditions": [
+        "Al menos una figura puntuada."
+      ],
+      "risks": [
+        "Fotografía no beneficia a todas las figuras."
+      ],
+      "order": "Sin requisito adicional de orden en esta ficha.",
+      "example": {
+        "setup": "Una sola figura puntuada, sin otras repeticiones.",
+        "expected": "Dos activaciones de Fotografía: X4.",
+        "basis": "Deducción documental; no resultado del motor ni observación en juego."
+      },
+      "sourceIds": [
+        "catalog",
+        "L02"
+      ],
+      "evidenceStatus": "static-supported",
+      "engineSupport": "reference-only",
+      "observedInGame": false
+    },
+    {
+      "id": "triboulet-buskin",
+      "title": "Triboulet + repetición de figuras",
+      "kind": "synergy",
+      "jokerIds": [
+        "j_triboulet",
+        "j_sock_and_buskin"
+      ],
+      "deckRequirements": [
+        {
+          "zone": "scoring",
+          "traits": [
+            "rank:K|Q"
+          ],
+          "minimum": 1
+        }
+      ],
+      "mechanism": "Repetir reyes y reinas vuelve a aplicar sus multiplicadores de Triboulet.",
+      "conditions": [
+        "Puntuar reyes o reinas."
+      ],
+      "risks": [
+        "Las jotas son figuras pero no cumplen Triboulet."
+      ],
+      "order": "Sin requisito adicional de orden en esta ficha.",
+      "example": {
+        "setup": "Una reina puntuada.",
+        "expected": "Dos factores X2 de Triboulet: X4 para esa carta.",
+        "basis": "Deducción documental; no resultado del motor ni observación en juego."
+      },
+      "sourceIds": [
+        "catalog"
+      ],
+      "evidenceStatus": "provisional-composition",
+      "engineSupport": "reference-only",
+      "observedInGame": false
+    },
+    {
+      "id": "hack-wee",
+      "title": "Hack + Comodín diminuto",
+      "kind": "synergy",
+      "jokerIds": [
+        "j_hack",
+        "j_wee"
+      ],
+      "deckRequirements": [
+        {
+          "zone": "scoring",
+          "traits": [
+            "rank:2"
+          ],
+          "minimum": 1
+        }
+      ],
+      "mechanism": "Repetir doses puntuados aumenta las oportunidades de crecimiento de Wee.",
+      "conditions": [
+        "Los doses deben puntuar, no solo jugarse."
+      ],
+      "risks": [
+        "El crecimiento necesita reutilizar el comodín en manos posteriores; ocupa dos espacios."
+      ],
+      "order": "Sin requisito adicional de orden en esta ficha.",
+      "example": {
+        "setup": "Un dos normal puntuado con ambos.",
+        "expected": "Dos activaciones de crecimiento de 8 fichas: +16 al contador de Wee.",
+        "basis": "Deducción documental; no resultado del motor ni observación en juego."
+      },
+      "sourceIds": [
+        "catalog",
+        "web-activation"
+      ],
+      "evidenceStatus": "provisional-composition",
+      "engineSupport": "reference-only",
+      "observedInGame": false
+    },
+    {
+      "id": "hack-fibonacci",
+      "title": "Hack + Fibonacci",
+      "kind": "synergy",
+      "jokerIds": [
+        "j_hack",
+        "j_fibonacci"
+      ],
+      "deckRequirements": [
+        {
+          "zone": "scoring",
+          "traits": [
+            "rank:2|3|5"
+          ],
+          "minimum": 1
+        }
+      ],
+      "mechanism": "Hack repite cartas bajas que también activan Fibonacci.",
+      "conditions": [
+        "Intersección de rangos: 2, 3 y 5."
+      ],
+      "risks": [
+        "Hack no repite ases ni ochos; Fibonacci no da bonus a cuatros."
+      ],
+      "order": "Sin requisito adicional de orden en esta ficha.",
+      "example": {
+        "setup": "Un tres puntuado.",
+        "expected": "Dos aportes de +8 Mult de Fibonacci, antes de otros efectos.",
+        "basis": "Deducción documental; no resultado del motor ni observación en juego."
+      },
+      "sourceIds": [
+        "catalog"
+      ],
+      "evidenceStatus": "provisional-composition",
+      "engineSupport": "reference-only",
+      "observedInGame": false
+    },
+    {
+      "id": "chad-glass",
+      "title": "Hanging Chad + Cristal",
+      "kind": "synergy",
+      "jokerIds": [
+        "j_hanging_chad"
+      ],
+      "deckRequirements": [
+        {
+          "zone": "scoring",
+          "traits": [
+            "enhancement:glass",
+            "position:first"
+          ],
+          "minimum": 1
+        }
+      ],
+      "mechanism": "Repite el multiplicador de la primera carta puntuada con Cristal.",
+      "conditions": [
+        "Cristal en la primera carta que puntúa."
+      ],
+      "risks": [
+        "Cristal puede romperse; repetición de puntuación no equivale a repetir cada comprobación de destrucción."
+      ],
+      "order": "Sin requisito adicional de orden en esta ficha.",
+      "example": {
+        "setup": "Primera carta puntuada de Cristal, sin otras repeticiones.",
+        "expected": "Tres activaciones X2: X8 de su mejora; evaluar rotura por separado.",
+        "basis": "Deducción documental; no resultado del motor ni observación en juego."
+      },
+      "sourceIds": [
+        "catalog",
+        "L02",
+        "web-modifiers"
+      ],
+      "evidenceStatus": "static-supported",
+      "engineSupport": "reference-only",
+      "observedInGame": false
+    },
+    {
+      "id": "lucky-chad",
+      "title": "Cartas de Suerte + Chad + Gato de la suerte",
+      "kind": "synergy",
+      "jokerIds": [
+        "j_hanging_chad",
+        "j_lucky_cat"
+      ],
+      "deckRequirements": [
+        {
+          "zone": "scoring",
+          "traits": [
+            "enhancement:lucky",
+            "position:first"
+          ],
+          "minimum": 1
+        }
+      ],
+      "mechanism": "Las repeticiones dan más oportunidades de éxito de Suerte y crecimiento del Gato.",
+      "conditions": [
+        "La primera carta puntuada debe ser de Suerte."
+      ],
+      "risks": [
+        "No hay crecimiento garantizado ni porcentaje de victoria."
+      ],
+      "order": "Sin requisito adicional de orden en esta ficha.",
+      "example": {
+        "setup": "Carta de Suerte primera, con Chad.",
+        "expected": "Tres evaluaciones de Suerte; el crecimiento depende de los éxitos reales.",
+        "basis": "Deducción documental; no resultado del motor ni observación en juego."
+      },
+      "sourceIds": [
+        "catalog"
+      ],
+      "evidenceStatus": "provisional-composition",
+      "engineSupport": "reference-only",
+      "observedInGame": false
+    },
+    {
+      "id": "bloodstone-oops",
+      "title": "Heliotropo + Oops! All 6s",
+      "kind": "synergy",
+      "jokerIds": [
+        "j_bloodstone",
+        "j_oops"
+      ],
+      "deckRequirements": [
+        {
+          "zone": "scoring",
+          "traits": [
+            "suit:H"
+          ],
+          "minimum": 1
+        }
+      ],
+      "mechanism": "Oops duplica la probabilidad normal usada por Heliotropo.",
+      "conditions": [
+        "Corazones puntuados y ambos comodines activos, sin otros modificadores de probabilidades."
+      ],
+      "risks": [
+        "Oops también aumenta probabilidades negativas de otros efectos."
+      ],
+      "order": "Sin requisito adicional de orden en esta ficha.",
+      "example": {
+        "setup": "Un corazón normal puntuado; probabilidad normal base 1.",
+        "expected": "El umbral 1/2 pasa a 2/2 para X1.5; no garantiza superar la ciega.",
+        "basis": "Deducción documental; no resultado del motor ni observación en juego."
+      },
+      "sourceIds": [
+        "catalog",
+        "web-bloodstone"
+      ],
+      "evidenceStatus": "provisional-composition",
+      "engineSupport": "reference-only",
+      "observedInGame": false
+    },
+    {
+      "id": "bloodstone-smeared",
+      "title": "Smeared Joker + Heliotropo",
+      "kind": "synergy",
+      "jokerIds": [
+        "j_smeared",
+        "j_bloodstone"
+      ],
+      "deckRequirements": [
+        {
+          "zone": "scoring",
+          "traits": [
+            "suit:H|D"
+          ],
+          "minimum": 1
+        }
+      ],
+      "mechanism": "La equivalencia de palos rojos permite aprovechar diamantes con efectos de corazones.",
+      "conditions": [
+        "Cartas rojas puntuadas y activas."
+      ],
+      "risks": [
+        "No elimina el azar propio de Heliotropo."
+      ],
+      "order": "Sin requisito adicional de orden en esta ficha.",
+      "example": {
+        "setup": "Un diamante puntuado.",
+        "expected": "Es elegible para el efecto de corazones, sin garantizar activación.",
+        "basis": "Deducción documental; no resultado del motor ni observación en juego."
+      },
+      "sourceIds": [
+        "catalog",
+        "web-bloodstone"
+      ],
+      "evidenceStatus": "provisional-composition",
+      "engineSupport": "reference-only",
+      "observedInGame": false
+    },
+    {
+      "id": "pareidolia-buskin",
+      "title": "Pareidolia + repetición de figuras",
+      "kind": "synergy",
+      "jokerIds": [
+        "j_pareidolia",
+        "j_sock_and_buskin"
+      ],
+      "deckRequirements": [
+        {
+          "zone": "scoring",
+          "traits": [
+            "any-rank"
+          ],
+          "minimum": 1
+        }
+      ],
+      "mechanism": "Pareidolia permite que otros rangos cumplan la condición de figura.",
+      "conditions": [
+        "Ambos activos; cartas puntuadas no debilitadas."
+      ],
+      "risks": [
+        "También puede exponer todo el mazo a efectos que perjudican figuras; no convierte rangos en reyes."
+      ],
+      "order": "Sin requisito adicional de orden en esta ficha.",
+      "example": {
+        "setup": "Un cinco puntuado.",
+        "expected": "Cuenta como figura y recibe la repetición de Sock and Buskin.",
+        "basis": "Deducción documental; no resultado del motor ni observación en juego."
+      },
+      "sourceIds": [
+        "catalog",
+        "web-pareidolia"
+      ],
+      "evidenceStatus": "provisional-composition",
+      "engineSupport": "reference-only",
+      "observedInGame": false
+    },
+    {
+      "id": "midas-vampire",
+      "title": "Máscara de Midas → Vampiro",
+      "kind": "synergy",
+      "jokerIds": [
+        "j_midas_mask",
+        "j_vampire"
+      ],
+      "deckRequirements": [
+        {
+          "zone": "scoring",
+          "traits": [
+            "face:true"
+          ],
+          "minimum": 1
+        }
+      ],
+      "mechanism": "Midas crea Oro que Vampiro puede consumir para crecer en esa misma mano.",
+      "conditions": [
+        "Figuras en el conjunto que puntúa; ambos activos."
+      ],
+      "risks": [
+        "Vampiro elimina la mejora: se sacrifica el beneficio de Oro."
+      ],
+      "order": "Midas antes de Vampiro para consumir la mejora recién creada; invertirlos cambia el resultado.",
+      "example": {
+        "setup": "Una figura base puntuada, Midas antes de Vampiro.",
+        "expected": "Se convierte en Oro y después vuelve a base; Vampiro gana X0.1.",
+        "basis": "Deducción documental; no resultado del motor ni observación en juego."
+      },
+      "sourceIds": [
+        "catalog",
+        "L02",
+        "web-midas"
+      ],
+      "evidenceStatus": "static-supported",
+      "engineSupport": "reference-only",
+      "observedInGame": false
+    },
+    {
+      "id": "pareidolia-midas-vampire",
+      "title": "Pareidolia + Midas + Vampiro",
+      "kind": "synergy",
+      "jokerIds": [
+        "j_pareidolia",
+        "j_midas_mask",
+        "j_vampire"
+      ],
+      "deckRequirements": [
+        {
+          "zone": "scoring",
+          "traits": [
+            "any-rank"
+          ],
+          "minimum": 1
+        }
+      ],
+      "mechanism": "Extiende el ciclo de mejora y consumo a otros rangos puntuados.",
+      "conditions": [
+        "Midas antes de Vampiro; cartas activas que realmente puntúan."
+      ],
+      "risks": [
+        "Tres espacios; sacrifica mejoras existentes y no garantiza que compense frente a una compra inmediata."
+      ],
+      "order": "Midas debe preceder a Vampiro para el ciclo inmediato.",
+      "example": {
+        "setup": "Un cinco base puntuado.",
+        "expected": "Pareidolia lo hace elegible para Midas; Vampiro consume Oro y crece X0.1.",
+        "basis": "Deducción documental; no resultado del motor ni observación en juego."
+      },
+      "sourceIds": [
+        "catalog",
+        "L02",
+        "web-pareidolia"
+      ],
+      "evidenceStatus": "static-supported",
+      "engineSupport": "reference-only",
+      "observedInGame": false
+    },
+    {
+      "id": "dna-hologram",
+      "title": "ADN + Holograma",
+      "kind": "synergy",
+      "jokerIds": [
+        "j_dna",
+        "j_hologram"
+      ],
+      "deckRequirements": [
+        {
+          "zone": "played",
+          "traits": [
+            "single-card"
+          ],
+          "minimum": 1
+        }
+      ],
+      "mechanism": "ADN añade una carta permanente; esa adición hace crecer Holograma.",
+      "conditions": [
+        "Primera mano de la ronda con una sola carta; mano legal para la ciega."
+      ],
+      "risks": [
+        "Consume una mano y puede diluir el mazo."
+      ],
+      "order": "Sin requisito adicional de orden en esta ficha.",
+      "example": {
+        "setup": "Primera mano legal de una carta.",
+        "expected": "Una nueva carta; Holograma aumenta su multiplicador en 0.25.",
+        "basis": "Deducción documental; no resultado del motor ni observación en juego."
+      },
+      "sourceIds": [
+        "catalog",
+        "web-dna"
+      ],
+      "evidenceStatus": "provisional-composition",
+      "engineSupport": "reference-only",
+      "observedInGame": false
+    },
+    {
+      "id": "dna-steel",
+      "title": "ADN para construir un mazo de Acero",
+      "kind": "synergy",
+      "jokerIds": [
+        "j_dna"
+      ],
+      "deckRequirements": [
+        {
+          "zone": "played",
+          "traits": [
+            "enhancement:steel",
+            "single-card"
+          ],
+          "minimum": 1
+        }
+      ],
+      "mechanism": "Copiar cartas de Acero aumenta su presencia futura en el mazo.",
+      "conditions": [
+        "Primera mano de una carta; disponer de una carta de Acero para copiar."
+      ],
+      "risks": [
+        "Esa carta jugada no activa Acero por estar retenida; no estimar consistencia sin robos y composición completa."
+      ],
+      "order": "Sin requisito adicional de orden en esta ficha.",
+      "example": {
+        "setup": "ADN copia una carta de Acero.",
+        "expected": "Se añade una copia; evaluar futuras manos por separado.",
+        "basis": "Deducción documental; no resultado del motor ni observación en juego."
+      },
+      "sourceIds": [
+        "catalog",
+        "web-dna"
+      ],
+      "evidenceStatus": "provisional-composition",
+      "engineSupport": "reference-only",
+      "observedInGame": false
+    },
+    {
+      "id": "marble-stone",
+      "title": "Comodín de mármol + Comodín de piedra",
+      "kind": "synergy",
+      "jokerIds": [
+        "j_marble",
+        "j_stone"
+      ],
+      "deckRequirements": [
+        {
+          "zone": "full-deck",
+          "traits": [
+            "enhancement:stone"
+          ],
+          "minimum": 1
+        }
+      ],
+      "mechanism": "Las piedras añadidas incrementan el recuento usado por Stone Joker.",
+      "conditions": [
+        "Conservar ambos durante la selección de ciega."
+      ],
+      "risks": [
+        "Más cartas pueden dificultar robar otros rangos o mejoras; no convertir cantidad en consistencia."
+      ],
+      "order": "Sin requisito adicional de orden en esta ficha.",
+      "example": {
+        "setup": "Se añade una piedra al mazo.",
+        "expected": "El aporte de Stone Joker aumenta 25 fichas mientras permanezca esa piedra.",
+        "basis": "Deducción documental; no resultado del motor ni observación en juego."
+      },
+      "sourceIds": [
+        "catalog"
+      ],
+      "evidenceStatus": "provisional-composition",
+      "engineSupport": "reference-only",
+      "observedInGame": false
+    },
+    {
+      "id": "steel-joker-deck",
+      "title": "Steel Joker + mazo con Acero",
+      "kind": "synergy",
+      "jokerIds": [
+        "j_steel_joker"
+      ],
+      "deckRequirements": [
+        {
+          "zone": "full-deck",
+          "traits": [
+            "enhancement:steel"
+          ],
+          "minimum": 1
+        }
+      ],
+      "mechanism": "Cuenta cartas de Acero del mazo completo, aunque no estén en mano.",
+      "conditions": [
+        "Recuento de Acero del mazo completo conocido."
+      ],
+      "risks": [
+        "Es distinto del X1.5 por carta de Acero retenida y de la repetición de Mimo."
+      ],
+      "order": "Sin requisito adicional de orden en esta ficha.",
+      "example": {
+        "setup": "Una carta de Acero en el mazo completo.",
+        "expected": "El factor del comodín es X1.2; su efecto independiente no lo repite Mimo.",
+        "basis": "Deducción documental; no resultado del motor ni observación en juego."
+      },
+      "sourceIds": [
+        "catalog",
+        "web-activation"
+      ],
+      "evidenceStatus": "provisional-composition",
+      "engineSupport": "reference-only",
+      "observedInGame": false
+    },
+    {
+      "id": "egg-swashbuckler",
+      "title": "Huevo + Swashbuckler",
+      "kind": "synergy",
+      "jokerIds": [
+        "j_egg",
+        "j_swashbuckler"
+      ],
+      "deckRequirements": [],
+      "mechanism": "El aumento de valor de venta de Huevo alimenta el Mult de Swashbuckler.",
+      "conditions": [
+        "Conservar Huevo tras la ronda; valor real de venta conocido."
+      ],
+      "risks": [
+        "Vender Huevo elimina su contribución; Huevo no aporta puntuación por sí solo."
+      ],
+      "order": "Sin requisito adicional de orden en esta ficha.",
+      "example": {
+        "setup": "Huevo aumenta su valor de venta $3 al cierre.",
+        "expected": "La contribución de ese Huevo a Swashbuckler aumenta +3 Mult para la próxima mano.",
+        "basis": "Deducción documental; no resultado del motor ni observación en juego."
+      },
+      "sourceIds": [
+        "catalog",
+        "web-egg"
+      ],
+      "evidenceStatus": "provisional-composition",
+      "engineSupport": "reference-only",
+      "observedInGame": false
+    },
+    {
+      "id": "gift-swashbuckler",
+      "title": "Tarjeta de regalo + Swashbuckler",
+      "kind": "synergy",
+      "jokerIds": [
+        "j_gift",
+        "j_swashbuckler"
+      ],
+      "deckRequirements": [],
+      "mechanism": "El crecimiento de valor de otros comodines alimenta Swashbuckler.",
+      "conditions": [
+        "Contar solo valores de venta de los otros comodines."
+      ],
+      "risks": [
+        "El valor de consumibles y el de Swashbuckler mismo no se incluyen."
+      ],
+      "order": "Sin requisito adicional de orden en esta ficha.",
+      "example": {
+        "setup": "Sube $1 el valor de un comodín distinto de Swashbuckler.",
+        "expected": "+1 Mult atribuible a ese incremento; no es ingreso hasta vender.",
+        "basis": "Deducción documental; no resultado del motor ni observación en juego."
+      },
+      "sourceIds": [
+        "catalog"
+      ],
+      "evidenceStatus": "provisional-composition",
+      "engineSupport": "reference-only",
+      "observedInGame": false
+    },
+    {
+      "id": "bull-bootstraps",
+      "title": "Toro + Bootstraps + ahorro",
+      "kind": "synergy",
+      "jokerIds": [
+        "j_bull",
+        "j_bootstraps"
+      ],
+      "deckRequirements": [],
+      "mechanism": "Ambos aprovechan dinero conservado, uno como fichas y otro como Mult.",
+      "conditions": [
+        "Saldo real no negativo conocido."
+      ],
+      "risks": [
+        "Comprar puede reducir ambos aportes; no sumar dólares, fichas y Mult como una sola utilidad."
+      ],
+      "order": "Sin requisito adicional de orden en esta ficha.",
+      "example": {
+        "setup": "Saldo $25, sin otros efectos económicos.",
+        "expected": "Toro +50 fichas; Bootstraps +10 Mult. Con $20: +40 y +8.",
+        "basis": "Deducción documental; no resultado del motor ni observación en juego."
+      },
+      "sourceIds": [
+        "catalog"
+      ],
+      "evidenceStatus": "provisional-composition",
+      "engineSupport": "reference-only",
+      "observedInGame": false
+    },
+    {
+      "id": "green-burglar",
+      "title": "Comodín verde + Ladrón",
+      "kind": "synergy",
+      "jokerIds": [
+        "j_green_joker",
+        "j_burglar"
+      ],
+      "deckRequirements": [],
+      "mechanism": "Más manos permiten acumular Green y perder descartes evita su reducción por descartar.",
+      "conditions": [
+        "Activar Burglar al elegir ciega; sobrevivir usando las manos disponibles."
+      ],
+      "risks": [
+        "La ronda termina al superar la ciega: no asumir que se usan todas las manos extra."
+      ],
+      "order": "Sin requisito adicional de orden en esta ficha.",
+      "example": {
+        "setup": "Burglar activo al inicio de ronda.",
+        "expected": "+3 manos y cero descartes; Green solo crece por manos realmente jugadas.",
+        "basis": "Deducción documental; no resultado del motor ni observación en juego."
+      },
+      "sourceIds": [
+        "catalog",
+        "web-green"
+      ],
+      "evidenceStatus": "provisional-composition",
+      "engineSupport": "reference-only",
+      "observedInGame": false
+    },
+    {
+      "id": "green-ramen",
+      "title": "Comodín verde + Ramen",
+      "kind": "synergy",
+      "jokerIds": [
+        "j_green_joker",
+        "j_ramen"
+      ],
+      "deckRequirements": [],
+      "mechanism": "Evitar descartes conserva Ramen y evita reducir Green.",
+      "conditions": [
+        "Las cartas disponibles deben permitir puntuar sin descartar."
+      ],
+      "risks": [
+        "No descartar a cualquier coste puede impedir superar la ciega."
+      ],
+      "order": "Sin requisito adicional de orden en esta ficha.",
+      "example": {
+        "setup": "Una mano jugada sin descarte previo.",
+        "expected": "Green crece según su regla; Ramen no pierde factor por descartes inexistentes.",
+        "basis": "Deducción documental; no resultado del motor ni observación en juego."
+      },
+      "sourceIds": [
+        "catalog",
+        "web-green"
+      ],
+      "evidenceStatus": "provisional-composition",
+      "engineSupport": "reference-only",
+      "observedInGame": false
+    },
+    {
+      "id": "blueprint-mime",
+      "title": "Blueprint copiando Mimo",
+      "kind": "synergy",
+      "jokerIds": [
+        "j_blueprint",
+        "j_mime"
+      ],
+      "deckRequirements": [
+        {
+          "zone": "held",
+          "traits": [
+            "held-effect"
+          ],
+          "minimum": 1
+        }
+      ],
+      "mechanism": "Añade otra repetición a los efectos retenidos mediante una copia compatible.",
+      "conditions": [
+        "Blueprint inmediatamente a la izquierda de Mimo; al menos un efecto retenido aplicable."
+      ],
+      "risks": [
+        "Copiar Mimo o Barón depende de los efectos por carta y repeticiones existentes: no hay elección universal."
+      ],
+      "order": "Blueprint copia al comodín inmediatamente a su derecha.",
+      "example": {
+        "setup": "Una carta de Acero, Mimo y un Blueprint copiándolo.",
+        "expected": "Tres activaciones de Acero: X3.375.",
+        "basis": "Deducción documental; no resultado del motor ni observación en juego."
+      },
+      "sourceIds": [
+        "catalog",
+        "L02"
+      ],
+      "evidenceStatus": "static-supported",
+      "engineSupport": "reference-only",
+      "observedInGame": false
+    },
+    {
+      "id": "erosion-dna-conflict",
+      "title": "ADN / Mármol frente a Erosión",
+      "kind": "conflict",
+      "jokerIds": [
+        "j_dna",
+        "j_marble",
+        "j_erosion"
+      ],
+      "deckRequirements": [
+        {
+          "zone": "full-deck",
+          "traits": [
+            "size-vs-start"
+          ],
+          "minimum": 1
+        }
+      ],
+      "mechanism": "Añadir cartas compite con la condición de tener menos cartas que el tamaño inicial.",
+      "conditions": [
+        "Comparar tamaño inicial real y tamaño actual, no fijar siempre 52."
+      ],
+      "risks": [
+        "Es una tensión entre objetivos, no una prohibición de combinación."
+      ],
+      "order": "Sin requisito adicional de orden en esta ficha.",
+      "example": {
+        "setup": "Mazo un elemento por debajo de su tamaño inicial; se añade una carta.",
+        "expected": "Desaparece el +4 Mult de Erosión asociado a esa diferencia.",
+        "basis": "Deducción documental; no resultado del motor ni observación en juego."
+      },
+      "sourceIds": [
+        "catalog",
+        "web-dna"
+      ],
+      "evidenceStatus": "provisional-composition",
+      "engineSupport": "reference-only",
+      "observedInGame": false
+    },
+    {
+      "id": "banner-burglar-conflict",
+      "title": "Ladrón frente a Estandarte",
+      "kind": "conflict",
+      "jokerIds": [
+        "j_burglar",
+        "j_banner"
+      ],
+      "deckRequirements": [],
+      "mechanism": "Ladrón elimina los descartes restantes que necesita Estandarte.",
+      "conditions": [
+        "Burglar activado al elegir la ciega."
+      ],
+      "risks": [
+        "Más manos no sustituyen automáticamente las fichas perdidas de Banner."
+      ],
+      "order": "Sin requisito adicional de orden en esta ficha.",
+      "example": {
+        "setup": "Descartes pasan de tres a cero.",
+        "expected": "Aporte de Banner pasa de 90 a 0 fichas.",
+        "basis": "Deducción documental; no resultado del motor ni observación en juego."
+      },
+      "sourceIds": [
+        "catalog"
+      ],
+      "evidenceStatus": "provisional-composition",
+      "engineSupport": "reference-only",
+      "observedInGame": false
+    },
+    {
+      "id": "mime-gold-seal-false",
+      "title": "Mimo no repite un sello dorado retenido",
+      "kind": "non-synergy",
+      "jokerIds": [
+        "j_mime"
+      ],
+      "deckRequirements": [
+        {
+          "zone": "held",
+          "traits": [
+            "seal:gold"
+          ],
+          "minimum": 1
+        }
+      ],
+      "mechanism": "El sello dorado paga al puntuar la carta; no genera ingreso por quedar retenido.",
+      "conditions": [
+        "Distinguir sello dorado y mejora Oro."
+      ],
+      "risks": [
+        "Si la misma carta también es Oro, Mimo repite la mejora, no el sello."
+      ],
+      "order": "Sin requisito adicional de orden en esta ficha.",
+      "example": {
+        "setup": "Carta base con sello dorado retenida, sin mejora Oro.",
+        "expected": "Cero ingresos de ese sello por Mimo al terminar la ronda.",
+        "basis": "Deducción documental; no resultado del motor ni observación en juego."
+      },
+      "sourceIds": [
+        "L02",
+        "web-mime"
+      ],
+      "evidenceStatus": "static-supported",
+      "engineSupport": "reference-only",
+      "observedInGame": false
+    },
+    {
+      "id": "mime-steel-joker-false",
+      "title": "Mimo no repite Steel Joker",
+      "kind": "non-synergy",
+      "jokerIds": [
+        "j_mime",
+        "j_steel_joker"
+      ],
+      "deckRequirements": [],
+      "mechanism": "Mimo repite efectos de cartas retenidas; Steel Joker se resuelve como efecto independiente.",
+      "conditions": [
+        "Separar cartas de Acero del comodín de Acero."
+      ],
+      "risks": [
+        "Pueden coexistir beneficios de Acero, pero no se duplica directamente este comodín."
+      ],
+      "order": "Sin requisito adicional de orden en esta ficha.",
+      "example": {
+        "setup": "Steel Joker y Mimo, sin efectos retenidos.",
+        "expected": "Mimo no repite el multiplicador independiente de Steel Joker.",
+        "basis": "Deducción documental; no resultado del motor ni observación en juego."
+      },
+      "sourceIds": [
+        "catalog",
+        "L02",
+        "web-activation"
+      ],
+      "evidenceStatus": "static-supported",
+      "engineSupport": "reference-only",
+      "observedInGame": false
+    }
+  ]
+}

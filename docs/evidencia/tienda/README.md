@@ -1,0 +1,19 @@
+# Prueba de la tienda manual
+
+`node tools/shop-test.mjs` sobre la compilación central del 14 de octubre de 2026: **12 grupos aprobados, sin errores de página**. La reproducción completa está disponible con `npm run test:shop`. [Resultado estructurado](report.json).
+
+QA final del artefacto actual, **14 de octubre de 2026 a las 16:44 UTC**, ejecutada sin reconstruir ni modificar el motor: `node tools/shop-test.mjs` aprobó sus 12 grupos y `node tools/static-site-test.mjs` aprobó sus ocho grupos. El sitio estático verificó 101 archivos, 17 activos, el montaje `/balatro-advisor/`, 150 comodines, el oráculo de mano 80→572, importación explícita y recarga, ausencia de escrituras al consultar y tamaños de 390/1440 px. Resultado: **0 solicitudes externas, 0 solicitudes fallidas y 0 errores de página**. [Informe del artefacto estático](../publicacion/static-report.json).
+
+Fixtures sintéticas derivadas de `examples/shop-purchase.json`, contextos independientes de Chrome y puerto local 4187. Los saldos esperados son oráculos literales: $25−$1=$24 y $25−$4=$21. La prueba no importa la aritmética del asesor para obtener esos resultados.
+
+Se verifican el precio observado y su conservación al recalcular automáticamente, H2 limitado para el precio manual de Joker, ausencia de soporte de Acero en el mazo actual, requisitos y vales ya adquiridos, 15 combinaciones de sobre, cinco cartas y dos elecciones de un Mega y contenido cerrado desconocido. Blueprint utiliza un comodín poseído compatible y conserva sus condiciones de posición y objetivo. La oferta Tarot documental comparte la fila superior con los comodines.
+
+Transcribir ofertas y consultar consejo conserva el saldo e inventario reales y hace cero escrituras del registro confirmado. Enter en el precio de una oferta no envía el formulario de partida. “Vaciar ofertas” limpia la transcripción temporal y conserva dinero, inventario y registro. Consejo queda desactivado con la tienda vacía y se habilita al registrar una oferta. La recarga conserva el registro y descarta las ofertas temporales. Los consejos siguen siendo condicionales o se abstienen; estas comprobaciones no demuestran una compra óptima, rentabilidad ni probabilidad de ganar.
+
+La interfaz tiene marco rojo, controles del asesor, precios amarillos encima de las cartas y bandejas inferiores para el vale a la izquierda y dos sobres a la derecha. **No hay Renovar, Actualizar ni Next Round en la tienda o su consejo.** La API conserva sus contratos; este caso de UI ya no presenta ni calcula una renovación.
+
+Capturas de tienda y consejo en 360, 390 y 1440 px revisadas visualmente: sprites de los atlas originales, cartas completas con nombre e índice visibles, ambos sobres en la misma bandeja y ningún desbordamiento horizontal de la página. La fila de cartas permite desplazamiento interno cuando hace falta; el diálogo mantiene desplazamiento vertical interno. Es emulación de navegador, sin prueba física de Android y sin observación de una partida nueva de Balatro.
+
+Durante la revisión del cambio de diseño se detectó un recorte transitorio: las cartas heredaban 72 px de altura y su información conservaba un límite de altura y desbordamiento. Se corrigió la altura automática de las tarjetas y el desbordamiento de la información. La nueva guarda comprueba que arte, nombre e índice caben completos verticalmente en la fila; pasó en 360, 390 y 1440 px y las capturas finales confirman la corrección.
+
+Regresión anterior del 14 de octubre: `node tools/sale-test.mjs` aprobó sus siete grupos. Conserva venta provisional, confirmación y recarga, protección contra doble clic, instancias distintas, Eternal, Negative, Campfire y diálogo móvil. [Resultado de ventas](../venta/report.json). Las capturas finales `shop-reset-1440.png` y `shop-reset-390.png` muestran la tienda vacía y Consejo desactivado.
