@@ -1,6 +1,6 @@
 # Backlog — T08c completado como software; T01/H2 y T11 abiertos
 
-**Auditoría de producto (2026-10-15):** [informe del código](reporte-codigo-2026-10-15.md) y [plan del asesor de partida](plan-asesor-de-partida.md). Orden propuesto: RUN01a (sesión/fases) → SHOP03a (oferta visible/acción confirmada/autoguardado) → TAG01 (jugar/saltar) → SHOP02a/DECK04 (contenido y consumibles) → DEC01 (mejora incremental); OBS01 (preguntas por dependencia) y CAP01 (capacidades por familia) pueden avanzar por separado. Estas son propuestas, no entregas ya implementadas. Primera prueba: comprar Joker de precio $2 con saldo $25 desde la tienda visible, conservar $23 al recargar y poder deshacer, sin que consultar escriba.
+**Plan vigente del asesor (2026-10-15):** [hoja de ruta de ejecución](hoja-de-ruta-asesor.md), [informe del código](reporte-codigo-2026-10-15.md) y [recorrido/entradas mínimas](plan-asesor-de-partida.md). Primero SHOP03a (tienda visual → acción confirmada/autoguardado, sin esperar sobres), con diseño RUN01a en paralelo; después recorrido RUN01b, comparación incremental DEC00/DEC01/SURV01 y jugar/saltar TAG01. OBS01, capacidades y banco de evaluación empiezan en paralelo. Sobres/consumibles SHOP02a/DECK04 y capacidad automática SURV02/PG02/PG03 amplían el flujo; EVAL01/PG04 separa software correcto de política útil. Son tareas propuestas, no entregas implementadas. Primera prueba: comprar Joker de $2 con $25, conservar $23 al recargar y poder deshacer, sin que consultar escriba.
 
 **PUB02 completado:** [GitHub Pages público](https://alejandroarielliliu-stack.github.io/balatro-advisor/) y workflow por actualización de `main`, con build/pruebas antes de desplegar. No exige ChatGPT para visitar la web. La migración de alojamiento no cerró T01/H2 ni la eficacia estratégica.
 
@@ -8,8 +8,9 @@
 
 | Continuación de tienda | Dependencia real | Aceptación |
 |---|---|---|
-| SHOP02 — siguiente | SHOP01 + catálogos/eventos concretos | Contenido observado de Buffoon/Celestial, elecciones restantes, opciones visibles; comparar sin inventar cartas o activar consumo antes de confirmarlo. |
-| SHOP03 | SHOP02 + H1/T09b | Snapshot persistente compatible, compra/apertura/elección y correcciones atómicas; unificar ofertas avanzadas con Mesa, sin guardar resultados hipotéticos. |
+| SHOP03a — siguiente | SHOP01 + H1/H2/T09b; independiente de SHOP02 | Tienda observada única, compra/venta desde Mesa, autoguardado y deshacer; recarga conserva acciones reales, consultar no modifica registro. |
+| SHOP02a / DECK04 | SHOP03a + fase/contexto de sobre + catálogos/eventos concretos | Contenido observado de Buffoon/Celestial, elecciones restantes, opciones visibles; pagar/abrir/elegir/usar/omitir separados, sin inventar cartas. |
+| SHOP03 — continuación | SHOP03a + operaciones de SHOP02a que se integren | Confirmación y persistencia atómicas también de apertura/elección; las operaciones no implementadas limitan su rama. |
 | SHOP04 | Operaciones específicas + datos de efectos | Descuentos, stickers fuera de White, vales22 restantes, Tarot/Spectral y renovaciones con nuevo stock transcrito. Regla pendiente limita solo su dependencia. |
 
 SHOP01 no cierra los contrastes T01/H2 ni supone eficacia de la política; las limitaciones de sobres cerrados no bloquean valorar un comodín conocido.

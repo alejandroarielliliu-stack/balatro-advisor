@@ -1,6 +1,6 @@
 # De valorador de composición a asesor de partida
 
-Propuesta del 15 de octubre de 2026, basada en el [informe del código](reporte-codigo-2026-10-15.md) y el [recorrido verificado de la build 1.0.1o](evidencia/ciclo-partida-1.0.1o.md). Es un plan de desarrollo, no funcionalidad ya implementada.
+Propuesta del 15 de octubre de 2026, basada en el [informe del código](reporte-codigo-2026-10-15.md) y el [recorrido verificado de la build 1.0.1o](evidencia/ciclo-partida-1.0.1o.md). Es un plan de desarrollo, no funcionalidad ya implementada. La [hoja de ruta de ejecución](hoja-de-ruta-asesor.md) concreta entregas, contratos, dependencias y evaluación del resultado final.
 
 **Objetivo:** que una persona empiece o continúe una partida, introduzca solo datos nuevos y reciba una acción contextual explicable: jugar/saltar, comprar/ahorrar/vender, elegir contenido o preparar el jefe. La web no controla Balatro ni conoce la semilla. «Mejor» debe significar la mejor opción entre las alternativas y condiciones realmente evaluadas, no una garantía de victoria.
 
@@ -136,18 +136,11 @@ La simulación no es requisito para guardar una partida, registrar un salto o co
 
 ## 4. Entregas y dependencias reales
 
-Estos IDs organizan el nuevo alcance; no declaran que ya esté implementado.
+El [plan de ejecución](hoja-de-ruta-asesor.md#4-entregas-y-dependencias) es la referencia vigente para tareas y aceptación. Corrige dos dependencias: conectar la compra/venta visual puede comenzar con las fases actuales, y no necesita esperar a abrir sobres.
 
-| Orden / tarea | Entrega pequeña | Dependencias y aceptación |
-|---|---|---|
-| 1 — RUN01a | Sesión persistente por fases y migración explícita | Reutilizar H1/T09b; selección, ronda/resumen, cobro, tienda, sobre y fin distinguibles. Guardados anteriores conservan dinero, inventario, historial y desconocidos |
-| 2 — SHOP03a | Unificar ofertas visuales y registro; confirmar compra/venta | RUN01a + H2. Una transcripción de oferta, una confirmación de acción realizada, autoguardado atómico y deshacer. Consultar no escribe; recargar conserva la acción |
-| Paralela — OBS01 | Entradas mínimas y preguntas tipadas por dependencia | Modelo de hechos. Plantillas solo para partidas nuevas; resúmenes parciales sin fabricar IDs; no pedir 52 cartas para valorar un comodín |
-| 3 — TAG01 | `skip_blind` y comparación jugar↔saltar | RUN01a + evidencia por tag. Primero subconjunto explícito, por ejemplo Economy/Investment y Throwback. Boss rechaza salto; no cobro/tienda ficticios; tags desconocidos limitan su rama |
-| 4 — SHOP02a / DECK04 | Vales/consumibles confirmables y contenido observado de sobres | SHOP03a; reutilizar `applyGameEvent`. Empezar por planetas y Buffoon/Celestial, incorporar objetivos de Tarot/Spectral por lotes. Pagar/abrir/elegir/usar/omitir separados; no inventar cartas |
-| 5 — DEC01 | Revisión de política de compras y acciones combinadas pequeñas | Datos de OBS01 + transacciones compatibles. Cubrir segundo efecto del mismo rol, necesidad inmediata, coste de vender crecimiento, orden y descuento real; no ordenar solo por índice |
-| 6 — CAP01 | Activar familias internas y ampliar alcance por capacidades | Puede avanzar por lotes junto a las anteriores. Conectar contexto/resultados/explicaciones y pruebas antes de habilitar 68. Jefes, dificultades y vales pendientes limitan solo dependencias justificadas |
-| 7 — EVAL01 | Sesiones completas y evaluación del consejo | Casos independientes, contraejemplos y revisión de decisiones. Medir fricción y errores de estado; no convertir aprobación de tests en eficacia estratégica |
+El orden de integración es **tienda persistente → recorrido de partida → consejo incremental → jugar/saltar y elecciones de tienda → evaluación automática de capacidad → evaluación estratégica y ampliación de cobertura**. Preguntas por dependencia, matriz de capacidades y casos independientes avanzan en paralelo. Integrar las pantallas por sí solo no implementa una política de juego ni demuestra que el consejo sea bueno.
+
+La primera entrega conserva el alcance de tienda de H2/T09b. El esquema de fases y su migración se diseñan en paralelo; deben contemplar también los estados completos conservados dentro del historial. El plan separa el primer asesor heurístico del trabajo posterior H4/H5: escenarios internos, política de manos/descartes, muestreo y evaluación reservada.
 
 **Primera prueba técnica concreta:** conectar una oferta de la tienda visual a una acción confirmada sobre la sesión. Con saldo $25 y un Joker observado de precio $2, confirmar la compra deja $23, ocupa un hueco, retira esa oferta y sube una revisión; recargar conserva todo y deshacer recupera lo anterior. Consultar repetidamente no cambia dinero ni registro. Un fallo de guardado, doble clic o revisión antigua no puede duplicar la compra ni perder la copia anterior. El siguiente paso de esa misma entrega enlaza el cambio de fase sin generar ofertas o jefes nuevos.
 
