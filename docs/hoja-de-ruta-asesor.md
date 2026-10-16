@@ -1,6 +1,6 @@
 # Plan de ejecución: asesor de partida con pocas entradas
 
-Plan del 15 de octubre de 2026. Actualización del 16: **SHOP03a completado como software**; [alcance entregado y límites](tienda-persistente.md). Las demás entregas siguen pendientes. Parte de la [auditoría del código](reporte-codigo-2026-10-15.md). El [plan de producto](plan-asesor-de-partida.md) conserva el recorrido del juego, la evidencia y las entradas por momento; este documento concreta entregas, contratos y condiciones de cierre.
+Plan del 15 de octubre de 2026. Actualización del 16: **SHOP03a y RUN01a completados como software**; [tienda persistente](tienda-persistente.md) y [fases/migración recuperable](fases-y-migracion.md). Las demás entregas siguen pendientes. Parte de la [auditoría del código](reporte-codigo-2026-10-15.md). El [plan de producto](plan-asesor-de-partida.md) conserva el recorrido del juego, la evidencia y las entradas por momento; este documento concreta entregas, contratos y condiciones de cierre.
 
 ## 1. Resultado que se va a entregar
 
@@ -85,7 +85,7 @@ Los IDs amplían el backlog vigente; no sustituyen sus entregas históricas. El 
 | Entrega | Tareas y resultado | Dependencia real | Condición de cierre |
 |---|---|---|---|
 | A. Tienda que conserva cambios — entregada | **SHOP03a:** ofertas visuales de comodines compartidas, compra/venta confirmadas, autoguardado y deshacer desde la misma ficha | H1/H2/T09b actuales; no necesita sobres ni todas las fases | Comprar Joker de $2 con $25 deja $23, consume un hueco y retira la oferta; recargar conserva y deshacer recupera. Consultar no escribe |
-| B. Recorrido persistente | **RUN01a:** esquema/fases y migración; **RUN01b:** iniciar/retomar, resultado observado y siguiente selección/tienda | Puede diseñarse en paralelo con A; integración final con T09b | Recorrido selección → ronda/resumen → cobro → tienda → selección, sin inventar stock, jefe o robos. Copias anteriores e historial recuperables |
+| B. Recorrido persistente — base entregada | **RUN01a completado:** esquema/fases y migración; **RUN01b pendiente:** iniciar/retomar, resultado observado y siguiente selección/tienda | Base integrada con T09b; transiciones confirmadas todavía pendientes | Recorrido selección → ronda/resumen → cobro → tienda → selección, sin inventar stock, jefe o robos. Copias anteriores e historial recuperables |
 | C. Información mínima | **OBS01:** hechos parciales, preguntas por dependencia y actualización de contadores/contexto; **CAP01a:** capacidades por operación | Paralela a A/B; reutiliza validación y catálogo | No repetir inventario ni pedir cartas irrelevantes. Desconocido sigue desconocido; desactualizar solo respuestas afectadas |
 | D. Mejor consejo de compra | **DEC00:** contrato unificado; **DEC01:** consecuencias incrementales; **SURV01:** nivel de evidencia de supervivencia | A + datos necesarios de C; no necesita jugar/saltar o sobres | Compra útil del mismo rol, ahorro, reemplazo compensado y pérdida de crecimiento explicados. No usar encaje ≥70 o rol faltante como permiso universal |
 | E. Jugar o saltar | **TAG01a:** acción legal y efectos observados; **TAG01b:** comparación de oportunidades | B + capacidades de tags; comparación con DEC00/SURV01 | Boss no saltable; sin cobro/tienda ficticios. Economy/Investment y crecimiento de Throwback como primer lote. Incluir tienda y desarrollo sacrificados sin inventar su valor monetario |
@@ -163,9 +163,9 @@ La primera versión del nuevo recorrido se cierra cuando A–F permiten una sesi
 
 El resultado final buscado requiere además que la política se evalúe en sesiones y casos reservados, que sus límites estén visibles y que el seguimiento no obligue a repetir datos. Alcance ampliado y calidad estratégica tienen cierres separados: completar catálogo no demuestra recomendar mejor.
 
-### Preparación técnica de RUN01a
+### RUN01a entregado y continuación
 
-La inspección posterior a SHOP03a recomienda evolucionar el modelo existente hacia estado `0.2` y registro `confirmed-2`, con datos discriminados por fase. Es una propuesta para la siguiente entrega, todavía sin cambios de esquema. Envolver el estado actual en otra partida persistente crearía dos fases que habría que sincronizar; se evita esa duplicación.
+El modelo existente ya admite estado `0.2` y registro `confirmed-2`, con datos discriminados por fase. [Contrato y uso](fases-y-migracion.md). No se envuelve el estado en otra partida persistente: existe una sola fase autoritativa. La implementación y sus pruebas satisfacen los puntos técnicos siguientes; no equivalen a implementar sus transiciones reales:
 
 - Congelar los validadores antiguos y validar antes/después de una migración pura. Convertir también `initialState`, `state` y cada `before/after`; conservar IDs, revisiones, fechas y evidencia, sin reproducir acciones con reglas nuevas.
 - `shop` antiguo puede conservar su fase; `draft` pasa a una fase desconocida con motivo. No convertirlo en victoria, derrota o selección por conveniencia.
@@ -174,4 +174,4 @@ La inspección posterior a SHOP03a recomienda evolucionar el modelo existente ha
 - Revisar `finishRound`, horizontes y editor, que hoy construyen `draft` o asumen tienda. Una unión de tipos por sí sola no resuelve esas transiciones. Las rondas hipotéticas nunca pasan a ser fases reales automáticamente.
 - Cerrar con migración de historial mixto compra/reemplazo/corrección/undo, copia H1 sin historial, `draft` ambiguo, documento roto/futuro, fallos de respaldo/escritura y regresión de H2/SHOP03a.
 
-**Siguiente tarea ejecutable: RUN01a.** Versionar fases de partida y migrar el estado actual, `initialState` y cada `before/after` del historial, conservando copias recuperables. Mantener `draft` antiguo sin fase inventada hasta aclararlo. Después RUN01b conecta selección, resultado observado/cobro, tienda y siguiente selección, sin generar ofertas o jefes desconocidos. OBS01 y los fixtures de decisión pueden avanzar en paralelo. SHOP03a ya acredita su caso $25 → $23; no acredita por ello el ciclo completo ni la eficacia estratégica.
+**Siguiente tarea ejecutable: RUN01b.** Conectar inicio/continuación explícitos, selección, resultado observado/cobro, tienda y siguiente selección, sin generar ofertas o jefes desconocidos. Reutilizar el historial atómico y representar cada transición confirmada; no avanzar por consultar un escenario. Si falta un dato de fase, pedir solo ese dato. OBS01 y los fixtures de decisión pueden avanzar en paralelo. SHOP03a acredita su caso $25 → $23 y RUN01a la migración recuperable; ninguno acredita el ciclo completo ni la eficacia estratégica.

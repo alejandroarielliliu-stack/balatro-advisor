@@ -45,7 +45,10 @@ export function evaluateHorizon(input:unknown,horizonInput:unknown,updatedAt:str
       if(index>0){
         // Only data declared in the scenario are supplied. Carry every endogenous value from this branch.
         const next=horizon.continuations[index-1]!;
-        state=structuredClone(state);state.phase='shop';state.observed.nextBlind=valueFact(structuredClone(next.blind));
+        state=structuredClone(state);
+        if(state.schemaVersion==='0.2')state={...state,phase:'shop',phaseData:{origin:{status:'unknown',reason:'Instantánea hipotética del horizonte; no registra una visita real a tienda.'}}};
+        else state.phase='shop';
+        state.observed.nextBlind=valueFact(structuredClone(next.blind));
         state.observed.visibleBoss=next.blind.kind==='boss'?valueFact(structuredClone(next.blind)):{status:'unknown',reason:'El horizonte no declara otro jefe visible.'};
         state.observed.shop={status:'unknown',reason:'Ofertas futuras no modeladas; se asume no operar en la tienda.'};
       }

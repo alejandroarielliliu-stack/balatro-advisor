@@ -1,11 +1,12 @@
 import type {GameState, Result} from '../state/model.js';
-import {array, boolean, checkJsonValue, integer, object, text} from '../state/schema.js';
+import {array, boolean, checkJsonValue, object, text} from '../state/schema.js';
 import type {Schema} from '../state/schema.js';
 import {validateState} from '../state/validation.js';
 import {createConfirmedStore} from './confirmed-store.js';
 import type {AnalysisBinding, ConfirmedRecord, ConfirmRequest, UndoRequest} from './confirmed-store.js';
 import type {StoragePort} from './state-store.js';
 import type {EngineOptions} from '../rules/core.js';
+import {bindingSchema,equal,analysisBinding} from './confirmed-record.js';
 
 type Shop = Extract<GameState['observed']['shop'], {status:'known'}>['value'];
 export type ShopOffer = Shop['cardOffers'][number];
@@ -26,7 +27,7 @@ const offerList:Schema<unknown[]>={check(value,path,errors){
   errors.push({path,code:'array',message:'Las ofertas deben ser una lista.'});return false;
 }};
 const observationSchema=object({confirmationId:text(),confirmed:boolean,
-  expected:object({runId:text(),revision:integer(0),rulesetId:text()}),updatedAt:text(),shopId:text(),offers:offerList
+  expected:bindingSchema,updatedAt:text(),shopId:text(),offers:offerList
 },{ignoredOtherOffers:array(text())});
 
 /**
@@ -57,7 +58,7 @@ export function createShopSessionStore(getStorage:()=>StoragePort) {
       if(!checked.ok)return checked;
       if(request.confirmed!==true)return fail('confirmation_required','Confirma que estas son las ofertas observadas.');
       if(record.history.some(entry=>entry.id===request.confirmationId))return fail('duplicate_confirmation','Este ID ya fue registrado. No se aplica dos veces.');
-      if(request.expected.runId!==state.runId || request.expected.revision!==state.revision || request.expected.rulesetId!==state.rulesetId)
+      if(!equal(request.expected,analysisBinding(state)))
         return fail('stale_revision','La partida cambió. Recarga las ofertas y recalcula antes de registrarlas.');
       // No change means no history event and no invalidation of an analysis.
       // An unused ID on this no-op has not been consumed as a confirmation.

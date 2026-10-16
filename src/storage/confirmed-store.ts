@@ -1,57 +1,26 @@
-import {effectChoiceSchema} from '../state/effect-choices.js';
-import { createStateStore } from './state-store.js';
-import type { StoragePort } from './state-store.js';
-import { validateState } from '../state/validation.js';
-import type { GameState, Result } from '../state/model.js';
-import { array, boolean, checkJsonValue, enumeration, integer, object, text, union } from '../state/schema.js';
-import type { Schema, Infer } from '../state/schema.js';
-import { applyShopAction } from '../rules/shop.js';
-import type { EngineOptions, Trace } from '../rules/core.js';
+import {createStateStore} from './state-store.js';
+import type {StoragePort} from './state-store.js';
+import {validateState} from '../state/validation.js';
+import type {GameState,Result} from '../state/model.js';
+import {array,boolean,checkJsonValue,integer,object,text} from '../state/schema.js';
+import type {Schema,Infer} from '../state/schema.js';
+import {applyShopAction} from '../rules/shop.js';
+import type {EngineOptions} from '../rules/core.js';
+import {actionSchema,bindingSchema,analysisBinding,validateConfirmedRecord,MAX_RECORD_BYTES,equal} from './confirmed-record.js';
+import type {ConfirmedRecord,EntryInput} from './confirmed-record.js';
+import {migrateConfirmedRecord} from './record-migration.js';
+export {analysisBinding,validateConfirmedRecord,MAX_RECORD_BYTES} from './confirmed-record.js';
+export type {AnalysisBinding,ConfirmedRecord,ConfirmedEntry} from './confirmed-record.js';
 
 export const CONFIRMED_STORAGE_KEY='balatro-advisor.confirmed.v1';
-export const MAX_RECORD_BYTES=8*1024*1024;
-const nullable=<T>(s:Schema<T>):Schema<T|null>=>({check(v,p,e){return v===null || s.check(v,p,e);}});
-const stateSchema:Schema<GameState>={check(v,p,e){const r=validateState(v);if(!r.ok)e.push(...r.errors.map(x=>({...x,path:p+x.path.slice(1)})));return r.ok;}};
-const actionSchema=union(union(object({type:enumeration('hold')},{choices:array(effectChoiceSchema,2000)}),object({type:enumeration('sell'),instanceId:text()},{choices:array(effectChoiceSchema,2000)})),
-  union(object({type:enumeration('buy'),offerId:text(),instanceId:text()},{choices:array(effectChoiceSchema,2000)}),object({type:enumeration('replace'),sellInstanceId:text(),offerId:text(),instanceId:text()},{choices:array(effectChoiceSchema,2000)})));
-const bindingSchema=object({runId:text(),revision:integer(0),rulesetId:text()});
-export type AnalysisBinding=Infer<typeof bindingSchema>;
-export const analysisBinding=(state:GameState):AnalysisBinding=>({runId:state.runId,revision:state.revision,rulesetId:state.rulesetId});
-const evidenceSchema=object({status:enumeration('documented','limited','abstain'),verifiedAgainstGame:boolean,
-  limitations:array(object({ruleId:text(),status:enumeration('confirmed','provisional','pending','missing'),evidenceIds:array(text()),message:text(2000)}))});
-const traceSchema:Schema<Trace[]>={check(v,p,e){
-  if(!Array.isArray(v)) {e.push({path:p,code:'trace',message:'Traza inválida.'});return false;}
-  for(const t of v)if(!t || typeof t!=='object' || typeof t.ruleId!=='string' || typeof t.label!=='string' || !t.values || typeof t.values!=='object' || Array.isArray(t.values) || Object.keys(t).some(k=>!['ruleId','label','values'].includes(k)) || Object.values(t.values).some(x=>typeof x!=='string' && typeof x!=='number')) {e.push({path:p,code:'trace',message:'Paso de traza inválido.'});return false;}
-  return true;
-}};
-const entrySchema=object({id:text(),kind:enumeration('action','correction','undo'),before:stateSchema,after:stateSchema,
-  action:nullable(actionSchema),reason:text(2000),targetEntryId:nullable(text()),evidence:nullable(evidenceSchema),trace:traceSchema});
-const journalSchema=object({schemaVersion:enumeration('confirmed-1'),initialState:stateSchema,state:stateSchema,history:array(entrySchema,1000)});
-export type ConfirmedRecord=Infer<typeof journalSchema>;
-export type ConfirmedEntry=ConfirmedRecord['history'][number];
+export const CONFIRMED_MIGRATION_BACKUP_KEY='balatro-advisor.confirmed.migration-backup.v1';
 const issue=<T>(code:string,message:string,path='$confirmation'):Result<T>=>({ok:false,errors:[{code,message,path}]});
-function canonical(v:unknown):unknown {return Array.isArray(v) ? v.map(canonical) : v && typeof v==='object' ? Object.fromEntries(Object.entries(v).sort(([a],[b])=>a.localeCompare(b)).map(([k,x])=>[k,canonical(x)])) : v;}
-const equal=(a:unknown,b:unknown)=>JSON.stringify(canonical(a))===JSON.stringify(canonical(b));
 function check<T>(schema:Schema<T>,input:unknown):Result<T>{
-  const errors=checkJsonValue(input);if(!errors.length)schema.check(input,'$',errors);
-  return errors.length ? {ok:false,errors} : {ok:true,value:structuredClone(input) as T};
+ const errors=checkJsonValue(input);if(!errors.length)schema.check(input,'$',errors);
+ return errors.length?{ok:false,errors}:{ok:true,value:structuredClone(input) as T};
 }
-export function validateConfirmedRecord(input:unknown):Result<ConfirmedRecord>{
-  const result=check(journalSchema,input);if(!result.ok)return result;
-  const d=result.value;let previous=d.initialState;const ids=new Set<string>();
-  for(const entry of d.history){
-    const increment=entry.kind==='action' && entry.action?.type==='replace' ? 2 : 1;
-    if(ids.has(entry.id) || !equal(entry.before,previous) || entry.after.runId!==previous.runId || entry.after.rulesetId!==previous.rulesetId || entry.after.revision!==previous.revision+increment)
-      return issue('invalid_history','Historial discontinuo, ID duplicado o revisión no creciente.','$history');
-    if(entry.kind==='action' ? entry.action===null || entry.evidence===null || entry.targetEntryId!==null : entry.action!==null || entry.evidence!==null)
-      return issue('invalid_history','Tipo de entrada inconsistente.','$history');
-    if(entry.targetEntryId!==null && !ids.has(entry.targetEntryId))return issue('invalid_history','La corrección apunta a una entrada inexistente.','$history');
-    ids.add(entry.id);previous=entry.after;
-  }
-  if(!equal(previous,d.state))return issue('invalid_history','El estado y la última entrada no coinciden.','$state');
-  if(new TextEncoder().encode(JSON.stringify(d)).byteLength>MAX_RECORD_BYTES)return issue('size','El registro supera 8 MiB. Exporta el archivo; no se elimina historial automáticamente.');
-  return result;
-}
+export interface PreparedMigration {record:ConfirmedRecord;expectedRaw:string;requiresMigration:boolean}
+
 const header={confirmationId:text(),confirmed:boolean,expected:bindingSchema,updatedAt:text()};
 // The observed balance has the same integer domain as H1. H2, not the receipt
 // schema, determines whether a negative balance is legal (e.g. Credit Card).
@@ -76,7 +45,7 @@ export function createConfirmedStore(getStorage:()=>StoragePort){
     let parsed:unknown;try{parsed=JSON.parse(raw);}catch{return issue('invalid_json','Registro corrupto: no se borra ni sustituye.');}
     const checked=validateConfirmedRecord(parsed);return checked.ok ? {ok:true,value:{raw,record:checked.value}} : checked;
   };
-  const commit=(record:ConfirmedRecord,expectedRaw:string|null):Result<ConfirmedRecord>=>{
+  const commit=(record:unknown,expectedRaw:string|null):Result<ConfirmedRecord>=>{
     const checked=validateConfirmedRecord(record);if(!checked.ok)return checked;
     let conflict=false;
     // H1 validates/serializes the state; its storage port wraps that write in the journal envelope.
@@ -95,13 +64,43 @@ export function createConfirmedStore(getStorage:()=>StoragePort){
     if(!equal(analysisBinding(record.state),r.expected))return issue('stale_revision','La partida cambió desde el análisis. Recarga y recalcula; no apliques automáticamente el consejo anterior.');
     return {ok:true,value:{raw,record}};
   };
-  const append=(base:{raw:string;record:ConfirmedRecord},entry:ConfirmedEntry)=>commit({...base.record,state:entry.after,history:[...base.record.history,entry]},base.raw);
+  const append=(base:{raw:string;record:ConfirmedRecord},entry:EntryInput)=>commit({...base.record,state:entry.after,history:[...base.record.history,entry]},base.raw);
+  const prepareMigration=():Result<PreparedMigration>=>{
+    const loaded=read();if(!loaded.ok)return loaded;
+    const {raw,record}=loaded.value;if(raw===null||record===null)return issue('not_initialized','No hay una partida registrada para migrar.');
+    const migrated=migrateConfirmedRecord(record);if(!migrated.ok)return migrated;
+    return {ok:true,value:{record:migrated.value,expectedRaw:raw,requiresMigration:record.schemaVersion==='confirmed-1'}};
+  };
   return {
     load():Result<ConfirmedRecord|null>{const r=read();return r.ok ? {ok:true,value:r.value.record} : r;},
+    prepareMigration,
+    migrateToCurrent(input:{confirmed:boolean;expectedRaw:string}):Result<ConfirmedRecord>{
+      const request=check(object({confirmed:boolean,expectedRaw:text(MAX_RECORD_BYTES)}),input);if(!request.ok)return request;
+      if(!request.value.confirmed)return issue('confirmation_required','Confirma la actualización del formato antes de guardar.');
+      const prepared=prepareMigration();if(!prepared.ok)return prepared;
+      const p=prepared.value;
+      if(request.value.expectedRaw!==p.expectedRaw)return issue('stale_revision','La copia cambió desde la vista previa. Vuelve a preparar la migración.');
+      if(!p.requiresMigration)return {ok:true,value:p.record};
+      try{
+        const storage=getStorage();
+        if(storage.getItem(CONFIRMED_STORAGE_KEY)!==p.expectedRaw)return issue('stale_revision','La copia cambió antes de guardar el respaldo.');
+        // Backup is a separate recoverable document. The active state and all
+        // history are replaced together only after this write has succeeded.
+        storage.setItem(CONFIRMED_MIGRATION_BACKUP_KEY,p.expectedRaw);
+      }catch{return issue('migration_backup','No se pudo guardar el respaldo. La partida anterior no se sustituyó.','$storage');}
+      return commit(p.record,p.expectedRaw);
+    },
+    exportMigrationBackup():Result<string>{
+      let raw:string|null;try{raw=getStorage().getItem(CONFIRMED_MIGRATION_BACKUP_KEY);}catch{return issue('storage_read','No se pudo leer el respaldo de migración.','$storage');}
+      if(raw===null)return issue('missing_backup','Todavía no existe un respaldo de migración.');
+      if(new TextEncoder().encode(raw).byteLength>MAX_RECORD_BYTES)return issue('size','El respaldo supera el límite admitido; se conserva sin cambiar.');
+      let parsed:unknown;try{parsed=JSON.parse(raw);}catch{return issue('invalid_json','El respaldo contiene JSON inválido; no se modifica.');}
+      const valid=validateConfirmedRecord(parsed);return valid.ok?{ok:true,value:raw}:valid;
+    },
     initialize(input:unknown):Result<ConfirmedRecord>{
       const current=read();if(!current.ok)return current;if(current.value.record)return issue('already_initialized','Ya existe una partida; usa importación con reemplazo explícito.');
       const checked=validateState(input);if(!checked.ok)return checked;
-      return commit({schemaVersion:'confirmed-1',initialState:checked.value,state:structuredClone(checked.value),history:[]},null);
+      return commit({schemaVersion:checked.value.schemaVersion==='0.2'?'confirmed-2':'confirmed-1',initialState:checked.value,state:structuredClone(checked.value),history:[]},null);
     },
     restoreJson(json:string,authorization:{confirmed:boolean;expectedRaw:string|null}):Result<ConfirmedRecord>{
       if(!authorization || authorization.confirmed!==true)return issue('confirmation_required','Confirma la importación y el reemplazo si existe una partida.');
@@ -111,12 +110,12 @@ export function createConfirmedStore(getStorage:()=>StoragePort){
       if(checked.ok)return commit(checked.value,authorization.expectedRaw);
       const legacy=validateState(input);
       if(!legacy.ok)return checked;
-      return commit({schemaVersion:'confirmed-1',initialState:legacy.value,state:structuredClone(legacy.value),history:[]},authorization.expectedRaw);
+      return commit({schemaVersion:legacy.value.schemaVersion==='0.2'?'confirmed-2':'confirmed-1',initialState:legacy.value,state:structuredClone(legacy.value),history:[]},authorization.expectedRaw);
     },
     migrateLegacy():Result<ConfirmedRecord>{
       const current=read();if(!current.ok)return current;if(current.value.record)return issue('already_initialized','Ya existe un registro; no se sobrescribe mediante migración.');
       const old=createStateStore(getStorage).load();if(!old.ok)return old;if(!old.value)return issue('missing_legacy','No existe una partida H1 para migrar.');
-      return commit({schemaVersion:'confirmed-1',initialState:old.value,state:structuredClone(old.value),history:[]},null);
+      return commit({schemaVersion:old.value.schemaVersion==='0.2'?'confirmed-2':'confirmed-1',initialState:old.value,state:structuredClone(old.value),history:[]},null);
     },
     confirm(input:unknown,options:EngineOptions={}):Result<ConfirmedRecord>{
       const request=check(confirmSchema,input);if(!request.ok)return request;const r=request.value;

@@ -1,8 +1,8 @@
-# Modelo de estado v0.1
+# Modelo de estado 0.1 y 0.2
 
-**T09b, 2026-10-10:** GameState 0.1 no cambia. Un documento separado confirmed-1 contiene partida e historial de acciones realizadas, migrado explícitamente desde H1. [Contrato, separación de hipótesis y correcciones](confirmaciones-t09b.md). Tras adoptar ese documento, su state es la fuente de verdad; el guardado H1 anterior queda como respaldo.
+**Actualización RUN01a, 2026-10-16:** se admiten GameState 0.1 y 0.2. El nuevo formato incorpora fases discriminadas; el antiguo sigue siendo legible sin conversión. El documento de partida e historial admite `confirmed-1` con estados 0.1 o `confirmed-2` con estados 0.2. [Fases, APIs de migración y recuperación](fases-y-migracion.md). El `state` del registro adoptado es la fuente de verdad; las consultas no lo modifican.
 
-Actualización: 2026-10-09. Implementado en [model.ts](../src/state/model.ts), [schema.ts](../src/state/schema.ts) y [validation.ts](../src/state/validation.ts). Alcance de producto: [especificación](especificacion-v0.1.md); reglas separadas: [catálogo y evidencia](reglas-y-fuentes.md). H1 no depende de confirmar versión, intereses ni Green.
+Implementado en [model.ts](../src/state/model.ts), [schema.ts](../src/state/schema.ts) y [validation.ts](../src/state/validation.ts). El contrato 0.1 está congelado en [legacy-model.ts](../src/state/legacy-model.ts) y [legacy-validation.ts](../src/state/legacy-validation.ts). Alcance de producto: [especificación](especificacion-v0.1.md); reglas separadas: [catálogo y evidencia](reglas-y-fuentes.md). La validación estructural no depende de confirmar reglas del juego.
 
 **H2:** este esquema y su persistencia no cambiaron. El motor ya implementa validación semántica del alcance, acciones, puntuación y eventos en módulos separados; el texto que los describe como posteriores a H1 se concreta ahora en [motor-h2.md](motor-h2.md). El ejemplo histórico 1.0.1f sigue siendo guardable, pero el motor activo requiere contrato 1.0.1o explícito. RoundState es una proyección efímera, no un campo nuevo del JSON. Las salidas proyectadas no son nuevas observaciones por el hecho de tener forma GameState.
 
@@ -18,7 +18,7 @@ type Fact<T> =
   | { status: 'unknown'; reason: string };
 ```
 
-Ausencia de dato no equivale a cero, false o lista vacía. `confirmedPreset` registra confirmación de entrada del usuario, no observación de una regla por el equipo. `createDraft(runId, updatedAt)` crea campos desconocidos y ruleset `unselected`, sin seleccionar build ni aplicar recursos del juego. El llamante suministra identidad y fecha, y valida antes de guardar.
+Ausencia de dato no equivale a cero, false o lista vacía. `confirmedPreset` registra confirmación de entrada del usuario, no observación de una regla por el equipo. `createDraft(runId, updatedAt)` sigue creando 0.1 `draft`; `createUnknownState(runId, updatedAt)` crea 0.2 `unknown`. Ambos usan campos desconocidos y ruleset `unselected`, sin seleccionar build ni aplicar recursos del juego. El llamante suministra identidad y fecha, y valida antes de guardar.
 
 `observed` conserva la instantánea; `assumptions` contiene manos y planes hipotéticos. Los resultados derivados no se guardan como hechos ni se aceptan como campos extra. `recentRounds` es contexto histórico opcional; no implica una distribución de probabilidades.
 
@@ -28,11 +28,12 @@ Todos los números son enteros seguros. No hay coerción de texto a número. Los
 
 | Campo | Tipo / validación H1 |
 | --- | --- |
-| schemaVersion | Literal "0.1"; otra versión se rechaza sin migración automática. |
+| schemaVersion | "0.1" o "0.2"; otras versiones se rechazan. Validar y cargar no convierten entre versiones. |
 | rulesetId, runId | Texto no vacío; ruleset no necesita existir para poder guardar. |
 | revision | Entero ≥0; guardar conserva su valor, no incrementa automáticamente. |
 | updatedAt | Fecha UTC real YYYY-MM-DDTHH:mm:ssZ o con tres cifras de milisegundos. |
-| phase | shop o draft. No es prueba de que el análisis esté disponible. |
+| phase | 0.1: shop/draft. 0.2: unknown/blind_select/in_round/cashout/shop/open_pack/finished. No acredita una transición realizada ni disponibilidad de análisis. |
+| phaseData | Solo 0.2, obligatorio y discriminado por phase. [Campos y validaciones](fases-y-migracion.md#fases-de-02). |
 | observed.gameVersion, gamePlatform, deckId, stakeId | Fact de texto; otras builds/barajas se conservan. |
 | observed.modsPresent | Fact booleano; true es guardable, aunque fuera del alcance propuesto. |
 | observed.money | Fact de entero con signo; no se impone la ausencia de deuda como regla de serialización. |
@@ -57,7 +58,7 @@ La lista completa y sus tipos se infieren del esquema ejecutable; no mantener un
 
 `ShopOffer`: offerId, catalogId, label, kind joker/unsupported, price Fact de entero ≥0, edition y stickers. Los precios observados se conservan aunque difieran del catálogo.
 
-Se rechazan IDs duplicados de cartas, instancias de comodín, ofertas, probes y planes. Las referencias de cartas se contrastan si el mazo está enumerado; un preset opaco no se expande ni permite acreditar referencias en H1. Cada lista de cartas de un evento rechaza duplicados. La disponibilidad de cartas a través del tiempo corresponde al motor futuro.
+Se rechazan IDs duplicados de cartas, instancias de comodín, ofertas, probes y planes. Las referencias de cartas se contrastan si el mazo está enumerado; un preset opaco no se expande ni permite acreditar referencias en H1. Cada lista de cartas de un evento rechaza duplicados. En 0.2 también se contrastan los IDs conocidos en mano. La disponibilidad de cartas a través del tiempo corresponde a H2/T07b.
 
 ## Datos para valorar supervivencia
 
@@ -69,11 +70,11 @@ Se rechazan IDs duplicados de cartas, instancias de comodín, ofertas, probes y 
 
 Para supervivencia, el futuro analizador necesitará objetivo/jefe/recursos, composición del mazo, bases de mano, inventario/contadores y ejemplos. Si faltan, debe limitar o abstenerse según el módulo. Incluso con datos completos el orden futuro del mazo continúa desconocido.
 
-## Validación semántica posterior, separada
+## Validación semántica separada
 
-H2 comprueba compatibilidad de build y presets, recursos Blue/White, capacidad, precios, efectos de los jefes admitidos, puntuación y disponibilidad de cartas durante eventos explícitos. Al terminar una ronda deja la próxima ciega y tienda desconocidas; no genera una nueva ronda. Evaluar planes completos sigue pendiente. Las dependencias están en el [backlog](backlog.md). Estas reglas no se ejecutan al guardar ni se presentan como observadas en el juego.
+H2 comprueba compatibilidad de build y presets, recursos, capacidad, precios, efectos de los jefes admitidos, puntuación y disponibilidad de cartas durante eventos explícitos, dentro de su cobertura. T07b evalúa planes completos y el horizonte permite continuaciones declaradas. Al terminar una ronda calculada, deja próxima ciega y tienda desconocidas: en 0.1 usa `draft`; en 0.2 usa `unknown` con motivo. Estas salidas son proyecciones, no avances registrados de partida. Estas reglas no se ejecutan al guardar ni se presentan como observadas en el juego.
 
-Las acciones H2 hold/buy/sell/replace producen copias y exigen revisión e IDs vigentes. Su contrato incluye trazas, evidencia y versión de motor, como detalla el [motor H2](motor-h2.md). El futuro análisis estratégico deberá asociarse también a la revisión de entrada y versión de política. No existe todavía puntuación estratégica ni probabilidad de victoria.
+Las acciones H2 hold/buy/sell/replace producen copias y exigen revisión e IDs vigentes. Su contrato incluye trazas, evidencia y versión de motor, como detalla el [motor H2](motor-h2.md). H3 y las valoraciones contextuales conservan sus límites propios; una valoración heurística no estima la probabilidad de victoria. T09b vincula las confirmaciones al estado utilizado, incluyendo schemaVersion en 0.2 para invalidar consejos anteriores a la migración.
 
 ## Ejemplo completo: fixture sintético S01
 
@@ -152,12 +153,12 @@ Ejemplo de contadores: `{"greenMult":{"status":"known","value":7,"source":"manua
 
 ## Persistencia y errores
 
-La tienda transcrita en la Mesa utiliza un `ShopSnapshot` separado: [contrato y límites](tienda-contextual.md#estado-y-contrato). Sus ofertas temporales no son adquisiciones ni sustituyen el `observed.shop` de un guardado existente. Consultarla no cambia la revisión, inventario o historial de la partida.
+Desde [SHOP03a](tienda-persistente.md), las ofertas de comodines transcritas en Mesa se conservan en `observed.shop` del mismo registro de la partida; la vista se reconstruye desde él. Registrar una oferta es una observación, no una compra. Consultarla no cambia revisión, inventario ni historial. Los vales y sobres ofertados mantienen sus límites de consulta descritos en esa entrega.
 
-API: validateState, parseState, serializeState y createStateStore. Resultado discriminado `{ok:true,value}` o `{ok:false,errors:[{path,code,message}]}`. Ejemplo: un schemaVersion diferente devuelve ruta `$.schemaVersion`, código `unsupported_schema` y explica que no se migrará automáticamente.
+API: validateState, validateLegacyState, validateCurrentState, parseState, serializeState y createStateStore. Resultado discriminado `{ok:true,value}` o `{ok:false,errors:[{path,code,message}]}`. Una versión no admitida devuelve ruta `$.schemaVersion`, código `unsupported_schema` y explica que no se migrará automáticamente. `migrateState` es una conversión explícita y pura; no incrementa revisión ni convierte hipótesis en observaciones.
 
-La clave es `balatro-advisor.state.v0.1`. load devuelve null cuando no existe guardado; un JSON corrupto devuelve errores sin borrarlo. save e import validan antes de setItem; fallos de acceso/cuota se comunican. export funciona sin acceder al almacenamiento. El puerto exige la atomicidad ante fallo de Web Storage. No se implementa archivo descargable ni formulario todavía.
+El almacén H1 conserva la clave `balatro-advisor.state.v0.1`; el flujo web adoptado usa el registro T09b en `balatro-advisor.confirmed.v1`, cuyo contenido puede ser confirmed-1 o confirmed-2. Los nombres históricos de claves no seleccionan el formato. load devuelve null cuando no existe guardado; un JSON corrupto devuelve errores sin borrarlo. save e import validan antes de setItem; fallos de acceso/cuota se comunican. El puerto exige la atomicidad ante fallo de Web Storage. La web permite descargar e importar el registro completo.
 
 Límite 1 MiB de JSON UTF-8, profundidad 60 y 100 000 nodos; rechazo de ciclos, getters, objetos no JSON, claves reservadas, campos extra, arrays dispersos y valores que no sobrevivirían ida/vuelta (undefined, NaN, infinito, -0). Una validación exitosa devuelve copia independiente.
 
-El almacenamiento pertenece al navegador/origen/dispositivo, puede borrarse y no se sincroniza. No se promete una segunda copia de borrador ni recuperación automática de datos corruptos. [Pruebas y limitaciones reales de H1](evidencia/h1-validacion.md).
+El almacenamiento pertenece al navegador/origen/dispositivo, puede borrarse y no se sincroniza. No se promete una segunda copia de borrador ni recuperación automática de datos corruptos. La migración explícita confirmed-1→confirmed-2 conserva antes el texto original en un único espacio de respaldo descargable; no es un historial de copias ilimitado. [Procedimiento y fallos de migración](fases-y-migracion.md). [Pruebas históricas de H1](evidencia/h1-validacion.md).

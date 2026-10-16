@@ -74,7 +74,7 @@ function select(id:string,label:string,choices:Record<string,string>,selected=''
 function checkbox(id:string,label:string,checked=false){const wrap=node('label','','check');const input=node('input');input.type='checkbox';input.id=id;input.checked=checked;wrap.append(input,node('span',label));return {wrap,input};}
 function button(text:string,fn:()=>void,className='secondary'){const b=node('button',text,className);b.type='button';b.onclick=fn;return b;}
 function details(title:string,data:unknown){const d=node('details');d.append(node('summary',title),node('pre',typeof data==='string'?data:JSON.stringify(data,null,2)));return d;}
-function invalidate(text='Los datos cambiaron. Vuelve a consultar las recomendaciones.',refreshShop=true) {handRequest++;if(refreshShop)invalidateCandidates();refreshOwnedFits();$('hand-results')?.replaceChildren();clearTimeout(cashoutTimer);cashoutTimer=setTimeout(()=>refreshCashout(),230);$('draft-status').hidden=!dirty;advice=null;demoMode=false;$('advice').replaceChildren(node('p',text,'empty'));$('bounds')?.replaceChildren();$('horizon-results')?.replaceChildren();$('exit-demo').hidden=true;}
+function invalidate(text='Los datos cambiaron. Vuelve a consultar las recomendaciones.',refreshShop=true) {handRequest++;if(refreshShop)invalidateCandidates();refreshOwnedFits();$('hand-results')?.replaceChildren();clearTimeout(cashoutTimer);cashoutTimer=setTimeout(()=>refreshCashout(),230);$('draft-status').hidden=!dirty;advice=null;demoMode=false;$('advice').replaceChildren(node('p',text,'empty'));$('bounds')?.replaceChildren();$('horizon-results')?.replaceChildren();$('exit-demo').hidden=true;updateMigrationButton();}
 function canWrite(){
   if(!lock.owned){message('Esta pestaña es de lectura. Solicita el control para guardar.',true);return false;}
   try{if(localStorage.getItem(CONFIRMED_STORAGE_KEY)!==seenRaw){reload();message('La partida cambió. Revisa los datos y vuelve a calcular.',true);return false;}}
@@ -109,7 +109,7 @@ function reload(){
   const loaded=store.load();loadFailed=!loaded.ok;record=loaded.ok?loaded.value:null;
   try{seenRaw=localStorage.getItem(CONFIRMED_STORAGE_KEY);}catch{loadFailed=true;}
   if(!loaded.ok)problem(loaded.errors);
-  invalidate();renderRecord();renderHistory();renderActions();updateOwnership();
+  invalidate();renderRecord();renderHistory();renderActions();renderMigrationControls();updateOwnership();
   document.querySelectorAll('[data-card-picker]').forEach(e=>e.dispatchEvent(new Event('refreshcards')));
   document.querySelectorAll('[data-composition-preview]').forEach(e=>e.dispatchEvent(new Event('input')));
 }
@@ -127,11 +127,17 @@ function unsupportedForEditor(s:GameState){
 }
 function renderRecord(){
   $('revision').textContent=record?`Revisión ${record.state.revision}`:'Sin copia guardada';
+  const phases:Record<string,string>={shop:'Tienda',draft:'Fase sin registrar',unknown:'Fase sin registrar',blind_select:'Selección de ciega',in_round:'Ronda',cashout:'Cobro',open_pack:'Sobre abierto',finished:'Partida terminada'};
+  const progress=$('run-progress');progress.hidden=!record;progress.textContent=record?phases[record.state.phase]??record.state.phase:'';
+  progress.title=record?.state.schemaVersion==='0.2'&&record.state.phase==='unknown'?record.state.phaseData.reason:'';
   const summary=$('summary');summary.replaceChildren();const host=$('state-form');host.replaceChildren();$('record-save')?.querySelector('.save-bar')?.remove();
   if(loadFailed){host.append(node('p','No se pudo cargar el registro. No se ha sobrescrito. Puedes importar una copia validada en «Copias».','error'));return;}
   readLiveState=null;refreshOwnedFits=()=>{};const s=record?.state;
   const deckDisplay=$('active-deck');deckDisplay.textContent=s?(deckDefinition(value(s.observed.deckId)??'')?.name??`Baraja ${value(s.observed.deckId)??'desconocida'} · sin soporte`):'15 barajas · 10 con cálculo';
-  if(s && unsupportedForEditor(s)){host.append(node('p','Copia recuperada fuera del formulario compatible (fase distinta de tienda, versión, mazo, edición o modificadores). Se conserva íntegra. Puedes exportarla o importar otra copia; el análisis indicará sus límites.','notice'),details('Datos importados, sin cambios',s));return;}
+  if(s && unsupportedForEditor(s)){
+    const text=s.schemaVersion==='0.2'&&s.phase==='unknown'?`Fase sin registrar. ${s.phaseData.reason}`:s.phase!=='shop'?'Los datos de esta fase se conservan. Su seguimiento se conectará en la siguiente entrega.':'Copia fuera del formulario compatible. Se conserva íntegra; el análisis indicará sus límites.';
+    host.append(node('p',text,'notice'),details('Datos importados, sin cambios',s));return;
+  }
   const form=node('form');form.id='run-form';form.noValidate=true;const fieldset=node('fieldset');form.append(fieldset);host.append(form);
   const coverage=checkbox('coverage','Partida compatible · datos confirmados',!!s);
   coverage.input.setAttribute('aria-describedby','coverage-description');
@@ -241,7 +247,10 @@ function renderRecord(){
   readLiveState=(quick=false)=>{
     if(!quick&&!deckDefinition(startingDeck.input.value))throw new Error('Baraja fuera del cálculo compatible.');
     if(!quick&&!coverage.input.checked)throw new Error('Confirma la cobertura de tu partida.');
-    const state=structuredClone(workingBase);state.rulesetId=ENGINE_RULESET;state.phase='shop';
+    const state=structuredClone(workingBase);state.rulesetId=ENGINE_RULESET;
+    // Only legacy drafts need this editor projection. A current state keeps its
+    // discriminated phase; editing fields never records a game transition.
+    if(state.schemaVersion==='0.1')state.phase='shop';
     const o=state.observed;o.gameVersion=coverage.input.checked?known(GAME_VERSION):unknown();o.gamePlatform=coverage.input.checked?known('pc-steam'):unknown();o.modsPresent=coverage.input.checked?known(false):unknown();o.deckId=known(startingDeck.input.value);o.stakeId=coverage.input.checked?known('white'):unknown();o.deck=deckEditor.read();o.outOfScope=known({vouchers:vouchers.read(),consumables:[],pendingTags:[],otherModifiers:[]});o.money=numFact(money.input,-20);
     o.resources={handsPerRound:numFact($<HTMLInputElement>('hands'),0),discardsPerRound:numFact($<HTMLInputElement>('discards'),0),handSize:numFact($<HTMLInputElement>('size'),0),jokerSlots:numFact($<HTMLInputElement>('slots'),0)};
     if(kind.input.value){const a=number(ante.input,1);if(a>8)throwField('ante','Solo se admiten antes 1 a 8.');o.nextBlind=known({ante:a,kind:kind.input.value as 'small'|'big'|'boss',bossId:kind.input.value==='boss'?(boss.input.value?known(boss.input.value):unknown()):known('none'),target:!manualTarget.input.checked&&targetCalculated&&target.input.value!==''?{status:'known',source:'confirmedPreset',value:number(target.input,1)}:numFact(target.input,1),reward:!manualReward.input.checked&&rewardCalculated&&reward.input.value!==''?{status:'known',source:'confirmedPreset',value:number(reward.input,0)}:numFact(reward.input,0)});}else o.nextBlind=unknown();
@@ -460,13 +469,46 @@ function renderHistory(){const host=$('history-list');host.replaceChildren();if(
   const current=record;for(const e of [...current.history].reverse()){const d=node('details');d.append(node('summary',`${e.kind==='action'?'Acción':e.kind==='undo'?'Deshacer registro':'Corrección manual'} · revisión ${e.before.revision} → ${e.after.revision}`),node('p',e.reason),node('p',`Dinero: ${value(e.before.observed.money)??'?'} → ${value(e.after.observed.money)??'?'}.`),details('Cambios completos y evidencia',e));host.append(d);}
   const last=current.history.at(-1)!;if(last.kind!=='undo'){const b=button('Deshacer la última entrada',()=>{if(!canWrite())return;const body=node('div');body.append(node('p','Corrige el registro local; no deshace ninguna acción dentro de Balatro. Se conservará todo el historial.'));const reason=field('undo-reason','Motivo del error');body.append(reason.wrap);const id=uuid();openDialog('Deshacer registro equivocado',body,'Deshacer entrada',()=>{if(!reason.input.value.trim()){message('Indica el motivo de la corrección.',true);return false;}return commit(()=>store.undoLatest({confirmationId:id,confirmed:true,expected:analysisBinding(current.state),updatedAt:now(),targetEntryId:last.id,reason:reason.input.value}));});});b.dataset.write='true';host.append(b);}host.append(node('p','Para corregir una entrada anterior, transcribe los datos actuales en «Tu partida» e indica el motivo.','muted'));
 }
+function updateMigrationButton(){
+  const button=$<HTMLButtonElement>('run-migrate');if(!button)return;
+  const disabled=!record||record.schemaVersion==='confirmed-2'||dirty||loadFailed;
+  button.dataset.localDisabled=String(disabled);button.disabled=disabled||!lock.owned;
+}
+function renderMigrationControls(){
+  updateMigrationButton();
+  $('run-format-status').textContent=record?.schemaVersion==='confirmed-2'?'Formato 0.2 actualizado. El respaldo permite recuperar la copia anterior.':record?'La copia actual sigue siendo compatible. Actualiza su formato para representar las fases de la partida.':'Registra o importa una partida para actualizar su formato.';
+  $<HTMLButtonElement>('run-migration-backup').disabled=!store.exportMigrationBackup().ok;
+}
+$('run-migrate').onclick=()=>{
+  if(dirty){message('Guarda o recarga la transcripción antes de actualizar el formato.',true);return;}
+  if(!canWrite())return;
+  const prepared=store.prepareMigration();if(!prepared.ok){problem(prepared.errors);return;}
+  const migration=prepared.value;if(!migration.requiresMigration)return;
+  const body=node('div');body.id='run-migration-preview';
+  body.append(node('p','Estado 0.1 → 0.2 · registro confirmed-1 → confirmed-2'),
+    node('p',`Revisión ${migration.record.state.revision} · ${migration.record.history.length} ${migration.record.history.length===1?'entrada':'entradas'} de historial · ${2+migration.record.history.length*2} instantáneas.`),
+    node('p','Se conservan dinero, cartas, contadores, revisiones y evidencia. No se reproducen acciones ni se aplican resultados de escenarios.'),
+    node('p',migration.record.state.phase==='unknown'?'La fase del antiguo borrador seguirá desconocida; no se deduce una ciega ni un resultado.':'La tienda conserva su fase; su ciega de origen permanece desconocida.'),
+    node('p','Antes de sustituir la copia se guarda un respaldo íntegro. Sustituye el respaldo de una migración previa si existe; puedes descargarlo antes de continuar.'));
+  openDialog('Actualizar formato de la partida',body,'Actualizar y conservar respaldo',()=>{
+    if(!canWrite())return false;
+    const result=store.migrateToCurrent({confirmed:true,expectedRaw:migration.expectedRaw});
+    if(!result.ok){problem(result.errors);renderMigrationControls();return false;}
+    reload();message('Formato actualizado. Estado e historial conservados; respaldo anterior disponible en Registro.');return true;
+  });
+};
+$('run-migration-backup').onclick=()=>{
+  const result=store.exportMigrationBackup();if(!result.ok){problem(result.errors);return;}
+  const url=URL.createObjectURL(new Blob([result.value],{type:'application/json'})),a=node('a');a.href=url;a.download='balatro-respaldo-anterior.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
+  message('Respaldo anterior preparado. Para recuperarlo, impórtalo como copia de partida.');
+};
 $('export').onclick=()=>{const result=store.exportJson();if(!result.ok){problem(result.errors);return;}const url=URL.createObjectURL(new Blob([result.value],{type:'application/json'}));const a=node('a');a.href=url;a.download='balatro-partida.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);message('Copia validada preparada para descargar.');};
 $<HTMLInputElement>('import-file').onchange=async()=>{
   const input=$<HTMLInputElement>('import-file'),file=input.files?.[0];input.value='';if(!file)return;
   if(!lock.owned){message('Solicita control antes de importar.',true);return;}if(file.size>MAX_RECORD_BYTES){message('La copia supera 8 MiB.',true);return;}
   try{const text=await file.text();let data:unknown;try{data=JSON.parse(text);}catch{message('JSON inválido. No se cambió la partida.',true);return;}
     const journal=validateConfirmedRecord(data),legacy=validateState(data);if(!journal.ok&&!legacy.ok){problem(journal.errors);return;}
-    const raw=localStorage.getItem(CONFIRMED_STORAGE_KEY);const body=node('div');body.append(node('p',raw===null?'Se importará una partida validada.':'Esto reemplazará la partida y su historial actuales. Exporta primero si quieres conservarlos.'),node('p',journal.ok?'Formato: partida e historial confirmed-1.':'Formato H1: se creará un registro sin historial previo.'));
+    const raw=localStorage.getItem(CONFIRMED_STORAGE_KEY);const body=node('div');body.append(node('p',raw===null?'Se importará una partida validada.':'Esto reemplazará la partida y su historial actuales. Exporta primero si quieres conservarlos.'),node('p',journal.ok?`Formato: partida e historial ${journal.value.schemaVersion}.`:'Formato H1: se creará un registro sin historial previo.'));
     openDialog('Importar copia validada',body,raw===null?'Importar partida':'Sí, reemplazar partida',()=>{
       if(!lock.owned){message('No tienes control de escritura.',true);return false;}
       const restored=store.restoreJson(text,{confirmed:true,expectedRaw:raw});if(!restored.ok){problem(restored.errors);return false;}reload();message('Copia importada y guardada. Los consejos anteriores se invalidaron.');return true;

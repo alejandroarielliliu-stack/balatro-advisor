@@ -1,56 +1,61 @@
-import { gameStateSchema } from './model.js';
-import type { GameState } from './model.js';
+import { currentGameStateSchema } from './model.js';
+import type { GameState, GameStateV01, GameStateV02 } from './model.js';
+import { MAX_STATE_BYTES, validateState as validateFrozenLegacyState } from './legacy-validation.js';
 import { checkJsonValue, isObject, issue } from './schema.js';
-import type { Issue, Result } from './schema.js';
+import type { Result } from './schema.js';
 
-export const MAX_STATE_BYTES = 1_048_576;
+export { MAX_STATE_BYTES } from './legacy-validation.js';
 
-function unique(values: readonly string[], path: string, errors: Issue[]): void {
-  const seen = new Set<string>();
-  values.forEach((value, index) => {
-    if (seen.has(value)) issue(errors, `${path}[${index}]`, 'duplicate_id', `Identificador repetido: ${value}.`);
-    seen.add(value);
-  });
+/** This export always validates the frozen 0.1 shape; it does not migrate it. */
+export function validateLegacyState(input: unknown): Result<GameStateV01> {
+  return validateFrozenLegacyState(input);
 }
 
-export function validateState(input: unknown): Result<GameState> {
+export function validateCurrentState(input: unknown): Result<GameStateV02> {
   const errors = checkJsonValue(input);
   if (errors.length) return { ok: false, errors };
-  if (isObject(input) && Object.hasOwn(input, 'schemaVersion') && input.schemaVersion !== '0.1') {
-    return { ok: false, errors: [{ path: '$.schemaVersion', code: 'unsupported_schema',
-      message: 'Versión de documento no admitida. Conserva el archivo original; no se migrará automáticamente.' }] };
-  }
-  if (!gameStateSchema.check(input, '$', errors)) return { ok: false, errors };
-  const state = input as GameState;
-  const { jokers, shop, deck } = state.observed;
-  if (jokers.status === 'known') unique(jokers.value.map(j => j.instanceId), '$.observed.jokers.value.instanceIds', errors);
-  if (shop.status === 'known') unique(shop.value.cardOffers.map(o => o.offerId), '$.observed.shop.value.offerIds', errors);
-  unique(state.assumptions.probes.map(p => p.probeId), '$.assumptions.probes.ids', errors);
-  unique(state.assumptions.roundPlans.map(p => p.planId), '$.assumptions.roundPlans.ids', errors);
-  let cardIds: Set<string> | undefined;
-  if (deck.status === 'known' && 'cards' in deck.value) {
-    unique(deck.value.cards.map(c => c.instanceId), '$.observed.deck.value.instanceIds', errors);
-    cardIds = new Set(deck.value.cards.map(c => c.instanceId));
-  }
-  const refs = (ids: string[], path: string) => {
-    unique(ids, path, errors);
-    ids.forEach((id, index) => {
-      if (cardIds && !cardIds.has(id)) issue(errors, `${path}[${index}]`, 'unknown_reference', `La carta ${id} no existe en el mazo explícito.`);
+  if (!currentGameStateSchema.check(input, '$', errors)) return { ok: false, errors };
+  const state = input as GameStateV02;
+  const projected = { ...state, schemaVersion: '0.1', phase: state.phase === 'shop' ? 'shop' : 'draft' };
+  delete (projected as Record<string, unknown>).phaseData;
+  const legacy = validateLegacyState(projected);
+  if (!legacy.ok) return legacy;
+
+  // Only structural identity references; turn legality, defaults and effects belong to H2.
+  if (state.phase === 'in_round' && state.phaseData.heldCardIds.status === 'known') {
+    const seen = new Set<string>();
+    const deck = state.observed.deck;
+    const ids = deck.status === 'known' && 'cards' in deck.value
+      ? new Set(deck.value.cards.map(card => card.instanceId)) : undefined;
+    state.phaseData.heldCardIds.value.forEach((id, index) => {
+      const path = `$.phaseData.heldCardIds.value[${index}]`;
+      if (seen.has(id)) issue(errors, path, 'duplicate_id', `Identificador repetido: ${id}.`);
+      if (ids && !ids.has(id)) issue(errors, path, 'unknown_reference', `La carta ${id} no existe en el mazo explícito.`);
+      seen.add(id);
     });
-  };
-  state.assumptions.probes.forEach((probe, index) => refs(probe.playedCardIds, `$.assumptions.probes[${index}].playedCardIds`));
-  state.assumptions.roundPlans.forEach((plan, index) => {
-    refs(plan.initialHandCardIds, `$.assumptions.roundPlans[${index}].initialHandCardIds`);
-    plan.events.forEach((event, n) => {
-      refs(event.cardIds, `$.assumptions.roundPlans[${index}].events[${n}].cardIds`);
-      refs(event.drawnCardIds, `$.assumptions.roundPlans[${index}].events[${n}].drawnCardIds`);
-    });
-  });
-  // Timing, card availability over events, capacity, defaults, prices and compatibility belong to H2.
+  }
+  if ((state.phase === 'in_round' || state.phase === 'cashout')
+    && state.phaseData.blind.status === 'known' && state.observed.nextBlind.status === 'known') {
+    const active = state.phaseData.blind.value, next = state.observed.nextBlind.value;
+    if (active.ante !== next.ante || active.kind !== next.kind) issue(errors, '$.phaseData.blind.value',
+      'conflicting_reference', 'La ciega activa no coincide con la posición registrada en observed.nextBlind.');
+  }
   if (new TextEncoder().encode(JSON.stringify(state)).byteLength > MAX_STATE_BYTES) {
     issue(errors, '$', 'size', 'La partida supera el límite de 1 MiB.');
   }
   return errors.length ? { ok: false, errors } : { ok: true, value: structuredClone(state) };
+}
+
+/** Accept either supported version; reading never silently changes schema or observations. */
+export function validateState(input: unknown): Result<GameState> {
+  const errors = checkJsonValue(input);
+  if (errors.length) return { ok: false, errors };
+  if (isObject(input) && input.schemaVersion === '0.2') return validateCurrentState(input);
+  if (isObject(input) && Object.hasOwn(input, 'schemaVersion') && input.schemaVersion !== '0.1') {
+    return { ok: false, errors: [{ path: '$.schemaVersion', code: 'unsupported_schema',
+      message: 'Versión de documento no admitida. Conserva el archivo original; no se migrará automáticamente.' }] };
+  }
+  return validateLegacyState(input);
 }
 
 export function parseState(json: string): Result<GameState> {

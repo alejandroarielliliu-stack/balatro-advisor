@@ -193,7 +193,10 @@ export function finishRound(input:RoundState,mutation:Mutation,options:EngineOpt
   const cashout=goalReached?null:cashoutInternal(round.game,round.handsLeft,won,trace,use,round.discardsLeft,{saved:round.status==='rescued',initialHands:round.initialHands,initialDiscards:round.initialDiscards,additionalJokerIncome:history.cashoutBonus});
   if(cashout)round.game.observed.money=valueFact(cashout.balanceAfter);
   if(won)round.game.observed.lastCleared=valueFact({ante:blind.ante,kind:blind.kind});
-  round.game.observed.nextBlind={status:'unknown',reason:'Registrar la siguiente ciega; no se genera un jefe.'};round.game.observed.shop={status:'unknown',reason:'Registrar ofertas nuevas; la tienda anterior ya no es válida.'};round.game.phase='draft';round.game.assumptions.probes=[];round.game.assumptions.roundPlans=[];revise(round.game,mutation);
+  round.game.observed.nextBlind={status:'unknown',reason:'Registrar la siguiente ciega; no se genera un jefe.'};round.game.observed.shop={status:'unknown',reason:'Registrar ofertas nuevas; la tienda anterior ya no es válida.'};
+  if(round.game.schemaVersion==='0.2')round.game={...round.game,phase:'unknown',phaseData:{reason:'La ronda calculada terminó; la siguiente fase real no se registra mediante esta proyección.'}};
+  else round.game.phase='draft';
+  round.game.assumptions.probes=[];round.game.assumptions.roundPlans=[];revise(round.game,mutation);
   trace.push({ruleId:'round.resources',label:'Final de ronda; rescate y objetivo de fichas se distinguen',values:{outcome:round.status,goalReached:String(goalReached)}});return{state:round.game,cashout,goalReached,outcome:round.status};
  });
 }

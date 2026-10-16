@@ -1,6 +1,8 @@
-export { createDraft } from './state/model.js';
-export type { GameState, Fact, Issue, Result, JokerInstance, Probe } from './state/model.js';
-export { validateState, parseState, serializeState, MAX_STATE_BYTES } from './state/validation.js';
+export { createDraft, createUnknownState } from './state/model.js';
+export type { GameState, GameStateV01, GameStateV02, RunPhase, PhaseData, Fact, Issue, Result, JokerInstance, Probe } from './state/model.js';
+export { validateState, validateLegacyState, validateCurrentState, parseState, serializeState, MAX_STATE_BYTES } from './state/validation.js';
+export { migrateState } from './state/migration.js';
+export { migrateConfirmedRecord } from './storage/record-migration.js';
 export { createStateStore, createBrowserStateStore, STATE_STORAGE_KEY } from './storage/state-store.js';
 export type { StoragePort, StateStore } from './storage/state-store.js';
 export { getRuleRegistry, assessRuleEvidence, assessAnalysis, analysisDependencies, evidenceSources } from './rules/evidence.js';
@@ -23,8 +25,8 @@ export type { Comparison, Alternative, Difference } from './evaluation/compariso
 export { adviseShop } from './advisor/advisor.js';
 export type { Advice, AdvisorScenario, AdvisorOptions, AdvisedAlternative, ScenarioAssessment } from './advisor/advisor.js';
 export { POLICY } from './advisor/policy.js';
-export { createConfirmedStore, createBrowserConfirmedStore, validateConfirmedRecord, analysisBinding, CONFIRMED_STORAGE_KEY } from './storage/confirmed-store.js';
-export type { ConfirmedRecord, ConfirmedEntry, ConfirmRequest, CorrectionRequest, UndoRequest, AnalysisBinding } from './storage/confirmed-store.js';
+export { createConfirmedStore, createBrowserConfirmedStore, validateConfirmedRecord, analysisBinding, CONFIRMED_STORAGE_KEY, CONFIRMED_MIGRATION_BACKUP_KEY } from './storage/confirmed-store.js';
+export type { ConfirmedRecord, ConfirmedEntry, ConfirmRequest, CorrectionRequest, UndoRequest, AnalysisBinding, PreparedMigration } from './storage/confirmed-store.js';
 export { boundRoundScore } from './rules/upper-bound.js';
 export type { RoundUpperBound, BoundTerm } from './rules/upper-bound.js';
 export { compareShopBounds } from './evaluation/shop-bounds.js';
