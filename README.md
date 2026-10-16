@@ -2,6 +2,8 @@
 
 **Web pública:** [Balatro Advisor en GitHub Pages](https://alejandroarielliliu-stack.github.io/balatro-advisor/). [Publicación automática y traslado de partidas](docs/github-pages.md). La migración solo se considera publicada cuando el despliegue termina y se comprueba el enlace sin iniciar sesión.
 
+**Informe actual (2026-10-15):** [auditoría del código y cobertura real](docs/reporte-codigo-2026-10-15.md), [recorrido de Balatro y plan del asesor con pocas entradas](docs/plan-asesor-de-partida.md). La web aún no aconseja jugar/saltar ciegas ni mantiene el ciclo completo de una partida. La siguiente integración propuesta es RUN01 + SHOP03; no equivale a añadir más perfiles de comodines.
+
 **Versión vigente:** Mesa con puntaje global/seis barras, [tienda manual y consejo contextual](docs/tienda-contextual.md),150perfiles quick-fit-2,17familias de composiciones,32vales registrables (10efectos H2) y15sobres catalogados con ilustraciones. Disposición visual de Balatro, sin Renovar, Actualizar o Siguiente ronda; recálculo automático. Cálculos de manos en Análisis y guardado confirmado en Registro. Sobres cerrados con contenido desconocido y consejo condicionado. Cobertura web exacta82/150; perfiles no equivalen a efectos completamente implementados.
 
 **Publicación:** `npm.cmd run build:site` genera `out/`; `npm.cmd run test:site` comprueba hosting estático dentro de un subdirectorio. [Acceso, Git separado y traslado de partidas](docs/publicacion.md). Los bloques siguientes conservan el historial de entregas.

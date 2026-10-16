@@ -1,5 +1,9 @@
 # Backlog — T08c completado como software; T01/H2 y T11 abiertos
 
+**Auditoría de producto (2026-10-15):** [informe del código](reporte-codigo-2026-10-15.md) y [plan del asesor de partida](plan-asesor-de-partida.md). Orden propuesto: RUN01a (sesión/fases) → SHOP03a (oferta visible/acción confirmada/autoguardado) → TAG01 (jugar/saltar) → SHOP02a/DECK04 (contenido y consumibles) → DEC01 (mejora incremental); OBS01 (preguntas por dependencia) y CAP01 (capacidades por familia) pueden avanzar por separado. Estas son propuestas, no entregas ya implementadas. Primera prueba: comprar Joker de precio $2 con saldo $25 desde la tienda visible, conservar $23 al recargar y poder deshacer, sin que consultar escriba.
+
+**PUB02 completado:** [GitHub Pages público](https://alejandroarielliliu-stack.github.io/balatro-advisor/) y workflow por actualización de `main`, con build/pruebas antes de desplegar. No exige ChatGPT para visitar la web. La migración de alojamiento no cerró T01/H2 ni la eficacia estratégica.
+
 **SHOP01 (2026-10-14):** [tienda contextual](tienda-contextual.md) sustituye Candidatos: precio/edición reales, vales32, sobres15 con ilustraciones, otras cartas manuales y consejo condicionado sin planes. Diseño de tienda de Balatro; por indicación del usuario no hay Renovar, Actualizar ni Siguiente ronda. Snapshot de sesión separado de H1; comparar no guarda adquisiciones. Política por preparación/rol/material, saldo, sacrificios y límites; no usaΔglobal ni porcentajes. Holo/Poly corregidos por evidencia primaria y oráculos. [Investigación](evidencia/tienda-investigacion.md) y [verificación web](evidencia/tienda/README.md).
 
 | Continuación de tienda | Dependencia real | Aceptación |
