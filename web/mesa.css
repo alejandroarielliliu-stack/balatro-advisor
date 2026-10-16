@@ -459,6 +459,12 @@ dialog[open] { animation: panel-arrival .14s ease-out; }
 .store-advice-option>b { display: block; font-size: 14px; }
 .store-advice-option>small { display: block; margin-top: 5px; color: var(--gold); }
 .store-advice-option[data-recommended=true] { border-left: 3px solid var(--gold); padding-left: 12px; }
+.run-journey { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px 24px; padding:15px 18px; margin-bottom:16px; border:3px solid #526b70; border-radius:9px; background:#263b40; box-shadow:0 4px #162a2d; }
+.journey-heading { min-width:0; }.journey-heading h2 { margin:0 0 5px; font:28px/1.1 var(--pixel); }.journey-heading>small { display:block; color:#c1d0ca; max-width:58ch; margin-top:7px; font-size:11px; }
+.journey-steps { display:flex; list-style:none; padding:0; margin:7px 0 0; gap:6px; }.journey-steps li { padding:4px 8px; background:#192e32; border-radius:4px; color:#aebfba; font:15px/1 var(--pixel); }.journey-steps [aria-current=step] { background:#e9bb60; color:#243338; }
+.journey-actions { display:flex; align-items:center; flex-wrap:wrap; gap:8px; }.journey-actions button { font:20px/1 var(--pixel); min-height:42px; padding:9px 12px; }.journey-actions #run-stop { color:#c3d0cb; background:transparent; border-color:transparent; box-shadow:none; font-size:16px; }
+.journey-pending { width:100%; color:#edc776; }.journey-dialog { display:grid; gap:14px; }.journey-dialog p { margin:0; }.journey-dialog small { display:block; font-size:12px; line-height:1.5; color:#c2cec9; }.journey-dialog .check { margin:0; }.journey-fields { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px; }.journey-dialog details { margin:0; }
+@media(max-width:720px) { .run-journey { padding:12px; gap:12px; }.journey-heading h2 { font-size:25px; }.journey-actions { width:100%; }.journey-actions button { flex:1; min-width:100px; }.journey-actions #run-stop { flex:0 1 auto; }.journey-fields { grid-template-columns:1fr; } }
 @media (max-width:720px) {
  .storefront { padding: 9px; }
  .storefront>.section-title { gap: 8px; margin-bottom: 9px; }

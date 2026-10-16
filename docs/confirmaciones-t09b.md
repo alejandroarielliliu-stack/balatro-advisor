@@ -1,5 +1,7 @@
 # T09b — registro de acciones realizadas
 
+**Continuación RUN01b:** `store.progress()` registra las transiciones observadas con el mismo control de revisión e historial atómico. Añade `kind: "progress"` solo a `confirmed-2`; conserva compra/venta y lectura legacy. [Contrato y comandos](recorrido-run01b.md).
+
 Entrega original: 2026-10-10. Actualización de formato RUN01a: 2026-10-16. Implementado en [confirmed-store.ts](../src/storage/confirmed-store.ts) y [confirmed-record.ts](../src/storage/confirmed-record.ts). El servicio admite `confirmed-1` con GameState 0.1 y `confirmed-2` con GameState 0.2; la lectura de un documento antiguo no lo convierte. [Contrato de fases y migración](fases-y-migracion.md).
 
 La [interfaz T10](interfaz-t10.md) integra importación, exportación, historial y correcciones. [SHOP03a](tienda-persistente.md) conecta las ofertas y las acciones de comodines de Mesa al mismo registro. Web Locks protege un único escritor en la UI; los límites del núcleo descritos abajo siguen aplicándose a otros clientes. RUN01a no amplía el catálogo ni implementa la confirmación de jugar/saltar.

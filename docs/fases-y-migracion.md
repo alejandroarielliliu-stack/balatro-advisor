@@ -1,6 +1,6 @@
 # RUN01a — fases de partida y migración explícita
 
-Entrega de formato del 16 de octubre de 2026. El estado 0.2 puede representar los momentos de una partida sin deducir hechos que no se registraron. La actualización conserva el historial existente. **Todavía no conecta acciones reales de jugar, saltar, cobrar o avanzar entre ciegas.** Es la base de esas transiciones, no el cierre de RUN01.
+Entrega de formato del 16 de octubre de 2026. El estado 0.2 puede representar los momentos de una partida sin deducir hechos que no se registraron. La actualización conserva el historial existente. **Continuación implementada:** [RUN01b](recorrido-run01b.md) conecta ahora el recorrido observado; este documento conserva el contrato de la migración RUN01a. Saltos y sobres siguen pendientes.
 
 Contratos generales: [modelo de estado](modelo-de-estado.md), [confirmaciones](confirmaciones-t09b.md) y [tienda persistente](tienda-persistente.md). El [plan de ejecución](hoja-de-ruta-asesor.md) mantiene las entregas siguientes.
 

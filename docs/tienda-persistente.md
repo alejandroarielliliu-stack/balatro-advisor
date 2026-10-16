@@ -1,5 +1,7 @@
 # SHOP03a — tienda y acciones registradas
 
+Continuación: [RUN01b](recorrido-run01b.md) ya conecta entrada/salida de tienda con el recorrido observado. El servicio admite registros `confirmed-1` y `confirmed-2`; en estado 0.2 rechaza registrar ofertas fuera de tienda. Los límites de compra, vales y sobres de SHOP03a se mantienen.
+
 Entrega del 16 de octubre de 2026. Primer corte de la [hoja de ruta](hoja-de-ruta-asesor.md): comodines ofertados, compra/venta/reemplazo confirmados, guardado y deshacer desde Mesa. No cambia la política estratégica ni incorpora saltos, simulación o nuevas reglas.
 
 ## Uso

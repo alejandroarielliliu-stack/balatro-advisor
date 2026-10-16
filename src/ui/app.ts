@@ -3,6 +3,8 @@ import {evaluateJokerFit,evaluateOwnedFits} from '../advisor/quick-fit.js';
 import {renderQuickFit,fitLabel,fitReason,fitTone} from './quick-fit-view.js';
 import {evaluateComposition} from '../advisor/composition.js';
 import {mountComposition} from './composition-view.js';
+import {renderRunJourney} from './run-progress-view.js';
+import {createNewRun} from '../run/start.js';
 import {markPreview,previewIssueStatus} from './preview-state.js';
 import {historyResourceDelta} from '../rules/history-jokers.js';
 import {mountCounterFields} from './joker-counters.js';
@@ -74,7 +76,7 @@ function select(id:string,label:string,choices:Record<string,string>,selected=''
 function checkbox(id:string,label:string,checked=false){const wrap=node('label','','check');const input=node('input');input.type='checkbox';input.id=id;input.checked=checked;wrap.append(input,node('span',label));return {wrap,input};}
 function button(text:string,fn:()=>void,className='secondary'){const b=node('button',text,className);b.type='button';b.onclick=fn;return b;}
 function details(title:string,data:unknown){const d=node('details');d.append(node('summary',title),node('pre',typeof data==='string'?data:JSON.stringify(data,null,2)));return d;}
-function invalidate(text='Los datos cambiaron. Vuelve a consultar las recomendaciones.',refreshShop=true) {handRequest++;if(refreshShop)invalidateCandidates();refreshOwnedFits();$('hand-results')?.replaceChildren();clearTimeout(cashoutTimer);cashoutTimer=setTimeout(()=>refreshCashout(),230);$('draft-status').hidden=!dirty;advice=null;demoMode=false;$('advice').replaceChildren(node('p',text,'empty'));$('bounds')?.replaceChildren();$('horizon-results')?.replaceChildren();$('exit-demo').hidden=true;updateMigrationButton();}
+function invalidate(text='Los datos cambiaron. Vuelve a consultar las recomendaciones.',refreshShop=true) {handRequest++;if(refreshShop)invalidateCandidates();refreshOwnedFits();$('hand-results')?.replaceChildren();clearTimeout(cashoutTimer);cashoutTimer=setTimeout(()=>refreshCashout(),230);$('draft-status').hidden=!dirty;advice=null;demoMode=false;$('advice').replaceChildren(node('p',text,'empty'));$('bounds')?.replaceChildren();$('horizon-results')?.replaceChildren();$('exit-demo').hidden=true;updateMigrationButton();renderJourney();}
 function canWrite(){
   if(!lock.owned){message('Esta pestaña es de lectura. Solicita el control para guardar.',true);return false;}
   try{if(localStorage.getItem(CONFIRMED_STORAGE_KEY)!==seenRaw){reload();message('La partida cambió. Revisa los datos y vuelve a calcular.',true);return false;}}
@@ -117,13 +119,28 @@ function formError(id:string,text:string){if(quietRead)return;const error=$(id+'
 function resetFormErrors(){document.querySelectorAll('.form-error,.error[id$="-error"]').forEach(e=>e.textContent='');document.querySelectorAll('[aria-invalid]').forEach(e=>e.removeAttribute('aria-invalid'));}
 function unsupportedForEditor(s:GameState){
   const o=s.observed;
-  if(s.phase!=='shop')return true;
+  if(s.phase!=='shop'&&(s.schemaVersion!=='0.2'||!['blind_select','in_round','cashout'].includes(s.phase)))return true;
   if(s.rulesetId!==ENGINE_RULESET || value(o.gameVersion)!==GAME_VERSION || value(o.modsPresent)!==false || !deckDefinition(value(o.deckId)??'') || value(o.stakeId)!=='white' || value(o.gamePlatform)!=='pc-steam')return true;
   const d=value(o.deck),extra=value(o.outOfScope);
   if(d && ('preset'in d?d.preset!=='standard52-unmodified':d.cards.some(c=>!['base','foil','holographic','polychrome'].includes(c.edition)||!['none','bonus','mult','wild','glass','steel','stone','gold','lucky'].includes(c.enhancement)||!['none','red','blue','gold','purple'].includes(c.seal)||c.extraChips<0)) || extra && (!cataloguedVouchers(extra.vouchers)||extra.consumables.length||extra.pendingTags.length||extra.otherModifiers.length))return true;
   // Shop observations are preserved even when a particular offer cannot be
   // rendered or purchased. H2 limits that operation, not the whole editor.
   return !!value(o.jokers)?.some(j=>!names[j.catalogId]||!['base','foil','holographic','polychrome','negative'].includes(value(j.edition)??'')||(value(j.stickers)?.some(s=>s!=='eternal')??true));
+}
+function renderJourney(){
+  const base=record,expected=base?analysisBinding(base.state):null,raw=seenRaw,id=uuid();
+  renderRunJourney($('run-journey'),{record:base,dirty,writable:lock.owned&&!loadFailed,open:openDialog,
+    error:text=>message(text,true),export:()=>$('export').click(),
+    migrate:()=>{location.hash='archive';$('run-migrate').click();},
+    submit:(command,inventory)=>{if(!expected){message('Primero registra la partida.',true);return false;}return commit(()=>store.progress({confirmationId:id,confirmed:true,expected,updatedAt:now(),command,inventory}));},
+    start:(deckId,profileConfirmed)=>{
+      const created=createNewRun({runId:uuid(),updatedAt:now(),deckId,profileConfirmed});if(!created.ok){problem(created.errors);return false;}
+      return commit(()=>base?store.restoreJson(JSON.stringify(created.value),{confirmed:true,expectedRaw:raw}):store.initialize(created.value));
+    },
+    undo:()=>{const last=base?.history.at(-1);if(!last||!expected)return;
+      if(commit(()=>store.undoLatest({confirmationId:uuid(),confirmed:true,expected,updatedAt:now(),targetEntryId:last.id,reason:'El usuario corrigió el último registro desde el recorrido.'})))message('Registro corregido. Esto no deshace acciones dentro de Balatro.');
+    }
+  });
 }
 function renderRecord(){
   $('revision').textContent=record?`Revisión ${record.state.revision}`:'Sin copia guardada';
@@ -135,7 +152,7 @@ function renderRecord(){
   readLiveState=null;refreshOwnedFits=()=>{};const s=record?.state;
   const deckDisplay=$('active-deck');deckDisplay.textContent=s?(deckDefinition(value(s.observed.deckId)??'')?.name??`Baraja ${value(s.observed.deckId)??'desconocida'} · sin soporte`):'15 barajas · 10 con cálculo';
   if(s && unsupportedForEditor(s)){
-    const text=s.schemaVersion==='0.2'&&s.phase==='unknown'?`Fase sin registrar. ${s.phaseData.reason}`:s.phase!=='shop'?'Los datos de esta fase se conservan. Su seguimiento se conectará en la siguiente entrega.':'Copia fuera del formulario compatible. Se conserva íntegra; el análisis indicará sus límites.';
+    const text=s.schemaVersion==='0.2'&&s.phase==='unknown'?`Fase sin registrar. ${s.phaseData.reason}`:s.phase==='finished'?'El registro completo queda disponible para exportar o corregir con Deshacer.':s.phase!=='shop'?'Los datos se conservan. Completa el recorrido desde los controles superiores.':'Copia fuera del formulario compatible. Se conserva íntegra; el análisis indicará sus límites.';
     host.append(node('p',text,'notice'),details('Datos importados, sin cambios',s));return;
   }
   const form=node('form');form.id='run-form';form.noValidate=true;const fieldset=node('fieldset');form.append(fieldset);host.append(form);
@@ -313,6 +330,10 @@ function renderRecord(){
     // local disabled reason or gaining the lock would leave these buttons inert.
     status:()=>dirty?'Guarda o recarga los otros datos editados antes de confirmar.':!record?'Configura y registra tu partida antes de confirmar acciones.':null,
     canUndo:()=>!!record&&record.history.length>0&&record.history.at(-1)?.kind!=='undo',undo:undoMesaChange,controlsChanged:updateOwnership});
+  const inShop=!s||s.phase==='shop';
+  $('joker-candidates').hidden=!inShop;
+  const offerButton=$('bay-candidate');if(offerButton)offerButton.hidden=!inShop;
+  host.querySelectorAll<HTMLElement>('.registered-offers').forEach(e=>e.hidden=!inShop);
   const compositionView=mountComposition(compositionHost);
   refreshOwnedFits=()=>{
    const rows=Array.from(ownedHost.querySelectorAll<HTMLElement>(':scope > .joker-editor'));let fits:ReturnType<typeof evaluateOwnedFits>=[];
@@ -466,7 +487,7 @@ function renderActions(){const host=$('actions');host.replaceChildren();if(!reco
   for(const a of actions.value){if(!a.legal){d.append(node('p',actionText(a.action,state)+': '+a.errors.map(e=>e.message).join(' '),'muted'));continue;}const b=button(actionText(a.action,state),()=>confirmAction(a.action,state));b.dataset.write='true';const row=node('div','','toolbar');row.append(b);d.append(row);}
 }
 function renderHistory(){const host=$('history-list');host.replaceChildren();if(!record || !record.history.length){host.append(node('p','Todavía no has confirmado acciones ni correcciones.','empty'));return;}
-  const current=record;for(const e of [...current.history].reverse()){const d=node('details');d.append(node('summary',`${e.kind==='action'?'Acción':e.kind==='undo'?'Deshacer registro':'Corrección manual'} · revisión ${e.before.revision} → ${e.after.revision}`),node('p',e.reason),node('p',`Dinero: ${value(e.before.observed.money)??'?'} → ${value(e.after.observed.money)??'?'}.`),details('Cambios completos y evidencia',e));host.append(d);}
+  const current=record;for(const e of [...current.history].reverse()){const d=node('details');d.append(node('summary',`${e.kind==='action'?'Acción':e.kind==='undo'?'Deshacer registro':e.kind==='progress'?'Avance de partida':'Corrección manual'} · revisión ${e.before.revision} → ${e.after.revision}`),node('p',e.reason),node('p',`Dinero: ${value(e.before.observed.money)??'?'} → ${value(e.after.observed.money)??'?'}.`),details('Cambios completos y evidencia',e));host.append(d);}
   const last=current.history.at(-1)!;if(last.kind!=='undo'){const b=button('Deshacer la última entrada',()=>{if(!canWrite())return;const body=node('div');body.append(node('p','Corrige el registro local; no deshace ninguna acción dentro de Balatro. Se conservará todo el historial.'));const reason=field('undo-reason','Motivo del error');body.append(reason.wrap);const id=uuid();openDialog('Deshacer registro equivocado',body,'Deshacer entrada',()=>{if(!reason.input.value.trim()){message('Indica el motivo de la corrección.',true);return false;}return commit(()=>store.undoLatest({confirmationId:id,confirmed:true,expected:analysisBinding(current.state),updatedAt:now(),targetEntryId:last.id,reason:reason.input.value}));});});b.dataset.write='true';host.append(b);}host.append(node('p','Para corregir una entrada anterior, transcribe los datos actuales en «Tu partida» e indica el motivo.','muted'));
 }
 function updateMigrationButton(){
@@ -476,7 +497,7 @@ function updateMigrationButton(){
 }
 function renderMigrationControls(){
   updateMigrationButton();
-  $('run-format-status').textContent=record?.schemaVersion==='confirmed-2'?'Formato 0.2 actualizado. El respaldo permite recuperar la copia anterior.':record?'La copia actual sigue siendo compatible. Actualiza su formato para representar las fases de la partida.':'Registra o importa una partida para actualizar su formato.';
+  $('run-format-status').textContent=record?.schemaVersion==='confirmed-2'?'Formato 0.2. Si actualizaste una copia anterior, su respaldo puede descargarse aquí.':record?'La copia actual sigue siendo compatible. Actualiza su formato para representar las fases de la partida.':'Registra o importa una partida para actualizar su formato.';
   $<HTMLButtonElement>('run-migration-backup').disabled=!store.exportMigrationBackup().ok;
 }
 $('run-migrate').onclick=()=>{

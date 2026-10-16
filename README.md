@@ -2,7 +2,7 @@
 
 **Web pública:** [Balatro Advisor en GitHub Pages](https://alejandroarielliliu-stack.github.io/balatro-advisor/). [Publicación automática y traslado de partidas](docs/github-pages.md). La migración solo se considera publicada cuando el despliegue termina y se comprueba el enlace sin iniciar sesión.
 
-**Entrega actual (2026-10-16):** [fases y migración RUN01a](docs/fases-y-migracion.md): estado `0.2`, historial completo convertido explícitamente y respaldo íntegro anterior. Las copias antiguas siguen siendo compatibles sin actualización automática. En Registro puedes actualizar el formato o descargar el respaldo. La [tienda persistente SHOP03a](docs/tienda-persistente.md) sigue permitiendo comprar, vender y deshacer. Siguiente: RUN01b conecta el avance de la partida; todavía no se aconseja jugar/saltar ni se mantiene el ciclo completo. [Hoja de ruta](docs/hoja-de-ruta-asesor.md).
+**Entrega actual (2026-10-16):** [recorrido observado RUN01b](docs/recorrido-run01b.md): iniciar o retomar, entrar en ciega, registrar victoria/derrota, saldo tras cobrar y salida de tienda. Cada confirmación guarda historial y permite deshacer. Conserva inventario confirmado y deja pendientes los datos que un resumen no determina. La [tienda persistente](docs/tienda-persistente.md) sigue permitiendo comprar/vender. Las copias antiguas requieren [actualización explícita](docs/fases-y-migracion.md) solo para el recorrido nuevo. Siguiente: OBS01 y DEC00/DEC01; no se aconseja todavía jugar/saltar. [Hoja de ruta](docs/hoja-de-ruta-asesor.md).
 
 **Versión vigente:** Mesa con puntaje global/seis barras, [consejo contextual](docs/tienda-contextual.md), 150 perfiles quick-fit-2, 17 familias de composiciones, 32 vales registrables (10 efectos H2) y 15 sobres catalogados con ilustraciones. Disposición visual de Balatro y recálculo automático. Cálculos de manos en Análisis; ofertas de comodines y acciones realizadas confirmadas se guardan desde Mesa. Las demás ediciones siguen siendo transcripciones que se guardan en Registro. Cobertura web exacta 82/150; perfiles no equivalen a efectos completamente implementados.
 
@@ -72,8 +72,9 @@ Requiere Node 24.x y npm. Versiones usadas: Node 24.19.0, npm 11.17.0; dependenc
     npm.cmd run demo:advisor
     npm.cmd run demo:confirm
     npm.cmd run demo:run-migration
+    npm.cmd run demo:run-progress
 
-check ejecuta tipos, compilación y pruebas: **569 aprobadas, 0 fallidas, 10 TODO de observación en Balatro** en RUN01a. Incluye H1/H2/T07b/H3/T09b/cotas/ventas/horizontes, tienda persistente y migración. Los TODO **no** cuentan como reglas verificadas. Una prueba usa Web Storage experimental de Node en dos procesos; su aviso es esperado. Además, 17 grupos de integración pasan en Chrome real headless; diseño revisado en escritorio y tamaños móviles. Android físico no probado. [Evidencia RUN01a](docs/evidencia/run-migration/README.md).
+check ejecuta tipos, compilación y pruebas: **594 aprobadas, 0 fallidas, 10 TODO de observación en Balatro** en RUN01b. Incluye H1/H2/T07b/H3/T09b/cotas/ventas/horizontes, tienda persistente, migración y recorrido. Los TODO **no** cuentan como reglas verificadas. Una prueba usa Web Storage experimental de Node en dos procesos; su aviso es esperado. Además, 17 grupos de integración pasan en Chrome real headless; diseño revisado en escritorio y tamaños móviles. Android físico no probado. [Evidencia RUN01b](docs/evidencia/run-progress/README.md).
 
 demo:advisor muestra preferencias condicionales de compra/ahorro, empates y abstención. `-- --json` imprime todos los escenarios, cálculos y motivos. [Política h3-1 y límites](docs/asesor-h3.md): sin porcentajes, promedios de escenarios ni suma de dólares y puntos.
 

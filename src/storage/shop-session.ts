@@ -49,6 +49,7 @@ export function createShopSessionStore(getStorage:()=>StoragePort) {
       if(!loaded.ok)return loaded;
       if(!loaded.value)return fail('not_initialized','Configura y registra la partida antes de guardar sus ofertas. No se inicializa a partir de una hipótesis.');
       const record=loaded.value,state=record.state,previous=state.observed.shop;
+      if(state.schemaVersion==='0.2'&&state.phase!=='shop')return fail('wrong_phase','Las ofertas solo se registran cuando estás en la tienda.');
       // Keep existing annotations only for the same shelf. A new shelf must not
       // inherit observations about vouchers/packs from a previous shop.
       const ignored=request.ignoredOtherOffers ?? (previous.status==='known' && previous.value.shopId===request.shopId

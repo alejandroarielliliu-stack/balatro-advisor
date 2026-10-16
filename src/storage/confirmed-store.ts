@@ -9,6 +9,7 @@ import type {EngineOptions} from '../rules/core.js';
 import {actionSchema,bindingSchema,analysisBinding,validateConfirmedRecord,MAX_RECORD_BYTES,equal} from './confirmed-record.js';
 import type {ConfirmedRecord,EntryInput} from './confirmed-record.js';
 import {migrateConfirmedRecord} from './record-migration.js';
+import {applyRunProgress,inventoryConfirmationSchema,runProgressCommandSchema} from '../run/progress.js';
 export {analysisBinding,validateConfirmedRecord,MAX_RECORD_BYTES} from './confirmed-record.js';
 export type {AnalysisBinding,ConfirmedRecord,ConfirmedEntry} from './confirmed-record.js';
 
@@ -32,9 +33,11 @@ const patchSchema:Schema<Partial<GameState['observed']>>={check(v,p,e){
   if(!v || typeof v!=='object' || Array.isArray(v) || !Object.keys(v).length || Object.keys(v).some(k=>!observedFields.includes(k))){e.push({path:p,code:'invalid_patch',message:'Transcribe campos observados explícitos; no se admiten estados completos ni escenarios.'});return false;}return true;
 }};
 const correctSchema=object({...header,patch:patchSchema,reason:text(2000)},{targetEntryId:text(),discardSavedScenarios:boolean});
+const progressSchema=object({...header,command:runProgressCommandSchema,inventory:inventoryConfirmationSchema});
 export type ConfirmRequest=Infer<typeof confirmSchema>;
 export type CorrectionRequest=Infer<typeof correctSchema>;
 export type UndoRequest=Infer<typeof undoSchema>;
+export type ProgressRequest=Infer<typeof progressSchema>;
 
 /** Synchronous single-writer store. One atomic setItem stores state AND history. */
 export function createConfirmedStore(getStorage:()=>StoragePort){
@@ -56,7 +59,7 @@ export function createConfirmedStore(getStorage:()=>StoragePort){
     if(conflict)return issue('stale_revision','El registro cambió durante la operación; vuelve a cargar y recalcular.');
     return saved.ok ? {ok:true,value:JSON.parse(JSON.stringify(checked.value)) as ConfirmedRecord} : saved;
   };
-  const prepare=(r:Infer<typeof undoSchema>|ConfirmRequest|CorrectionRequest):Result<{raw:string;record:ConfirmedRecord}>=>{
+  const prepare=(r:Infer<typeof undoSchema>|ConfirmRequest|CorrectionRequest|ProgressRequest):Result<{raw:string;record:ConfirmedRecord}>=>{
     if(r.confirmed!==true)return issue('confirmation_required','Confirma expresamente que realizaste la acción o corrección.');
     const loaded=read();if(!loaded.ok)return loaded;
     const {record,raw}=loaded.value;if(!record || raw===null)return issue('not_initialized','Migra explícitamente la partida H1 antes de confirmar.');
@@ -132,6 +135,15 @@ export function createConfirmedStore(getStorage:()=>StoragePort){
           return issue('model_discrepancy','Lo observado no coincide con H2. No se guardó la transacción: registra una corrección manual con los datos reales y el motivo.');
       }
       return append(base.value,{id:r.confirmationId,kind:'action',before,after,action:r.action,reason:'El usuario confirmó que realizó esta acción. Efectos calculados bajo el modelo provisional, no observación validada de las reglas.',targetEntryId:null,evidence:changed.evidence,trace:changed.trace});
+    },
+    progress(input:unknown):Result<ConfirmedRecord>{
+      const request=check(progressSchema,input);if(!request.ok)return request;const r=request.value;
+      const base=prepare(r);if(!base.ok)return base;
+      if(base.value.record.schemaVersion!=='confirmed-2')return issue('migration_required','Actualiza explícitamente el formato de la partida antes de registrar su avance.');
+      const before=base.value.record.state;
+      const changed=applyRunProgress(before,r.command,{expectedRevision:before.revision,updatedAt:r.updatedAt,inventory:r.inventory});
+      if(!changed.ok)return changed;
+      return append(base.value,{id:r.confirmationId,kind:'progress',before,after:changed.value.state,action:null,reason:'Avance real declarado por el usuario; no se ejecutaron manos ni cobros hipotéticos.',targetEntryId:null,evidence:null,trace:changed.value.trace,progress:{command:r.command,inventory:r.inventory,limitations:changed.value.limitations}});
     },
     correct(input:unknown):Result<ConfirmedRecord>{
       const request=check(correctSchema,input);if(!request.ok)return request;const r=request.value;

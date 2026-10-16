@@ -1,5 +1,7 @@
 # Modelo de estado 0.1 y 0.2
 
+RUN01b añade comandos observacionales y entradas `progress` al registro `confirmed-2`, sin cambiar el esquema de estado 0.2. [Flujo, datos que caducan y compatibilidad](recorrido-run01b.md). El formato sigue separado del cálculo de reglas.
+
 **Actualización RUN01a, 2026-10-16:** se admiten GameState 0.1 y 0.2. El nuevo formato incorpora fases discriminadas; el antiguo sigue siendo legible sin conversión. El documento de partida e historial admite `confirmed-1` con estados 0.1 o `confirmed-2` con estados 0.2. [Fases, APIs de migración y recuperación](fases-y-migracion.md). El `state` del registro adoptado es la fuente de verdad; las consultas no lo modifican.
 
 Implementado en [model.ts](../src/state/model.ts), [schema.ts](../src/state/schema.ts) y [validation.ts](../src/state/validation.ts). El contrato 0.1 está congelado en [legacy-model.ts](../src/state/legacy-model.ts) y [legacy-validation.ts](../src/state/legacy-validation.ts). Alcance de producto: [especificación](especificacion-v0.1.md); reglas separadas: [catálogo y evidencia](reglas-y-fuentes.md). La validación estructural no depende de confirmar reglas del juego.
