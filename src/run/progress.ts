@@ -1,7 +1,7 @@
 import type {Fact,GameState,GameStateV02,Result} from '../state/model.js';
 import {createUnknownState} from '../state/model.js';
 import {validateCurrentState,validateState} from '../state/validation.js';
-import {checkJsonValue,enumeration,fact,integer,object,text,union} from '../state/schema.js';
+import {array,checkJsonValue,enumeration,fact,integer,object,text,union} from '../state/schema.js';
 import type {Infer,Schema} from '../state/schema.js';
 import {counterSpecs} from '../catalog/joker-counters.js';
 import {HISTORY_TARGET_KEYS} from '../catalog/history-jokers.js';
@@ -21,7 +21,15 @@ const patchSchema:Schema<ObservedPatch>={check(v,p,e){
   return checked.ok;
 }};
 const literalTrue:Schema<true>={check:(v,p,e)=>v===true||(e.push({path:p,code:'confirmation_required',message:'Confirma que el inventario no cambió o transcribe sus datos observados.'}),false)};
-export const inventoryConfirmationSchema=union(object({unchanged:literalTrue}),object({patch:patchSchema}));
+export const inventoryGroups=['deck','jokers','handBases','outOfScope','resources','jokerContext'] as const;
+export type InventoryGroup=typeof inventoryGroups[number];
+const changedGroupsSchema:Schema<InventoryGroup[]>={check(value,path,errors){
+ if(!array(enumeration(...inventoryGroups),6).check(value,path,errors))return false;
+ const groups=value as InventoryGroup[];
+ if(!groups.length||new Set(groups).size!==groups.length){errors.push({path,code:'invalid_groups',message:'Indica al menos un grupo que cambió, sin repetirlo.'});return false;}return true;
+}};
+export const inventoryConfirmationSchema=union(union(object({unchanged:literalTrue}),object({patch:patchSchema})),
+  object({reconcile:object({changedGroups:changedGroupsSchema})}));
 export type InventoryConfirmation=Infer<typeof inventoryConfirmationSchema>;
 export const runProgressCommandSchema=union(
   union(object({type:enumeration('locate'),phase:enumeration('blind_select','in_round','shop'),blind:progressBlindSchema},{money:integer()}),
@@ -90,6 +98,14 @@ function invalidateDynamic(state:GameStateV02,scope:'gap'|'selection'|'round'|'s
 
 function applyInventory(state:GameStateV02,inventory:InventoryConfirmation){
   if('unchanged' in inventory)return;
+  if('reconcile' in inventory){
+    const reason='El usuario indicó que este grupo cambió. Transcribe únicamente sus datos actuales.';
+    for(const group of inventory.reconcile.changedGroups){
+      if(group==='resources')state.observed.resources={handsPerRound:unknown(reason),discardsPerRound:unknown(reason),handSize:unknown(reason),jokerSlots:unknown(reason)};
+      else state.observed[group]=unknown(reason) as never;
+    }
+    return;
+  }
   const reason='No se confirmó que este dato siguiera igual ni se transcribió su valor actual.';
   state.observed.deck=unknown(reason);state.observed.jokers=unknown(reason);state.observed.handBases=unknown(reason);state.observed.outOfScope=unknown(reason);state.observed.jokerContext=unknown(reason);
   state.observed.resources={handsPerRound:unknown(reason),discardsPerRound:unknown(reason),handSize:unknown(reason),jokerSlots:unknown(reason)};

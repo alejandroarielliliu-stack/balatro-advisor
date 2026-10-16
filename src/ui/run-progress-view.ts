@@ -1,7 +1,7 @@
 import type {GameState,Fact} from '../state/model.js';
 import type {ConfirmedRecord} from '../storage/confirmed-store.js';
 import type {RunProgressCommand,InventoryConfirmation,BlindInfo} from '../run/progress.js';
-import {nextBlindAfter} from '../run/progress.js';
+import {nextBlindAfter,inventoryGroups} from '../run/progress.js';
 import {DECK_PROFILES,deckDefinition} from '../catalog/decks.js';
 import {blindRequirement} from '../catalog/blinds.js';
 
@@ -31,8 +31,17 @@ export function renderRunJourney(host:HTMLElement,options:JourneyOptions){
  const open=(title:string,body:HTMLElement,accept:string,submit:()=>boolean)=>options.open(title,body,accept,()=>{try{return submit();}catch(e){options.error(e instanceof Error?e.message:'Revisa los datos.');return false;}});
  const inventory=(body:HTMLElement)=>{
   const box=check('progress-inventory-unchanged','Cartas, comodines, vales, niveles y recursos sin cambios');
-  const note=el('small','Sin marcar, esos datos quedan pendientes de transcribir en la Mesa. Los contadores que puedan haber cambiado también quedarán pendientes.');
-  body.append(box.wrap,note);return ():InventoryConfirmation=>box.input.checked?{unchanged:true}:{patch:{}};
+  const groups=el('details');groups.id='progress-changes';groups.append(el('summary','Indicar qué cambió'));
+  const labels={deck:'Cartas del mazo',jokers:'Inventario de comodines',handBases:'Niveles de manos',outOfScope:'Vales y otros modificadores',resources:'Recursos',jokerContext:'Consumibles e historial'};
+  const choices=inventoryGroups.map(group=>{const choice=check('progress-changed-'+group,labels[group]);groups.append(choice.wrap);return {group,input:choice.input};});
+  box.input.onchange=()=>groups.hidden=box.input.checked;
+  const note=el('small','Marca solo los grupos que cambiaron; confirmas que los demás siguen igual. Los contadores que el resumen no determina se pedirán por separado.');
+  body.append(box.wrap,groups,note);return ():InventoryConfirmation=>{
+   if(box.input.checked)return {unchanged:true};
+   const changedGroups=choices.filter(c=>c.input.checked).map(c=>c.group);
+   if(!changedGroups.length){groups.open=true;throw Error('Confirma que no hubo cambios o marca únicamente los grupos que cambiaron.');}
+   return {reconcile:{changedGroups}};
+  };
  };
  const submit=(command:RunProgressCommand,readInventory:()=>InventoryConfirmation)=>options.submit(command,readInventory());
  const newGame=()=>{

@@ -38,6 +38,8 @@ jobs:
         run: node tools/run-migration-test.mjs
       - name: Comprobar recorrido observado de partida
         run: node tools/run-progress-test.mjs
+      - name: Comprobar datos observados por dependencia
+        run: node tools/observations-test.mjs
       - name: Comprobar la web bajo una subruta
         run: node tools/static-site-test.mjs
       - name: Preparar el artefacto público

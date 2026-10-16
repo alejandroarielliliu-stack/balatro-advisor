@@ -5,6 +5,8 @@ import {evaluateComposition} from '../advisor/composition.js';
 import {mountComposition} from './composition-view.js';
 import {renderRunJourney} from './run-progress-view.js';
 import {createNewRun} from '../run/start.js';
+import {observationPatch} from '../state/observations.js';
+import {renderObservationRequests} from './observations-view.js';
 import {markPreview,previewIssueStatus} from './preview-state.js';
 import {historyResourceDelta} from '../rules/history-jokers.js';
 import {mountCounterFields} from './joker-counters.js';
@@ -141,6 +143,11 @@ function renderJourney(){
       if(commit(()=>store.undoLatest({confirmationId:uuid(),confirmed:true,expected,updatedAt:now(),targetEntryId:last.id,reason:'El usuario corrigió el último registro desde el recorrido.'})))message('Registro corregido. Esto no deshace acciones dentro de Balatro.');
     }
   });
+  renderObservationRequests($('observation-requests'),base?.state??null,{writable:lock.owned&&!loadFailed,dirty,error:text=>message(text,true),submit:answers=>{
+    if(!base||!expected)return false;
+    const patch=observationPatch(base.state,answers,base.state.revision);if(!patch.ok){problem(patch.errors);return false;}
+    return commit(()=>store.correct({confirmationId:id,confirmed:true,expected,updatedAt:now(),patch:patch.value,reason:'Valores observados completados individualmente; los demás datos se conservan.'}));
+  }});
 }
 function renderRecord(){
   $('revision').textContent=record?`Revisión ${record.state.revision}`:'Sin copia guardada';

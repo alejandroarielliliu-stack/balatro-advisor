@@ -1,5 +1,7 @@
 # Recorrido observado de partida — RUN01b
 
+Continuación [OBS01a](observaciones-obs01a.md): la UI puede conservar grupos independientes y registrar valores pendientes de manera puntual. Los modos históricos `unchanged` y `patch` descritos abajo no cambian; `reconcile.changedGroups` añade la nueva declaración explícita.
+
 Entrega del 16 de octubre de 2026. Conecta el [formato de fases de RUN01a](fases-y-migracion.md) con confirmaciones reales y guardado local. Permite iniciar o retomar una partida, registrar que se entró en una ciega, comunicar su resultado, transcribir el saldo después de cobrar y salir de la tienda. No decide todavía si conviene jugar o saltar ni ejecuta las manos omitidas.
 
 ## Qué se registra y qué se calcula

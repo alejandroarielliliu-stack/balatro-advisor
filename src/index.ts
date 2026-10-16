@@ -4,6 +4,8 @@ export { validateState, validateLegacyState, validateCurrentState, parseState, s
 export { migrateState } from './state/migration.js';
 export { migrateConfirmedRecord } from './storage/record-migration.js';
 export { createNewRun } from './run/start.js';
+export { observationNeeds, observationPatch } from './state/observations.js';
+export type { ObservationNeed, ObservationAnswer, ObservationPatch } from './state/observations.js';
 export { applyRunProgress, advanceBlindRef, nextBlindAfter } from './run/progress.js';
 export type { RunProgressCommand, InventoryConfirmation, ProgressResult, BlindInfo, BlindRef } from './run/progress.js';
 export { createStateStore, createBrowserStateStore, STATE_STORAGE_KEY } from './storage/state-store.js';

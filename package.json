@@ -36,6 +36,7 @@
     "test:shop-session": "npm run build && node tools/shop-session-test.mjs",
     "test:run-migration": "npm run build && node tools/run-migration-test.mjs",
     "test:run-progress": "npm run build && node tools/run-progress-test.mjs",
+    "test:observations": "npm run build && node tools/observations-test.mjs",
     "test:target": "npm run build && node tools/target-test.mjs",
     "test:bay": "npm run build && node tools/bay-test.mjs",
     "test:catalog": "npm run build && node tools/collection-test.mjs",
