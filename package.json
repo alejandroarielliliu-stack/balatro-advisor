@@ -53,7 +53,9 @@
     "demo:tags": "npm run build && node dist/src/demo-tags.js",
     "test:tags": "npm run build && node tools/tags-test.mjs",
     "demo:blinds": "npm run build && node dist/src/demo-blind-decision.js",
-    "test:blinds": "npm run build && node tools/blind-decision-test.mjs"
+    "test:blinds": "npm run build && node tools/blind-decision-test.mjs",
+    "demo:vouchers": "npm run build && node dist/src/demo-vouchers.js",
+    "test:voucher-shop": "npm run build && node tools/voucher-shop-test.mjs"
   },
   "devDependencies": {
     "@types/node": "24.19.1",

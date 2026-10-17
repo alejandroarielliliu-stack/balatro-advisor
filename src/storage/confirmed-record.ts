@@ -11,6 +11,8 @@ const nullable=<T>(schema:Schema<T>):Schema<T|null>=>({check:(v,p,e)=>v===null||
 const stateSchema=<T extends GameState>(validate:(v:unknown)=>Result<T>):Schema<T>=>({check(v,p,e){const r=validate(v);if(!r.ok)e.push(...r.errors.map(x=>({...x,path:p+x.path.slice(1)})));return r.ok;}});
 export const actionSchema=union(union(object({type:enumeration('hold')},{choices:array(effectChoiceSchema,2000)}),object({type:enumeration('sell'),instanceId:text()},{choices:array(effectChoiceSchema,2000)})),
   union(object({type:enumeration('buy'),offerId:text(),instanceId:text()},{choices:array(effectChoiceSchema,2000)}),object({type:enumeration('replace'),sellInstanceId:text(),offerId:text(),instanceId:text()},{choices:array(effectChoiceSchema,2000)})));
+export const voucherActionSchema=object({type:enumeration('buy_voucher'),offerId:text()});
+export const currentActionSchema=union(actionSchema,voucherActionSchema);
 // Old bindings remain valid only for old documents. A migrated document needs
 // its schema in the binding even when its numeric revision did not change.
 export const bindingSchema=object({runId:text(),revision:integer(0),rulesetId:text()},{schemaVersion:enumeration('0.2')});
@@ -28,7 +30,7 @@ const entrySchema=<T extends GameState>(state:Schema<T>)=>object({id:text(),kind
 const legacyState=stateSchema<GameStateLegacy>(validateLegacyState),currentState=stateSchema<GameStateV02>(validateCurrentState);
 const progressPayloadSchema=object({command:runProgressCommandSchema,inventory:inventoryConfirmationSchema,limitations:array(text(2000),100)});
 const currentEntrySchema=object({id:text(),kind:enumeration('action','correction','undo','progress'),before:currentState,after:currentState,
-  action:nullable(actionSchema),reason:text(2000),targetEntryId:nullable(text()),evidence:nullable(evidenceSchema),trace:traceSchema},{progress:progressPayloadSchema});
+  action:nullable(currentActionSchema),reason:text(2000),targetEntryId:nullable(text()),evidence:nullable(evidenceSchema),trace:traceSchema},{progress:progressPayloadSchema});
 const legacyJournal=object({schemaVersion:enumeration('confirmed-1'),initialState:legacyState,state:legacyState,history:array(entrySchema(legacyState),1000)});
 const currentJournal=object({schemaVersion:enumeration('confirmed-2'),initialState:currentState,state:currentState,history:array(currentEntrySchema,1000)});
 const journalSchema=union(legacyJournal,currentJournal);

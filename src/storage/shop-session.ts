@@ -1,6 +1,7 @@
-import type {GameState, Result} from '../state/model.js';
+import type {GameState, Result,VoucherOffer} from '../state/model.js';
 import {array, boolean, checkJsonValue, object, text} from '../state/schema.js';
 import type {Schema} from '../state/schema.js';
+import {voucherOfferSchema} from '../state/model.js';
 import {validateState} from '../state/validation.js';
 import {createConfirmedStore} from './confirmed-store.js';
 import type {AnalysisBinding, ConfirmedRecord, ConfirmRequest, UndoRequest} from './confirmed-store.js';
@@ -17,6 +18,7 @@ export interface ObserveJokerOffersRequest {
   updatedAt:string;
   shopId:string;
   offers:ShopOffer[];
+  voucherOffers?:VoucherOffer[];
   /** Explicit transcription of other offers' coverage; never interpreted as purchasable contents. */
   ignoredOtherOffers?:string[];
 }
@@ -28,7 +30,7 @@ const offerList:Schema<unknown[]>={check(value,path,errors){
 }};
 const observationSchema=object({confirmationId:text(),confirmed:boolean,
   expected:bindingSchema,updatedAt:text(),shopId:text(),offers:offerList
-},{ignoredOtherOffers:array(text())});
+},{ignoredOtherOffers:array(text()),voucherOffers:array(voucherOfferSchema,100)});
 
 /**
  * The visual shop and H2 share the T09b journal, not a second storage document.
@@ -49,12 +51,15 @@ export function createShopSessionStore(getStorage:()=>StoragePort) {
       if(!loaded.ok)return loaded;
       if(!loaded.value)return fail('not_initialized','Configura y registra la partida antes de guardar sus ofertas. No se inicializa a partir de una hipótesis.');
       const record=loaded.value,state=record.state,previous=state.observed.shop;
+      if(request.voucherOffers!==undefined&&state.schemaVersion!=='0.2')return fail('migration_required','Actualiza explícitamente la partida al formato 0.2 desde Registro antes de guardar ofertas de vales.');
       if(state.schemaVersion==='0.2'&&state.phase!=='shop')return fail('wrong_phase','Las ofertas solo se registran cuando estás en la tienda.');
       // Keep existing annotations only for the same shelf. A new shelf must not
       // inherit observations about vouchers/packs from a previous shop.
       const ignored=request.ignoredOtherOffers ?? (previous.status==='known' && previous.value.shopId===request.shopId
         ? previous.value.ignoredOtherOffers : ['Vales, sobres y otras cartas no registrados en este flujo.']);
-      const shop={status:'known' as const,source:'manual' as const,value:{shopId:request.shopId,cardOffers:request.offers,ignoredOtherOffers:ignored}};
+      const previousVouchers=state.schemaVersion==='0.2'&&state.observed.shop.status==='known'&&state.observed.shop.value.shopId===request.shopId?state.observed.shop.value.voucherOffers:undefined;
+      const vouchers=request.voucherOffers??previousVouchers;
+      const shop={status:'known' as const,source:'manual' as const,value:{shopId:request.shopId,cardOffers:request.offers,ignoredOtherOffers:ignored,...(vouchers===undefined?{}:{voucherOffers:structuredClone(vouchers)})}};
       const checked=validateState({...state,revision:state.revision+1,updatedAt:request.updatedAt,observed:{...state.observed,shop}});
       if(!checked.ok)return checked;
       if(request.confirmed!==true)return fail('confirmation_required','Confirma que estas son las ofertas observadas.');
@@ -69,7 +74,7 @@ export function createShopSessionStore(getStorage:()=>StoragePort) {
       return confirmed.correct({
         confirmationId:request.confirmationId,confirmed:request.confirmed,expected:request.expected,updatedAt:request.updatedAt,
         patch:{shop},
-        reason:'Ofertas de comodines transcritas por el usuario. Registrar una oferta no confirma su compra.'
+        reason:'Ofertas de tienda transcritas por el usuario. Registrar una oferta no confirma su compra.'
       });
     },
     /** H2 validates the selected operation; unsupported shelf entries can remain observed. */

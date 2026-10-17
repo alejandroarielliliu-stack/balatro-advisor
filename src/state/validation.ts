@@ -1,4 +1,4 @@
-import { currentGameStateSchema } from './model.js';
+import { currentGameStateSchema,legacyShape } from './model.js';
 import type { GameState, GameStateV01, GameStateV02 } from './model.js';
 import { MAX_STATE_BYTES, validateState as validateFrozenLegacyState } from './legacy-validation.js';
 import { checkJsonValue, isObject, issue } from './schema.js';
@@ -16,10 +16,14 @@ export function validateCurrentState(input: unknown): Result<GameStateV02> {
   if (errors.length) return { ok: false, errors };
   if (!currentGameStateSchema.check(input, '$', errors)) return { ok: false, errors };
   const state = input as GameStateV02;
-  const projected = { ...state, schemaVersion: '0.1', phase: state.phase === 'shop' ? 'shop' : 'draft' };
-  delete (projected as Record<string, unknown>).phaseData;
+  const projected=legacyShape(state as unknown as Record<string,unknown>);
   const legacy = validateLegacyState(projected);
   if (!legacy.ok) return legacy;
+
+  if(state.observed.shop.status==='known'){
+    const ids=new Set(state.observed.shop.value.cardOffers.map(o=>o.offerId));
+    for(const [i,offer]of (state.observed.shop.value.voucherOffers??[]).entries()){if(ids.has(offer.offerId))issue(errors,`$.observed.shop.value.voucherOffers[${i}].offerId`,'duplicate_id','La oferta de vale necesita un identificador único en esta tienda.');ids.add(offer.offerId);}
+  }
 
   // Only structural identity references; turn legality, defaults and effects belong to H2.
   if (state.phase === 'in_round' && state.phaseData.heldCardIds.status === 'known') {

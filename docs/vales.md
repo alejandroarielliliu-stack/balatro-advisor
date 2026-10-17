@@ -1,5 +1,7 @@
 # Vales adquiridos — L06
 
+Actualización SHOP02a: [compra registrada de diez vales](compras-vales-shop02a.md), con ofertas guardadas en 0.2 y confirmación real desde la tienda. El panel «Tus vales» descrito aquí conserva su función de transcripción del inventario; no descuenta dinero. Los demás 22 se pueden anotar, pero no comprar mediante H2.
+
 El panel «Tus vales» queda debajo de Candidatos. Pulsar una ilustración abre su descripción y permite marcar o quitar un vale ya adquirido. No compra vales ni descuenta dinero. La selección recalcula los recursos desde la baraja base, invalida candidatos y actualiza el cobro por escenario. Guardar conserva la selección y sus recursos en el registro existente; consultar o editar no modifica la copia guardada.
 
 Se conservan los archivos anteriores: los IDs utilizan `observed.outOfScope.value.vouchers`, sin cambiar el esquema. El nombre histórico del campo no determina la cobertura del motor. Los dos vales de interés existentes se muestran en el nuevo panel; se retiró el selector duplicado.
@@ -17,7 +19,7 @@ Se conservan los archivos anteriores: los IDs utilizan `observed.outOfScope.valu
 | Antimatter | +1 espacio de comodín |
 | Seed Money / Money Tree | Topes de interés $10 / $20; véase [cobro](cobro-automatico.md) |
 
-Las mejoras requieren su vale base. No se permite quitar el base mientras se conserve la mejora. No se simulan desbloqueos del perfil: el usuario registra adquisiciones reales. Los otros22 aparecen mediante «Ver los32» y pueden marcarse como adquiridos, con estado «Registrado · sin cálculo»; siguen visibles al reducir la lista. Se conservan al guardar y recuperar una partida, pero registrar su nombre no activa descuentos, renovaciones, probabilidades, sobres ni consumibles. H2 conserva el rechazo explícito a modificadores fuera de su cobertura; la valoración contextual los describe y limita únicamente los apartados pertinentes, según [composición global](composicion-global.md).
+Las mejoras requieren su vale base. No se permite quitar el base mientras se conserve la mejora. No se simulan desbloqueos del perfil: el usuario registra adquisiciones reales. Los otros 22 aparecen mediante «Ver los32» y pueden marcarse como adquiridos, con estado «Registrado · sin cálculo»; siguen visibles al reducir la lista. Se conservan al guardar y recuperar una partida, pero registrar su nombre no activa descuentos, renovaciones, probabilidades, sobres ni consumibles. H2 conserva el rechazo explícito a modificadores fuera de su cobertura; la valoración contextual los describe y limita únicamente los apartados pertinentes, según [composición global](composicion-global.md).
 
 Jeroglífico y Petroglifo requieren transcribir respectivamente las manos y descartes actuales después de registrarlos. El campo afectado queda desconocido hasta hacerlo: no se repite la reducción histórica del ante ni se reconstruye un historial supuesto. Cambiar otro vale no sobrescribe el recurso transcrito; cambiar un modificador de ese recurso o la baraja exige transcribirlo nuevamente. Los otros recursos integrados siguen calculándose una sola vez.
 

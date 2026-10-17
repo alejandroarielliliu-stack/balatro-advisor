@@ -1,3 +1,4 @@
+import {applyVoucherPurchase} from '../rules/voucher-shop.js';
 import {createStateStore} from './state-store.js';
 import type {StoragePort} from './state-store.js';
 import {validateState} from '../state/validation.js';
@@ -6,7 +7,7 @@ import {array,boolean,checkJsonValue,integer,object,text} from '../state/schema.
 import type {Schema,Infer} from '../state/schema.js';
 import {applyShopAction} from '../rules/shop.js';
 import type {EngineOptions} from '../rules/core.js';
-import {actionSchema,bindingSchema,analysisBinding,validateConfirmedRecord,MAX_RECORD_BYTES,equal} from './confirmed-record.js';
+import {currentActionSchema,bindingSchema,analysisBinding,validateConfirmedRecord,MAX_RECORD_BYTES,equal} from './confirmed-record.js';
 import type {ConfirmedRecord,EntryInput} from './confirmed-record.js';
 import {migrateConfirmedRecord} from './record-migration.js';
 import {applyRunProgress,inventoryConfirmationSchema,runProgressCommandSchema} from '../run/progress.js';
@@ -25,8 +26,8 @@ export interface PreparedMigration {record:ConfirmedRecord;expectedRaw:string;re
 const header={confirmationId:text(),confirmed:boolean,expected:bindingSchema,updatedAt:text()};
 // The observed balance has the same integer domain as H1. H2, not the receipt
 // schema, determines whether a negative balance is legal (e.g. Credit Card).
-const receiptSchema=object({money:integer(),jokerIds:array(text(),100),offerIds:array(text(),100)});
-const confirmSchema=object({...header,action:actionSchema},{observedAfter:receiptSchema});
+const receiptSchema=object({money:integer(),jokerIds:array(text(),100),offerIds:array(text(),100)},{voucherOfferIds:array(text(),100),voucherIds:array(text(),32)});
+const confirmSchema=object({...header,action:currentActionSchema},{observedAfter:receiptSchema});
 const undoSchema=object({...header,targetEntryId:text(),reason:text(2000)});
 const observedFields=['gameVersion','gamePlatform','deckId','stakeId','modsPresent','money','lastCleared','nextBlind','visibleBoss','resources','deck','handBases','jokers','shop','outOfScope','jokerContext'];
 const patchSchema:Schema<Partial<GameState['observed']>>={check(v,p,e){
@@ -123,15 +124,15 @@ export function createConfirmedStore(getStorage:()=>StoragePort){
     confirm(input:unknown,options:EngineOptions={}):Result<ConfirmedRecord>{
       const request=check(confirmSchema,input);if(!request.ok)return request;const r=request.value;
       const base=prepare(r);if(!base.ok)return base;const before=base.value.record.state;
-      if(r.action.choices?.some(c=>c.knowledge!=='known'))return {ok:false,errors:[{path:'$.action.choices',code:'hypothetical_confirmation',message:'La confirmación real necesita resultados observados, no ramas hipotéticas.'}]};
-      const changed=applyShopAction(before,r.action,{expectedRevision:before.revision,updatedAt:r.updatedAt},options);if(!changed.ok)return {ok:false,errors:changed.errors};
+      if('choices' in r.action&&r.action.choices?.some(c=>c.knowledge!=='known'))return {ok:false,errors:[{path:'$.action.choices',code:'hypothetical_confirmation',message:'La confirmación real necesita resultados observados, no ramas hipotéticas.'}]};
+      const changed=r.action.type==='buy_voucher'?applyVoucherPurchase(before,r.action,{expectedRevision:before.revision,updatedAt:r.updatedAt},options):applyShopAction(before,r.action,{expectedRevision:before.revision,updatedAt:r.updatedAt},options);if(!changed.ok)return {ok:false,errors:changed.errors};
       const after=changed.value.state;
       // Even a confirmed hold invalidates old analyses; replacement keeps H2's two increments.
       if(after.revision===before.revision)after.revision++;
       after.updatedAt=r.updatedAt;
       if(r.observedAfter){
         const m=after.observed.money,j=after.observed.jokers,s=after.observed.shop;
-        if(m.status!=='known'||j.status!=='known'||s.status!=='known'||r.observedAfter.money!==m.value || !equal(r.observedAfter.jokerIds,j.value.map(x=>x.instanceId)) || !equal(r.observedAfter.offerIds,s.value.cardOffers.map(x=>x.offerId)))
+        if(m.status!=='known'||j.status!=='known'||s.status!=='known'||r.observedAfter.money!==m.value || !equal(r.observedAfter.jokerIds,j.value.map(x=>x.instanceId)) || !equal(r.observedAfter.offerIds,s.value.cardOffers.map(x=>x.offerId)) || r.observedAfter.voucherOfferIds!==undefined&&!equal(r.observedAfter.voucherOfferIds,after.schemaVersion==='0.2'&&after.observed.shop.status==='known'?(after.observed.shop.value.voucherOffers??[]).map(x=>x.offerId):[]) || r.observedAfter.voucherIds!==undefined&&!equal(r.observedAfter.voucherIds,after.observed.outOfScope.status==='known'?after.observed.outOfScope.value.vouchers:[]))
           return issue('model_discrepancy','Lo observado no coincide con H2. No se guardó la transacción: registra una corrección manual con los datos reales y el motivo.');
       }
       return append(base.value,{id:r.confirmationId,kind:'action',before,after,action:r.action,reason:'El usuario confirmó que realizó esta acción. Efectos calculados bajo el modelo provisional, no observación validada de las reglas.',targetEntryId:null,evidence:changed.evidence,trace:changed.trace});

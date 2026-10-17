@@ -16,12 +16,12 @@ export function catalogCapabilities(kind:CapabilityKind,id:string):CatalogCapabi
  const pack=kind==='pack'?BOOSTER_CATALOG.find(p=>p.id===id):undefined;
  const deck=kind==='deck'&&Object.hasOwn(DECK_PROFILES,id)?DECK_PROFILES[id as keyof typeof DECK_PROFILES]:undefined;
  if(!joker&&!voucher&&!pack&&!deck)return null;
- const shop=!!joker;
+ const shop=!!joker||!!voucher&&supportsVoucher(id);
  return {kind,id,operations:{
   show:cap('available','catalogue','Identidad y descripción catalogadas; no demuestra reglas implementadas.'),
   rate:cap(joker&&!FIT_PROFILES[joker.artId]?'unimplemented':'conditional','heuristic','Valoración editorial condicionada al estado. No son puntos ni probabilidad de ganar.'),
   score:cap(joker||voucher&&supportsVoucher(id)||deck&&deckDefinition(id)?'conditional':pack?'not_applicable':'unimplemented','engine',pack?'Un sobre cerrado no tiene una mano concreta que puntuar.':'Solo una ejecución concreta de H2 puede comprobar datos, interacciones y evidencia requerida. El catálogo no certifica todos sus efectos.'),
-  apply:cap(shop?'conditional':deck?'not_applicable':'unimplemented','engine',shop?'Compra, venta o reemplazo de comodín: requiere una prueba concreta de H2 sobre el estado y oferta registrados.':deck?'Una baraja no es una compra de tienda.':'Compra/apertura de esta categoría no está integrada en el flujo persistente de tienda.'),
+  apply:cap(shop?'conditional':deck?'not_applicable':'unimplemented','engine',shop?'Compra de vale compatible o compra/venta/reemplazo de comodín: requiere prueba H2 sobre estado y oferta registrados.':deck?'Una baraja no es una compra de tienda.':'Compra/apertura de esta categoría no está integrada en el flujo persistente de tienda.'),
   confirm:cap(shop?'conditional':deck?'not_applicable':'unimplemented','storage',shop?'Solo tras validación de H2, confirmación explícita, revisión vigente y escritura T09b. Consultar nunca registra acciones.':'Transcribir que posees un elemento no equivale a confirmar su adquisición mediante H2.')
  }};
 }

@@ -55,3 +55,8 @@ export {inspectShopDecision,decisionIsCurrent} from './advisor/decision.js';
 export type {ShopDecision,DecisionOptions,ActionCapability,DecisionQuestion,OperationStatus} from './advisor/decision.js';
 export {immediateConsequences,scenarioConsequences} from './advisor/consequences.js';
 export type {ImmediateConsequences,ScenarioConsequences,ScenarioConsequence,ScenarioAlternative} from './advisor/consequences.js';
+
+export {applyVoucherPurchase} from './rules/voucher-shop.js';
+export type {VoucherPurchaseAction,VoucherPurchaseChange} from './rules/voucher-shop.js';
+export type {VoucherOffer,CurrentShop} from './state/model.js';
+export type {VoucherCapability} from './advisor/decision.js';

@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { chromium } from 'playwright';
 import { spawn } from 'node:child_process';
 import { readFile, mkdir, writeFile } from 'node:fs/promises';
+import { migrateState } from '../dist/src/state/migration.js';
 
 // Synthetic fixtures and literal arithmetic oracles. This verifies the UI and
 // its declared policy; it is not an observation of Balatro or an optimality test.
@@ -17,7 +18,11 @@ const pass = (id, expected, observed) => report.cases.push({ id, expected, obser
 const base = JSON.parse(await readFile('examples/shop-purchase.json', 'utf8'));
 const known = value => ({ status: 'known', source: 'manual', value });
 function fixture({ vouchers = [], jokers = [] } = {}) {
-  const state = structuredClone(base);
+  // This synthetic current-format scenario opts into migration explicitly.
+  // Legacy loading and refusal to silently migrate remain covered elsewhere.
+  const migrated = migrateState(structuredClone(base));
+  assert.equal(migrated.ok, true, 'The synthetic shop fixture must migrate to0.2.');
+  const state = migrated.value;
   state.runId = 'synthetic-shop-ui';
   state.observed.money = known(25);
   state.observed.jokers = known(jokers);
@@ -79,7 +84,7 @@ try {
     await page.waitForFunction(() => document.querySelectorAll('.bay-mini').length === 150);
     const original = await stored();
     let expectedRecord = original, writeCount = await writes(), submitCount = await submits();
-    // Transcribing an observed joker is now a persisted correction. Checkpoints
+    // Transcribing an observed joker or voucher is a persisted correction. Checkpoints
     // are explicit and only taken after edits, never after an advice operation.
     const checkpoint = async () => { expectedRecord = await stored(); writeCount = await writes(); submitCount = await submits(); };
     const inventory = () => page.locator('.inventory-panel .joker-editor select[id^="joker-"]').evaluateAll(rows => rows.map(row => row.value));
@@ -116,6 +121,7 @@ try {
       if (price !== undefined) await page.locator('#store-item-price').fill(String(price));
       await page.locator('#store-item-save').click();
       await page.locator('#store-item-editor').waitFor({ state: 'hidden' });
+      if (kind === 'voucher') await checkpoint();
       return page.locator(`.store-extra-tile[data-store-kind="${kind}"]`).last();
     };
     return { context, page, go, stored, writes, submits, inventory, original, originalVouchers, unchanged, checkpoint, addJoker, advice, close, addExtra };
@@ -202,7 +208,24 @@ try {
   assert.match(await voucherAdvice.innerText(), /tope|capacidad|interés|intereses/i);
   await main.close();
   await main.unchanged();
-  pass('voucher-projection', 'Observed Seed Money $4: literal $25−$4=$21; interest cap is no immediate income', { price: 4, projectedMoney: 21, realMoney: 25, owned: false });
+  await voucher.locator('.store-extra-inspect').click();
+  assert.equal(await p.locator(`[data-voucher-confirm="${await voucher.getAttribute('data-offer-id')}"]`).isDisabled(), true, 'The observed $4 voucher cannot be confirmed under the base-price-only H2 rule.');
+  assert.match(await p.locator('#voucher-confirm-note').innerText(), /precio.*base|base.*\$10/i);
+  const discountedVoucher = await p.evaluate(async ({ key, id }) => {
+    const record = JSON.parse(localStorage.getItem(key));
+    const [{ inspectShopDecision }, { readShopSnapshot }] = await Promise.all([
+      import('/dist/src/advisor/decision.js'), import('/dist/src/ui/storefront.js'),
+    ]);
+    const result = inspectShopDecision(record.state, readShopSnapshot());
+    if (!result.ok) throw new Error(JSON.stringify(result.errors));
+    return result.value.voucherActions.find(action => action.optionId === id);
+  }, { key: storageKey, id: await voucher.getAttribute('data-offer-id') });
+  assert.equal(discountedVoucher.errors[0].code, 'unsupported_price');
+  assert.equal(discountedVoucher.confirmation, 'unavailable');
+  assert.equal(await p.locator('#confirmation[open]').count(), 0);
+  await main.close();
+  await main.unchanged();
+  pass('voucher-projection', 'Observed Seed Money $4 persists without acquisition: contextual $25−$4=$21, no immediate interest income, H2 explicitly refuses unsupported_price', { price: 4, projectedMoney: 21, realMoney: 25, owned: false, persisted: true, h2Error: 'unsupported_price' });
 
   await p.locator('#store-pack-add').click();
   const packChoices = await p.locator('#store-item-id option').evaluateAll(options => options.map(option => option.value).filter(Boolean));
@@ -351,7 +374,7 @@ try {
   pass('responsive', 'Shop/advice fit 360, 390 and 1440px without page overflow; full joker art/name/index and other cards share the upper row', { widths: [360, 390, 1440], completeJokerCards: true, upperRowOffers: 3, physicalMobileTest: false });
   await p.locator('#store-new-shop').click();
   await main.checkpoint();
-  assert.equal(await p.locator('.candidate-card,.store-extra-tile').count(), 0, 'New shop clears all temporary offer categories.');
+  assert.equal(await p.locator('.candidate-card,.store-extra-tile').count(), 0, 'Clear offers removes persisted joker/voucher offers and temporary packs/other cards.');
   assert.equal(await p.locator('#store-reroll-cost').count(), 0);
   assert.equal(await p.locator('#shop-recommendation').isDisabled(), true, 'Clearing the shop also disables advice.');
   await main.unchanged();
@@ -360,21 +383,34 @@ try {
   assert.equal(await p.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
   await p.locator('#joker-candidates').screenshot({ path: `${dir}/shop-reset-390.png` });
   await p.setViewportSize({ width: 1440, height: 900 });
-  pass('clear-offers', 'Clear offers persists removal of observed jokers, clears session extras and disables advice while preserving $25 and inventory', { offers: 0, adviceDisabled: true, realMoney: 25, purchased: false });
-  // Refill after reset: joker observations persist; extras remain session-only.
+  pass('clear-offers', 'Clear offers persists removal of observed jokers and vouchers, clears session packs/other cards and disables advice while preserving $25 and inventory', { offers: 0, adviceDisabled: true, realMoney: 25, purchased: false });
+  // Refill after reset: joker/voucher observations persist; packs/other cards remain temporary.
   await main.addJoker('j_joker');
   await main.addExtra('voucher', 'v_seed_money', 4);
-  assert.equal(await p.locator('.candidate-card,.store-extra-tile').count(), 2);
+  await main.addExtra('pack', 'arcana-normal');
+  await p.locator('#store-other-add').click();
+  await p.locator('#store-item-name').fill('El Mago temporal');
+  await p.locator('#store-item-price').fill('3');
+  await p.locator('#store-item-save').click();
+  await p.locator('#store-item-editor').waitFor({ state: 'hidden' });
+  assert.equal(await p.locator('.candidate-card,.store-extra-tile').count(), 4);
   await main.unchanged();
   const beforeReload = await main.stored();
   await p.reload();
-  await p.waitForFunction(() => document.querySelectorAll('.bay-mini').length === 150);
+  await p.waitForFunction(() => document.querySelectorAll('.bay-mini').length === 150 && document.querySelector('#store-new-shop')?.dataset.localDisabled === 'false');
   await main.go('table');
   assert.equal(await main.stored(), beforeReload, 'Reload itself must not rewrite the record.');
   assert.equal(await p.locator('.candidate-card[data-candidate="j_joker"]').count(), 1, 'Observed joker offer is restored without being acquired.');
-  assert.equal(await p.locator('.store-extra-tile').count(), 0, 'Pack/voucher/other observations remain session-only in this delivery.');
+  assert.equal(await p.locator('.store-extra-tile[data-store-kind="voucher"]').count(), 1, 'The observed voucher is restored without being acquired.');
+  assert.match(await p.locator('.store-extra-tile[data-store-kind="voucher"]').innerText(), /\$4/);
+  assert.equal(await p.locator('.store-extra-tile[data-store-kind="pack"],.store-extra-tile[data-store-kind="other"]').count(), 0, 'Pack/other observations remain session-only.');
   assert.deepEqual(await main.inventory(), []);
-  pass('observed-offers-reload', 'Reload restores the observed Joker offer, discards session voucher and never acquires it', { persistedJokers: 1, sessionExtras: 0, acquiredJokers: 0, reloadWrites: 0 });
+  assert.equal(await p.locator('#money').inputValue(), '25');
+  assert.deepEqual(await p.locator('#vouchers [data-owned="true"]').evaluateAll(rows => rows.map(row => row.dataset.voucher)), []);
+  const restored = JSON.parse(await main.stored()).state;
+  assert.equal(restored.observed.shop.value.voucherOffers[0].catalogId, 'v_seed_money');
+  assert.deepEqual(restored.observed.outOfScope.value.vouchers, []);
+  pass('observed-offers-reload', 'Reload restores observed Joker and Seed Money $4 without payment/acquisition, discards temporary packs/other cards', { persistedJokers: 1, persistedVouchers: 1, sessionExtras: 0, acquiredJokers: 0, acquiredVouchers: 0, realMoney: 25, reloadWrites: 0 });
   await main.context.close();
 
   const prerequisite = await session(fixture());
@@ -418,7 +454,7 @@ try {
   report.status = 'passed';
   report.pageErrors = errors;
   await writeFile(`${dir}/report.json`, JSON.stringify(report, null, 2) + '\n');
-  console.log('PASS tienda: observed prices, literal balances, current-deck context, vouchers/prerequisites, 15 closed pack types, advisor controls/no game renewal, zero writes/acquisitions and 360/390/1440px');
+  console.log('PASS tienda: observed prices, literal balances, current-deck context, vouchers/prerequisites, 15 closed pack types, advisor controls/no game renewal, zero consultation writes/acquisitions and 360/390/1440px');
 } catch (error) {
   report.status = 'failed';
   report.error = error.stack || error.message;

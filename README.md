@@ -2,9 +2,11 @@
 
 **Web pública:** [Balatro Advisor en GitHub Pages](https://alejandroarielliliu-stack.github.io/balatro-advisor/). [Publicación automática y traslado de partidas](docs/github-pages.md). La migración solo se considera publicada cuando el despliegue termina y se comprueba el enlace sin iniciar sesión.
 
-**Entrega actual (2026-10-17):** [TAG01b: Jugar / saltar](docs/comparacion-ciegas-tag01b.md), consulta desde selección. Proyecta Economía/Inversión y compara planes explícitos mediante DEC00/H3/T07b, separando saldo, tienda omitida y contadores. Preferencia condicional acotada; sin planes no diagnostica supervivencia. Consulta sin guardado, confirmación real separada y modo estricto conservado. TAG01 sigue parcial; siguiente SHOP02a: compras confirmadas de vales compatibles.
+**Entrega actual (2026-10-17):** [SHOP02a: compras registradas de diez vales](docs/compras-vales-shop02a.md). Guarda las ofertas de vales en partidas 0.2, consulta saldo/recursos y confirma «Compré» desde Mesa. Precio observado, prerrequisitos, crédito y recursos validados por H2; historial atómico, recarga y deshacer por T09b. Inspección del ejecutable provisional, sin observación en partida. Otros 22 vales, descuentos y apertura de sobres siguen pendientes; no añade ranking H3 de vales. `npm run demo:vouchers` y `npm run test:voucher-shop`.
 
-**Versión vigente:** Mesa con puntaje global/seis barras, [consejo contextual](docs/tienda-contextual.md), 150 perfiles quick-fit-2, 17 familias de composiciones, 32 vales registrables (10 efectos H2) y 15 sobres catalogados con ilustraciones. Disposición visual de Balatro y recálculo automático. Cálculos de manos en Análisis; ofertas de comodines y acciones realizadas confirmadas se guardan desde Mesa. Las demás ediciones siguen siendo transcripciones que se guardan en Registro. Cobertura web exacta 82/150; perfiles no equivalen a efectos completamente implementados.
+**Verificación de esta entrega:** 722 pruebas aprobadas, 0 fallos, 10 TODO manuales; nueva demo y pruebas de integración de compra de vales. Los TODO no se consideran verificaciones en Balatro.
+
+**Versión vigente:** Mesa con puntaje global/seis barras, [consejo contextual](docs/tienda-contextual.md), 150 perfiles quick-fit-2, 17 familias de composiciones, 32 vales registrables (10 efectos H2) y 15 sobres catalogados con ilustraciones. Disposición visual de Balatro y recálculo automático. Cálculos de manos en Análisis; ofertas de comodines/vales y acciones realizadas confirmadas se guardan desde Mesa. Las demás ediciones siguen siendo transcripciones que se guardan en Registro. Cobertura web exacta 82/150; perfiles no equivalen a efectos completamente implementados.
 
 **Publicación:** `npm.cmd run build:site` genera `out/`; `npm.cmd run test:site` comprueba hosting estático dentro de un subdirectorio. [Acceso, Git separado y traslado de partidas](docs/publicacion.md). Los bloques siguientes conservan el historial de entregas.
 
@@ -24,7 +26,7 @@
 
 **Actualización del plan general:** [estado H0–H7 y próximos entregables](docs/plan-general-reconciliado.md). Firefox ya pasa los mismos 17 grupos que Chrome; [rendimiento medido](docs/rendimiento-h6.md) en PC y formato móvil emulado. Android físico aplazado por decisión del usuario. H4/H5 (simulación) y H7 (beta publicada) no están implementados; la v0.1 básica no equivale al plan completo.
 
-H1 completo en su núcleo; H2 funcional y provisional; T07b compara planes y **H3 incorpora un asesor heurístico básico**. **H2 no está cerrado por falta de contraste ejecutado en Balatro; la eficacia estratégica de H3 tampoco está validada.** Interfaz web mínima local T10 implementada, sin simulaciones. Documentación y código exclusivos de esta carpeta; ../ProjectBonk/ no se modifica. Se usa el Git raíz preexistente, sin crear otro repositorio.
+H1 completo en su núcleo; H2 funcional y provisional; T07b compara planes y **H3 incorpora un asesor heurístico básico**. **H2 no está cerrado por falta de contraste ejecutado en Balatro; la eficacia estratégica de H3 tampoco está validada.** Interfaz web mínima local T10 implementada, sin simulaciones. Documentación y código exclusivos de esta carpeta; ../ProjectBonk/ no se modifica. El repositorio independiente publicado se mantiene separado de Project Bonk.
 
 **T07b implementado:** comparación de conservar, comprar y reemplazar usando el mismo escenario explícito de cartas. Finalización temprana, saldos, contadores y limitaciones por rama, sin ranking estratégico. [Contrato y ejemplos](docs/comparacion-t07b.md).
 
@@ -38,7 +40,7 @@ El asesor **h3-2** compara también vender sin comprar y explica qué efecto o c
 
 La web permite seleccionar planes como una secuencia de hasta tres ciegas, declarando cada ciega futura y la ausencia de operaciones intermedias. Conserva dinero/Green por alternativa y se detiene si falta información o el plan no vence. No predice robos ni modifica la partida real. `npm.cmd run demo:horizon` muestra S03: conservar 25→37→50 frente a comprar Golden 19→33→50. [Contrato, política y pruebas](docs/horizontes-t08c.md).
 
-Verificación vigente: **141 pruebas, 29 contrastes EFHIII y 17 grupos Chrome aprobados**, con 10 TODO manuales. [Auditoría conjunta S01–S09 completada](docs/auditoria-t08c.md): T08c cerrado como software provisional, sin declarar eficacia validada. Reproducir los casos con `npm.cmd run test:scenarios`. Quedan T01/H2 y T11/A7 (contraste en juego, Firefox y Android físico).
+Verificación histórica T08c: **141 pruebas, 29 contrastes EFHIII y 17 grupos Chrome aprobados**, con 10 TODO manuales. [Auditoría conjunta S01–S09 completada](docs/auditoria-t08c.md): T08c cerrado como software provisional, sin declarar eficacia validada. Reproducir los casos con `npm.cmd run test:scenarios`. Quedan T01/H2 y T11/A7 (contraste en juego, Firefox y Android físico).
 
 ## Límite conservador de puntuación (T07c)
 

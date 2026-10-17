@@ -1,7 +1,7 @@
 import { gameStateSchema as legacyGameStateSchema } from './legacy-model.js';
 import type { GameState as LegacyGameState } from './legacy-model.js';
 import { array, enumeration, fact, integer, isObject, issue, object, text, union } from './schema.js';
-import type { Infer, Schema } from './schema.js';
+import type { Infer, Schema, Fact } from './schema.js';
 
 export type { Fact, Issue, Result } from './schema.js';
 export type { JokerInstance, Probe } from './legacy-model.js';
@@ -31,13 +31,28 @@ export const phaseDataSchemas = {
 export type RunPhase = keyof typeof phaseDataSchemas;
 export type PhaseData = { [P in RunPhase]: Infer<(typeof phaseDataSchemas)[P]> };
 type PhaseState = { [P in RunPhase]: { phase: P; phaseData: PhaseData[P] } }[RunPhase];
-export type GameStateV02 = Omit<GameStateV01, 'schemaVersion' | 'phase'> & {
+export const voucherOfferSchema=object({offerId:text(),catalogId:text(),price:fact(integer(0))});
+export type VoucherOffer=Infer<typeof voucherOfferSchema>;
+type LegacyShop=Extract<GameStateV01['observed']['shop'],{status:'known'}>['value'];
+export type CurrentShop=LegacyShop & {voucherOffers?:VoucherOffer[]};
+export type GameStateV02 = Omit<GameStateV01, 'schemaVersion' | 'phase' | 'observed'> & {
   schemaVersion: '0.2';
+  observed:Omit<GameStateV01['observed'],'shop'> & {shop:Fact<CurrentShop>};
 } & PhaseState;
 export type GameState = GameStateV01 | GameStateV02;
 
 const phase = enumeration('unknown', 'blind_select', 'in_round', 'cashout', 'shop', 'open_pack', 'finished');
 
+/** Project only declared 0.2 extensions for the frozen legacy structural checks. */
+export function legacyShape(value:Record<string,unknown>):Record<string,unknown>{
+ const base={...value,schemaVersion:'0.1',phase:value.phase==='shop'?'shop':'draft'};
+ delete (base as Record<string,unknown>).phaseData;
+ if(isObject(value.observed)&&isObject(value.observed.shop)&&value.observed.shop.status==='known'&&isObject(value.observed.shop.value)){
+  const shop={...value.observed.shop.value};delete shop.voucherOffers;
+  Object.assign(base,{observed:{...value.observed,shop:{...value.observed.shop,value:shop}}});
+ }
+ return base;
+}
 /** Reuse the frozen base instead of allowing 0.2 additions to change the 0.1 contract. */
 export const currentGameStateSchema: Schema<GameStateV02> = {
   check(value, path, errors) {
@@ -51,8 +66,10 @@ export const currentGameStateSchema: Schema<GameStateV02> = {
         valid = false;
       } else if (!phaseDataSchemas[phaseName].check(value.phaseData, `${path}.phaseData`, errors)) valid = false;
     }
-    const base = { ...value, schemaVersion: '0.1', phase: value.phase === 'shop' ? 'shop' : 'draft' };
-    delete (base as Record<string, unknown>).phaseData;
+    if(isObject(value.observed)&&isObject(value.observed.shop)&&value.observed.shop.status==='known'&&isObject(value.observed.shop.value)&&Object.hasOwn(value.observed.shop.value,'voucherOffers')){
+      if(!array(voucherOfferSchema,100).check(value.observed.shop.value.voucherOffers,`${path}.observed.shop.value.voucherOffers`,errors))valid=false;
+    }
+    const base=legacyShape(value);
     if (!legacyGameStateSchema.check(base, path, errors)) valid = false;
     return valid;
   }

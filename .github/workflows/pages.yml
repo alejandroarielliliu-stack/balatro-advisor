@@ -34,6 +34,8 @@ jobs:
         run: npx --no-install playwright install --with-deps chrome
       - name: Comprobar registro desde la tienda
         run: node tools/shop-session-test.mjs
+      - name: Comprobar compras registradas de vales
+        run: node tools/voucher-shop-test.mjs
       - name: Comprobar migración recuperable de partidas
         run: node tools/run-migration-test.mjs
       - name: Comprobar recorrido observado de partida
