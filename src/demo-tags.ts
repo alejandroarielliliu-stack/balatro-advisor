@@ -1,0 +1,11 @@
+import assert from 'node:assert/strict';
+import {createNewRun} from './run/start.js';
+import {createConfirmedStore,analysisBinding} from './storage/confirmed-store.js';
+import type {Result} from './state/model.js';
+const ok=<T>(r:Result<T>)=>{if(!r.ok)throw Error(JSON.stringify(r.errors));return r.value;};
+const data=new Map<string,string>(),store=createConfirmedStore(()=>({getItem:k=>data.get(k)??null,setItem:(k,v)=>{data.set(k,v);}}));
+let record=ok(store.initialize(ok(createNewRun({runId:'synthetic-tags-demo',deckId:'yellow',updatedAt:'2026-10-16T20:00:00Z',profileConfirmed:true}))));
+const before=structuredClone(record.state);
+record=ok(store.progress({confirmationId:'observed-skip',confirmed:true,expected:analysisBinding(record.state),updatedAt:'2026-10-16T20:01:00Z',command:{type:'skip_blind',atNextSelection:true,money:13,tags:{status:'known',source:'manual',value:['tag_double','tag_double']}},inventory:{unchanged:true}}));
+assert.equal(record.state.phase,'blind_select');assert.equal(record.state.observed.money.status,'known');assert.equal(record.history.length,1);assert.deepEqual(ok(store.load()),record);
+console.log(JSON.stringify({demo:'TAG01 · synthetic observation, not a game test',before:{revision:before.revision,money:before.observed.money,blind:before.observed.nextBlind},after:{revision:record.state.revision,money:record.state.observed.money,blind:record.state.observed.nextBlind,context:record.state.observed.jokerContext},limitations:'No se generaron sobres, premios, duplicados ni estados hipotéticos. Los valores de esta demo son observaciones sintéticas declaradas.',reloadPreserved:true},null,2));

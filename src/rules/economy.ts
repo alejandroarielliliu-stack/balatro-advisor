@@ -3,7 +3,7 @@ import {generationRoundIncome} from './generation-jokers.js';
 import {interestCap} from '../catalog/economy-vouchers.js';
 import {deckDefinition} from '../catalog/decks.js';
 import type { GameState } from '../state/model.js';
-import { blindInfo, deckCards, fail, inventory, need, resources, run, safe, stateInput } from './core.js';
+import { blindInfo, deckCards, fail, guardPendingTags, inventory, need, resources, run, safe, stateInput } from './core.js';
 import type { EngineOptions, Trace } from './core.js';
 
 export interface Cashout { balanceBefore: number; blindReward: number; unusedHands: number; unusedDiscards?: number; goldenIncome: number; otherJokerIncome?:number; interest: number; earned: number; balanceAfter: number }
@@ -24,6 +24,7 @@ export function interestOnBalance(input: unknown, options: EngineOptions = {}) {
   });
 }
 export function cashoutInternal(state: GameState, handsRemaining: number, won: boolean, trace: Trace[], use: (id: string) => void, discardsRemaining?: number,settings:{saved?:boolean;initialHands?:number;initialDiscards?:number;additionalJokerIncome?:number}={}): Cashout {
+  if(won)guardPendingTags(state,'cashout');
   const before = bankBalance(need(state.observed.money, '$.observed.money'));
   const bases=resources(state),r={...bases,hands:settings.initialHands??bases.hands,discards:settings.initialDiscards??bases.discards};
   if (!Number.isSafeInteger(handsRemaining) || handsRemaining < 0 || handsRemaining >= r.hands) fail('$round.handsRemaining', 'invalid_hands', `El cobro requiere entre 0 y ${r.hands-1} manos sobrantes tras jugar al menos una.`);

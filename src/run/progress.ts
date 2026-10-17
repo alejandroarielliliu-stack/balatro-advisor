@@ -1,3 +1,4 @@
+import {tagDefinition} from '../catalog/tags.js';
 import type {Fact,GameState,GameStateV02,Result} from '../state/model.js';
 import {createUnknownState} from '../state/model.js';
 import {validateCurrentState,validateState} from '../state/validation.js';
@@ -31,12 +32,16 @@ const changedGroupsSchema:Schema<InventoryGroup[]>={check(value,path,errors){
 export const inventoryConfirmationSchema=union(union(object({unchanged:literalTrue}),object({patch:patchSchema})),
   object({reconcile:object({changedGroups:changedGroupsSchema})}));
 export type InventoryConfirmation=Infer<typeof inventoryConfirmationSchema>;
-export const runProgressCommandSchema=union(
+const cycleCommandSchema=union(
   union(object({type:enumeration('locate'),phase:enumeration('blind_select','in_round','shop'),blind:progressBlindSchema},{money:integer()}),
     object({type:enumeration('enter_round')},{blind:progressBlindSchema})),
   union(object({type:enumeration('report_result'),outcome:enumeration('won','lost')},{score:integer(0),handsUsed:integer(0,100),discardsUsed:integer(0,100)}),
     union(object({type:enumeration('collect_cashout'),money:integer()},{nextBlind:progressBlindSchema}),
       union(object({type:enumeration('leave_shop')},{nextBlind:progressBlindSchema}),object({type:enumeration('end_run'),reason:text(2000)})))));
+export const runProgressCommandSchema=union(cycleCommandSchema,union(
+ object({type:enumeration('observe_skip_tag'),tag:fact(text())}),
+ union(object({type:enumeration('observe_tag_queue'),tags:fact(array(text(),100))}),
+ object({type:enumeration('skip_blind'),atNextSelection:{check:(v,p,e)=>v===true||(e.push({path:p,code:'confirmation_required',message:'Confirma que resolviste los efectos del salto y estás en la siguiente selección.'}),false)} as Schema<true>},{money:integer(),nextBlind:progressBlindSchema,tags:fact(array(text(),100))}))));
 export type RunProgressCommand=Infer<typeof runProgressCommandSchema>;
 export interface ProgressOptions {expectedRevision:number;updatedAt:string;inventory:InventoryConfirmation}
 export interface ProgressResult {state:GameStateV02;trace:Trace[];limitations:string[]}
@@ -45,7 +50,7 @@ const unknown=<T>(reason:string):Fact<T>=>({status:'unknown',reason});
 const issue=<T>(code:string,message:string,path='$progress'):Result<T>=>({ok:false,errors:[{path,code,message}]});
 const sameRef=(a:BlindRef,b:BlindRef)=>a.ante===b.ante&&a.kind===b.kind;
 
-/** Cycle order only. No skip, boss lottery, payout or scoring is performed. */
+/** Cycle order only. No tag effects, boss lottery, payout or scoring is performed. */
 export function advanceBlindRef(blind:BlindRef):BlindRef|null {
   if(!Number.isSafeInteger(blind.ante)||blind.ante<1||blind.ante>8)return null;
   if(blind.kind==='small')return {ante:blind.ante,kind:'big'};
@@ -84,7 +89,7 @@ function invalidateDynamic(state:GameStateV02,scope:'gap'|'selection'|'round'|'s
   if(context?.status==='known'){
     const ctx=context.value;
     const fields=scope==='shop_entry'?['rerollCost','freeRerolls'] as const:scope==='shop'?['rerollCost','freeRerolls',...(inventory.status==='known'&&inventory.value.some(j=>j.catalogId==='perkeo')?['consumables' as const]:[])] as const:dynamicContext;
-    for(const field of fields)if(ctx[field]&&!(field==='grosMichelExtinct'&&ctx.grosMichelExtinct?.status==='known'&&ctx.grosMichelExtinct.value===true))ctx[field]=unknown(reason) as never;
+    for(const field of fields)if(ctx[field]&&!(field==='tags'&&ctx.tags?.status==='known'&&ctx.tags.value.length===0)&&!(field==='grosMichelExtinct'&&ctx.grosMichelExtinct?.status==='known'&&ctx.grosMichelExtinct.value===true))ctx[field]=unknown(reason) as never;
     if(scope==='round'||scope==='gap')for(const field of ['handCounts','roundHandCounts'] as const)if(ctx[field])for(const key of Object.keys(ctx[field]))ctx[field][key]=unknown(reason);
   }
   // A saved debuff boolean cannot express "unknown". Retaining it would apply an old boss to a new blind.
@@ -130,7 +135,39 @@ export function applyRunProgress(input:unknown,commandInput:unknown,options:Prog
     return {ok:true,value:state.observed.nextBlind.value};
   };
   const acceptBlind=(proposed:BlindInfo|undefined,expected:BlindInfo):Result<BlindInfo>=>proposed&&!sameRef(proposed,expected)?issue('wrong_blind','La ciega transcrita no coincide con la siguiente posición del ciclo.'):{ok:true,value:structuredClone(proposed??expected)};
-  if(command.type==='locate'){
+  const tags='tag' in command?[command.tag]:('tags' in command&&command.tags?[command.tags]:[]);
+  for(const fact of tags)if(fact.status==='known')for(const id of typeof fact.value==='string'?[fact.value]:fact.value)if(!tagDefinition(id))return issue('unsupported_tag','Etiqueta fuera del catálogo 1.0.1o-FULL: '+id);
+  if(command.type==='observe_skip_tag'){
+    if(state.phase!=='blind_select')return issue('wrong_phase','La etiqueta visible se registra en la selección de ciega.');
+    const blind=requireBlind();if(!blind.ok)return blind;
+    if(blind.value.kind==='boss')return issue('illegal_skip','La ciega jefe no se puede saltar.');
+    state.phaseData.skipTag=command.tag;
+  }else if(command.type==='observe_tag_queue'){
+    if(state.phase==='finished'||state.phase==='unknown')return issue('wrong_phase','Ubica una partida en curso antes de registrar sus etiquetas.');
+    const ctx=state.observed.jokerContext?.status==='known'?state.observed.jokerContext.value:{};
+    ctx.tags=command.tags;state.observed.jokerContext=known(ctx);
+  }else if(command.type==='skip_blind'){
+    if(state.phase!=='blind_select')return issue('wrong_phase','Solo puedes registrar un salto desde la selección de ciega.');
+    const current=requireBlind();if(!current.ok)return current;
+    if(current.value.kind==='boss')return issue('illegal_skip','La ciega jefe no se puede saltar.');
+    const tag=state.phaseData.skipTag;
+    if(tag.status==='known'&&!tagDefinition(tag.value))return issue('unsupported_tag','Registra una etiqueta compatible o declárala desconocida antes del salto.');
+    // A Boss Tag or an unobserved reward can replace the visible boss. Never retain it as current.
+    if(tag.status==='unknown'||tag.value==='tag_boss')state.observed.visibleBoss=unknown('Confirma el jefe después de los efectos del salto.');
+    const successor=nextBlindAfter(state,current.value)!;
+    const upcoming=acceptBlind(command.nextBlind,successor);if(!upcoming.ok)return upcoming;
+    if(tag.status==='known'&&tag.value==='tag_orbital')state.observed.handBases=unknown('La etiqueta orbital cambia una mano. Transcribe sus bases finales; no se calculó el incremento.');
+    state.observed.nextBlind=known(upcoming.value);
+    state.observed.shop=unknown('Saltar no abre una tienda; no se reutilizan ofertas.');
+    state.observed.money=unknown('Transcribe el saldo observado después de todos los efectos del salto.');
+    const ctx=state.observed.jokerContext?.status==='known'?state.observed.jokerContext.value:{};
+    state.observed.jokerContext=known(ctx);
+    const skipped=ctx.blindsSkipped;
+    ctx.blindsSkipped=skipped?.status==='known'?known(skipped.value+1):unknown('No se conoce el total previo de ciegas saltadas.');
+    ctx.tags=command.tags??unknown('Confirma las etiquetas pendientes después del salto; no se ejecutaron ni duplicaron sus efectos.');
+    next={...state,phase:'blind_select',phaseData:{skipTag:unknown('Transcribe la etiqueta de la nueva ciega.')}};
+    limitations.push('Salto declarado después de resolver sus efectos y volver a selección; no se generaron cartas, sobres, dinero ni duplicados. No equivale a una ronda ganada ni acredita que saltar fuera mejor.');
+  }else if(command.type==='locate'){
     if(state.phase!=='unknown')return issue('wrong_phase','Ubicar la partida solo se aplica cuando su fase es desconocida.');
     state.observed.nextBlind=known(command.blind);state.observed.shop=unknown('La tienda actual todavía no se transcribió.');
     if(command.blind.kind==='boss')state.observed.visibleBoss=known(command.blind);
@@ -181,9 +218,19 @@ export function applyRunProgress(input:unknown,commandInput:unknown,options:Prog
     next={...state,phase:'finished',phaseData:{outcome:'stopped',reason:known(command.reason)}};
     next.observed.shop=unknown('La partida fue detenida.');
   }
+  const skipContext=command.type==='skip_blind'&&next.observed.jokerContext?.status==='known'?structuredClone({blindsSkipped:next.observed.jokerContext.value.blindsSkipped,tags:next.observed.jokerContext.value.tags}):undefined;
   applyInventory(next,options.inventory);
+  if(command.type==='observe_tag_queue'){
+    const ctx=next.observed.jokerContext?.status==='known'?next.observed.jokerContext.value:{};
+    ctx.tags=command.tags;next.observed.jokerContext=known(ctx);
+  }
+  if(command.type==='skip_blind'){
+    const ctx=next.observed.jokerContext?.status==='known'?next.observed.jokerContext.value:{};
+    Object.assign(ctx,skipContext);next.observed.jokerContext=known(ctx);
+  }
+  // A patch is an explicit final observation; an "unchanged" declaration cannot undo an Orbital invalidation.
   // The final balance is an observation, not an increment or projected payout.
-  if(command.type==='collect_cashout'||command.type==='locate'&&command.money!==undefined)next.observed.money=known(command.money!);
+  if(command.type==='collect_cashout'||(command.type==='locate'||command.type==='skip_blind')&&command.money!==undefined)next.observed.money=known(command.money!);
   next.revision=state.revision+1;next.updatedAt=options.updatedAt;
   const validated=validateCurrentState(next);if(!validated.ok)return validated;
   trace.push({ruleId:'run.observed',label:'Avance confirmado por el usuario',values:{command:command.type,from:loaded.value.phase,to:next.phase,revision:next.revision}});

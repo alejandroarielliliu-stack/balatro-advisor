@@ -38,6 +38,8 @@ jobs:
         run: node tools/run-migration-test.mjs
       - name: Comprobar recorrido observado de partida
         run: node tools/run-progress-test.mjs
+      - name: Comprobar etiquetas y saltos observados
+        run: node tools/tags-test.mjs
       - name: Comprobar datos observados por dependencia
         run: node tools/observations-test.mjs
       - name: Comprobar cambios observados por carta y consumible

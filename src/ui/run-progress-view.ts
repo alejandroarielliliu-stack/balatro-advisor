@@ -1,3 +1,4 @@
+import {TAGS,tagDefinition} from '../catalog/tags.js';
 import type {GameState,Fact} from '../state/model.js';
 import type {ConfirmedRecord} from '../storage/confirmed-store.js';
 import type {RunProgressCommand,InventoryConfirmation,BlindInfo} from '../run/progress.js';
@@ -43,12 +44,22 @@ export function renderRunJourney(host:HTMLElement,options:JourneyOptions){
    return {reconcile:{changedGroups}};
   };
  };
+ const queueEditor=(body:HTMLElement,initial:Fact<string[]>|undefined)=>{
+  const verified=check('progress-tags-known','He revisado las etiquetas pendientes (vacío = ninguna)');verified.input.checked=initial?.status==='known';
+  const ids=[...(value(initial)??[])],list=el('div','','journey-actions');list.id='progress-tags-list';
+  const choice=select('progress-tag-choice','Añadir etiqueta pendiente',Object.fromEntries(TAGS.map(t=>[t.id,t.name])),TAGS[0]!.id);
+  const add=el('button','Añadir','secondary');add.type='button';add.id='progress-tag-add';
+  const render=()=>{list.replaceChildren();ids.forEach((id,index)=>{const b=el('button',(tagDefinition(id)?.name??id)+' ×','secondary');b.type='button';b.setAttribute('aria-label','Quitar '+(tagDefinition(id)?.name??id));b.onclick=()=>{ids.splice(index,1);render();};list.append(b);});};
+  add.onclick=()=>{if(ids.length>=100){options.error('Como máximo 100 etiquetas.');return;}ids.push(choice.input.value);render();};render();
+  body.append(verified.wrap,list,choice.wrap,add,el('small','Transcribe la cola que muestra el juego, incluidos duplicados. No se simulan sus efectos.'));
+  return ():Fact<string[]>=>verified.input.checked?manual([...ids]):{status:'unknown',reason:'No se revisó la cola de etiquetas pendientes.'};
+ };
  const submit=(command:RunProgressCommand,readInventory:()=>InventoryConfirmation)=>options.submit(command,readInventory());
  const newGame=()=>{
   const body=el('div','','journey-dialog'),decks=Object.fromEntries(Object.entries(DECK_PROFILES).filter(([id])=>!!deckDefinition(id)).map(([id,d])=>[id,d.name]));
   const deck=select('progress-deck','Baraja',decks,'blue'),profile=check('progress-profile','Steam 1.0.1o-FULL · sin mods · White Stake');
   if(record){body.append(el('p','La nueva partida sustituirá esta copia y su historial. Exporta la actual si quieres conservarla.','notice'));const backup=el('button','Exportar partida actual','secondary');backup.type='button';backup.onclick=options.export;body.append(backup);}
-  body.append(deck.wrap,profile.wrap,el('small','Se aplican las condiciones iniciales de la baraja. Las cartas de Errática, el jefe y los tags seguirán desconocidos.'));
+  body.append(deck.wrap,profile.wrap,el('small','Se aplican las condiciones iniciales de la baraja. Las cartas de Errática, el jefe y la etiqueta visible seguirán desconocidos.'));
   open('Empecé una partida nueva',body,'Registrar nueva partida',()=>options.start(deck.input.value,profile.input.checked));
  };
  const title=el('div','','journey-heading');
@@ -72,7 +83,24 @@ export function renderRunJourney(host:HTMLElement,options:JourneyOptions){
   },true);
  }else if(state.phase==='blind_select'){
   action('run-enter-round','Entré en la ciega',()=>openCommand('Entré en la ciega','Registrar entrada',{type:'enter_round'}),true);
-  title.append(el('small','Saltar ciegas todavía no está disponible.'));
+  if(blind&&blind.kind!=='boss'){
+   const current=value(state.phaseData.skipTag);title.append(el('small',current?(tagDefinition(current)?.name??current):'Etiqueta de salto sin registrar'));
+   action('run-observe-tag','Etiqueta visible',()=>{
+    const body=el('div','','journey-dialog'),knownTag=check('progress-tag-known','Conozco la etiqueta visible');knownTag.input.checked=!!current;
+    const tag=select('progress-visible-tag','Etiqueta',Object.fromEntries(TAGS.map(t=>[t.id,t.name])),current??TAGS[0]!.id);body.append(knownTag.wrap,tag.wrap);
+    open('Etiqueta de esta ciega',body,'Registrar etiqueta',()=>options.submit({type:'observe_skip_tag',tag:knownTag.input.checked?manual(tag.input.value):unknown()},{unchanged:true}));
+   });
+   action('run-skip-blind','Salté esta ciega',()=>{
+    const body=el('div','','journey-dialog'),done=check('progress-skip-resolved','Ya resolví los efectos y estoy en la siguiente selección'),money=field('progress-money','Saldo actual ($) · opcional');
+    body.append(done.wrap,money.wrap,el('small','No cobras una ronda ni visitas una tienda. Indica cambios después de resolver sobres y recompensas en Balatro.'));
+    const readInventory=inventory(body),details=el('details');details.append(el('summary','Etiquetas pendientes después del salto'));const readTags=queueEditor(details,undefined);body.append(details);
+    open('Registré el salto',body,'Registrar salto',()=>{
+     if(!done.input.checked)throw Error('Termina los efectos en Balatro y confirma que estás en la siguiente selección.');
+     const moneyValue=number(money.input,Number.MIN_SAFE_INTEGER,true),next=nextBlindAfter(state,blind);
+     return submit({type:'skip_blind',atNextSelection:true,tags:readTags(),...(moneyValue===undefined?{}:{money:moneyValue}),...(next&&next.kind!=='boss'?{nextBlind:completeBlind(next,state)}:{})},readInventory);
+    });
+   });
+  }
  }else if(state.phase==='in_round'){
   action('run-report-result','Terminé la ciega',()=>{
    const body=el('div','','journey-dialog'),outcome=select('progress-outcome','Resultado observado',{won:'Superé la ciega',lost:'Perdí la partida'},'won');
@@ -97,6 +125,13 @@ export function renderRunJourney(host:HTMLElement,options:JourneyOptions){
  }else if(state.phase==='open_pack')title.append(el('small','El registro de elecciones de sobres todavía no está disponible. Se conserva el estado actual.'));
  else if(state.phase==='finished'){
   title.append(el('small',state.phaseData.outcome==='won'?'Objetivo ante 8 completado':state.phaseData.outcome==='lost'?'Derrota registrada':'Partida detenida'));action('run-new','Empecé otra partida',newGame,true);
+ }
+ if(state.phase!=='finished'&&state.phase!=='unknown'){
+  const context=value(state.observed.jokerContext),tags=context?.tags;
+  action('run-observe-tags','Etiquetas pendientes',()=>{
+   const body=el('div','','journey-dialog'),readTags=queueEditor(body,tags);
+   open('Etiquetas pendientes',body,'Registrar cola',()=>options.submit({type:'observe_tag_queue',tags:readTags()},{unchanged:true}));
+  });
  }
  const last=record.history.at(-1);if(last&&last.kind!=='undo'){
   const undo=action('run-undo','Deshacer registro',options.undo);undo.title='Corrige el registro local. No deshace acciones dentro de Balatro.';

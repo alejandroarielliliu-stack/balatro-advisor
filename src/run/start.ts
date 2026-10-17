@@ -29,6 +29,6 @@ export function createNewRun(input:unknown):Result<GameStateV02>{
     shop:missing('Todavía no se ha observado una tienda en esta partida.'),
     outOfScope:preset({vouchers:[],consumables:[],pendingTags:[],otherModifiers:[]}),
     jokerContext:preset({startingDeckSize:preset(composition.status==='known'?composition.cards.length:composition.count),blindsSkipped:preset(0),
-      tarotsUsed:preset(0),planetsUsed:preset([]),consumables:preset([]),consumableSlots:preset(deck.consumableSlots)})};
+      tags:preset([]),tarotsUsed:preset(0),planetsUsed:preset([]),consumables:preset([]),consumableSlots:preset(deck.consumableSlots)})};
   return validateCurrentState(result);
 }

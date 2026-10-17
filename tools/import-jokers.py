@@ -36,6 +36,7 @@ def literal(text):
             at += 1
             assert not (fields and items), 'Mixed tables require explicit handling'
             return fields if fields or not items else items
+        if t == 'nil': return None
         if t in ['true', 'false']: return t == 'true'
         if t[0] in "\"'": return ast.literal_eval(t)
         if re.fullmatch(r'-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?', t): return float(t) if '.' in t or 'e' in t.lower() else int(t)
