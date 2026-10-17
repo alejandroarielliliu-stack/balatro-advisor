@@ -36,7 +36,7 @@ No migra los archivos existentes ni sus anotaciones `outOfScope.pendingTags`: el
 
 H2 conserva sus validaciones de precios, recursos y modo estricto. La nueva protección no genera efectos:
 
-- Cola explícitamente desconocida: limita cálculos que requieren recursos de ronda/cobro; interés de un saldo explícito y acciones de tienda independientes siguen disponibles.
+- Cola o contexto completo explícitamente desconocidos: limita cálculos que requieren recursos de ronda/cobro; interés de un saldo explícito y acciones de tienda independientes siguen disponibles.
 - Juggle y efectos inmediatos/de selección todavía pendientes: limita esos recursos, evitando cifras que los omitan. Es una abstención conservadora, no simulación parcial.
 - Investment pendiente limita el cobro de Jefe; no bloquea la puntuación ni el cobro de Pequeña/Grande.
 - Double y etiquetas de futuro stock no impiden puntuar una mano independiente. No se genera stock futuro ni se ejecutan sus cambios de precio/edición. Precios fuera de cobertura H2 se rechazan como antes.

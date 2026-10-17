@@ -112,7 +112,8 @@ export function selectCards(state: GameState, ids: readonly string[]): Card[] {
 /** No tag hooks are simulated. Block only operations whose totals can depend on the pending queue. */
 export function guardPendingTags(state:GameState,operation:'resources'|'cashout'){
  const context=state.observed.jokerContext;
- if(context?.status!=='known')return; // legacy context policy remains unchanged; no claim that missing means empty
+ if(context?.status==='unknown')fail('$.observed.jokerContext','unknown_data','El contexto desconocido puede contener etiquetas que afectan recursos o cobro; confirma la cola actual.');
+ if(!context)return; // absent legacy context is not silently migrated to an empty queue
  const fact=context.value.tags;
  if(!fact)return; // legacy files predate this explicit queue; no migration to fabricated []
  const tags=need(fact,'$.observed.jokerContext.tags');

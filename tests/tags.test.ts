@@ -74,6 +74,7 @@ test('TAG01 Juggle/cola desconocida bloquean recursos afectados; interés de sal
   assert.ok(applyShopAction(s,{type:'buy',offerId:'o1',instanceId:'independent-buy'},{expectedRevision:s.revision,updatedAt:time}).ok);
   const interest=interestOnBalance(s);assert.ok(interest.ok);assert.equal(interest.value,1); // explicit $7, floor(7/5)
  }
+ const missing=shop();missing.observed.jokerContext=unknown;assert.equal(scoreHand(missing,hand).ok,false);assert.ok(interestOnBalance(missing).ok);assert.ok(applyShopAction(missing,{type:'buy',offerId:'o1',instanceId:'independent-context-buy'},{expectedRevision:missing.revision,updatedAt:time}).ok);
  const s=shop();s.observed.jokerContext=known({tags:known(['tag_double','tag_rare'])});assert.ok(scoreHand(s,hand).ok);
 });
 test('TAG01 modo estricto y guardados anteriores mantienen su contrato; cola vacía no se invalida al entrar',()=>{
