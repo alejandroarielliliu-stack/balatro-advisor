@@ -1,3 +1,4 @@
+import {consumeInvestments} from './tags.js';
 import {counterValue,updateCounter,decayJokers} from './joker-counters.js';
 import {SCORING_EFFECTS as FX} from '../catalog/initial.js';
 import {jokerResourceDelta} from '../catalog/joker-resources.js';
@@ -191,7 +192,7 @@ export function finishRound(input:RoundState,mutation:Mutation,options:EngineOpt
   const hook:FullEventInput={state:round.game,stage:'end_round',cards:round.hand.map(id=>deckCards(round.game).find(c=>c.instanceId===id)!),won,choices:choicesInput(choices),trace,use};
   const history=historyEvent(hook);economicEvent(hook);generationEvent(hook,effectiveJokers(inventory(round.game)));randomEvent(hook);decayJokers(round.game,'round',trace);syncResourceBases(round.game);if(won)heldEndRound(round,trace,use);
   const cashout=goalReached?null:cashoutInternal(round.game,round.handsLeft,won,trace,use,round.discardsLeft,{saved:round.status==='rescued',initialHands:round.initialHands,initialDiscards:round.initialDiscards,additionalJokerIncome:history.cashoutBonus});
-  if(cashout)round.game.observed.money=valueFact(cashout.balanceAfter);
+  if(cashout){round.game.observed.money=valueFact(cashout.balanceAfter);consumeInvestments(round.game,won,blind.kind==='boss');}
   if(won)round.game.observed.lastCleared=valueFact({ante:blind.ante,kind:blind.kind});
   round.game.observed.nextBlind={status:'unknown',reason:'Registrar la siguiente ciega; no se genera un jefe.'};round.game.observed.shop={status:'unknown',reason:'Registrar ofertas nuevas; la tienda anterior ya no es válida.'};
   if(round.game.schemaVersion==='0.2')round.game={...round.game,phase:'unknown',phaseData:{reason:'La ronda calculada terminó; la siguiente fase real no se registra mediante esta proyección.'}};

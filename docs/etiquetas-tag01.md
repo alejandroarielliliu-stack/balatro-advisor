@@ -1,5 +1,7 @@
 # TAG01a — etiquetas y saltos observados
 
+**Actualización TAG01b (2026-10-17):** [comparación condicional y dos efectos proyectados](comparacion-ciegas-tag01b.md). Esta página conserva el contrato de registro observado de TAG01a; Economía/Inversión calculadas solo en consultas no cambian ese registro.
+
 Entrega acotada del recorrido, no cierre de TAG01. Permite comunicar un salto que **ya ocurrió**; todavía no recomienda jugar frente a saltar ni ejecuta efectos de etiquetas. Versión objetivo: Steam `1.0.1o-FULL`, sin mods, White Stake, antes 1–8 y barajas integradas de RUN01b.
 
 ## Uso
@@ -32,13 +34,13 @@ No migra los archivos existentes ni sus anotaciones `outOfScope.pendingTags`: el
 
 ## Límites de cálculo
 
-`src/catalog/tags.ts` contiene 24 identidades, nombres españoles, disparadores y mínimo ante declarado (`null` = no declarado; no supone probabilidad ni elegibilidad garantizada). **Ningún efecto de etiqueta se declara implementado por estar en este catálogo.**
+`src/catalog/tags.ts` contiene 24 identidades, nombres españoles, disparadores y mínimo ante declarado (`null` = no declarado; no supone probabilidad ni elegibilidad garantizada). **Estar en el catálogo no implica efecto implementado. TAG01b incorpora únicamente los efectos de Economía e Inversión.**
 
 H2 conserva sus validaciones de precios, recursos y modo estricto. La nueva protección no genera efectos:
 
 - Cola o contexto completo explícitamente desconocidos: limita cálculos que requieren recursos de ronda/cobro; interés de un saldo explícito y acciones de tienda independientes siguen disponibles.
 - Juggle y efectos inmediatos/de selección todavía pendientes: limita esos recursos, evitando cifras que los omitan. Es una abstención conservadora, no simulación parcial.
-- Investment pendiente limita el cobro de Jefe; no bloquea la puntuación ni el cobro de Pequeña/Grande.
+- Desde TAG01b, Investment pendiente se calcula al cobrar un Jefe compatible y se consume al finalizar esa ronda; no bloquea puntuación ni cobro de Pequeña/Grande.
 - Double y etiquetas de futuro stock no impiden puntuar una mano independiente. No se genera stock futuro ni se ejecutan sus cambios de precio/edición. Precios fuera de cobertura H2 se rechazan como antes.
 - `outOfScope.pendingTags` antiguo mantiene su rechazo previo por modificadores no implementados; no se borra automáticamente. Ausencia del nuevo campo en copias antiguas conserva la política previa, **no certifica que su cola esté vacía**.
 
@@ -54,7 +56,7 @@ Inspección local de `Balatro.exe`, sin ejecutarlo ni alterar la instalación. `
 | Jefe no ofrece salto | Llegar a selección de Jefe; no debe tener botón de saltar | `functions/UI_definitions.lua:1463–1524`: tag extra y control de salto para Small/Big | Respaldada por inspección; pendiente partida |
 | Total saltos +1, Throwback utiliza ese total | Con Throwback, registrar total anterior y su ×Mult antes/después de un salto | Callback `:2755`, `card.lua:2429` y rama Throwback; H2 ya usa `1+0.25*blindsSkipped` | Respaldada por inspección; pendiente partida |
 | Double no se duplica al recibir Double; puede haber varios en la cola | Con Double pendiente, obtener Double; después obtener otra etiqueta y observar consumo/duplicación | `tag.lua:320–332`: comparación de identidad distinta de `tag_double` y copia con destino Orbital | Respaldada por inspección; efecto NO ejecutado en Advisor; pendiente partida |
-| Investment se cobra al superar Jefe; Juggle modifica próxima mano | Registrar cola, jugar ronda correspondiente, observar cobro/tamaño de mano y consumo | `tag.lua:117–129` y `:334–342` | Respaldada por inspección; cálculo bloqueado donde depende de estos efectos; pendiente partida |
+| Investment se cobra al superar Jefe; Juggle modifica próxima mano | Registrar cola, jugar ronda correspondiente, observar cobro/tamaño de mano y consumo | `tag.lua:117–129` y `:334–342` | Respaldada por inspección; Investment calculado desde TAG01b; Juggle sigue limitado; pendiente partida |
 | Boss reemplaza jefe, Orbital cambia bases, sobres deben resolverse antes de nueva selección | Anotar jefe/bases antes y después y completar un sobre gratuito | `tag.lua:191–204`, `:206–300` | Respaldada por inspección; resultados se transcriben; pendiente partida |
 | Cola inicial vacía | Crear partida compatible nueva; sin etiquetas pendientes | `game.lua:1898,1930`, valores iniciales `skips=0`, `tags={}` | Respaldada por inspección; preset, no observación |
 
@@ -73,4 +75,4 @@ Huellas SHA256 de fuentes internas (no se redistribuye Lua):
 
 `npm.cmd run demo:tags`: ejemplo sintético ejecutable; `npm.cmd run test:tags`: siete grupos de navegador, con capturas y recibo en [evidencia](evidencia/tags/README.md). Las pruebas de UI no observan Balatro.
 
-Siguiente: **TAG01b**, comparación condicional jugar/saltar para un lote pequeño de efectos verificables, reutilizando DEC00/SURV01, conservando la tienda y crecimiento sacrificados como límites explícitos. TAG01a sigue parcial respecto al plan general: no ejecuta Economy/Investment ni abre sobres. SHOP02a puede avanzar independientemente con vales compatibles y sobres observados.
+Continuación entregada: **TAG01b acotado**, [comparación condicional](comparacion-ciegas-tag01b.md), con Economía/Inversión proyectadas y planes explícitos. El registro de esta página sigue sin ejecutar premios: exige resultados observados. TAG01 permanece parcial para los otros premios y la política ampliada; SHOP02a continúa con vales y sobres observados.

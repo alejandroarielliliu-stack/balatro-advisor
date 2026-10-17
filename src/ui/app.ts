@@ -144,7 +144,7 @@ function renderJourney(){
     const changed=observedDetails(base.state,request);if(!changed.ok){problem(changed.errors);return false;}
     return commit(()=>store.correct({confirmationId:id,confirmed:true,expected,updatedAt:now(),patch:changed.value.patch,reason:changed.value.description}));
   }});
-  renderRunJourney($('run-journey'),{record:base,dirty,writable:lock.owned&&!loadFailed,open:openDialog,
+  renderRunJourney($('run-journey'),{record:base,dirty,writable:lock.owned&&!loadFailed,open:openDialog,comparisonState:()=>liveState(true),scenarios:()=>{const previous=quietRead;quietRead=true;try{return scenarioReaders.map(read=>read()).filter(Boolean);}finally{quietRead=previous;}},
     error:text=>message(text,true),export:()=>$('export').click(),
     migrate:()=>{location.hash='archive';$('run-migrate').click();},
     submit:(command,inventory)=>{if(!expected){message('Primero registra la partida.',true);return false;}return commit(()=>store.progress({confirmationId:id,confirmed:true,expected,updatedAt:now(),command,inventory}));},
@@ -217,7 +217,7 @@ function renderRecord(){
     for(const scenario of scenarios){const evaluated=evaluateRoundPlan(current,scenario.plan,current.updatedAt);const row=node('div');row.append(node('strong',scenario.plan.description));
       if(!evaluated.ok){row.append(node('p',evaluated.errors.map(e=>e.message).join(' ')));}
       else{const settlement=evaluated.value.settlement,cash=settlement?.ok?settlement.value.cashout:null;
-        if(cash){row.append(node('p',`Cobro: $${cash.earned} · saldo final: $${cash.balanceAfter}`),node('small',`Ciega $${cash.blindReward} + manos $${cash.unusedHands} + descartes $${cash.unusedDiscards??0} + Golden Joker $${cash.goldenIncome} + otros comodines $${cash.otherJokerIncome??0} + intereses $${cash.interest}.`));}
+        if(cash){row.append(node('p',`Cobro: $${cash.earned} · saldo final: $${cash.balanceAfter}`),node('small',`Ciega $${cash.blindReward} + manos $${cash.unusedHands} + descartes $${cash.unusedDiscards??0} + Golden Joker $${cash.goldenIncome} + otros comodines $${cash.otherJokerIncome??0} + etiquetas $${cash.tagIncome??0} + intereses $${cash.interest}.`));}
         else row.append(node('p',settlement&&!settlement.ok?settlement.errors.map(e=>e.message).join(' '):evaluated.value.targetReached?'Ante 8 completado: sin proyectar cobros posteriores.':'El plan no supera la ciega; no se concede un cobro.'));
       }cashoutRows.append(row);
     }cashoutRows.append(node('small','Proyección por escenario · reglas provisionales.'));

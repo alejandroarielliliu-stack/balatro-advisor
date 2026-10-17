@@ -117,7 +117,7 @@ export function guardPendingTags(state:GameState,operation:'resources'|'cashout'
  const fact=context.value.tags;
  if(!fact)return; // legacy files predate this explicit queue; no migration to fabricated []
  const tags=need(fact,'$.observed.jokerContext.tags');
- const blocked=tags.find(id=>{const definition=tagDefinition(id);return !definition||['immediate','new_blind_choice','round_start_bonus'].includes(definition.trigger)||operation==='cashout'&&id==='tag_investment'&&state.observed.nextBlind.status==='known'&&state.observed.nextBlind.value.kind==='boss';});
+ const blocked=tags.find(id=>{const definition=tagDefinition(id);return !definition||['immediate','new_blind_choice','round_start_bonus'].includes(definition.trigger);});
  if(blocked)fail('$.observed.jokerContext.tags','unsupported_tag',`Etiqueta pendiente ${blocked}: ${operation==='resources'?'los recursos de la próxima ronda':'el cobro'} requieren efectos todavía no implementados. Registra sus resultados observados.`);
 }
 export function resources(state: GameState) {

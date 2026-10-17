@@ -51,7 +51,9 @@
     "test:consequences": "npm run build && node tools/consequences-test.mjs",
     "demo:consequences": "npm run build && node dist/src/demo-consequences.js",
     "demo:tags": "npm run build && node dist/src/demo-tags.js",
-    "test:tags": "npm run build && node tools/tags-test.mjs"
+    "test:tags": "npm run build && node tools/tags-test.mjs",
+    "demo:blinds": "npm run build && node dist/src/demo-blind-decision.js",
+    "test:blinds": "npm run build && node tools/blind-decision-test.mjs"
   },
   "devDependencies": {
     "@types/node": "24.19.1",

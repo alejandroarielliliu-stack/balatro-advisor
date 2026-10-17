@@ -505,3 +505,18 @@ dialog[open] { animation: panel-arrival .14s ease-out; }
 .inventory-change-queue li { padding:5px 0; }
 .inventory-change-queue button { padding:5px 8px; font-size:12px; }
 @media(max-width:480px) { .inventory-change-dialog button { min-height:42px; } }
+
+/* TAG01b: compact read-only choice report, separate from confirmed progress. */
+.blind-comparison {display:grid;gap:12px;min-width:0;}
+.blind-comparison p {font-size:13px;line-height:1.5;}
+.blind-choice-grid {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;}
+.blind-choice-grid section {padding:12px;background:#193735;border:1px solid #66817b;border-radius:6px;min-width:0;}
+.blind-choice-grid h3 {margin:0 0 10px;}
+.blind-balance {font:28px var(--pixel);color:#f3ce73;display:block;}
+.blind-plan {display:grid;gap:5px;padding:10px 0;border-bottom:1px solid #526d68;}
+.blind-comparison small {overflow-wrap:anywhere;}
+@media(max-width:520px){.blind-choice-grid{grid-template-columns:1fr;}}
+
+#confirmation:has(.blind-choice-dialog) #dialog-cancel {display:none;}
+.blind-comparison[data-recommendation="abstain"]>.notice {background:#263d46;border-color:#617b84;}
+.blind-comparison[data-recommendation="tradeoff"]>.notice {background:#48432e;border-color:#9b8b53;}

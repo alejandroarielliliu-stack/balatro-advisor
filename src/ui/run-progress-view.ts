@@ -1,3 +1,5 @@
+import {blindComparisonButton} from './blind-decision-view.js';
+import type {AdvisorScenario} from '../advisor/advisor.js';
 import {TAGS,tagDefinition} from '../catalog/tags.js';
 import type {GameState,Fact} from '../state/model.js';
 import type {ConfirmedRecord} from '../storage/confirmed-store.js';
@@ -17,7 +19,7 @@ export interface JourneyOptions {
   open:(title:string,body:HTMLElement,accept:string,submit:()=>boolean)=>void;
   submit:(command:RunProgressCommand,inventory:InventoryConfirmation)=>boolean;
   start:(deckId:string,profile:boolean)=>boolean;undo:()=>void;export:()=>void;migrate:()=>void;
-  error:(text:string)=>void;
+  error:(text:string)=>void;comparisonState?:()=>GameState;scenarios?:()=>AdvisorScenario[];
 }
 const field=(id:string,label:string,initial='',type='number')=>{const wrap=el('label'),input=el('input');wrap.htmlFor=id;input.id=id;input.type=type;input.value=initial;if(type==='number'){input.step='1';input.inputMode='numeric';}wrap.append(el('span',label),input);return {wrap,input};};
 const select=(id:string,label:string,choices:Record<string,string>,selected:string)=>{const wrap=el('label'),input=el('select');input.id=id;wrap.htmlFor=id;for(const [value,label]of Object.entries(choices)){const option=el('option',label);option.value=value;input.append(option);}input.value=selected;wrap.append(el('span',label),input);return {wrap,input};};
@@ -84,6 +86,7 @@ export function renderRunJourney(host:HTMLElement,options:JourneyOptions){
  }else if(state.phase==='blind_select'){
   action('run-enter-round','Entré en la ciega',()=>openCommand('Entré en la ciega','Registrar entrada',{type:'enter_round'}),true);
   if(blind&&blind.kind!=='boss'){
+   toolbar.append(blindComparisonButton({open:options.open,state:options.comparisonState??(()=>structuredClone(state)),scenarios:options.scenarios??(()=>[])}));
    const current=value(state.phaseData.skipTag);title.append(el('small',current?(tagDefinition(current)?.name??current):'Etiqueta de salto sin registrar'));
    action('run-observe-tag','Etiqueta visible',()=>{
     const body=el('div','','journey-dialog'),knownTag=check('progress-tag-known','Conozco la etiqueta visible');knownTag.input.checked=!!current;

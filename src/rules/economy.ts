@@ -1,3 +1,4 @@
+import {investmentIncome} from './tags.js';
 import {bankBalance} from './economic-jokers.js';
 import {generationRoundIncome} from './generation-jokers.js';
 import {interestCap} from '../catalog/economy-vouchers.js';
@@ -6,7 +7,7 @@ import type { GameState } from '../state/model.js';
 import { blindInfo, deckCards, fail, guardPendingTags, inventory, need, resources, run, safe, stateInput } from './core.js';
 import type { EngineOptions, Trace } from './core.js';
 
-export interface Cashout { balanceBefore: number; blindReward: number; unusedHands: number; unusedDiscards?: number; goldenIncome: number; otherJokerIncome?:number; interest: number; earned: number; balanceAfter: number }
+export interface Cashout { balanceBefore: number; blindReward: number; unusedHands: number; unusedDiscards?: number; goldenIncome: number; tagIncome?:number; otherJokerIncome?:number; interest: number; earned: number; balanceAfter: number }
 export function interestInternal(balance: number, trace: Trace[], cap=5): number {
   bankBalance(balance);
   const interest = Math.min(cap, Math.max(0,Math.floor(balance / 5)));
@@ -65,10 +66,11 @@ export function cashoutInternal(state: GameState, handsRemaining: number, won: b
   const interest=baseInterest*(1+moons);
   if(moons)trace.push({ruleId:'jokers.context',label:'To the Moon',values:{baseInterest,moons,interest}});
   const unusedHands=handsRemaining*income.perHand;
-  const earned = safe(reward + unusedHands + unusedDiscards + goldenIncome + otherJokerIncome + interest), balanceAfter = bankBalance(before + earned);
+  const tagIncome=investmentIncome(state,won,trace,use);
+  const earned = safe(reward + unusedHands + unusedDiscards + goldenIncome + otherJokerIncome + tagIncome + interest), balanceAfter = bankBalance(before + earned);
   trace.push({ ruleId: 'round.cashout', label: 'Cobro condicionado a victoria, sin dinero durante la ronda',
-    values: { before, reward, handsRemaining, perHand:income.perHand, unusedHands, unusedDiscards, goldenIncome, ...(otherJokerIncome?{otherJokerIncome}:{}), interest, earned, balanceAfter } });
-  return { balanceBefore: before, blindReward: reward, unusedHands, ...(income.perDiscard?{unusedDiscards}:{}), goldenIncome, ...(otherJokerIncome?{otherJokerIncome}:{}), interest, earned, balanceAfter };
+    values: { before, reward, handsRemaining, perHand:income.perHand, unusedHands, unusedDiscards, goldenIncome, ...(tagIncome?{tagIncome}:{}), ...(otherJokerIncome?{otherJokerIncome}:{}), interest, earned, balanceAfter } });
+  return { balanceBefore: before, blindReward: reward, unusedHands, ...(income.perDiscard?{unusedDiscards}:{}), goldenIncome, ...(tagIncome?{tagIncome}:{}), ...(otherJokerIncome?{otherJokerIncome}:{}), interest, earned, balanceAfter };
 }
 /** Explicit conditional projection; this function does not assert that the round was actually won. */
 export function projectCashout(input: unknown, assumptions: { discardsRemaining?: number; handsRemaining: number; won: boolean; noMoneyChangesDuringRound: boolean }, options: EngineOptions = {}) {

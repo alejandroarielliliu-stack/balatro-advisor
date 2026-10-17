@@ -49,7 +49,7 @@ test('TAG01 no se reinician contadores al saltar; total previo desconocido no se
  const owned=structuredClone(s.observed.jokers);s=skip(s);assert.deepEqual(s.observed.jokers,owned);if(s.observed.jokerContext?.status==='known'){assert.equal(s.observed.jokerContext.value.blindsSkipped?.status,'unknown');assert.deepEqual(s.observed.jokerContext.value.handCounts,{pair:known(4)});}
 });
 test('TAG01 Orbital invalida bases; jefe desconocido o Boss Tag invalida jefe anterior, no lo reutiliza',()=>{
- let s=start();s.observed.visibleBoss=known({ante:1,kind:'boss',bossId:known('the_hook'),target:known(600),reward:known(5)});
+ let s=start();s.observed.visibleBoss=known({ante:1,kind:'boss',bossId:known('the_psychic'),target:known(600),reward:known(5)});
  s=act(s,{type:'observe_skip_tag',tag:known('tag_boss')});s=skip(s);assert.equal(s.observed.visibleBoss.status,'unknown');
  s=act(s,{type:'observe_skip_tag',tag:known('tag_orbital')});s=skip(s);assert.equal(s.observed.handBases.status,'unknown');
  assert.equal(s.observed.nextBlind.status,'known');if(s.observed.nextBlind.status==='known')assert.equal(s.observed.nextBlind.value.bossId.status,'unknown');
@@ -60,12 +60,12 @@ test('TAG01 cola y total sobreviven a conciliación de otro historial; lo demás
 });
 function shop():GameState {const s=JSON.parse(readFileSync(new URL('../../examples/shop-purchase.json',import.meta.url),'utf8')) as GameState;s.observed.jokers=known([]);return s;}
 const hand={cardIds:['8S','8H'],discardsRemaining:3};
-test('TAG01 Investment limita cobro de jefe; puntuación y compra observada siguen disponibles',()=>{
+test('TAG01 Investment se calcula en cobro compatible desde TAG01b; puntuación y compra siguen disponibles',()=>{
  const s=shop();s.observed.jokerContext=known({tags:known(['tag_investment'])});
  const score=scoreHand(s,hand);assert.ok(score.ok);assert.equal(score.value.score,52); // (10+8+8)*2, no jokers
  assert.ok(projectCashout(s,{handsRemaining:3,won:true,noMoneyChangesDuringRound:true}).ok);
- const boss=structuredClone(s);boss.observed.nextBlind=known({ante:1,kind:'boss',bossId:known('the_hook'),target:known(600),reward:known(5)});
- const cash=projectCashout(boss,{handsRemaining:3,won:true,noMoneyChangesDuringRound:true});assert.ok(!cash.ok);assert.equal(cash.errors[0]!.code,'unsupported_tag');
+ const boss=structuredClone(s);boss.observed.nextBlind=known({ante:1,kind:'boss',bossId:known('the_psychic'),target:known(600),reward:known(5)});
+ const cash=projectCashout(boss,{handsRemaining:3,won:true,noMoneyChangesDuringRound:true});assert.ok(cash.ok);assert.equal(cash.value.tagIncome,25);assert.equal(cash.value.balanceAfter,41);
  assert.ok(applyShopAction(s,{type:'buy',offerId:'o1',instanceId:'bought'},{expectedRevision:s.revision,updatedAt:time}).ok);
 });
 test('TAG01 Juggle/cola desconocida bloquean recursos afectados; interés de saldo no depende de etiquetas',()=>{

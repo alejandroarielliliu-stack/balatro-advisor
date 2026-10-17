@@ -22,6 +22,7 @@ export interface RuleRecord {
 export type RuleRegistry = Readonly<Record<string, RuleRecord>>;
 
 export const evidenceSources: Readonly<Record<string, Evidence>> = {
+  L09:{id:'L09',kind:'local_source',reviewedAt:'2026-10-16',uri:'docs/comparacion-ciegas-tag01b.md',summary:'TAG01b: parámetros Economy/Investment, callback de salto y consumo en cobro inspeccionados en Steam 1.0.1o-FULL; no observados en partida.'},
   L08:{id:'L08',kind:'local_source',reviewedAt:'2026-10-12',uri:'docs/comodines-cat04.md',summary:'FamiliasCAT04, contexto, sucesos aleatorios declarados y efectos sobre ronda/tienda/mazo; evidencia estática local.'},
   L07:{id:'L07',kind:'local_source',reviewedAt:'2026-10-12',uri:'docs/comodines-cat03.md',summary:'Card:calculate_joker, add_to_deck, remove_from_deck, state_events en 1.0.1o-FULL. Inspección estática, no gameplay.'},
   L06:{id:'L06',kind:'local_source',reviewedAt:'2026-10-12',uri:'docs/vales.md',summary:'Parámetros, prerrequisitos, arte y efectos persistentes de vales en game.lua y Card:apply_to_run del ejecutable 1.0.1o-FULL.'},
