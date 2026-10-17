@@ -49,3 +49,7 @@ export {inventoryChanges,inventoryCards,inventoryReference} from './state/invent
 export type {InventoryChangeRequest,InventoryChangeResult,CardOperation,ConsumableOperation} from './state/inventory-changes.js';
 export {observedDetails,observedHandBases} from './state/observed-details.js';
 export type {ObservedDetailOperation,ObservedDetailRequest,ObservedDetailResult} from './state/observed-details.js';
+export {catalogCapabilities,listCatalogCapabilities} from './catalog/capabilities.js';
+export type {CatalogCapabilities,Capability,CapabilityKind,CapabilityOperation} from './catalog/capabilities.js';
+export {inspectShopDecision,decisionIsCurrent} from './advisor/decision.js';
+export type {ShopDecision,DecisionOptions,ActionCapability,DecisionQuestion,OperationStatus} from './advisor/decision.js';

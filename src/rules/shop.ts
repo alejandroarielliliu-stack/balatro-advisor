@@ -6,7 +6,7 @@ import {generationEvent,generationSellingSelf,generationShopInventoryChanged} fr
 import {effectiveJokers} from './joker-context.js';
 import {initialCounters} from '../catalog/joker-counters.js';
 import {jokerResourceDelta} from '../catalog/joker-resources.js';
-import type { GameState } from '../state/model.js';
+import type { GameState, JokerInstance } from '../state/model.js';
 import { validateState } from '../state/validation.js';
 import { jokerDefinition } from '../catalog/initial.js';
 import { fail, inventory, need, plain, run, safe, stateInput, valueFact, synchronizeResourceFacts } from './core.js';
@@ -86,6 +86,10 @@ export function applyShopAction(input: unknown, action: ShopAction, mutation: Mu
   });
 }
 
+/** Shared identity allocation for projected alternatives, never a real acquisition. */
+export function shopPurchaseInstanceId(offerId:string,jokers:readonly JokerInstance[]):string{
+ let id='new:'+offerId;while(jokers.some(j=>j.instanceId===id))id='_'+id;return id;
+}
 /** Each candidate starts from the same input. Rejected candidates keep their error. No strategy ranking. */
 export function enumerateActions(input: unknown, mutation: Mutation, options: EngineOptions = {}) {
   return run<{ action: ShopAction; legal: boolean; errors: { code: string; message: string; path: string }[]; trace: Trace[] }[]>(['shop.actions'], options, (_trace,use) => {
@@ -93,8 +97,7 @@ export function enumerateActions(input: unknown, mutation: Mutation, options: En
     const shop = need(state.observed.shop, '$.observed.shop');
     const actions: ShopAction[] = [{ type: 'hold' }, ...jokers.map(j => ({ type: 'sell' as const, instanceId: j.instanceId }))];
     for (const offer of shop.cardOffers) {
-      let instanceId = 'new:' + offer.offerId;
-      while (jokers.some(j => j.instanceId === instanceId)) instanceId = '_' + instanceId;
+      const instanceId=shopPurchaseInstanceId(offer.offerId,jokers);
       actions.push({ type: 'buy', offerId: offer.offerId, instanceId });
       for (const j of jokers) actions.push({ type: 'replace', sellInstanceId: j.instanceId, offerId: offer.offerId, instanceId });
     }

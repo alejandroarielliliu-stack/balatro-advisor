@@ -4,7 +4,8 @@ import type {PreviewRenderer} from './joker-bay.js';
 import type {GameState} from '../state/model.js';
 import {VOUCHER_CATALOG} from '../catalog/voucher-catalog.js';
 import {BOOSTER_CATALOG} from '../catalog/booster-catalog.js';
-import {evaluateShopContext} from '../advisor/shop-context.js';
+import {inspectShopDecision} from '../advisor/decision.js';
+import type {ShopDecision,OperationStatus} from '../advisor/decision.js';
 import type {ShopSnapshot} from '../advisor/shop-context.js';
 import {ALL_JOKER_FACTS} from '../catalog/all-joker-facts.js';
 
@@ -56,19 +57,22 @@ export function mountCandidates(host:HTMLElement,preview:PreviewRenderer,replace
  const adviceDialog=el('dialog','','shop-advice-dialog');adviceDialog.id='shop-advice-dialog';adviceDialog.setAttribute('aria-label','Decisión de tienda');
  const editor=el('dialog','','store-item-editor');editor.id='store-item-editor';editor.setAttribute('aria-label','Registrar oferta');
  host.append(heading,status,layout,adviceDialog,editor);
- let report:ReturnType<typeof evaluateShopContext>|null=null;
+ let report:ShopDecision['context']|null=null,decision:ShopDecision|null=null;
  const snapshot=readShopSnapshot;
  const renderAdvice=()=>{
   adviceDialog.replaceChildren();const close=el('button','Cerrar','secondary');close.type='button';close.onclick=()=>adviceDialog.close();const header=el('div','','section-title');header.append(el('h2','Decisión de tienda'),close);adviceDialog.append(header);
   if(!report){adviceDialog.append(el('p','Revisa los datos de la partida.'));return;}
   adviceDialog.append(el('h3',report.recommendation.title));for(const text of report.recommendation.reasons)adviceDialog.append(el('p',text));
+  if(decision?.questions.length){const details=el('details');details.id='decision-questions';details.append(el('summary',`Datos pendientes · ${decision.questions.length}`));for(const question of decision.questions)details.append(el('p',question.message));adviceDialog.append(details);}
   for(const option of report.options){if(option.kind==='reroll')continue;const row=el('article','','store-advice-option');row.dataset.adviceOffer=option.id;row.dataset.kind=option.kind;row.dataset.affordability=option.affordability;row.dataset.coverage=option.coverage;row.dataset.recommended=String(report.recommendation.status!=='abstain'&&report.recommendation.offerIds.includes(option.id));row.append(el('b',option.title));
    if(option.moneyAfter!==null)row.append(el('small',`Saldo $${option.moneyAfter}${option.price!==null?' · coste $'+option.price:''}`));for(const reason of option.reasons)row.append(el('p',reason));
-   if(option.limitations.length){const d=el('details');d.append(el('summary','Cobertura'));for(const reason of option.limitations)d.append(el('p',reason));row.append(d);}adviceDialog.append(row);
+   {const d=el('details');d.append(el('summary','Cobertura'));const action=decision?.actions.find(a=>a.optionId===option.id),labels:Record<OperationStatus,string>={available:'Validación disponible',provisional:'H2: cálculo provisional',missing_data:'H2: faltan datos',pending_evidence:'H2: falta evidencia de partida',illegal:'H2: acción ilegal',unsupported:'H2: fuera de cobertura',invalid:'H2: datos inválidos'};
+    const capability=el('p',action?labels[action.status]+(action.confirmation==='explicit_confirmation_required'?' · Registrar requiere confirmación.':' · No se puede confirmar esta acción.'):'La adquisición de esta categoría no está integrada.');capability.dataset.operationStatus=action?.status??'unsupported';d.append(capability);
+    if(option.fit)d.append(el('p','Encaje heurístico; no es puntuación de una mano.'));for(const reason of option.limitations)d.append(el('p',reason));row.append(d);}adviceDialog.append(row);
   }
   if(report.limitations.length){const d=el('details');d.append(el('summary','Límites de esta comparación'));for(const text of report.limitations)d.append(el('p',text));adviceDialog.append(d);}for(const error of report.errors)adviceDialog.append(el('p',error.message,'error'));
  };
- const refreshAdvice=()=>{const hasOffers=candidates.length+voucherOffers.length+packOffers.length+otherOffers.length>0;suggestion.disabled=!hasOffers;try{if(!context)throw Error();report=evaluateShopContext(context.state(),snapshot(),{ante:context.ante()});suggestion.textContent=hasOffers?report.recommendation.title:'Consejo de tienda';suggestion.dataset.status=hasOffers?report.recommendation.status:'abstain';}catch{report=null;suggestion.textContent='Revisa los datos';suggestion.dataset.status='abstain';}if(adviceDialog.open)renderAdvice();};
+ const refreshAdvice=()=>{const hasOffers=candidates.length+voucherOffers.length+packOffers.length+otherOffers.length>0;suggestion.disabled=!hasOffers;try{if(!context)throw Error();const inspected=inspectShopDecision(context.state(),snapshot(),{ante:context.ante()});if(!inspected.ok)throw Error();decision=inspected.value;report=decision.context;suggestion.textContent=hasOffers?report.recommendation.title:'Consejo de tienda';suggestion.dataset.status=hasOffers?report.recommendation.status:'abstain';}catch{report=null;decision=null;suggestion.textContent='Revisa los datos';suggestion.dataset.status='abstain';}if(adviceDialog.open)renderAdvice();};
  suggestion.onclick=()=>{refreshAdvice();renderAdvice();adviceDialog.showModal();};
  const numeric=(value:number|null,id:string)=>{const label=el('label','Precio que ves ($)'),input=el('input');input.type='number';input.min='0';input.step='1';input.value=String(value??'');input.id=id;label.htmlFor=id;label.append(input);return {label,input};};
 

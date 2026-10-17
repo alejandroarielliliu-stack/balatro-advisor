@@ -1,5 +1,7 @@
 # Backlog — seguimiento de partida en desarrollo
 
+**CAP01a/DEC00 (2026-10-16) entregado dentro del contrato:** [rutas por operación](capacidades-cap01a.md) e [informe de decisión](contrato-decision-dec00.md). Matriz212 sin certificar soporte universal; pruebas independientes H2, H3 solo con escenarios explícitos, datos pendientes por operaciones/ejes afectados y vigencia también de borradores/ofertas. Cobertura visible separa encaje, H2 y confirmación. 646 aprobadas/0 fallos/10 TODO; seis grupos nuevos de navegador. No cambia política, fórmulas ni catálogo. Siguiente DEC01/SURV01; OBS01, TAG01 y SHOP02a conservan su alcance independiente.
+
 **OBS01c (2026-10-16), correcciones puntuales entregadas:** [comodines, bases e historial parcial](datos-puntuales-obs01c.md). Hechos por copia/campo, doce bases observadas, totales separados por ronda/partida y Tarots usados, desconocidos explícitos, lotes atómicos y T09b. 630 pruebas/0 fallos/10 TODO; nueve grupos nuevos de navegador. No ejecuta consumibles ni calcula bases a partir del nivel. OBS01 sigue parcial en conciliación de identidades e información priorizada por decisión; CAP01a/DEC00 pueden avanzar sin esperar esas ampliaciones.
 
 **Ajuste pequeño OBS01b:** selector de consumibles con etiquetas españolas y tipo visible. IDs, guardados y reglas intactos; tipos y ocho grupos de navegador aprobados.
