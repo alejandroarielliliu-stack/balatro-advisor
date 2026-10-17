@@ -344,7 +344,7 @@ function renderRecord(){
    edit:id=>{const row=Array.from(ownedHost.querySelectorAll<HTMLElement>(':scope > .joker-editor')).find(row=>row.dataset.instanceId===id);const settings=row?.querySelector<HTMLDetailsElement>('.card-settings');if(settings)settings.open=true;},
    describe:id=>{try{const j=value(liveState(true).observed.jokers)?.find(j=>j.instanceId===id);return {price:value(j?.sellValue)??null,...(value(j?.stickers)?.includes('eternal')?{blocked:'Eternal: no se puede vender.'}:{})};}catch{return {price:null};}},
    sell:id=>requestMesaAction({type:'sell',instanceId:id})
-  },{state:()=>liveState(true),ante:()=>Number(ante.input.value),changed:()=>{handRequest++;$('hand-results')?.replaceChildren();},
+  },{state:()=>liveState(true),ante:()=>Number(ante.input.value),scenarios:()=>{const previous=quietRead;quietRead=true;try{return scenarioReaders.map(read=>read()).filter(Boolean);}finally{quietRead=previous;}},changed:()=>{handRequest++;$('hand-results')?.replaceChildren();},
     observe:observeShelf,confirm:(offerId,sellId)=>requestMesaAction(sellId?{type:'replace',sellInstanceId:sellId,offerId,instanceId:uuid()}:{type:'buy',offerId,instanceId:uuid()}),
     // Ownership is applied centrally by updateOwnership; do not cache it as a
     // local disabled reason or gaining the lock would leave these buttons inert.

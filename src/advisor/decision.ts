@@ -17,11 +17,13 @@ import {adviseShop} from './advisor.js';
 import type {Advice,AdvisorScenario} from './advisor.js';
 import {catalogCapabilities} from '../catalog/capabilities.js';
 import type {CatalogCapabilities} from '../catalog/capabilities.js';
+import {immediateConsequences,scenarioConsequences} from './consequences.js';
+import type {ImmediateConsequences,ScenarioConsequences} from './consequences.js';
 export type OperationStatus='available'|'provisional'|'missing_data'|'pending_evidence'|'illegal'|'unsupported'|'invalid';
 export interface ActionCapability {
  id:string;optionId:string;action:ShopAction;status:OperationStatus;errors:Issue[];
  evidence:AnalysisGate|null;trace:Trace[];moneyAfter:number|null;
- confirmation:'explicit_confirmation_required'|'unavailable';confirmationErrors:Issue[];
+ confirmation:'explicit_confirmation_required'|'unavailable';confirmationErrors:Issue[];consequences:ImmediateConsequences|null;
 }
 export interface DecisionQuestion {path:string;message:string;operationIds:string[]}
 export interface ShopDecision {
@@ -29,6 +31,7 @@ export interface ShopDecision {
  context:ShopContextResult;catalogue:{optionId:string;capabilities:CatalogCapabilities|null}[];
  actions:ActionCapability[];questions:DecisionQuestion[];
  hand:EngineResult<HandScore>|null;scenarios:EngineResult<Advice>|null;
+ scenarioConsequences:ScenarioConsequences;
  limitations:string[];projected:true;exhaustive:false;
 }
 export interface DecisionOptions {ante?:number;requireObserved?:boolean;hand?:HandInput;scenarios?:AdvisorScenario[];actions?:ShopAction[]}
@@ -63,16 +66,16 @@ export function inspectShopDecision(input:unknown,snapshotInput:unknown,options:
   const id='action:'+index++,identity=JSON.stringify(canonical(action));if(used.has(identity))return fail('duplicate_action','La misma alternativa aparece dos veces.');used.add(identity);
   const optionId=action.type==='hold'?'hold':action.type==='sell'?'sell:'+action.instanceId:action.offerId;
   if((action.type==='buy'||action.type==='replace')&&!matchesRecordedOffer(state,shop,action.offerId)){
-   const errors=[{path:'$.observed.shop',code:'unrecorded_offer',message:'La oferta comparada no coincide con la tienda registrada. Registra su identidad, precio y modificadores actuales antes de validar la transacción.'}];actions.push({id,optionId,action:structuredClone(action),status:'missing_data',errors,evidence:null,trace:[],moneyAfter:null,confirmation:'unavailable',confirmationErrors:errors});continue;
+   const errors=[{path:'$.observed.shop',code:'unrecorded_offer',message:'La oferta comparada no coincide con la tienda registrada. Registra su identidad, precio y modificadores actuales antes de validar la transacción.'}];actions.push({id,optionId,action:structuredClone(action),status:'missing_data',errors,evidence:null,trace:[],moneyAfter:null,confirmation:'unavailable',confirmationErrors:errors,consequences:null});continue;
   }
   const result=applyShopAction(structuredClone(state),structuredClone(action),{expectedRevision:state.revision,updatedAt:state.updatedAt},{requireObserved});
   const confirmationErrors:Issue[]=!result.ok?result.errors:action.choices?.some(c=>c.knowledge!=='known')?[{path:'$action.choices',code:'hypothetical_confirmation',message:'La rama usa resultados hipotéticos. Registrar una acción real exige resultados observados, no los del escenario.'}]:[];
-  actions.push({id,optionId,action:structuredClone(action),status:operationStatus(result.ok?[]:result.errors,result.evidence),errors:result.ok?[]:result.errors,evidence:result.evidence,trace:result.ok?result.trace:[],moneyAfter:result.ok?value(result.value.state.observed.money)??null:null,confirmation:result.ok&&!confirmationErrors.length?'explicit_confirmation_required':'unavailable',confirmationErrors});
+  actions.push({id,optionId,action:structuredClone(action),status:operationStatus(result.ok?[]:result.errors,result.evidence),errors:result.ok?[]:result.errors,evidence:result.evidence,trace:result.ok?result.trace:[],moneyAfter:result.ok?value(result.value.state.observed.money)??null:null,confirmation:result.ok&&!confirmationErrors.length?'explicit_confirmation_required':'unavailable',confirmationErrors,consequences:result.ok?immediateConsequences(state,result.value.state):null});
  }
  const hand=options.hand===undefined?null:scoreHand(structuredClone(state),structuredClone(options.hand),{requireObserved});
  // H3 uses exactly the same explicitly selected alternatives as the operation probes.
  const mismatch=actions.flatMap(a=>a.errors.filter(e=>e.code==='unrecorded_offer'));
- const scenarios:EngineResult<Advice>|null=options.scenarios===undefined?null:mismatch.length?{ok:false,errors:mismatch,evidence:engineEvidence(['version.compatibility'],requireObserved),engineVersion:ENGINE_VERSION}:adviseShop(structuredClone(state),structuredClone(options.scenarios),{expectedRevision:state.revision,updatedAt:state.updatedAt},{actions:probes,requireObserved});
+ const scenarios:EngineResult<Advice>|null=options.scenarios===undefined?null:mismatch.length?{ok:false,errors:mismatch,evidence:engineEvidence(['version.compatibility'],requireObserved),engineVersion:ENGINE_VERSION}:adviseShop(structuredClone(state),structuredClone(options.scenarios),{expectedRevision:state.revision,updatedAt:state.updatedAt},Array.isArray(options.scenarios)&&!options.scenarios.length?{requireObserved}:{actions:probes,requireObserved});
  const questions=new Map<string,DecisionQuestion>();
  const labels:Record<string,string>={'$.observed.money':'Dinero actual ($)','$.observed.shop':'Ofertas actuales de tienda','$.observed.deck':'Cartas del mazo','$.observed.jokers':'Tus comodines','$.observed.handBases':'Bases de manos','$.observed.resources.jokerSlots':'Espacios de comodines','$.observed.resources.handsPerRound':'Manos por ronda','$.observed.resources.discardsPerRound':'Descartes por ronda','$.observed.resources.handSize':'Tamaño de mano'};
  const collect=(id:string,errors:readonly Issue[])=>{for(const error of errors)if(['unknown_data','unknown_context','unrecorded_offer'].includes(error.code)){const q=questions.get(error.path)??{path:error.path,message:(labels[error.path]??error.path)+': '+error.message,operationIds:[]};if(!q.operationIds.includes(id))q.operationIds.push(id);questions.set(error.path,q);}};
@@ -84,7 +87,7 @@ export function inspectShopDecision(input:unknown,snapshotInput:unknown,options:
  if(scenarios){collect('scenarios',scenarios.ok?scenarios.value.errors:scenarios.errors);if(scenarios.ok)for(const comparison of scenarios.value.comparisons)if(!comparison.ok)collect('scenarios',comparison.errors);}
  return {ok:true,value:{contract:'shop-decision-1',binding:analysisBinding(state),phase:state.phase,snapshotToken:token(shop),stateToken:JSON.stringify(canonical(state)),optionsToken:JSON.stringify(canonical(options)),requireObserved,context,
   catalogue:[...shop.jokers.map(o=>({optionId:o.offerId,capabilities:catalogCapabilities('joker',o.catalogId)})),...shop.vouchers.map(o=>({optionId:o.offerId,capabilities:catalogCapabilities('voucher',o.catalogId)})),...shop.packs.map(o=>({optionId:o.offerId,capabilities:catalogCapabilities('pack',o.family+'-'+o.size)}))],
-  actions,questions:[...questions.values()].sort((a,b)=>b.operationIds.length-a.operationIds.length||a.path.localeCompare(b.path)),hand,scenarios,
+  actions,questions:[...questions.values()].sort((a,b)=>b.operationIds.length-a.operationIds.length||a.path.localeCompare(b.path)),hand,scenarios,scenarioConsequences:scenarioConsequences(scenarios),
   limitations:['Las capacidades del catálogo son rutas de análisis, no una certificación de todos los efectos.','Las preguntas describen los bloqueos encontrados; H2 puede revelar otros al completar el primero.','Las acciones son pruebas independientes desde el mismo estado, nunca una secuencia de compras. La búsqueda no es exhaustiva.','Sin escenarios explícitos no se evalúa supervivencia. Una mano concreta tampoco demuestra consistencia ni victoria de la partida.','El consejo contextual conserva su política heurística. Validar una transacción no demuestra que convenga comprar.','Un estado proyectado de H2/H3 nunca se convierte en la partida real. Confirmar requiere T09b, revisión, titularidad de escritura y declaración del usuario.'],projected:true,exhaustive:false}};
 }
 /** Also invalidate changes to a temporary shop that have not incremented the saved revision. */

@@ -46,6 +46,8 @@ jobs:
         run: node tools/observed-details-test.mjs
       - name: Comprobar capacidades y decisiones independientes
         run: node tools/decision-test.mjs
+      - name: Comprobar consecuencias y planes en tienda
+        run: node tools/consequences-test.mjs
       - name: Comprobar la web bajo una subruta
         run: node tools/static-site-test.mjs
       - name: Preparar el artefacto público

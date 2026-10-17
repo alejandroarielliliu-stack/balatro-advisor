@@ -53,3 +53,5 @@ export {catalogCapabilities,listCatalogCapabilities} from './catalog/capabilitie
 export type {CatalogCapabilities,Capability,CapabilityKind,CapabilityOperation} from './catalog/capabilities.js';
 export {inspectShopDecision,decisionIsCurrent} from './advisor/decision.js';
 export type {ShopDecision,DecisionOptions,ActionCapability,DecisionQuestion,OperationStatus} from './advisor/decision.js';
+export {immediateConsequences,scenarioConsequences} from './advisor/consequences.js';
+export type {ImmediateConsequences,ScenarioConsequences,ScenarioConsequence,ScenarioAlternative} from './advisor/consequences.js';

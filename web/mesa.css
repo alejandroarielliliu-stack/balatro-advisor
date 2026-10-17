@@ -496,6 +496,11 @@ dialog[open] { animation: panel-arrival .14s ease-out; }
 .inventory-change-fields { display:grid; gap:12px; min-width:0; }
 .inventory-fields-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; }
 .inventory-fields-grid>.check { grid-column:1/-1; }
+.immediate-consequences { display:grid; gap:4px; margin:8px 0; }
+.scenario-consequences { margin:14px 0; padding:12px 0; border-block:1px solid #607b75; }
+.scenario-consequences small { display:block; line-height:1.5; }
+.scenario-consequences td { vertical-align:top; }
+.scenario-consequences .table-wrap { max-width:100%; overflow-x:auto; }
 .inventory-change-queue { margin:0; padding-left:22px; max-height:150px; overflow:auto; overflow-wrap:anywhere; }
 .inventory-change-queue li { padding:5px 0; }
 .inventory-change-queue button { padding:5px 8px; font-size:12px; }

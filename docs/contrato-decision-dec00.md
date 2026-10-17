@@ -2,6 +2,8 @@
 
 Entrega del 16 de octubre de 2026. Une contratos existentes sin añadir fórmulas ni una política estratégica nueva: encaje/contexto de tienda, operaciones de H2 y, cuando se suministran planes explícitos, comparación T07b y asesor H3.
 
+Continuación: [DEC01/SURV01](consecuencias-dec01-surv01.md) añade consecuencias inmediatas y una síntesis de escenarios, conectadas de forma opcional a la tienda. Los contratos originales descritos a continuación se conservan.
+
 ## Entrada y salida
 
 `inspectShopDecision(state, snapshot, options)` valida estado H1, snapshot de tienda y opciones. Es determinista y no consulta almacenamiento, reloj ni red. Las opciones son `ante`, `requireObserved`, `hand`, `scenarios` y `actions`. Una mano concreta se delega a `scoreHand`; los escenarios conservan su tipo `AdvisorScenario` y se delegan a `adviseShop`.

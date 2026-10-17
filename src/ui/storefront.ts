@@ -8,12 +8,15 @@ import {inspectShopDecision} from '../advisor/decision.js';
 import type {ShopDecision,OperationStatus} from '../advisor/decision.js';
 import type {ShopSnapshot} from '../advisor/shop-context.js';
 import {ALL_JOKER_FACTS} from '../catalog/all-joker-facts.js';
+import type {AdvisorScenario} from '../advisor/advisor.js';
+import {renderImmediateConsequences,renderScenarioConsequences} from './consequences-view.js';
 
 const el=<K extends keyof HTMLElementTagNameMap>(tag:K,text='',cl='')=>{const e=document.createElement(tag);e.textContent=text;e.className=cl;return e;};
 const known=<T>(value:T)=>({status:'known' as const,source:'manual' as const,value});
 const priceValue=(input:HTMLInputElement)=>input.value.trim()===''?null:Number(input.value);
 export interface ShopContext {
  state:()=>GameState;ante:()=>number;changed?:()=>void;
+ scenarios?:()=>AdvisorScenario[];
  /** Transcribe visible joker offers; this is not an acquisition. */
  observe?:(snapshot:ShopSnapshot)=>string|null;
  /** Opens the explicit performed-action confirmation, separate from consultation. */
@@ -57,22 +60,29 @@ export function mountCandidates(host:HTMLElement,preview:PreviewRenderer,replace
  const adviceDialog=el('dialog','','shop-advice-dialog');adviceDialog.id='shop-advice-dialog';adviceDialog.setAttribute('aria-label','Decisión de tienda');
  const editor=el('dialog','','store-item-editor');editor.id='store-item-editor';editor.setAttribute('aria-label','Registrar oferta');
  host.append(heading,status,layout,adviceDialog,editor);
- let report:ShopDecision['context']|null=null,decision:ShopDecision|null=null;
+ let report:ShopDecision['context']|null=null,decision:ShopDecision|null=null,useScenarios=false,scenarioError='';
  const snapshot=readShopSnapshot;
  const renderAdvice=()=>{
   adviceDialog.replaceChildren();const close=el('button','Cerrar','secondary');close.type='button';close.onclick=()=>adviceDialog.close();const header=el('div','','section-title');header.append(el('h2','Decisión de tienda'),close);adviceDialog.append(header);
   if(!report){adviceDialog.append(el('p','Revisa los datos de la partida.'));return;}
-  adviceDialog.append(el('h3',report.recommendation.title));for(const text of report.recommendation.reasons)adviceDialog.append(el('p',text));
+  const contextual=el('div');contextual.append(el('h3',report.recommendation.title));for(const text of report.recommendation.reasons)contextual.append(el('p',text));
+  if(useScenarios&&decision&&decision.scenarioConsequences.status!=='not_assessed'){const details=el('details');details.append(el('summary','Valoración por composición'),contextual);adviceDialog.append(details);}else adviceDialog.append(contextual);
+  const scenarioControls=el('div','','toolbar'),toggle=el('button',useScenarios?'Solo valoración':'Comparar escenarios de Análisis','secondary');toggle.type='button';toggle.id='store-scenarios';toggle.onclick=()=>{useScenarios=!useScenarios;refreshAdvice();};const edit=el('a','Editar escenarios');edit.href='#evaluation';edit.onclick=()=>adviceDialog.close();scenarioControls.append(toggle,edit);adviceDialog.append(scenarioControls);
+  if(scenarioError)adviceDialog.append(el('p',scenarioError,'error'));
+  if(decision)adviceDialog.append(renderScenarioConsequences(decision.scenarioConsequences,action=>{
+   if(action.type==='hold')return 'Conservar';if(action.type==='sell'){const sold=decision?.actions.find(a=>a.action.type==='sell'&&a.action.instanceId===action.instanceId)?.consequences?.removed[0];return 'Vender '+(sold?ALL_JOKER_FACTS[sold.catalogId]?.name??sold.catalogId:action.instanceId);}
+   return (action.type==='replace'?'Reemplazar por ':'Comprar ')+(report?.options.find(o=>o.id===action.offerId)?.title??action.offerId);
+  }));
   if(decision?.questions.length){const details=el('details');details.id='decision-questions';details.append(el('summary',`Datos pendientes · ${decision.questions.length}`));for(const question of decision.questions)details.append(el('p',question.message));adviceDialog.append(details);}
   for(const option of report.options){if(option.kind==='reroll')continue;const row=el('article','','store-advice-option');row.dataset.adviceOffer=option.id;row.dataset.kind=option.kind;row.dataset.affordability=option.affordability;row.dataset.coverage=option.coverage;row.dataset.recommended=String(report.recommendation.status!=='abstain'&&report.recommendation.offerIds.includes(option.id));row.append(el('b',option.title));
-   if(option.moneyAfter!==null)row.append(el('small',`Saldo $${option.moneyAfter}${option.price!==null?' · coste $'+option.price:''}`));for(const reason of option.reasons)row.append(el('p',reason));
+   if(option.moneyAfter!==null)row.append(el('small',`Saldo $${option.moneyAfter}${option.price!==null?' · coste $'+option.price:''}`));const changes=decision?.actions.find(a=>a.optionId===option.id)?.consequences;if(changes)row.append(renderImmediateConsequences(changes));for(const reason of option.reasons)row.append(el('p',reason));
    {const d=el('details');d.append(el('summary','Cobertura'));const action=decision?.actions.find(a=>a.optionId===option.id),labels:Record<OperationStatus,string>={available:'Validación disponible',provisional:'H2: cálculo provisional',missing_data:'H2: faltan datos',pending_evidence:'H2: falta evidencia de partida',illegal:'H2: acción ilegal',unsupported:'H2: fuera de cobertura',invalid:'H2: datos inválidos'};
     const capability=el('p',action?labels[action.status]+(action.confirmation==='explicit_confirmation_required'?' · Registrar requiere confirmación.':' · No se puede confirmar esta acción.'):'La adquisición de esta categoría no está integrada.');capability.dataset.operationStatus=action?.status??'unsupported';d.append(capability);
     if(option.fit)d.append(el('p','Encaje heurístico; no es puntuación de una mano.'));for(const reason of option.limitations)d.append(el('p',reason));row.append(d);}adviceDialog.append(row);
   }
   if(report.limitations.length){const d=el('details');d.append(el('summary','Límites de esta comparación'));for(const text of report.limitations)d.append(el('p',text));adviceDialog.append(d);}for(const error of report.errors)adviceDialog.append(el('p',error.message,'error'));
  };
- const refreshAdvice=()=>{const hasOffers=candidates.length+voucherOffers.length+packOffers.length+otherOffers.length>0;suggestion.disabled=!hasOffers;try{if(!context)throw Error();const inspected=inspectShopDecision(context.state(),snapshot(),{ante:context.ante()});if(!inspected.ok)throw Error();decision=inspected.value;report=decision.context;suggestion.textContent=hasOffers?report.recommendation.title:'Consejo de tienda';suggestion.dataset.status=hasOffers?report.recommendation.status:'abstain';}catch{report=null;decision=null;suggestion.textContent='Revisa los datos';suggestion.dataset.status='abstain';}if(adviceDialog.open)renderAdvice();};
+ const refreshAdvice=()=>{const hasOffers=candidates.length+voucherOffers.length+packOffers.length+otherOffers.length>0;suggestion.disabled=!hasOffers;try{if(!context)throw Error();let scenarios:AdvisorScenario[]|undefined;scenarioError='';if(useScenarios)try{scenarios=context.scenarios?.();if(!scenarios?.length)throw Error('No hay escenarios. Configúralos en Análisis; la valoración rápida sigue disponible.');}catch(e){scenarios=undefined;scenarioError=e instanceof Error?e.message:'Revisa los escenarios de Análisis.';}const inspected=inspectShopDecision(context.state(),snapshot(),{ante:context.ante(),...(scenarios?{scenarios}:{})});if(!inspected.ok)throw Error();decision=inspected.value;report=decision.context;suggestion.textContent=hasOffers?report.recommendation.title:'Consejo de tienda';suggestion.dataset.status=hasOffers?report.recommendation.status:'abstain';}catch{report=null;decision=null;suggestion.textContent='Revisa los datos';suggestion.dataset.status='abstain';}if(adviceDialog.open)renderAdvice();};
  suggestion.onclick=()=>{refreshAdvice();renderAdvice();adviceDialog.showModal();};
  const numeric=(value:number|null,id:string)=>{const label=el('label','Precio que ves ($)'),input=el('input');input.type='number';input.min='0';input.step='1';input.value=String(value??'');input.id=id;label.htmlFor=id;label.append(input);return {label,input};};
 
