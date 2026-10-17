@@ -44,7 +44,8 @@
     "test:fit": "npm run build && node tools/quick-fit-test.mjs",
     "test:composition": "npm run build && node tools/composition-test.mjs",
     "test:sale": "npm run build && node tools/sale-test.mjs",
-    "test:inventory-changes": "npm run build && node tools/inventory-changes-test.mjs"
+    "test:inventory-changes": "npm run build && node tools/inventory-changes-test.mjs",
+    "test:observed-details": "npm run build && node tools/observed-details-test.mjs"
   },
   "devDependencies": {
     "@types/node": "24.19.1",

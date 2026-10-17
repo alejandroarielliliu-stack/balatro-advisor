@@ -1,5 +1,9 @@
 # Backlog — seguimiento de partida en desarrollo
 
+**OBS01c (2026-10-16), correcciones puntuales entregadas:** [comodines, bases e historial parcial](datos-puntuales-obs01c.md). Hechos por copia/campo, doce bases observadas, totales separados por ronda/partida y Tarots usados, desconocidos explícitos, lotes atómicos y T09b. 630 pruebas/0 fallos/10 TODO; nueve grupos nuevos de navegador. No ejecuta consumibles ni calcula bases a partir del nivel. OBS01 sigue parcial en conciliación de identidades e información priorizada por decisión; CAP01a/DEC00 pueden avanzar sin esperar esas ampliaciones.
+
+**Ajuste pequeño OBS01b:** selector de consumibles con etiquetas españolas y tipo visible. IDs, guardados y reglas intactos; tipos y ocho grupos de navegador aprobados.
+
 **OBS01b (2026-10-16) entregado para cartas y consumibles:** [contrato y uso](cambios-inventario-obs01b.md). Registro por instancia, lotes validados antes de escribir, referencia histórica real explícita, datos no afectados conservados, cuota/revisión/deshacer con T09b. 616 pruebas aprobadas/0 fallos/10 TODO; ocho grupos nuevos de navegador. No ejecuta consumibles ni infiere dinero, niveles o uso. OBS01 sigue parcial: OBS01c (comodines por instancia, bases e historial parcial) y CAP01a mantienen trabajo; DEC00 puede avanzar sobre estos contratos.
 
 **OBS01a (2026-10-16) completado como entrega parcial de OBS01:** [cambios por grupo y valores pendientes](observaciones-obs01a.md). El progreso conserva grupos independientes y permite indicar solo cuáles cambiaron. Mesa pide hechos numéricos del inventario actual y registra únicamente los respondidos mediante T09b; revisión, cuota, recarga y deshacer cubiertos. 603 pruebas/0 fallos/10 TODO; siete grupos nuevos de navegador. No cierra OBS01 ni CAP01a: siguen la conciliación por instancia/carta, historial parcial y capacidades por operación. Siguiente OBS01b; DEC00 puede avanzar con los contratos existentes.

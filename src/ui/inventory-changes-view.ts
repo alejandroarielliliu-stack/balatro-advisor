@@ -3,8 +3,8 @@ import {inventoryCards,inventoryReference} from '../state/inventory-changes.js';
 import type {InventoryChangeRequest,CardOperation,ConsumableOperation} from '../state/inventory-changes.js';
 import {RANKS} from '../catalog/initial.js';
 import {CONSUMABLE_KINDS} from '../catalog/generation-jokers.js';
+import {consumableLabel as title} from './consumable-labels.js';
 const el=<K extends keyof HTMLElementTagNameMap>(tag:K,text='',cl='')=>{const e=document.createElement(tag);e.textContent=text;e.className=cl;return e;};
-const title=(id:string)=>id.replace(/^c_/,'').replaceAll('_',' ').replace(/\b\w/g,c=>c.toUpperCase());
 const select=(id:string,label:string,choices:Record<string,string>,value:string)=>{const wrap=el('label'),input=el('select');input.id=id;wrap.htmlFor=id;for(const [v,name]of Object.entries(choices)){const option=el('option',name);option.value=v;input.append(option);}input.value=value;wrap.append(el('span',label),input);return {wrap,input};};
 const choices=(values:readonly string[])=>Object.fromEntries(values.map(v=>[v,v]));
 const checkbox=(id:string,label:string)=>{const wrap=el('label','','check'),input=el('input');input.type='checkbox';input.id=id;wrap.append(input,el('span',label));return {wrap,input};};
@@ -46,7 +46,7 @@ export function renderInventoryChanges(host:HTMLElement,options:Options){
      };
     }else{
      const list=items??[],item=select('inventory-object','Consumible',Object.fromEntries(list.map((c,i)=>[c.instanceId,`${i+1}. ${title(c.catalogId)} · ${c.edition}`])),list[0]?.instanceId??'');if(action==='remove'||action==='update')editor.append(item.wrap);
-     const catalog=select('inventory-consumable','Carta',Object.fromEntries(Object.keys(CONSUMABLE_KINDS).filter(id=>id!=='c_locked').map(id=>[id,title(id)])),'c_fool');
+     const catalog=select('inventory-consumable','Carta',Object.fromEntries(Object.keys(CONSUMABLE_KINDS).filter(id=>id!=='c_locked').map(id=>[id,({tarot:'Tarot',planet:'Planeta',spectral:'Espectral'}as const)[CONSUMABLE_KINDS[id]!]+ ' · '+title(id)])),'c_fool');
      const edition=select('inventory-edition','Edición',{base:'Base',negative:'Negativa'},'base'),sell=number('inventory-sell','Valor de venta que ves ($)','');
      if(action==='add')editor.append(catalog.wrap);if(action==='add'||action==='update')editor.append(edition.wrap,sell.wrap);
      const fill=()=>{const c=list.find(c=>c.instanceId===item.input.value);if(c){edition.input.value=c.edition;sell.input.value=String(c.sellValue);}};item.input.onchange=fill;if(action==='update')fill();

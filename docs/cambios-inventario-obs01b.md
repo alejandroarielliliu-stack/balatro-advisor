@@ -12,7 +12,7 @@ Con una partida registrada, aparecen **Cambios de cartas** y **Mis consumibles**
 4. Confirma que los demás objetos y datos conservados siguen igual y pulsa **Registrar cambios**. Cancelar o cerrar no escribe.
 5. Para corregir una transcripción equivocada, usa **Deshacer** del recorrido. El historial conserva el registro y su corrección; no deshace acciones dentro de Balatro.
 
-En consumibles se registra la identidad, edición y valor de venta visible. **Ya no está** solo retira esa instancia: no distingue uso/venta ni modifica saldo, niveles, estadísticas o efectos de comodines. Esos resultados deben observarse por separado. Con lista desconocida se puede confirmar expresamente que está vacía; no se asume por omisión. Los nombres del selector de consumibles proceden de los identificadores ingleses del catálogo; falta su localización completa.
+En consumibles se registra la identidad, edición y valor de venta visible. **Ya no está** solo retira esa instancia: no distingue uso/venta ni modifica saldo, niveles, estadísticas o efectos de comodines. Esos resultados deben observarse por separado. Con lista desconocida se puede confirmar expresamente que está vacía; no se asume por omisión. El selector muestra etiquetas en español agrupadas visualmente por tipo (Tarot, Planeta o Espectral); las etiquetas no cambian IDs ni reglas y no se presentan como una transcripción verificada de la localización oficial.
 
 ## Contrato de datos
 

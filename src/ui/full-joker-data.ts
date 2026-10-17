@@ -1,4 +1,5 @@
 import {CONSUMABLE_KINDS} from '../catalog/generation-jokers.js';
+import {consumableLabel as consumableName} from './consumable-labels.js';
 import {HAND_BASES} from '../catalog/initial.js';
 import type {HandId} from '../catalog/initial.js';
 import type {Fact,GameState} from '../state/model.js';
@@ -6,13 +7,12 @@ import type {Consumable,FullJokerContext} from '../rules/full-joker-contract.js'
 const node=<K extends keyof HTMLElementTagNameMap>(tag:K,text='',className='')=>{const e=document.createElement(tag);e.textContent=text;e.className=className;return e;};
 const known=<T>(value:T):Fact<T>=>({status:'known',value,source:'manual'});
 const unknown=(label:string)=>({status:'unknown' as const,reason:label+' todavía sin registrar.'});
-const handNames:Record<HandId,string>={high_card:'Carta alta',pair:'Pareja',two_pair:'Doble pareja',three_kind:'Trío',straight:'Escalera',flush:'Color',full_house:'Full',four_kind:'Póquer',straight_flush:'Escalera de color',five_kind:'Cinco iguales',flush_house:'Full de color',flush_five:'Cinco iguales de color'};
+export const handNames:Record<HandId,string>={high_card:'Carta alta',pair:'Pareja',two_pair:'Doble pareja',three_kind:'Trío',straight:'Escalera',flush:'Color',full_house:'Full',four_kind:'Póquer',straight_flush:'Escalera de color',five_kind:'Cinco iguales',flush_house:'Full de color',flush_five:'Cinco iguales de color'};
 const HANDS=Object.keys(HAND_BASES) as HandId[];
 function factValue<T>(fact:Fact<T>|undefined){return fact?.status==='known'?fact.value:undefined;}
 function number(input:HTMLInputElement,label:string){const n=Number(input.value);if(!Number.isSafeInteger(n)||n<0)throw new Error(label+': escribe un entero no negativo o déjalo vacío si es desconocido.');return n;}
 function labelInput(label:string,type='number'){const host=node('label',label),input=node('input');input.type=type;input.setAttribute('aria-label',label);if(type==='number'){input.min='0';input.step='1';input.placeholder='Desconocido';}host.append(input);return {host,input};}
 function subdetails(host:HTMLElement,title:string){const d=node('details');d.append(node('summary',title));host.append(d);return d;}
-const consumableName=(id:string)=>id.replace(/^c_/,'').replaceAll('_',' ').replace(/\b\w/g,c=>c.toUpperCase());
 
 /** Manual facts only. Untouched imports preserve unknown reasons and source metadata. */
 export function mountFullJokerData(host:HTMLElement,initial:GameState['observed']['jokerContext']|undefined,changed:()=>void){

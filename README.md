@@ -2,7 +2,7 @@
 
 **Web pública:** [Balatro Advisor en GitHub Pages](https://alejandroarielliliu-stack.github.io/balatro-advisor/). [Publicación automática y traslado de partidas](docs/github-pages.md). La migración solo se considera publicada cuando el despliegue termina y se comprueba el enlace sin iniciar sesión.
 
-**Entrega actual (2026-10-16):** [OBS01b](docs/cambios-inventario-obs01b.md): registrar cambios concretos de cartas y consumibles desde Mesa, conservando el resto de la partida. Lista previa de cambios, referencia real del historial, confirmación explícita, guardado atómico, recarga y deshacer. No calcula efectos por usar/retirar consumibles. Continúan OBS01c/CAP01a y DEC00; todavía no hay consejo de jugar/saltar.
+**Entrega actual (2026-10-16):** [OBS01c](docs/datos-puntuales-obs01c.md): corregir datos de una copia de comodín, bases de manos e historial parcial desde Mesa, con desconocidos explícitos y guardado atómico. Incluye nombres españoles de consumibles. No ejecuta efectos de consumibles ni deduce bases del nivel. Continúan CAP01a/DEC00 y la conciliación de identidades; todavía no hay consejo de jugar/saltar.
 
 **Versión vigente:** Mesa con puntaje global/seis barras, [consejo contextual](docs/tienda-contextual.md), 150 perfiles quick-fit-2, 17 familias de composiciones, 32 vales registrables (10 efectos H2) y 15 sobres catalogados con ilustraciones. Disposición visual de Balatro y recálculo automático. Cálculos de manos en Análisis; ofertas de comodines y acciones realizadas confirmadas se guardan desde Mesa. Las demás ediciones siguen siendo transcripciones que se guardan en Registro. Cobertura web exacta 82/150; perfiles no equivalen a efectos completamente implementados.
 
@@ -74,7 +74,7 @@ Requiere Node 24.x y npm. Versiones usadas: Node 24.19.0, npm 11.17.0; dependenc
     npm.cmd run demo:run-migration
     npm.cmd run demo:run-progress
 
-check ejecuta tipos, compilación y pruebas: **616 aprobadas, 0 fallidas, 10 TODO de observación en Balatro** en OBS01b. Incluye H1/H2/T07b/H3/T09b/cotas/ventas/horizontes, tienda persistente, migración, recorrido y observaciones puntuales. Los TODO **no** cuentan como reglas verificadas. Una prueba usa Web Storage experimental de Node en dos procesos; su aviso es esperado. Además, 17 grupos de integración pasan en Chrome real headless; diseño revisado en escritorio y tamaños móviles. Android físico no probado. [Evidencia RUN01b](docs/evidencia/run-progress/README.md).
+check ejecuta tipos, compilación y pruebas: **630 aprobadas, 0 fallidas, 10 TODO de observación en Balatro** en OBS01c. Incluye H1/H2/T07b/H3/T09b/cotas/ventas/horizontes, tienda persistente, migración, recorrido y observaciones puntuales. Los TODO **no** cuentan como reglas verificadas. Una prueba usa Web Storage experimental de Node en dos procesos; su aviso es esperado. Además, 17 grupos de integración pasan en Chrome real headless; diseño revisado en escritorio y tamaños móviles. Android físico no probado. [Evidencia RUN01b](docs/evidencia/run-progress/README.md).
 
 demo:advisor muestra preferencias condicionales de compra/ahorro, empates y abstención. `-- --json` imprime todos los escenarios, cálculos y motivos. [Política h3-1 y límites](docs/asesor-h3.md): sin porcentajes, promedios de escenarios ni suma de dólares y puntos.
 

@@ -47,3 +47,5 @@ export {DECK_PROFILES,resolveDeck,startingComposition,startingShopDistribution} 
 export type {DeckId,DeckCondition} from './catalog/decks.js';
 export {inventoryChanges,inventoryCards,inventoryReference} from './state/inventory-changes.js';
 export type {InventoryChangeRequest,InventoryChangeResult,CardOperation,ConsumableOperation} from './state/inventory-changes.js';
+export {observedDetails,observedHandBases} from './state/observed-details.js';
+export type {ObservedDetailOperation,ObservedDetailRequest,ObservedDetailResult} from './state/observed-details.js';

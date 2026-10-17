@@ -9,7 +9,7 @@ export type ObservationTarget={kind:'counter';instanceId:string;key:string}|{kin
 export interface ObservationNeed {id:string;label:string;reason:string;affects:string[];min:number;max?:number;target:ObservationTarget;revision:number}
 export interface ObservationAnswer {needId:string;value:number}
 export type ObservationPatch=Partial<GameState['observed']>;
-const specs=(j:JokerInstance):Readonly<Record<string,CounterSpec>>=>j.catalogId==='green_joker'?{greenMult:{label:'Mult actual',min:0,initial:0}}:counterSpecs(j.catalogId);
+export const observationCounterSpecs=(j:JokerInstance):Readonly<Record<string,CounterSpec>>=>j.catalogId==='green_joker'?{greenMult:{label:'Mult actual',min:0,initial:0}}:counterSpecs(j.catalogId);
 const id=(target:ObservationTarget)=>JSON.stringify(target);
 const resources={handsPerRound:'Manos por ronda',discardsPerRound:'Descartes por ronda',handSize:'Tamaño de mano',jokerSlots:'Espacios de comodín'};
 const fail=(code:string,message:string,path='$observations'):Result<never>=>({ok:false,errors:[{path,code,message}]});
@@ -21,7 +21,7 @@ export function observationNeeds(input:unknown):Result<ObservationNeed[]>{
  const add=(target:ObservationTarget,label:string,reason:string,affects:string[],min:number,max?:number)=>needs.push({id:id(target),target,label,reason,affects,min,...(max===undefined?{}:{max}),revision:s.revision});
  if(s.observed.jokers.status==='known')for(const [index,j] of s.observed.jokers.value.entries()){
   if(!ALL_JOKER_FACTS[j.catalogId])continue;const name=`${ALL_JOKER_FACTS[j.catalogId]!.name} · posición ${index+1}`;
-  for(const [key,spec]of Object.entries(specs(j)))if(j.counters[key]?.status!=='known')add({kind:'counter',instanceId:j.instanceId,key},`${name} · ${spec.label}`,
+  for(const [key,spec]of Object.entries(observationCounterSpecs(j)))if(j.counters[key]?.status!=='known')add({kind:'counter',instanceId:j.instanceId,key},`${name} · ${spec.label}`,
    'El resumen no determina este valor. Introduce el que muestra el comodín; vacío sigue desconocido.',
    [key==='dollars'?'economía':'efecto del comodín','valoración contextual'],spec.min,spec.max);
   if(j.sellValue.status==='unknown'&&s.phase==='shop')add({kind:'sell',instanceId:j.instanceId},`${name} · valor de venta ($)`,'Necesario para comparar vender o reemplazar; no se deduce del precio original.',['venta','reemplazo'],0);

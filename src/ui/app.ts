@@ -9,6 +9,8 @@ import {observationPatch} from '../state/observations.js';
 import {renderObservationRequests} from './observations-view.js';
 import {inventoryChanges} from '../state/inventory-changes.js';
 import {renderInventoryChanges} from './inventory-changes-view.js';
+import {observedDetails} from '../state/observed-details.js';
+import {appendObservedDetailsControl} from './observed-details-view.js';
 import {markPreview,previewIssueStatus} from './preview-state.js';
 import {historyResourceDelta} from '../rules/history-jokers.js';
 import {mountCounterFields} from './joker-counters.js';
@@ -137,6 +139,10 @@ function renderJourney(){
     if(!base||!expected)return false;
     const changes=inventoryChanges(base,request);if(!changes.ok){problem(changes.errors);return false;}
     return commit(()=>store.correct({confirmationId:id,confirmed:true,expected,updatedAt:now(),patch:changes.value.patch,discardSavedScenarios:changes.value.discardSavedScenarios,reason:changes.value.description}));
+  }});
+  if(base&&expected)appendObservedDetailsControl($('inventory-changes'),{state:base.state,dirty,writable:lock.owned&&!loadFailed,open:openDialog,error:text=>message(text,true),submit:request=>{
+    const changed=observedDetails(base.state,request);if(!changed.ok){problem(changed.errors);return false;}
+    return commit(()=>store.correct({confirmationId:id,confirmed:true,expected,updatedAt:now(),patch:changed.value.patch,reason:changed.value.description}));
   }});
   renderRunJourney($('run-journey'),{record:base,dirty,writable:lock.owned&&!loadFailed,open:openDialog,
     error:text=>message(text,true),export:()=>$('export').click(),
