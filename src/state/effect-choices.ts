@@ -1,5 +1,5 @@
 import {array,boolean,checkJsonValue,enumeration,integer,object,text,union} from './schema.js';
-import {cardSchema,jokerSchema,consumableSchema} from './model.js';
+import {cardSchema,jokerSchema,consumableSchema} from './legacy-model.js';
 import type {EffectChoice} from '../rules/full-joker-contract.js';
 import type {Result} from './model.js';
 export const effectChoiceSchema=object({key:text(1000),kind:enumeration('boolean','integer','card','joker','consumable','target'),value:union(boolean,union(integer(),union(text(1000),union(cardSchema,union(jokerSchema,consumableSchema))))),knowledge:enumeration('known','hypothetical'),basis:text(2000)});

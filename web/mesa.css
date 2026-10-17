@@ -520,3 +520,27 @@ dialog[open] { animation: panel-arrival .14s ease-out; }
 #confirmation:has(.blind-choice-dialog) #dialog-cancel {display:none;}
 .blind-comparison[data-recommendation="abstain"]>.notice {background:#263d46;border-color:#617b84;}
 .blind-comparison[data-recommendation="tradeoff"]>.notice {background:#48432e;border-color:#9b8b53;}
+
+/* Open boosters share the table's card scale and confirmation controls. */
+.pack-panel {margin:16px 0;padding:18px;background:#253e43;border:3px solid #6c8585;border-radius:12px;box-shadow:0 5px #142e31;}
+.pack-panel[hidden],.pack-panel [hidden] {display:none;}
+.pack-panel>.section-title {align-items:center;}
+.pack-panel>.section-title .booster-art {flex-shrink:0;zoom:1.35;}
+.pack-panel small {display:block;overflow-wrap:anywhere;}
+.pack-observation-grid,.pack-choice-grid {display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px;margin:14px 0;}
+.pack-observation-card,.pack-choice {min-width:0;padding:12px;background:#183236;border:1px solid #526e70;border-radius:8px;}
+.pack-observation-card {display:flex;flex-direction:column;gap:8px;}
+.pack-panel input,.pack-panel select {width:100%;min-width:0;}
+.pack-option-art {height:100px;display:grid;place-items:center;}
+.pack-option-art .joker-art,.pack-choice>.joker-art {zoom:.45;flex-shrink:0;}
+.pack-counter-fields {display:grid;gap:8px;}
+.pack-counter-fields label {display:grid;gap:4px;}
+.pack-choice {display:flex;align-items:flex-start;gap:12px;}
+.pack-choice-info {min-width:0;flex:1;display:grid;gap:8px;}
+.pack-choice h3 {font-size:17px;margin:0;overflow-wrap:anywhere;}
+.pack-choice button {width:100%;}
+.pack-choice[data-selected="true"] {opacity:.55;border-color:#c8b973;}
+.pack-planet-art {display:grid;place-items:center;flex-shrink:0;width:64px;height:88px;border:2px solid #91cde0;border-radius:8px;background:radial-gradient(circle,#406ea5,#142c54);color:#e3f2ff;font-size:44px;}
+.pack-panel>.toolbar {margin:16px 0 10px;}
+.pack-panel>details {margin:12px 0;}
+@media(max-width:520px){.pack-panel{padding:12px;}.pack-choice-grid,.pack-observation-grid{grid-template-columns:1fr;}.pack-panel .section-title h2{font-size:23px;}.pack-choice>.joker-art{zoom:.38;}}

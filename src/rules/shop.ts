@@ -1,3 +1,4 @@
+import {BOOSTER_CATALOG} from '../catalog/booster-catalog.js';
 import {validateEffectChoices} from '../state/effect-choices.js';
 import type {EffectChoice,FullEventInput} from './full-joker-contract.js';
 import {bankBalance,creditLimit} from './economic-jokers.js';
@@ -34,20 +35,7 @@ export function applyShopAction(input: unknown, action: ShopAction, mutation: Mu
       if (step.type === 'hold') continue;
       const before = bankBalance(need(state.observed.money, '$.observed.money'));
       if (step.type === 'sell') {
-        const index = jokers.findIndex(j => j.instanceId === step.instanceId);
-        if (index < 0) fail('$action.instanceId', 'missing_joker', 'El comodín a vender no existe.');
-        const j = jokers[index]!;
-        use('shop.prices');
-        const amount = need(j.sellValue, '$.observed.jokers.' + j.instanceId + '.sellValue');
-        const extra=j.counters.extraSell?need(j.counters.extraSell,'$.jokers.counters.extraSell'):0;const edition=need(j.edition,'$.edition');
-        if(amount!==Math.max(1,Math.floor(editionPrice(j.catalogId,edition)/2))+extra) fail('$.observed.jokers.' + j.instanceId, 'unsupported_price', 'Valor de venta distinto del catálogo base; posible efecto no compatible.');
-        if(need(j.stickers,'$.stickers').includes('eternal'))fail('$action','eternal_joker','Un comodín Eternal no se puede vender.');
-        const event:FullEventInput={state,stage:'sell',cards:[],soldJoker:j,activeBlind:options.activeBlind??false,choices:selected.value,trace,use};generationSellingSelf(event,j);generationShopInventoryChanged(state,j,'remove',trace,use);historyEvent(event);
-        adjustResources(state,j,-1);
-        jokers.splice(jokers.indexOf(j),1);
-        generationEvent(event,effectiveJokers(jokers));
-        state.observed.money = valueFact(bankBalance(before + amount));
-        trace.push({ ruleId: 'shop.actions', label: 'Venta', values: { instanceId: j.instanceId, before, received: amount, after: before + amount } });
+        sellObservedJoker(state,step.instanceId,selected.value,trace,use,options);
       } else {
         const shop = need(state.observed.shop, '$.observed.shop');
         if (shop.cardOffers.length > 2) fail('$.observed.shop', 'unsupported_shop', 'Más de dos ofertas de cartas requiere modificadores fuera de cobertura.');
@@ -64,11 +52,7 @@ export function applyShopAction(input: unknown, action: ShopAction, mutation: Mu
         use('shop.prices');
         if (price !== editionPrice(offer.catalogId,need(offer.edition,'$.edition'))) fail('$action.offerId', 'unsupported_price', 'Precio distinto del catálogo base; no se reemplaza el precio observado.');
         if (before-price < -creditLimit(state)) fail('$action', 'insufficient_money', `Dinero insuficiente: ${before}, precio ${price}.`);
-        if (offer.catalogId === 'green_joker') use('green.changes');
-        jokers.push({ instanceId: step.instanceId, catalogId: offer.catalogId, edition: structuredClone(offer.edition),
-          stickers: structuredClone(offer.stickers), sellValue: valueFact(Math.max(1,Math.floor(price/2))),
-          counters: offer.catalogId === 'green_joker' ? { greenMult: valueFact(0) } : initialCounters(offer.catalogId) });
-        const created=jokers[jokers.length-1]!;adjustResources(state,created,1);generationShopInventoryChanged(state,created,'add',trace,use);
+        acquireObservedJoker(state,{...freshJokerInstance(offer.catalogId,step.instanceId,need(offer.edition,'$.offer.edition')),stickers:structuredClone(offer.stickers)},trace,use);
         shop.cardOffers.splice(index, 1);
         state.observed.money = valueFact(bankBalance(before - price));
         trace.push({ ruleId: 'shop.actions', label: 'Compra', values: { offerId: offer.offerId, before, spent: price, after: before - price, occupied: jokers.length, free: need(state.observed.resources.jokerSlots, '$.observed.resources.jokerSlots') - jokers.length } });
@@ -117,3 +101,48 @@ function adjustResources(state:GameState,j:import('../state/model.js').JokerInst
 
 // Static 1.0.1o-FULL Card:set_cost (card.lua:372–373), without inflation or discounts.
 export function editionPrice(id:string,edition:string){return jokerDefinition(id)!.price+(({foil:2,holo:3,holographic:3,polychrome:5,negative:5} as Record<string,number>)[edition]??0);}
+
+/** Shared physical acquisition. The caller validates the observed source and pays separately. */
+export function acquireObservedJoker(state:GameState,joker:JokerInstance,trace:Trace[],use:(id:string)=>void):void{
+ const jokers=inventory(state);
+ if(!jokerDefinition(joker.catalogId))fail('$joker.catalogId','unsupported_joker','Comodín no implementado: '+joker.catalogId+'.');
+ plain(joker.edition,joker.stickers,'$joker');
+ if(typeof joker.instanceId!=='string'||!joker.instanceId.trim()||joker.instanceId.length>200||jokers.some(j=>j.instanceId===joker.instanceId))fail('$joker.instanceId','invalid_id','La instancia adquirida necesita un ID nuevo y único.');
+ if(need(joker.edition,'$joker.edition')!=='negative'&&jokers.length>=need(state.observed.resources.jokerSlots,'$.observed.resources.jokerSlots'))fail('$action','no_slots','No hay espacios; vende antes de elegir o comprar.');
+ if(joker.catalogId==='green_joker')use('green.changes');
+ const created=structuredClone(joker);jokers.push(created);adjustResources(state,created,1);generationShopInventoryChanged(state,created,'add',trace,use);
+ if(created.catalogId==='astronomer')repriceCelestialPackOffers(state,trace,use);
+}
+/** Shared physical sale: no phase switch, revision change or end-shop hook. */
+export function sellObservedJoker(state:GameState,instanceId:string,choices:EffectChoice[],trace:Trace[],use:(id:string)=>void,options:EngineOptions={}):void{
+ const jokers=inventory(state),index=jokers.findIndex(j=>j.instanceId===instanceId);
+ if(index<0)fail('$action.instanceId','missing_joker','El comodín a vender no existe.');
+ const j=jokers[index]!,before=bankBalance(need(state.observed.money,'$.observed.money'));
+ use('shop.prices');const amount=need(j.sellValue,'$.observed.jokers.'+j.instanceId+'.sellValue');
+ const extra=j.counters.extraSell?need(j.counters.extraSell,'$.jokers.counters.extraSell'):0,edition=need(j.edition,'$.edition');
+ if(amount!==Math.max(1,Math.floor(editionPrice(j.catalogId,edition)/2))+extra)fail('$.observed.jokers.'+j.instanceId,'unsupported_price','Valor de venta distinto del catálogo base; posible efecto no compatible.');
+ if(need(j.stickers,'$.stickers').includes('eternal'))fail('$action','eternal_joker','Un comodín Eternal no se puede vender.');
+ const event:FullEventInput={state,stage:'sell',cards:[],soldJoker:j,activeBlind:options.activeBlind??false,choices,trace,use};
+ generationSellingSelf(event,j);generationShopInventoryChanged(state,j,'remove',trace,use);historyEvent(event);adjustResources(state,j,-1);jokers.splice(jokers.indexOf(j),1);generationEvent(event,effectiveJokers(jokers));
+ state.observed.money=valueFact(bankBalance(before+amount));
+ if(j.catalogId==='astronomer')repriceCelestialPackOffers(state,trace,use);
+ trace.push({ruleId:'shop.actions',label:'Venta',values:{instanceId:j.instanceId,before,received:amount,after:before+amount}});
+}
+/** Astronomer's passive price applies to the already visible Celestial shelf too. */
+function repriceCelestialPackOffers(state:GameState,trace:Trace[],use:(id:string)=>void){
+ if(state.schemaVersion!=='0.2'||state.observed.shop.status!=='known')return;
+ const free=need(state.observed.jokers,'$.observed.jokers').some(j=>j.catalogId==='astronomer');
+ for(const offer of state.observed.shop.value.packOffers??[]){
+  const pack=BOOSTER_CATALOG.find(item=>item.id===offer.catalogId&&item.family==='celestial');if(!pack)continue;
+  const base=pack.basePrice;
+  use('jokers.generation');const after=free?0:base;offer.price=valueFact(after);
+  trace.push({ruleId:'jokers.generation',label:'Astronomer actualiza el precio del sobre visible',values:{offerId:offer.offerId,price:after}});
+ }
+}
+
+/** Base fresh instance convenience, with unknown targets kept explicitly unknown. */
+export function freshJokerInstance(catalogId:string,instanceId:string,edition='base'):JokerInstance{
+ if(!jokerDefinition(catalogId))fail('$joker.catalogId','unsupported_joker','Comodín no implementado: '+catalogId+'.');
+ if(!['base','foil','holographic','polychrome','negative'].includes(edition))fail('$joker.edition','unsupported_modifier','Edición fuera de cobertura.');
+ return {instanceId,catalogId,edition:valueFact(edition),stickers:valueFact([]),sellValue:valueFact(Math.max(1,Math.floor(editionPrice(catalogId,edition)/2))),counters:catalogId==='green_joker'?{greenMult:valueFact(0)}:initialCounters(catalogId)};
+}

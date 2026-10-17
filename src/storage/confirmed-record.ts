@@ -1,3 +1,4 @@
+import {packActionSchema} from '../state/pack-contract.js';
 import {effectChoiceSchema} from '../state/effect-choices.js';
 import {validateLegacyState,validateCurrentState} from '../state/validation.js';
 import type {GameState,GameStateLegacy,GameStateV02,Result} from '../state/model.js';
@@ -12,7 +13,7 @@ const stateSchema=<T extends GameState>(validate:(v:unknown)=>Result<T>):Schema<
 export const actionSchema=union(union(object({type:enumeration('hold')},{choices:array(effectChoiceSchema,2000)}),object({type:enumeration('sell'),instanceId:text()},{choices:array(effectChoiceSchema,2000)})),
   union(object({type:enumeration('buy'),offerId:text(),instanceId:text()},{choices:array(effectChoiceSchema,2000)}),object({type:enumeration('replace'),sellInstanceId:text(),offerId:text(),instanceId:text()},{choices:array(effectChoiceSchema,2000)})));
 export const voucherActionSchema=object({type:enumeration('buy_voucher'),offerId:text()});
-export const currentActionSchema=union(actionSchema,voucherActionSchema);
+export const currentActionSchema=union(actionSchema,union(voucherActionSchema,packActionSchema));
 // Old bindings remain valid only for old documents. A migrated document needs
 // its schema in the binding even when its numeric revision did not change.
 export const bindingSchema=object({runId:text(),revision:integer(0),rulesetId:text()},{schemaVersion:enumeration('0.2')});

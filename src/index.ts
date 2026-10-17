@@ -60,3 +60,9 @@ export {applyVoucherPurchase} from './rules/voucher-shop.js';
 export type {VoucherPurchaseAction,VoucherPurchaseChange} from './rules/voucher-shop.js';
 export type {VoucherOffer,CurrentShop} from './state/model.js';
 export type {VoucherCapability} from './advisor/decision.js';
+
+export {applyPackAction} from './rules/pack-shop.js';
+export type {PackChange} from './rules/pack-shop.js';
+export type {PackAction,PackOffer,PackEntry,PackContext} from './state/pack-contract.js';
+export {applyPlanetUse,PLANET_HANDS} from './rules/planet.js';
+export type {PackCapability} from './advisor/decision.js';

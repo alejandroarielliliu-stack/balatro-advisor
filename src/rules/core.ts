@@ -49,7 +49,7 @@ export function run<T>(ids: string[], options: EngineOptions, body: (trace: Trac
     return { ok: false, errors: [error.detail], evidence: engineEvidence([...required], options.requireObserved), engineVersion: ENGINE_VERSION };
   }
 }
-export function stateInput(input: unknown, use: (id:string)=>void = ()=>{}): GameState {
+export function stateInput(input: unknown, use: (id:string)=>void = ()=>{}, allowedPhases:readonly GameState['phase'][]=['shop']): GameState {
   const result = validateState(input);
   if (!result.ok) { const first = result.errors[0]!; fail(first.path, first.code, first.message); }
   const state = result.value;
@@ -60,7 +60,7 @@ export function stateInput(input: unknown, use: (id:string)=>void = ()=>{}): Gam
   if (!deckDefinition(need(observed.deckId,'$.observed.deckId'))) fail('$.observed.deckId','unsupported_context','Baraja catalogada pero aún sin integración en H2; no se sustituyen sus condiciones por las de Azul.');
   if (state.rulesetId !== ENGINE_RULESET) fail('$.rulesetId', 'unsupported_ruleset', `Se requiere ${ENGINE_RULESET}.`);
   if (need(observed.modsPresent, '$.observed.modsPresent')) fail('$.observed.modsPresent', 'unsupported_modifier', 'Mods fuera de cobertura.');
-  if (state.phase !== 'shop') fail('$.phase', 'wrong_phase', 'Se necesita una instantánea de tienda; un borrador no es analizable.');
+  if (!allowedPhases.includes(state.phase)) fail('$.phase', 'wrong_phase', 'Esta operación requiere la fase: '+allowedPhases.join(', ')+'.');
   const extra = need(observed.outOfScope, '$.observed.outOfScope');
   if (!supportedVouchers(extra.vouchers)||extra.consumables.length||extra.pendingTags.length||extra.otherModifiers.length) fail('$.observed.outOfScope', 'unsupported_modifier', 'Hay vales, consumibles, tags u otros modificadores no implementados.');
   if(extra.vouchers.some(id=>!['v_seed_money','v_money_tree'].includes(id))) use('vouchers.resources');

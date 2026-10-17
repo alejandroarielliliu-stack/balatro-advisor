@@ -9,8 +9,8 @@ Entrega del 16 de octubre de 2026. El catálogo, los perfiles estratégicos y el
 | `show` | Identidad y descripción catalogadas | Disponible para las 212; no es evidencia del comportamiento |
 | `rate` | Ruta hacia valoración editorial contextual | Condicional a los datos y soporte del valorador; no son puntos ni probabilidad |
 | `score` | Ruta hacia H2 para un caso concreto | Condicional para comodines y las barajas/vales integrados; una ejecución debe comprobar el caso. Un sobre cerrado no tiene una mano definida |
-| `apply` | Compra/venta/reemplazo de tienda en H2 | Condicional para comodines y compra de los diez vales compatibles de SHOP02a; los demás 22 y apertura de sobres no están integrados. No describe todos los eventos internos del motor |
-| `confirm` | Registro de esa transacción con T09b | Condicional para comodines y los diez vales de SHOP02a; requiere H2, revisión, confirmación humana y guardado. Transcribir posesión no equivale a confirmar una compra |
+| `apply` | Compra/venta/reemplazo de tienda en H2 | Condicional para comodines, compra de diez vales de SHOP02a y apertura de seis sobres SHOP02b; los demás 22 y los sobres ajenos a Buffoon/Celestial no están integrados. No describe todos los eventos internos del motor |
+| `confirm` | Registro de esa transacción con T09b | Condicional para comodines, diez vales y seis sobres; requiere H2, revisión, confirmación humana y guardado. Transcribir posesión no equivale a confirmar una compra |
 
 Estados de esta matriz: `available`, `conditional`, `unimplemented`, `not_applicable`. **Conditional significa que existe una ruta de comprobación, no que todos los efectos del elemento estén implementados.** No se utiliza esta matriz para omitir validaciones de H2 ni para promocionar reglas. La cobertura de cada solicitud procede del resultado real descrito en [DEC00](contrato-decision-dec00.md).
 
@@ -21,3 +21,5 @@ La evidencia dinámica se conserva con los IDs, estados y fuentes que H2 ya devu
 Esta entrega cierra la matriz de **rutas** y su comprobación por solicitud de tienda. CAP01b conserva la ampliación y certificación por familia/interacción. Los antiguos indicadores `engineId` de la colección no se reinterpretan como soporte universal ni cambian silenciosamente sus cifras. La eficacia estratégica y las diez verificaciones manuales siguen pendientes.
 
 SHOP02a: `apply` y `confirm` son condicionales también para los diez vales compatibles. DEC00 expone `voucherActions` independientes; esto no los incluye en la búsqueda/ranking H3. [Contrato y evidencia](compras-vales-shop02a.md).
+
+SHOP02b: `packActions` prueba aperturas independientes mediante H2. Los sobres cerrados siguen sin mano concreta ni ranking H3; las elecciones solo se prueban sobre el contenido registrado. [Contrato y límites](sobres-shop02b.md).

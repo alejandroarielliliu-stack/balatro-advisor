@@ -36,6 +36,8 @@ jobs:
         run: node tools/shop-session-test.mjs
       - name: Comprobar compras registradas de vales
         run: node tools/voucher-shop-test.mjs
+      - name: Comprobar sobres y elecciones observadas
+        run: node tools/pack-shop-test.mjs
       - name: Comprobar migración recuperable de partidas
         run: node tools/run-migration-test.mjs
       - name: Comprobar recorrido observado de partida

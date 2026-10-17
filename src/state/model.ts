@@ -1,3 +1,5 @@
+import {packContextSchema,packOfferSchema} from './pack-contract.js';
+import type {PackOffer} from './pack-contract.js';
 import { gameStateSchema as legacyGameStateSchema } from './legacy-model.js';
 import type { GameState as LegacyGameState } from './legacy-model.js';
 import { array, enumeration, fact, integer, isObject, issue, object, text, union } from './schema.js';
@@ -24,7 +26,7 @@ export const phaseDataSchemas = {
   }),
   cashout: object({ blind: fact(blindRef), amount: fact(integer()) }),
   shop: object({ origin: fact(blindRef) }),
-  open_pack: object({ packId: fact(text()), returnTo: enumeration('blind_select', 'shop') }),
+  open_pack: object({ packId: fact(text()), returnTo: enumeration('blind_select', 'shop') },{context:packContextSchema}),
   finished: object({ outcome: enumeration('won', 'lost', 'stopped'), reason: fact(text(1000)) })
 };
 
@@ -34,7 +36,7 @@ type PhaseState = { [P in RunPhase]: { phase: P; phaseData: PhaseData[P] } }[Run
 export const voucherOfferSchema=object({offerId:text(),catalogId:text(),price:fact(integer(0))});
 export type VoucherOffer=Infer<typeof voucherOfferSchema>;
 type LegacyShop=Extract<GameStateV01['observed']['shop'],{status:'known'}>['value'];
-export type CurrentShop=LegacyShop & {voucherOffers?:VoucherOffer[]};
+export type CurrentShop=LegacyShop & {voucherOffers?:VoucherOffer[];packOffers?:PackOffer[]};
 export type GameStateV02 = Omit<GameStateV01, 'schemaVersion' | 'phase' | 'observed'> & {
   schemaVersion: '0.2';
   observed:Omit<GameStateV01['observed'],'shop'> & {shop:Fact<CurrentShop>};
@@ -48,7 +50,7 @@ export function legacyShape(value:Record<string,unknown>):Record<string,unknown>
  const base={...value,schemaVersion:'0.1',phase:value.phase==='shop'?'shop':'draft'};
  delete (base as Record<string,unknown>).phaseData;
  if(isObject(value.observed)&&isObject(value.observed.shop)&&value.observed.shop.status==='known'&&isObject(value.observed.shop.value)){
-  const shop={...value.observed.shop.value};delete shop.voucherOffers;
+  const shop={...value.observed.shop.value};delete shop.voucherOffers;delete shop.packOffers;
   Object.assign(base,{observed:{...value.observed,shop:{...value.observed.shop,value:shop}}});
  }
  return base;
@@ -68,6 +70,9 @@ export const currentGameStateSchema: Schema<GameStateV02> = {
     }
     if(isObject(value.observed)&&isObject(value.observed.shop)&&value.observed.shop.status==='known'&&isObject(value.observed.shop.value)&&Object.hasOwn(value.observed.shop.value,'voucherOffers')){
       if(!array(voucherOfferSchema,100).check(value.observed.shop.value.voucherOffers,`${path}.observed.shop.value.voucherOffers`,errors))valid=false;
+    }
+    if(isObject(value.observed)&&isObject(value.observed.shop)&&value.observed.shop.status==='known'&&isObject(value.observed.shop.value)&&Object.hasOwn(value.observed.shop.value,'packOffers')){
+      if(!array(packOfferSchema,100).check(value.observed.shop.value.packOffers,`${path}.observed.shop.value.packOffers`,errors))valid=false;
     }
     const base=legacyShape(value);
     if (!legacyGameStateSchema.check(base, path, errors)) valid = false;

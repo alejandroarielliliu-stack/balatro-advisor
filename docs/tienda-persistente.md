@@ -1,6 +1,6 @@
 # SHOP03a — tienda y acciones registradas
 
-Continuación: [RUN01b](recorrido-run01b.md) ya conecta entrada/salida de tienda con el recorrido observado. El servicio admite registros `confirmed-1` y `confirmed-2`; en estado 0.2 rechaza registrar ofertas fuera de tienda. [SHOP02a](compras-vales-shop02a.md) añade ofertas y compras de diez vales en0.2; sobres y otros22 vales conservan sus límites.
+Continuación: [RUN01b](recorrido-run01b.md) ya conecta entrada/salida de tienda con el recorrido observado. El servicio admite registros `confirmed-1` y `confirmed-2`; en estado 0.2 rechaza registrar ofertas fuera de tienda. [SHOP02a](compras-vales-shop02a.md) añade ofertas y compras de diez vales en0.2; otros22 vales conservan sus límites. SHOP02b integra seis sobres con contenido observado.
 
 Entrega del 16 de octubre de 2026. Primer corte de la [hoja de ruta](hoja-de-ruta-asesor.md): comodines ofertados, compra/venta/reemplazo confirmados, guardado y deshacer desde Mesa. No cambia la política estratégica ni incorpora saltos, simulación o nuevas reglas.
 
@@ -37,7 +37,7 @@ La transcripción admite los 150 IDs de catálogo, pero una transacción necesit
 
 La vista admite hasta cuatro ofertas de comodín, mientras H2 conserva el límite de dos ofertas para comprar en este alcance. Más ofertas observadas pueden guardarse y valorarse contextualmente; una compra exacta devuelve su límite de cobertura. Ampliarlo con los modificadores pertinentes es otra entrega.
 
-Las ofertas de vales se guardan en0.2 y diez compras están conectadas a confirmaciones mediante SHOP02a. Sobres y otras cartas siguen siendo consultas de sesión; su compra/apertura/elección no está conectada. Se indica en la interfaz. Los vales ya transcritos como adquiridos mantienen su comportamiento previo. No se ofrece una ruta de acción completa de toda la partida todavía.
+Las ofertas de vales se guardan en0.2 y diez compras están conectadas a confirmaciones mediante SHOP02a. [SHOP02b](sobres-shop02b.md) añade ofertas de sobres persistentes y seis aperturas/elecciones. Las otras cartas siguen siendo consultas de sesión; su compra/uso no está conectada. Se indica en la interfaz. Los vales ya transcritos como adquiridos mantienen su comportamiento previo. No se ofrece una ruta de acción completa de toda la partida todavía.
 
 ## Reproducción
 

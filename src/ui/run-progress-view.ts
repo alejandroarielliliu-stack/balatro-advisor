@@ -125,7 +125,7 @@ export function renderRunJourney(host:HTMLElement,options:JourneyOptions){
   },true);
  }else if(state.phase==='shop'){
   action('run-leave-shop','Salí de la tienda',()=>openCommand('Salí de la tienda','Registrar salida',{type:'leave_shop'}),true);
- }else if(state.phase==='open_pack')title.append(el('small','El registro de elecciones de sobres todavía no está disponible. Se conserva el estado actual.'));
+ }else if(state.phase==='open_pack')title.append(el('small',state.phaseData.context?'Resuelve el sobre para volver a la tienda.':'Apertura antigua sin contexto de elecciones; se conserva la copia.'));
  else if(state.phase==='finished'){
   title.append(el('small',state.phaseData.outcome==='won'?'Objetivo ante 8 completado':state.phaseData.outcome==='lost'?'Derrota registrada':'Partida detenida'));action('run-new','Empecé otra partida',newGame,true);
  }

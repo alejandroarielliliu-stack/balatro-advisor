@@ -55,7 +55,9 @@
     "demo:blinds": "npm run build && node dist/src/demo-blind-decision.js",
     "test:blinds": "npm run build && node tools/blind-decision-test.mjs",
     "demo:vouchers": "npm run build && node dist/src/demo-vouchers.js",
-    "test:voucher-shop": "npm run build && node tools/voucher-shop-test.mjs"
+    "test:voucher-shop": "npm run build && node tools/voucher-shop-test.mjs",
+    "demo:packs": "npm run build && node dist/src/demo-packs.js",
+    "test:pack-shop": "npm run build && node tools/pack-shop-test.mjs"
   },
   "devDependencies": {
     "@types/node": "24.19.1",

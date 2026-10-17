@@ -84,7 +84,7 @@ try {
     await page.waitForFunction(() => document.querySelectorAll('.bay-mini').length === 150);
     const original = await stored();
     let expectedRecord = original, writeCount = await writes(), submitCount = await submits();
-    // Transcribing an observed joker or voucher is a persisted correction. Checkpoints
+    // Transcribing an observed joker, voucher or pack is a persisted correction. Checkpoints
     // are explicit and only taken after edits, never after an advice operation.
     const checkpoint = async () => { expectedRecord = await stored(); writeCount = await writes(); submitCount = await submits(); };
     const inventory = () => page.locator('.inventory-panel .joker-editor select[id^="joker-"]').evaluateAll(rows => rows.map(row => row.value));
@@ -121,7 +121,7 @@ try {
       if (price !== undefined) await page.locator('#store-item-price').fill(String(price));
       await page.locator('#store-item-save').click();
       await page.locator('#store-item-editor').waitFor({ state: 'hidden' });
-      if (kind === 'voucher') await checkpoint();
+      if (kind === 'voucher' || kind === 'pack') await checkpoint();
       return page.locator(`.store-extra-tile[data-store-kind="${kind}"]`).last();
     };
     return { context, page, go, stored, writes, submits, inventory, original, originalVouchers, unchanged, checkpoint, addJoker, advice, close, addExtra };
@@ -242,6 +242,7 @@ try {
   await p.locator('#store-item-editor').waitFor({ state: 'hidden' });
   const arcana = p.locator('.store-extra-tile[data-store-kind="pack"]').last();
   const arcanaId = await arcana.getAttribute('data-offer-id');
+  await main.checkpoint();
   const mega = await main.addExtra('pack', 'standard-mega');
   assert.equal(await p.locator('.store-extra-tile[data-store-kind="pack"]').count(), 2);
   assert.equal(await p.locator('.store-extra-tile[data-store-kind="pack"] .booster-art').count(), 2);
@@ -374,7 +375,7 @@ try {
   pass('responsive', 'Shop/advice fit 360, 390 and 1440px without page overflow; full joker art/name/index and other cards share the upper row', { widths: [360, 390, 1440], completeJokerCards: true, upperRowOffers: 3, physicalMobileTest: false });
   await p.locator('#store-new-shop').click();
   await main.checkpoint();
-  assert.equal(await p.locator('.candidate-card,.store-extra-tile').count(), 0, 'Clear offers removes persisted joker/voucher offers and temporary packs/other cards.');
+  assert.equal(await p.locator('.candidate-card,.store-extra-tile').count(), 0, 'Clear offers removes persisted joker/voucher/pack offers and temporary other cards.');
   assert.equal(await p.locator('#store-reroll-cost').count(), 0);
   assert.equal(await p.locator('#shop-recommendation').isDisabled(), true, 'Clearing the shop also disables advice.');
   await main.unchanged();
@@ -383,8 +384,8 @@ try {
   assert.equal(await p.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
   await p.locator('#joker-candidates').screenshot({ path: `${dir}/shop-reset-390.png` });
   await p.setViewportSize({ width: 1440, height: 900 });
-  pass('clear-offers', 'Clear offers persists removal of observed jokers and vouchers, clears session packs/other cards and disables advice while preserving $25 and inventory', { offers: 0, adviceDisabled: true, realMoney: 25, purchased: false });
-  // Refill after reset: joker/voucher observations persist; packs/other cards remain temporary.
+  pass('clear-offers', 'Clear offers persists removal of observed jokers, vouchers and packs, clears session other cards and disables advice while preserving $25 and inventory', { offers: 0, adviceDisabled: true, realMoney: 25, purchased: false });
+  // Refill after reset: joker/voucher/pack observations persist; other cards remain temporary.
   await main.addJoker('j_joker');
   await main.addExtra('voucher', 'v_seed_money', 4);
   await main.addExtra('pack', 'arcana-normal');
@@ -403,14 +404,16 @@ try {
   assert.equal(await p.locator('.candidate-card[data-candidate="j_joker"]').count(), 1, 'Observed joker offer is restored without being acquired.');
   assert.equal(await p.locator('.store-extra-tile[data-store-kind="voucher"]').count(), 1, 'The observed voucher is restored without being acquired.');
   assert.match(await p.locator('.store-extra-tile[data-store-kind="voucher"]').innerText(), /\$4/);
-  assert.equal(await p.locator('.store-extra-tile[data-store-kind="pack"],.store-extra-tile[data-store-kind="other"]').count(), 0, 'Pack/other observations remain session-only.');
+  assert.equal(await p.locator('.store-extra-tile[data-store-kind="pack"]').count(), 1, 'The observed pack survives reload without opening.');
+  assert.equal(await p.locator('.store-extra-tile[data-store-kind="other"]').count(), 0, 'Other observations remain session-only.');
   assert.deepEqual(await main.inventory(), []);
   assert.equal(await p.locator('#money').inputValue(), '25');
   assert.deepEqual(await p.locator('#vouchers [data-owned="true"]').evaluateAll(rows => rows.map(row => row.dataset.voucher)), []);
   const restored = JSON.parse(await main.stored()).state;
   assert.equal(restored.observed.shop.value.voucherOffers[0].catalogId, 'v_seed_money');
   assert.deepEqual(restored.observed.outOfScope.value.vouchers, []);
-  pass('observed-offers-reload', 'Reload restores observed Joker and Seed Money $4 without payment/acquisition, discards temporary packs/other cards', { persistedJokers: 1, persistedVouchers: 1, sessionExtras: 0, acquiredJokers: 0, acquiredVouchers: 0, realMoney: 25, reloadWrites: 0 });
+  assert.equal(restored.observed.shop.value.packOffers[0].catalogId, 'arcana-normal');
+  pass('observed-offers-reload', 'Reload restores observed Joker, Seed Money $4 and Arcana without payment/acquisition, discards temporary other cards', { persistedJokers: 1, persistedVouchers: 1, persistedPacks: 1, sessionExtras: 0, acquiredJokers: 0, acquiredVouchers: 0, realMoney: 25, reloadWrites: 0 });
   await main.context.close();
 
   const prerequisite = await session(fixture());

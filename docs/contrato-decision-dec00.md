@@ -62,3 +62,5 @@ npm.cmd run test:decision
 La demo carga el ejemplo guardado y muestra $7→$5 o$2 como alternativas independientes, mano de pareja52 y saldo desconocido que limita compras sin bloquear esa mano. [Pruebas y evidencia reproducible](evidencia/decisiones/README.md).
 
 CAP01a/DEC00 queda entregado dentro de este contrato. Siguiente: DEC01/SURV01, comparar consecuencias incrementales con evidencia explícita de supervivencia y conectar esa comparación al consejo visible. No se añaden Monte Carlo, saltos/tags, resolución de sobres ni una estimación de victoria. OBS01 puede continuar la conciliación de identidades de forma independiente.
+
+SHOP02b añade `packActions` independientes: oferta/tienda/precio exactos, apertura H2 y consecuencias. Esto no añade contenido desconocido ni sobres al ranking de planes H3. [Contrato](sobres-shop02b.md).

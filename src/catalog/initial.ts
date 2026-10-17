@@ -3,7 +3,7 @@ import {ADVANCED_JOKERS} from './advanced-jokers.js';
 import {SIMPLE_JOKERS} from './simple-jokers.js';
 /** Closed catalogue. Values are provisional; evidence lives outside the state schema. */
 export const ENGINE_RULESET = 'balatro-pc-1.0.1o-blue-white-v1';
-export const ENGINE_VERSION = '0.8.2';
+export const ENGINE_VERSION = '0.9.0';
 export const GAME_VERSION = '1.0.1o-FULL';
 const jokers = {
   ...ALL_JOKER_FACTS,

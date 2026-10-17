@@ -1,4 +1,4 @@
-import type {Card,HandId} from '../catalog/initial.js';
+import type {Card} from '../catalog/initial.js';
 import {CONSUMABLE_KINDS} from '../catalog/generation-jokers.js';
 import type {GameState,JokerInstance} from '../state/model.js';
 import {validateState} from '../state/validation.js';
@@ -7,7 +7,7 @@ import type {EngineOptions,Trace} from './core.js';
 import type {Mutation} from './shop.js';
 import type {Consumable,EffectChoice,FullEventInput} from './full-joker-contract.js';
 import {effectiveJokers} from './joker-context.js';
-import {levelUp} from './random-jokers.js';
+import {applyPlanetUse,PLANET_HANDS} from './planet.js';
 import {generationCardsAdded,generationCardsDestroyed,generationEvent,generationShopInventoryChanged,generationUseReroll} from './generation-jokers.js';
 
 type KnownValue<T>=T extends {status:'known';value:infer V}?V:never;
@@ -27,7 +27,7 @@ export type GameEvent =
  | {type:'add_cards';cards:Card[];basis:string;choices?:EffectChoice[]}
  | {type:'destroy_cards';cardIds:string[];shatteredIds?:string[];basis:string;choices?:EffectChoice[]};
 export interface GameEventChange {state:GameState;event:GameEvent;limitations:string[]}
-const PLANET_HANDS:Readonly<Record<string,HandId>>={c_mercury:'pair',c_venus:'three_kind',c_earth:'full_house',c_mars:'four_kind',c_jupiter:'flush',c_saturn:'straight',c_uranus:'two_pair',c_neptune:'straight_flush',c_pluto:'high_card',c_planet_x:'five_kind',c_ceres:'flush_house',c_eris:'flush_five'};
+
 const CORRECTION_FIELDS=new Set(['basis','money','cards','jokers','handBases','consumables','resources']);
 const REQUIRED_CORRECTION:Readonly<Record<string,readonly (keyof ConsumableCorrection)[]>>={
  c_fool:['consumables'],c_high_priestess:['consumables'],c_emperor:['consumables'],c_hermit:['money'],c_temperance:['money'],c_judgement:['jokers'],c_wheel_of_fortune:['jokers'],
@@ -108,9 +108,10 @@ export function applyGameEvent(input:unknown,event:GameEvent,mutation:Mutation,o
     }else validateCorrection(event.correction,used);
     const targets=event.targetCardIds?selectedCards(state,ids(event.targetCardIds,'$event.targetCardIds')):[];
     const beforeDeck=event.correction?.cards?deckCards(state).map(c=>structuredClone(c)):undefined,beforeJokers=structuredClone(need(state.observed.jokers,'$.observed.jokers'));
-    items.splice(index,1);const e=scope('use_consumable',targets);e.consumable=used;generationEvent(e);
-    if(ownHand){use('jokers.random');levelUp(state,ownHand);trace.push({ruleId:'jokers.random',label:'Planet mejora la mano indicada por su identidad',values:{catalogId:used.catalogId,hand:ownHand,levelsAdded:1}});}
+    items.splice(index,1);const e=scope('use_consumable',targets);e.consumable=used;
+    if(ownHand)applyPlanetUse(state,used,trace,use,event.choices);
     else {
+     generationEvent(e);
      applyCorrection(state,event.correction!,trace);
      correctedStructure(state);
      if(beforeDeck){const after=deckCards(state),afterIds=new Set(after.map(c=>c.instanceId)),oldIds=new Set(beforeDeck.map(c=>c.instanceId));generationCardsAdded(state,after.filter(c=>!oldIds.has(c.instanceId)),trace,use);generationCardsDestroyed(state,beforeDeck.filter(c=>!afterIds.has(c.instanceId)),[],trace,use);}

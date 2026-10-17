@@ -339,8 +339,8 @@ try{
  pass('mobile390-without-document-overflow',{money:30,hands:6,width:390,overflow:false},{money:30,hands:6,width:390,overflow:false,physicalAndroid:false});
  await mobile.context.close();
 
- // 9. Pack offers remain temporary. Consuming a saved voucher then reloading
- // cannot restore the old voucher cache or persist the closed pack observation.
+ // 9. Pack observations now persist independently of voucher purchases. Consuming
+ // a voucher cannot resurrect its old cache or erase the unopened pack offer.
  const temporary=await session(),t=temporary.page,temporaryId=await add(t);
  before=await raw(t);count=await writes(t);
  await t.locator('#store-pack-add').click();await editor(t).waitFor({state:'visible'});
@@ -348,16 +348,23 @@ try{
  await t.locator('#store-item-price').fill('4');await t.locator('#store-item-save').click();
  await editor(t).waitFor({state:'hidden'});
  assert.equal(await t.locator('.store-extra-tile[data-store-kind="pack"]').count(),1);
- assert.equal(await raw(t),before);assert.equal(await writes(t),count);
+ assert.notEqual(await raw(t),before);assert.equal(await writes(t),count+1);
+ saved=await record(t);const retainedPacks=structuredClone(saved.state.observed.shop.value.packOffers);
+ assert.equal(retainedPacks.length,1);assert.equal(retainedPacks[0].catalogId,'celestial-normal');
+ assert.equal(saved.state.observed.money.value,40);assert.deepEqual(saved.state.observed.outOfScope.value.vouchers,[]);
  assert.equal((await cache(t)).packs.length,1);
+ before=await raw(t);count=await writes(t);
+ await openAdvice(t);await closeAdvice(t);assert.equal(await raw(t),before);assert.equal(await writes(t),count);
  await begin(t,temporaryId);await finish(t);
  saved=await record(t);assertBasePurchase(saved,temporaryId);
+ assert.deepEqual(saved.state.observed.shop.value.packOffers,retainedPacks);
  assert.equal(await t.locator('.store-extra-tile[data-store-kind="voucher"]').count(),0);
  before=await raw(t);await reload(t);assert.equal(await raw(t),before);
  assert.equal(await t.locator('.store-extra-tile[data-store-kind="voucher"]').count(),0);
- assert.equal(await t.locator('.store-extra-tile[data-store-kind="pack"]').count(),0);
- assert.deepEqual((await cache(t)).vouchers,[]);assert.deepEqual((await cache(t)).packs,[]);
- pass('temporary-packs-and-no-voucher-resurrection',{money:30,hands:6,persistedVoucherOffers:0,temporaryPacksAfterReload:0},{money:30,hands:6,persistedVoucherOffers:0,temporaryPacksAfterReload:0,packObservationWrites:0});
+ assert.equal(await t.locator('.store-extra-tile[data-store-kind="pack"]').count(),1);
+ assert.deepEqual((await cache(t)).vouchers,[]);assert.equal((await cache(t)).packs.length,1);
+ assert.deepEqual((await record(t)).state.observed.shop.value.packOffers,retainedPacks);
+ pass('persisted-packs-and-no-voucher-resurrection',{money:30,hands:6,persistedVoucherOffers:0,persistedPacksAfterReload:1,packObservationWrites:1,consultationWrites:0},{money:30,hands:6,persistedVoucherOffers:0,persistedPacksAfterReload:1,packObservationWrites:1,consultationWrites:0});
  await temporary.context.close();
 
  // 10. Voucher observations hydrate independently of the Joker artwork index.

@@ -36,6 +36,10 @@ import {validateState,parseState} from '../state/validation.js';
 import {ENGINE_RULESET,GAME_VERSION,jokerDefinition,HAND_BASES,standardDeck} from '../catalog/initial.js';
 import {enumerateActions,applyShopAction} from '../rules/shop.js';
 import type {ShopAction} from '../rules/shop.js';
+import {applyPackAction} from '../rules/pack-shop.js';
+import type {PackAction} from '../state/pack-contract.js';
+import {renderPackView,renderPackOutcome,packEntryLabel} from './pack-view.js';
+import {BOOSTER_CATALOG} from '../catalog/booster-catalog.js';
 import {applyVoucherPurchase} from '../rules/voucher-shop.js';
 import type {VoucherPurchaseAction} from '../rules/voucher-shop.js';
 import {VOUCHER_CATALOG} from '../catalog/voucher-catalog.js';
@@ -161,6 +165,8 @@ function renderJourney(){
       if(commit(()=>store.undoLatest({confirmationId:uuid(),confirmed:true,expected,updatedAt:now(),targetEntryId:last.id,reason:'El usuario corrigió el último registro desde el recorrido.'})))message('Registro corregido. Esto no deshace acciones dentro de Balatro.');
     }
   });
+  let packHost=document.getElementById('pack-panel');if(!packHost){packHost=node('section');packHost.id='pack-panel';$('run-journey').after(packHost);}
+  renderPackView(packHost,{state:base?.state??null,writable:lock.owned&&!loadFailed,dirty,confirm:action=>base?confirmAction(action,base.state):'Primero registra una partida.',controlsChanged:updateOwnership});
   renderObservationRequests($('observation-requests'),base?.state??null,{writable:lock.owned&&!loadFailed,dirty,error:text=>message(text,true),submit:answers=>{
     if(!base||!expected)return false;
     const patch=observationPatch(base.state,answers,base.state.revision);if(!patch.ok){problem(patch.errors);return false;}
@@ -172,10 +178,11 @@ function renderRecord(){
   const phases:Record<string,string>={shop:'Tienda',draft:'Fase sin registrar',unknown:'Fase sin registrar',blind_select:'Selección de ciega',in_round:'Ronda',cashout:'Cobro',open_pack:'Sobre abierto',finished:'Partida terminada'};
   const progress=$('run-progress');progress.hidden=!record;progress.textContent=record?phases[record.state.phase]??record.state.phase:'';
   progress.title=record?.state.schemaVersion==='0.2'&&record.state.phase==='unknown'?record.state.phaseData.reason:'';
-  const summary=$('summary');summary.replaceChildren();const host=$('state-form');host.replaceChildren();$('record-save')?.querySelector('.save-bar')?.remove();
+  const summary=$('summary');summary.replaceChildren();const host=$('state-form');host.hidden=false;host.replaceChildren();$('record-save')?.querySelector('.save-bar')?.remove();
   if(loadFailed){host.append(node('p','No se pudo cargar el registro. No se ha sobrescrito. Puedes importar una copia validada en «Copias».','error'));return;}
   readLiveState=null;refreshOwnedFits=()=>{};const s=record?.state;
   const deckDisplay=$('active-deck');deckDisplay.textContent=s?(deckDefinition(value(s.observed.deckId)??'')?.name??`Baraja ${value(s.observed.deckId)??'desconocida'} · sin soporte`):'15 barajas · 10 con cálculo';
+  host.hidden=s?.phase==='open_pack';if(host.hidden)return;
   if(s && unsupportedForEditor(s)){
     const text=s.schemaVersion==='0.2'&&s.phase==='unknown'?`Fase sin registrar. ${s.phaseData.reason}`:s.phase==='finished'?'El registro completo queda disponible para exportar o corregir con Deshacer.':s.phase!=='shop'?'Los datos se conservan. Completa el recorrido desde los controles superiores.':'Copia fuera del formulario compatible. Se conserva íntegra; el análisis indicará sus límites.';
     host.append(node('p',text,'notice'),details('Datos importados, sin cambios',s));return;
@@ -309,17 +316,20 @@ function renderRecord(){
     if(s){const reasonText=reason?.input.value??'';if(!reasonText.trim())throwField('edit-reason','Describe por qué actualizas los datos.');commit(()=>store.correct({confirmationId:uuid(),confirmed:true,expected:analysisBinding(record?.state??s),updatedAt:now(),patch:o,reason:reasonText,discardSavedScenarios:deckEditor.discardSavedScenarios()}));}
     else commit(()=>store.initialize(state));
   }catch(err){if(err instanceof Error)message(err.message,true);}};
-  const observeShelf=(snapshot:ShopSnapshot,scope:'all'|'voucher'='all'):string|null=>{
+  const observeShelf=(snapshot:ShopSnapshot,scope:'all'|'voucher'|'pack'='all'):string|null=>{
     if(record&&dirty)return 'Hay otros datos editados sin guardar. Guarda la transcripción o recárgala antes de registrar ofertas.';
     if(demoMode)return 'Sal de la demostración antes de registrar ofertas reales.';
     if(!canWrite())return $('message').textContent??'No se pudo guardar.';
-    if(snapshot.vouchers.length&&record?.state.schemaVersion!=='0.2')return 'Registrar vales requiere una partida 0.2. Migra explícitamente la partida desde Registro o crea una nueva compatible.';
+    if((snapshot.vouchers.length||snapshot.packs.length)&&record?.state.schemaVersion!=='0.2')return 'Registrar vales o sobres requiere una partida 0.2. Migra explícitamente la partida desde Registro o crea una nueva compatible.';
     try{
       const previous=value(record?.state.observed.shop),previousOffers=previous?.cardOffers??[];
       const previousVouchers=record?.state.schemaVersion==='0.2'&&record.state.observed.shop.status==='known'?record.state.observed.shop.value.voucherOffers??[]:[];
-      const voucherOffers=snapshot.vouchers.map(offer=>{const old=previousVouchers.find(v=>v.offerId===offer.offerId);return {offerId:offer.offerId,catalogId:offer.catalogId,price:offer.price===null?(old?.price.status==='unknown'?structuredClone(old.price):unknown()):known(offer.price)};});
+      const voucherOffers=scope==='pack'?structuredClone(previousVouchers):snapshot.vouchers.map(offer=>{const old=previousVouchers.find(v=>v.offerId===offer.offerId);return {offerId:offer.offerId,catalogId:offer.catalogId,price:offer.price===null?(old?.price.status==='unknown'?structuredClone(old.price):unknown()):old?.price.status==='known'&&old.price.value===offer.price?structuredClone(old.price):known(offer.price)};});
       voucherOffers.push(...previousVouchers.filter(o=>!VOUCHER_CATALOG.some(v=>v.id===o.catalogId)&&!voucherOffers.some(v=>v.offerId===o.offerId)).map(o=>structuredClone(o)));
-      const offers:ShopOffer[]=scope==='voucher'?structuredClone(previousOffers):snapshot.jokers.map(offer=>{
+      const previousPacks=record?.state.schemaVersion==='0.2'&&record.state.observed.shop.status==='known'?record.state.observed.shop.value.packOffers??[]:[];
+      const packOffers=scope==='voucher'?structuredClone(previousPacks):snapshot.packs.map(offer=>{const old=previousPacks.find(p=>p.offerId===offer.offerId);return {offerId:offer.offerId,catalogId:offer.family+'-'+offer.size,price:offer.price===null?(old?.price.status==='unknown'?structuredClone(old.price):unknown()):old?.price.status==='known'&&old.price.value===offer.price?structuredClone(old.price):known(offer.price)};});
+      packOffers.push(...previousPacks.filter(o=>!BOOSTER_CATALOG.some(p=>p.id===o.catalogId)&&!packOffers.some(p=>p.offerId===o.offerId)).map(o=>structuredClone(o)));
+      const offers:ShopOffer[]=scope!=='all'?structuredClone(previousOffers):snapshot.jokers.map(offer=>{
         const old=previousOffers.find(o=>o.offerId===offer.offerId);
         const catalogId=ALL_JOKER_FACTS[offer.catalogId]?offer.catalogId:Object.keys(ALL_JOKER_FACTS).find(id=>ALL_JOKER_FACTS[id]!.artId===offer.catalogId)??offer.catalogId;
         return {offerId:offer.offerId,catalogId,label:names[catalogId]??old?.label??catalogId,kind:'joker',
@@ -335,9 +345,9 @@ function renderRecord(){
       const initialized=record===null;
       if(!record){
         const initial=liveState();
-        initial.observed.shop=known({shopId:uuid(),cardOffers:offers,ignoredOtherOffers:['Sobres y otras cartas: solo consulta de esta sesión.']});
+        initial.observed.shop=known({shopId:uuid(),cardOffers:offers,ignoredOtherOffers:['Otras cartas: solo consulta de esta sesión.']});
         saved=store.initialize(initial);
-      }else saved=shopSession.observeJokerOffers({confirmationId:uuid(),confirmed:true,expected:analysisBinding(record.state),updatedAt:now(),shopId:previous?.shopId??uuid(),offers,...(record.state.schemaVersion==='0.2'?{voucherOffers}:{})});
+      }else saved=shopSession.observeJokerOffers({confirmationId:uuid(),confirmed:true,expected:analysisBinding(record.state),updatedAt:now(),shopId:previous?.shopId??uuid(),offers,...(record.state.schemaVersion==='0.2'?{voucherOffers,packOffers}:{})});
       if(!saved.ok){problem(saved.errors);return saved.errors.map(e=>e.message).join(' ');}
       record=saved.value;Object.assign(workingBase,structuredClone(record.state));
       try{seenRaw=localStorage.getItem(CONFIRMED_STORAGE_KEY);}catch{loadFailed=true;}
@@ -356,6 +366,7 @@ function renderRecord(){
   },{state:()=>liveState(true),recordedState:()=>record?.state,ante:()=>Number(ante.input.value),scenarios:()=>{const previous=quietRead;quietRead=true;try{return scenarioReaders.map(read=>read()).filter(Boolean);}finally{quietRead=previous;}},changed:()=>{handRequest++;$('hand-results')?.replaceChildren();},
     observe:observeShelf,confirm:(offerId,sellId)=>requestMesaAction(sellId?{type:'replace',sellInstanceId:sellId,offerId,instanceId:uuid()}:{type:'buy',offerId,instanceId:uuid()}),
     confirmVoucher:offerId=>requestMesaAction({type:'buy_voucher',offerId}),
+    confirmPack:offerId=>requestMesaAction({type:'buy_pack',offerId}),
     // Ownership is applied centrally by updateOwnership; do not cache it as a
     // local disabled reason or gaining the lock would leave these buttons inert.
     status:()=>dirty?'Guarda o recarga los otros datos editados antes de confirmar.':!record?'Configura y registra tu partida antes de confirmar acciones.':null,
@@ -447,8 +458,8 @@ function renderScenarios(){
   host.addEventListener('click',e=>{if((e.target as HTMLElement).closest('button'))invalidate('El escenario cambió. Vuelve a calcular con estos supuestos.');});
 }
 
-type ConfirmableShopAction=ShopAction|VoucherPurchaseAction;
-function actionText(a:ConfirmableShopAction,state:GameState){const owned=value(state.observed.jokers)??[],offers=value(state.observed.shop)?.cardOffers??[];const name=(id:string)=>names[owned.find(j=>j.instanceId===id)?.catalogId??'']??id;const offer=(id:string)=>names[offers.find(o=>o.offerId===id)?.catalogId??'']??id;switch(a.type){case'hold':return 'Conservar, sin comprar';case'buy':return `Comprar ${offer(a.offerId)}`;case'sell':return `Vender ${name(a.instanceId)}`;case'replace':return `Vender ${name(a.sellInstanceId)} → comprar ${offer(a.offerId)}`;case'buy_voucher':{const shop=state.schemaVersion==='0.2'?value(state.observed.shop):undefined;const id=shop?.voucherOffers?.find(v=>v.offerId===a.offerId)?.catalogId;return 'Comprar '+(VOUCHER_CATALOG.find(v=>v.id===id)?.name??id??a.offerId);}}}
+type ConfirmableShopAction=ShopAction|VoucherPurchaseAction|PackAction;
+function actionText(a:ConfirmableShopAction,state:GameState){const owned=value(state.observed.jokers)??[],offers=value(state.observed.shop)?.cardOffers??[];const name=(id:string)=>names[owned.find(j=>j.instanceId===id)?.catalogId??'']??id;const offer=(id:string)=>names[offers.find(o=>o.offerId===id)?.catalogId??'']??id;switch(a.type){case'hold':return 'Conservar, sin comprar';case'buy':return `Comprar ${offer(a.offerId)}`;case'sell':return `Vender ${name(a.instanceId)}`;case'replace':return `Vender ${name(a.sellInstanceId)} → comprar ${offer(a.offerId)}`;case'buy_pack':{const shop=state.schemaVersion==='0.2'?value(state.observed.shop):undefined;const id=shop?.packOffers?.find(p=>p.offerId===a.offerId)?.catalogId;return 'Abrir '+(BOOSTER_CATALOG.find(p=>p.id===id)?.name??id??a.offerId);}case'observe_pack':return 'Registrar las opciones visibles del sobre';case'choose_pack_item':{const entry=state.schemaVersion==='0.2'&&state.phase==='open_pack'&&state.phaseData.context?.contents.status==='known'?state.phaseData.context.contents.value.find(e=>e.entryId===a.entryId):undefined;return entry?(entry.kind==='joker'?'Elegir ':'Usar ')+packEntryLabel(entry):'Elegir la carta del sobre';}case'skip_open_pack':return 'Omitir las elecciones restantes del sobre';case'sell_pack_joker':return 'Vender '+name(a.instanceId);case'buy_voucher':{const shop=state.schemaVersion==='0.2'?value(state.observed.shop):undefined;const id=shop?.voucherOffers?.find(v=>v.offerId===a.offerId)?.catalogId;return 'Comprar '+(VOUCHER_CATALOG.find(v=>v.id===id)?.name??id??a.offerId);}}}
 function renderAdvice(result:Result<Advice>,state:GameState,isDemo=false){
   $('bounds')?.replaceChildren();
   $('horizon-results')?.replaceChildren();
@@ -485,6 +496,7 @@ function renderAdvice(result:Result<Advice>,state:GameState,isDemo=false){
 $('analyze').onclick=()=>{resetFormErrors();if(dirty){message('Hay datos de partida sin guardar. Guarda la actualización antes de analizar.',true);return;}if(!record){message('Primero registra una partida o abre la demostración independiente.',true);return;}try{const scenarios=scenarioReaders.map(r=>r()).filter(Boolean);const result=adviseShop(record.state,scenarios,{expectedRevision:record.state.revision,updatedAt:now()});renderAdvice(result,record.state);if(result.ok)message('Análisis hipotético generado. La partida registrada no cambió.');}catch(e){message(String(e),true);}};
 $('demo').onclick=()=>{void fetch('./examples/shop-purchase.json').then(r=>r.text()).then(text=>{const loaded=parseState(text);if(!loaded.ok){problem(loaded.errors);return;}const demo=comparisonDemoScenarios(loaded.value)[0]!;renderAdvice(adviseShop(demo.state,[{role:'favorable',plan:demo.plan}],{expectedRevision:demo.state.revision,updatedAt:now()}),demo.state,true);}).catch(e=>message(String(e),true));};
 $('exit-demo').onclick=()=>{invalidate('De vuelta a tu partida. Consulta con tus escenarios.');renderActions();};
+const isPackAction=(action:ConfirmableShopAction):action is PackAction=>['buy_pack','observe_pack','choose_pack_item','skip_open_pack','sell_pack_joker'].includes(action.type);
 function requestMesaAction(action:ConfirmableShopAction):string|null{
   if(!record)return 'Configura y guarda la partida antes de registrar acciones reales. No se usa una hipótesis como partida.';
   return confirmAction(action,record.state);
@@ -500,18 +512,18 @@ function confirmAction(action:ConfirmableShopAction,state:GameState):string|null
   if(dirty){const text='Guarda o recarga los datos editados antes de confirmar una acción.';message(text,true);return text;}
   if(demoMode){const text='Sal de la demostración para registrar acciones de tu partida.';message(text,true);return text;}
   if(!canWrite())return $('message').textContent??'No se puede guardar.';
-  const expected=analysisBinding(state),mutation={expectedRevision:state.revision,updatedAt:now()};const preview=action.type==='buy_voucher'?applyVoucherPurchase(state,action,mutation):applyShopAction(state,action,mutation);if(!preview.ok){problem(preview.errors);return preview.errors.map(e=>e.message).join(' ');}
+  const expected=analysisBinding(state),mutation={expectedRevision:state.revision,updatedAt:now()};const preview=action.type==='buy_voucher'?applyVoucherPurchase(state,action,mutation):isPackAction(action)?applyPackAction(state,action,mutation):applyShopAction(state,action,mutation);if(!preview.ok){problem(preview.errors);return preview.errors.map(e=>e.message).join(' ');}
   const body=node('div');body.append(node('p',actionText(action,state)),node('p',`Saldo calculado tras la acción: $${value(preview.value.state.observed.money)??'desconocido'}. Se validará de nuevo al confirmar.`));
-  if(action.type==='buy_voucher')body.append(renderImmediateConsequences(immediateConsequences(state,preview.value.state)),node('small','Reglas provisionales por inspección del ejecutable; falta contraste en partida.','muted'));
+  if(action.type==='buy_voucher'||isPackAction(action))body.append(isPackAction(action)?renderPackOutcome(state,preview.value.state):renderImmediateConsequences(immediateConsequences(state,preview.value.state)),node('small','Reglas provisionales por inspección del ejecutable; falta contraste en partida.','muted'));
   if(action.type==='replace')body.append(node('p','Confirma solo si hiciste la venta Y la compra. Si solo vendiste, cancela y elige «Vender» en acciones manuales.'));
-  const performed=checkbox('performed','Confirmo que realicé esta acción completa en Balatro, no solo que quiero hacerla.');body.append(performed.wrap);
+  const performed=checkbox('performed',action.type==='observe_pack'?'Confirmo que estas son las opciones que veo en el sobre de Balatro.':'Confirmo que realicé esta acción completa en Balatro, no solo que quiero hacerla.');body.append(performed.wrap);
   const balance=field('observed-balance','Saldo que ves después (opcional; verifica discrepancias)','number');body.append(balance.wrap);
   const id=uuid();openDialog('Registrar acción realizada',body,'Registrar que la hice',()=>{
     if(!performed.input.checked){message('Marca la confirmación de acción realizada.',true);return false;}
     const jokers=value(preview.value.state.observed.jokers),shop=value(preview.value.state.observed.shop);
     if(balance.input.value.trim()!=='' && (!jokers || !shop)){message('Completa inventario y tienda para contrastar el recibo; también puedes omitir el saldo opcional.',true);return false;}
     const resultState=preview.value.state;
-    const receipt=balance.input.value.trim()===''?{}:{observedAfter:{money:Number(balance.input.value),jokerIds:jokers!.map(j=>j.instanceId),offerIds:shop!.cardOffers.map(o=>o.offerId),...(resultState.schemaVersion==='0.2'&&resultState.observed.shop.status==='known'?{voucherOfferIds:(resultState.observed.shop.value.voucherOffers??[]).map(v=>v.offerId),voucherIds:value(resultState.observed.outOfScope)?.vouchers??[]}: {})}};
+    const receipt=balance.input.value.trim()===''?{}:{observedAfter:{money:Number(balance.input.value),jokerIds:jokers!.map(j=>j.instanceId),offerIds:shop!.cardOffers.map(o=>o.offerId),...(resultState.schemaVersion==='0.2'&&resultState.observed.shop.status==='known'?{packOfferIds:(resultState.observed.shop.value.packOffers??[]).map(p=>p.offerId),phase:resultState.phase,voucherOfferIds:(resultState.observed.shop.value.voucherOffers??[]).map(v=>v.offerId),voucherIds:value(resultState.observed.outOfScope)?.vouchers??[]}: {})}};
     return commit(()=>shopSession.confirm({confirmationId:id,confirmed:true,expected,updatedAt:now(),action,...receipt}));
   });
   return null;

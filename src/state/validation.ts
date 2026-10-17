@@ -23,6 +23,35 @@ export function validateCurrentState(input: unknown): Result<GameStateV02> {
   if(state.observed.shop.status==='known'){
     const ids=new Set(state.observed.shop.value.cardOffers.map(o=>o.offerId));
     for(const [i,offer]of (state.observed.shop.value.voucherOffers??[]).entries()){if(ids.has(offer.offerId))issue(errors,`$.observed.shop.value.voucherOffers[${i}].offerId`,'duplicate_id','La oferta de vale necesita un identificador único en esta tienda.');ids.add(offer.offerId);}
+    for(const [i,offer]of (state.observed.shop.value.packOffers??[]).entries()){if(ids.has(offer.offerId))issue(errors,`$.observed.shop.value.packOffers[${i}].offerId`,'duplicate_id','La oferta de sobre necesita un identificador único en esta tienda.');ids.add(offer.offerId);}
+  }
+
+  if(state.phase==='open_pack'&&state.phaseData.context){
+    const context=state.phaseData.context,path='$.phaseData.context';
+    if(state.phaseData.packId.status!=='known'||state.phaseData.packId.value!==context.offerId)
+      issue(errors,`${path}.offerId`,'conflicting_reference','El sobre abierto debe identificar la misma oferta que phaseData.packId.');
+    if(state.phaseData.returnTo!=='shop')issue(errors,'$.phaseData.returnTo','conflicting_reference','Un sobre con contexto de tienda debe regresar a shop.');
+    if(state.observed.shop.status!=='known'||state.observed.shop.value.shopId!==context.shopId)
+      issue(errors,`${path}.shopId`,'conflicting_reference','El contexto del sobre no coincide con la tienda registrada.');
+    const selected=new Set<string>();
+    context.selectedEntryIds.forEach((id,index)=>{
+      if(selected.has(id))issue(errors,`${path}.selectedEntryIds[${index}]`,'duplicate_id','Una entrada del sobre no puede registrarse dos veces.');
+      selected.add(id);
+    });
+    if(context.contents.status==='known'){
+      const entryIds=new Set<string>(),jokerIds=new Set<string>();
+      context.contents.value.forEach((entry,index)=>{
+        if(entryIds.has(entry.entryId))issue(errors,`${path}.contents.value[${index}].entryId`,'duplicate_id','Las entradas del sobre necesitan identificadores únicos.');
+        entryIds.add(entry.entryId);
+        if(entry.kind==='joker'){
+          if(jokerIds.has(entry.joker.instanceId))issue(errors,`${path}.contents.value[${index}].joker.instanceId`,'duplicate_id','Las instancias de comodines del sobre necesitan identificadores únicos.');
+          jokerIds.add(entry.joker.instanceId);
+        }
+      });
+      context.selectedEntryIds.forEach((id,index)=>{
+        if(!entryIds.has(id))issue(errors,`${path}.selectedEntryIds[${index}]`,'unknown_reference','La elección no existe entre los contenidos observados.');
+      });
+    }else if(selected.size)issue(errors,`${path}.selectedEntryIds`,'unknown_reference','No se pueden referenciar elecciones sin contenidos observados.');
   }
 
   // Only structural identity references; turn legality, defaults and effects belong to H2.

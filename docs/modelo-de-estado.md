@@ -1,5 +1,7 @@
 # Modelo de estado 0.1 y 0.2
 
+Extensión vigente: [SHOP02b](sobres-shop02b.md) añade ofertas opcionales y contexto de sobre abierto en 0.2. Conserva 0.1 congelado y 0.2 anteriores sin contexto; no se genera contenido ni se migra al leer.
+
 RUN01b añade comandos observacionales y entradas `progress` al registro `confirmed-2`, sin cambiar el esquema de estado 0.2. [Flujo, datos que caducan y compatibilidad](recorrido-run01b.md). El formato sigue separado del cálculo de reglas.
 
 **Actualización RUN01a, 2026-10-16:** se admiten GameState 0.1 y 0.2. El nuevo formato incorpora fases discriminadas; el antiguo sigue siendo legible sin conversión. El documento de partida e historial admite `confirmed-1` con estados 0.1 o `confirmed-2` con estados 0.2. [Fases, APIs de migración y recuperación](fases-y-migracion.md). El `state` del registro adoptado es la fuente de verdad; las consultas no lo modifican.
