@@ -1,5 +1,7 @@
 # Plan de ejecución: asesor de partida con pocas entradas
 
+**DECK04d (2026-10-18) entregado como software:** [Ermitaño/Templanza](tarot-dinero-deck04d.md) con L14, dependencias económicas específicas, uso propio y directo de Arcana, T09b y comparación contextual sin objetivos. Siguiente: Fuerza/cambios de rango; el resto de DECK04 y EVAL01 permanece abierto.
+
 **DECK04c (2026-10-18) entregado como software:** [comparación de objetivos Arcana](objetivos-arcana-deck04c.md), búsqueda acotada de la próxima elección, proyecciones H2, apartados contextuales, sacrificios y abstención. No certifica equivalencia estratégica ni optimiza dos elecciones Mega. Continúa DECK04d para Ermitaño/Templanza y EVAL01 mantiene su validación independiente.
 
 Plan del 15 de octubre de 2026. Actualización del 16: **SHOP03a, RUN01a y RUN01b completados como software**; [tienda persistente](tienda-persistente.md), [fases/migración recuperable](fases-y-migracion.md) y [recorrido observado](recorrido-run01b.md). Las demás entregas siguen pendientes. Parte de la [auditoría del código](reporte-codigo-2026-10-15.md). El [plan de producto](plan-asesor-de-partida.md) conserva el recorrido del juego, la evidencia y las entradas por momento; este documento concreta entregas, contratos y condiciones de cierre.

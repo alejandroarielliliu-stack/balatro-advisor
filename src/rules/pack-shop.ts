@@ -14,10 +14,12 @@ import {acquireObservedJoker,freshJokerInstance,sellObservedJoker} from './shop.
 import {effectiveJokers} from './joker-context.js';
 import {generationEvent,generationShopPrice} from './generation-jokers.js';
 import {applyPlanetUse,PLANET_HANDS} from './planet.js';
-import {applyTargetedTarotUse,tarotDefinition} from './tarot.js';
+import {applyTargetedTarotUse,tarotUseDefinition} from './tarot.js';
 import type {TarotCardChange} from './tarot.js';
+import {applyMoneyTarotUse,moneyTarotDefinition} from './tarot-money.js';
+import type {MoneyTarotChange} from './tarot-money.js';
 
-export interface PackChange {state:GameStateV02;limitations:string[];cardChanges:TarotCardChange[];steps:GameStateV02[]}
+export interface PackChange {state:GameStateV02;limitations:string[];cardChanges:TarotCardChange[];steps:GameStateV02[];moneyChange?:MoneyTarotChange}
 type Definition=typeof BOOSTER_CATALOG[number];
 function definition(id:string):Definition{
  const pack=BOOSTER_CATALOG.find(item=>item.id===id);
@@ -47,7 +49,7 @@ function validateContents(contents:PackEntry[],pack:Definition){
   if(entry.kind==='unsupported')continue;
   if(pack.family==='buffoon'&&entry.kind!=='joker'||pack.family==='celestial'&&entry.kind!=='planet'||pack.family==='arcana'&&entry.kind!=='tarot')fail('$action.contents','incompatible_pack_item','El tipo de carta no coincide con la familia del sobre.');
   if(entry.kind==='planet'&&!PLANET_HANDS[entry.catalogId])fail('$action.contents','unsupported_planet','Registra este contenido como no compatible; no es uno de los doce Planet implementados.');
-  if(entry.kind==='tarot'&&!tarotDefinition(entry.catalogId))fail('$action.contents','unsupported_tarot','Registra este contenido como no compatible; no es uno de los doce Tarot dirigidos implementados.');
+  if(entry.kind==='tarot'&&!tarotUseDefinition(entry.catalogId))fail('$action.contents','unsupported_tarot','Registra este contenido como no compatible; no es uno de los catorce Tarot implementados.');
   if(entry.kind==='joker'){
    if(instances.has(entry.joker.instanceId))fail('$action.contents','duplicate_id','Dos comodines del sobre no pueden tener la misma instancia.');instances.add(entry.joker.instanceId);
   }
@@ -94,6 +96,7 @@ export function applyPackAction(input:unknown,action:PackAction,mutation:Mutatio
   const state=loaded;
   if(!mutation||mutation.expectedRevision!==state.revision)fail('$.revision','stale_revision','La partida cambió; recarga antes de registrar esta acción.');
   const limitations=['Contenido transcrito por el usuario; no se generó azar ni se predijo el resultado del sobre.','Efectos respaldados por inspección del ejecutable, todavía sin comprobación directa en partida.'],cardChanges:TarotCardChange[]=[];
+  let moneyChange:MoneyTarotChange|undefined;
   if(action.type==='buy_pack'){
    if(state.phase!=='shop')fail('$.phase','wrong_phase','Solo puedes comprar un sobre desde la tienda.');
    use('packs.purchase');use('shop.prices');
@@ -128,7 +131,7 @@ export function applyPackAction(input:unknown,action:PackAction,mutation:Mutatio
    }else if(action.type==='observe_pack_hand'){
     use('packs.arcana');
     if(pack.family!=='arcana')fail('$action','incompatible_pack_action','Solo los sobres Arcana de este lote registran una mano de cartas objetivo.');
-    if(context.selectedEntryIds.length)fail('$action.cardIds','pack_already_selected','Después de elegir no se sustituye la mano del sobre. Corrige el registro mediante deshacer.');
+    if(context.selectedEntryIds.length&&context.heldCardIds?.status==='known')fail('$action.cardIds','pack_already_selected','Después de elegir no se sustituye la mano del sobre. Corrige el registro mediante deshacer.');
     packHand(state,action.cardIds);context.heldCardIds=valueFact(structuredClone(action.cardIds));
     if(state.observed.resources.handSize.status==='unknown')limitations.push('Tamaño de mano desconocido: se registraron las cartas visibles sin comprobar la cantidad total que debía robar el juego.');
     limitations.push('Mano transcrita del sobre real; no se predijo el orden de robo ni se dedujo de una jugada hipotética.');
@@ -148,6 +151,9 @@ export function applyPackAction(input:unknown,action:PackAction,mutation:Mutatio
     }else{
      use('packs.arcana');
      if(pack.family!=='arcana')fail('$action.entryId','incompatible_pack_item','Un Tarot directo requiere un sobre Arcana observado.');
+     const used={instanceId:context.offerId+':'+entry.entryId,catalogId:entry.catalogId,kind:'tarot' as const,edition:'base' as const,sellValue:1};
+     if(moneyTarotDefinition(entry.catalogId))moneyChange=applyMoneyTarotUse(state,used,action.targetCardIds??[],trace,use,limitations);
+     else{
      if(!context.heldCardIds)fail('$.phaseData.context.heldCardIds','unknown_data','Falta registrar la mano que robó el juego al abrir Arcana.');
      const held=need(context.heldCardIds,'$.phaseData.context.heldCardIds');
      if(!action.targetCardIds)fail('$action.targetCardIds','missing_targets','Elige las cartas de la mano observada sobre las que usaste el Tarot.');
@@ -155,7 +161,8 @@ export function applyPackAction(input:unknown,action:PackAction,mutation:Mutatio
      if(state.observed.resources.handSize.status==='unknown')limitations.push('Tamaño de mano desconocido: no se pudo comprobar que la mano observada incluya todas las cartas robadas. Solo se usan objetivos que sí registraste visibles.');
      // This pack was bought from the shop: Blind:defeat clears the old active
      // blind before cashout. nextBlind is future context, not an active debuff.
-     cardChanges.push(...applyTargetedTarotUse(state,{instanceId:context.offerId+':'+entry.entryId,catalogId:entry.catalogId,kind:'tarot',edition:'base',sellValue:1},action.targetCardIds,held,trace,use,limitations));
+     cardChanges.push(...applyTargetedTarotUse(state,used,action.targetCardIds,held,trace,use,limitations));
+     }
      limitations.push('Uso directo de una carta observada del sobre; no ocupó ni se insertó en el inventario de consumibles. La misma mano permanece para la segunda elección Mega.');
     }
     context.selectedEntryIds.push(entry.entryId);context.remainingChoices--;
@@ -176,6 +183,6 @@ export function applyPackAction(input:unknown,action:PackAction,mutation:Mutatio
   }
   state.revision=safe(state.revision+1,'$.revision');state.updatedAt=mutation.updatedAt;
   const valid=validateState(state);if(!valid.ok){const e=valid.errors[0]!;fail(e.path,e.code,e.message);}
-  return {state:valid.value as GameStateV02,limitations,cardChanges,steps:[structuredClone(valid.value as GameStateV02)]};
+  return {state:valid.value as GameStateV02,limitations,cardChanges,steps:[structuredClone(valid.value as GameStateV02)],...(moneyChange?{moneyChange}:{})};
  });
 }

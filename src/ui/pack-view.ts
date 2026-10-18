@@ -15,7 +15,7 @@ import {mountPackComparison} from './pack-choice-view.js';
 import {mountArcanaComparison} from './arcana-choice-view.js';
 import {CONSUMABLE_KINDS} from '../catalog/generation-jokers.js';
 import {inventoryCards} from '../state/inventory-changes.js';
-import {tarotDefinition} from '../rules/tarot.js';
+import {tarotDefinition,tarotUseDefinition} from '../rules/tarot.js';
 import {tarotCardButton,tarotCardLabel,renderTarotOutcome} from './tarot-view.js';
 import {evaluateComposition} from '../advisor/composition.js';
 
@@ -55,7 +55,7 @@ export function renderPackView(host:HTMLElement,options:PackViewOptions){
   hand.append(el('summary',recorded?`Mano del sobre · ${recorded.length} cartas`:'Registrar la mano que robaste'));
   const cards=inventoryCards(state);
   if(!cards)hand.append(el('small','Registra la composición actual del mazo para identificar las cartas que aparecieron.'));
-  else if(ctx.selectedEntryIds.length)hand.append(el('small','La mano se conserva tras elegir. Para corregirla, deshaz el registro equivocado.'));
+  else if(ctx.selectedEntryIds.length&&recorded)hand.append(el('small','La mano se conserva tras elegir. Para corregirla, deshaz el registro equivocado.'));
   else{
    const picked=new Set(recorded??[]),search=el('input');search.id='pack-hand-search';search.type='search';search.placeholder='Buscar rango, palo o mejora';search.setAttribute('aria-label','Buscar carta en la mano del sobre');
    const grid=el('div','','tarot-card-picker'),count=el('small'),save=write(el('button','Registrar mano del sobre','secondary'));save.id='pack-observe-hand';
@@ -91,9 +91,9 @@ export function renderPackView(host:HTMLElement,options:PackViewOptions){
     choice.onchange=refresh;edition.onchange=refresh;refresh();row.append(preview,search,choice,edition,details);
     readers.push(()=>{if(!current||!readFields)throw Error('Selecciona el comodín de la carta '+(index+1)+'.');return {entryId,kind:'joker',joker:readFields()};});
    }else if(family==='arcana'){
-    const choices=Object.entries(CONSUMABLE_KINDS).filter(([id,kind])=>kind==='tarot'&&id!=='c_locked').map(([id]):[string,string]=>[id,consumableLabel(id)+(tarotDefinition(id)?'':' · uso pendiente')]);choices.push(['c_soul',consumableLabel('c_soul')+' · uso pendiente']);
+    const choices=Object.entries(CONSUMABLE_KINDS).filter(([id,kind])=>kind==='tarot'&&id!=='c_locked').map(([id]):[string,string]=>[id,consumableLabel(id)+(tarotUseDefinition(id)?'':' · uso pendiente')]);choices.push(['c_soul',consumableLabel('c_soul')+' · uso pendiente']);
     const choice=select([['','Seleccionar carta'],...choices],old&&old.kind!=='joker'?old.catalogId:'');choice.dataset.packTarotIndex=String(index);choice.setAttribute('aria-label','Tarot '+(index+1));row.append(el('span','☾','pack-planet-art'),choice);
-    readers.push(()=>{if(!choice.value)throw Error('Selecciona la carta '+(index+1)+'.');return {entryId,kind:tarotDefinition(choice.value)?'tarot':'unsupported',catalogId:choice.value};});
+    readers.push(()=>{if(!choice.value)throw Error('Selecciona la carta '+(index+1)+'.');return {entryId,kind:tarotUseDefinition(choice.value)?'tarot':'unsupported',catalogId:choice.value};});
    }else{
     const choice=select([['','Seleccionar carta'],...Object.entries(planets)],old&&old.kind!=='joker'?old.catalogId:'');choice.dataset.packPlanetIndex=String(index);choice.setAttribute('aria-label','Planeta '+(index+1));row.append(el('span','✦','pack-planet-art'),choice);
     readers.push(()=>{if(!choice.value)throw Error('Selecciona la carta '+(index+1)+'.');return {entryId,kind:choice.value==='c_black_hole'?'unsupported':'planet',catalogId:choice.value};});
@@ -115,7 +115,7 @@ export function renderPackView(host:HTMLElement,options:PackViewOptions){
    const info=el('div','','pack-choice-info');info.append(el('h3',packEntryLabel(entry)));
    if(selected)info.append(el('small','Elegido'));else{
     const assessment=el('div','','pack-choice-assessment');comparison?.addEntry(entry.entryId,assessment);info.append(assessment);
-    if(entry.kind==='tarot'){
+    if(entry.kind==='tarot'&&tarotDefinition(entry.catalogId)){
      const cards=inventoryCards(state),held=value(ctx.heldCardIds),targets=el('div','','tarot-targets'),preview=el('div','','tarot-preview'),button=write(el('button','Usé esta carta'));button.dataset.packChoose=entry.entryId;const picked=new Set<string>();
      const max=tarotDefinition(entry.catalogId)?.maxTargets;info.append(el('small',max===1?'Elige 1 carta de la mano del sobre.':`Elige de 1 a ${max??'?'} cartas de la mano del sobre.`),targets,preview,button);
      const action=():PackAction=>({type:'choose_pack_item',entryId:entry.entryId,targetCardIds:[...picked]});
@@ -126,9 +126,10 @@ export function renderPackView(host:HTMLElement,options:PackViewOptions){
      arcana?.addEntry(entry.entryId,assessment,ids=>{picked.clear();for(const id of ids)picked.add(id);refresh();});
     }else{
     arcana?.addEntry(entry.entryId,assessment,()=>{});
-    const action:PackAction={type:'choose_pack_item',entryId:entry.entryId},result=probe(action),button=write(el('button',entry.kind==='planet'?'Usé esta carta':'Elegí esta carta'),!result.ok);button.dataset.packChoose=entry.entryId;button.onclick=()=>request(action);
+    const action:PackAction={type:'choose_pack_item',entryId:entry.entryId},result=probe(action),button=write(el('button',entry.kind==='planet'||entry.kind==='tarot'?'Usé esta carta':'Elegí esta carta'),!result.ok);button.dataset.packChoose=entry.entryId;button.onclick=()=>request(action);
     if(result.ok){
      info.append(renderPackOutcome(state,result.value.state));
+     if(result.value.moneyChange)info.append(renderTarotOutcome(result.value));
     }else info.append(el('small',result.errors.map(e=>e.message).join(' '),'error'));
     info.append(button);
     }

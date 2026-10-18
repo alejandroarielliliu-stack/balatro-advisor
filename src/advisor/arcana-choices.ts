@@ -9,7 +9,7 @@ import {applyPackAction} from '../rules/pack-shop.js';
 import type {PackChange} from '../rules/pack-shop.js';
 import type {EngineResult} from '../rules/core.js';
 import type {AnalysisGate} from '../rules/evidence.js';
-import {tarotDefinition} from '../rules/tarot.js';
+import {tarotDefinition,tarotUseDefinition} from '../rules/tarot.js';
 import type {TarotCardChange} from '../rules/tarot.js';
 import {evaluateComposition} from './composition.js';
 import type {CompositionReport} from './composition.js';
@@ -21,7 +21,7 @@ import {operationStatus} from './decision.js';
 import type {OperationStatus} from './decision.js';
 
 /** Editorial comparison over the existing six sections; no new effect formula. */
-export const ARCANA_CHOICE_POLICY={version:'arcana-choice-policy-1',defaultMaxCandidates:1024,maximumCandidates:4096,
+export const ARCANA_CHOICE_POLICY={version:'arcana-choice-policy-2',defaultMaxCandidates:1024,maximumCandidates:4096,
  rules:{incomplete:'A-INCOMPLETE',pareto:'A-CONTEXTUAL-PARETO',undistinguished:'A-UNDISTINGUISHED',tradeoff:'A-TRADEOFF',sacrifice:'A-UNVALUED-SACRIFICE'}} as const;
 export interface ArcanaChoiceOptions {requireObserved?:boolean;maxCandidates?:number}
 type ChoiceAction=Extract<PackAction,{type:'choose_pack_item'|'skip_open_pack'}>;
@@ -47,7 +47,7 @@ const optionSchema=object({},{requireObserved:boolean,maxCandidates:integer(1,AR
 const invalid=(code:string,message:string,path='$arcanaChoices'):Result<never>=>({ok:false,errors:[{path,code,message}]});
 const optionErrors=(options:ArcanaChoiceOptions)=>{const errors=checkJsonValue(options);if(!errors.length)optionSchema.check(options,'$options',errors);return errors;};
 const identity=(entryId:string,targets:readonly string[])=>'entry:'+encodeURIComponent(entryId)+':targets:'+targets.slice().sort().map(encodeURIComponent).join(',');
-const entryName=(entry:PackEntry)=>entry.kind==='joker'?entry.joker.catalogId:tarotDefinition(entry.catalogId)?.name??entry.catalogId;
+const entryName=(entry:PackEntry)=>entry.kind==='joker'?entry.joker.catalogId:tarotUseDefinition(entry.catalogId)?.name??entry.catalogId;
 
 /** Unordered, nonempty subsets in recorded hand order; permutations are not new targets. */
 function* subsets(ids:readonly string[],maximum:number):Generator<string[]>{
@@ -125,14 +125,20 @@ export function compareArcanaChoices(input:unknown,options:ArcanaChoiceOptions={
  if(!context)return invalid('missing_pack_context','Falta el contexto registrado del sobre.');
  if(BOOSTER_CATALOG.find(pack=>pack.id===context.catalogId)?.family!=='arcana')return invalid('unsupported_pack','Esta comparación solo admite sobres Arcana.');
  const entries=value(context.contents)?.filter(entry=>!context.selectedEntryIds.includes(entry.entryId))??[],hand=value(context.heldCardIds),maximum=options.maxCandidates??ARCANA_CHOICE_POLICY.defaultMaxCandidates;
+ const needsHand=entries.some(entry=>entry.kind==='tarot'&&!!tarotDefinition(entry.catalogId));
  const baseline=evaluateComposition(state),evaluated:ArcanaChoiceOption[]=[],blocked:string[]=[];
- let enumerated=0,theoreticalCount:number|null=context.contents.status==='known'&&hand!==undefined?0:null,truncated=false;
+ let enumerated=0,theoreticalCount:number|null=context.contents.status==='known'&&(!needsHand||hand!==undefined)?0:null,truncated=false;
  if(context.contents.status!=='known')blocked.push('El contenido del sobre sigue desconocido. Transcribe las opciones visibles antes de compararlas.');
- if(hand===undefined)blocked.push('Falta la mano observada de Arcana. No se inventan cartas ni se eligen objetivos de todo el mazo.');
- if(state.observed.resources.handSize.status==='unknown')blocked.push('No se conoce el tamaño de mano: se pueden calcular transformaciones locales, pero no comprobar que estén todos los objetivos visibles.');
+ if(needsHand&&hand===undefined)blocked.push('Falta la mano observada de Arcana. No se inventan cartas ni se eligen objetivos de todo el mazo.');
+ if(needsHand&&state.observed.resources.handSize.status==='unknown')blocked.push('No se conoce el tamaño de mano: se pueden calcular transformaciones locales, pero no comprobar que estén todos los objetivos visibles.');
  for(const entry of entries){
-  const definition=entry.kind==='tarot'?tarotDefinition(entry.catalogId):undefined;
+  const definition=entry.kind==='tarot'?tarotUseDefinition(entry.catalogId):undefined;
   if(!definition){theoreticalCount=null;blocked.push('Hay contenido no compatible o de otra familia: '+entryName(entry)+'. Se conservan los cálculos compatibles sin declarar una mejor opción global.');evaluated.push(project(state,entry,[],baseline,options));continue;}
+  if(definition.maxTargets===0){
+   if(theoreticalCount!==null)theoreticalCount++;
+   if(enumerated>=maximum)truncated=true;else{evaluated.push(project(state,entry,[],baseline,options));enumerated++;}
+   continue;
+  }
   if(hand===undefined){evaluated.push(project(state,entry,[],baseline,options));continue;}
   if(theoreticalCount!==null)theoreticalCount+=subsetCount(hand.length,definition.maxTargets);
   for(const targets of subsets(hand,definition.maxTargets)){
@@ -146,7 +152,7 @@ export function compareArcanaChoices(input:unknown,options:ArcanaChoiceOptions={
  for(const option of evaluated)if(!order.includes(option.id))order.push(option.id);
  return {ok:true,value:{contract:'arcana-choices-1',policyVersion:ARCANA_CHOICE_POLICY.version,binding:analysisBinding(state),stateToken:token(state),optionsToken:token(options),inputRevision:state.revision,remainingChoices:context.remainingChoices,
   options:evaluated,order,recommendation:recommend(evaluated,front,blocked),coverage:{scope:'next-choice',maxCandidates:maximum,enumerated,theoreticalCount,truncated},
-  limitations:['Se enumeran subconjuntos no vacíos de los objetivos observados para cada Tarot compatible restante, más omitir. El límite corresponde a proyecciones de objetivos; omitir y entradas no compatibles se muestran además.',
+  limitations:['Se enumeran subconjuntos no vacíos de los objetivos observados para cada Tarot dirigido compatible, una opción sin objetivos por Tarot de dinero, y omitir. El límite corresponde a proyecciones de uso; omitir y entradas no compatibles se muestran además.',
    'Solo la siguiente elección: no se optimiza el orden de dos usos Mega ni se añaden ventas, otros consumibles o robos. Recalcula después de confirmar una elección.',
    'La entrada es una observación registrada; todos los resultados son proyecciones independientes. Solo una confirmación explícita puede guardar una acción real.',
    'Los seis apartados reutilizan la política de composición existente ('+baseline.policy+'); la relación Pareto se comparte con '+PACK_CHOICE_POLICY.version+'. El índice global solo describe diferencias y no ordena por sí solo.',

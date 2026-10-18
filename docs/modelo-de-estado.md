@@ -1,5 +1,7 @@
 # Modelo de estado 0.1 y 0.2
 
+**DECK04d:** los dos [Tarot de dinero](tarot-dinero-deck04d.md) reutilizan `use_tarot` con `targetCardIds: []` y el mismo inventario/historial; no añaden campos persistentes ni migración. La fase de tienda admite estos dos consumibles propios, sin convertir una mano desconocida en vacía.
+
 Extensión vigente: [SHOP02b](sobres-shop02b.md) añade ofertas opcionales y contexto de sobre abierto en 0.2. Conserva 0.1 congelado y 0.2 anteriores sin contexto; no se genera contenido ni se migra al leer.
 
 RUN01b añade comandos observacionales y entradas `progress` al registro `confirmed-2`, sin cambiar el esquema de estado 0.2. [Flujo, datos que caducan y compatibilidad](recorrido-run01b.md). El formato sigue separado del cálculo de reglas.

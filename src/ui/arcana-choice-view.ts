@@ -29,11 +29,11 @@ export function mountArcanaComparison(host:HTMLElement,state:GameState){
  else{
   const recommendation=report.recommendation;status.dataset.kind=recommendation.kind;
   status.textContent=recommendation.kind==='conditional'?'Preferencia condicional según tu composición':recommendation.kind==='tie'?'Sin distinción en los apartados actuales':recommendation.kind==='tradeoff'?'Hay efectos distintos; revisa sus ventajas':'Sin recomendación concluyente';
-  const c=report.coverage;coverage.textContent=`${c.enumerated}${c.theoreticalCount===null?'':` de ${c.theoreticalCount}`} combinaciones de objetivos · próxima elección${c.truncated?' · búsqueda limitada':''}`;
+  const c=report.coverage;coverage.textContent=`${c.enumerated}${c.theoreticalCount===null?'':` de ${c.theoreticalCount}`} alternativas de uso · próxima elección${c.truncated?' · búsqueda limitada':''}`;
   if(recommendation.kind==='abstain'&&recommendation.reasons[0])panel.append(el('small',recommendation.reasons[0],'pack-choice-warning'));
   if(recommendation.kind==='conditional'){
    const preferred=report.options.filter(o=>recommendation.optionIds.includes(o.id));
-   const names=preferred.slice(0,2).map(o=>o.entryId===null?'Omitir lo restante':`${consumableLabel(o.label)} → ${o.targetCardIds.map(targetLabel).join(', ')}`);
+   const names=preferred.slice(0,2).map(o=>o.entryId===null?'Omitir lo restante':consumableLabel(o.label)+(o.targetCardIds.length?` → ${o.targetCardIds.map(targetLabel).join(', ')}`:' · sin cartas objetivo'));
    panel.append(el('small',names.join(' / ')+(preferred.length>2?` y ${preferred.length-2} opciones más`:''),'arcana-preferred'));
   }
   for(const reason of recommendation.reasons)body.append(el('p',reason));
@@ -52,7 +52,8 @@ export function mountArcanaComparison(host:HTMLElement,state:GameState){
    list.replaceChildren();
    for(const option of ordered.slice(0,shown)){
     const row=el('div','','arcana-target-option');row.dataset.arcanaCandidate=option.id;
-    row.append(el('b',option.targetCardIds.length?option.targetCardIds.map(targetLabel).join(' + '):'Sin objetivos'));
+    row.append(el('b',option.targetCardIds.length?option.targetCardIds.map(targetLabel).join(' + '):'Sin cartas objetivo'));
+    if(option.projection.ok&&option.projection.value.moneyChange){const change=option.projection.value.moneyChange;row.append(el('small',`Dinero $${change.before} → $${change.after} (+$${change.income})`));}
     if(option.composition){
      const changed=option.composition.sections.filter(s=>s.delta!==null&&s.delta!==0);
      row.append(el('small',changed.length?changed.map(s=>`${s.label} ${signed(s.delta!)}`).join(' · '):'Sin diferencia en los apartados','muted'));
@@ -62,7 +63,7 @@ export function mountArcanaComparison(host:HTMLElement,state:GameState){
     }
     if(option.projection.ok){
      const button=el('button','Ver estos objetivos','secondary');button.type='button';button.dataset.arcanaTargets=option.id;button.dataset.entryId=entryId;button.dataset.targetCardIds=JSON.stringify(option.targetCardIds);
-     button.onclick=()=>selectTargets([...option.targetCardIds]);row.append(button);
+     button.onclick=()=>selectTargets([...option.targetCardIds]);if(option.targetCardIds.length)row.append(button);
     }else for(const error of option.errors)row.append(el('small',error.message,'error'));
     list.append(row);
    }

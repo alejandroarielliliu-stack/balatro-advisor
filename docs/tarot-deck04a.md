@@ -1,5 +1,7 @@
 # DECK04a — Tarot propios con cartas objetivo
 
+**Ampliación DECK04d:** [Ermitaño y Templanza](tarot-dinero-deck04d.md) añaden dos efectos sin objetivos, propios desde tienda/ronda y directos desde Arcana. La cobertura actual es14 Tarot; las cifras y límites dirigidos que siguen corresponden a la entrega original.
+
 Entrega del 17 de octubre de 2026, motor 0.9.1. Se conecta el primer lote determinista de Tarot al estado 0.2 y al registro recuperable T09b. Se reutilizan las cartas por instancia, el inventario de consumibles y la mano de `phaseData.in_round.heldCardIds`; no se añade otro estado real ni se amplía la cobertura de barajas.
 
 ## Flujo

@@ -1,5 +1,7 @@
 # DECK04b — Arcana con contenido y mano observados
 
+**Ampliación DECK04d:** [Ermitaño y Templanza](tarot-dinero-deck04d.md) añaden dos efectos sin objetivos, propios desde tienda/ronda y directos desde Arcana. La cobertura actual es14 Tarot; las cifras y límites dirigidos que siguen corresponden a la entrega original.
+
 Entrega del 18 de octubre de 2026, motor 0.9.2. Amplía [SHOP02b](sobres-shop02b.md) a Arcana y reutiliza las doce transformaciones de [DECK04a](tarot-deck04a.md). No añade efectos Tarot, un inventario paralelo ni una nueva migración de los guardados 0.2.
 
 ## Recorrido

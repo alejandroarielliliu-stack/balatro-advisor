@@ -1,0 +1,22 @@
+import assert from 'node:assert/strict';
+import {createNewRun} from './run/start.js';
+import type {Fact,GameStateV02,Result} from './state/model.js';
+import {applyTarotAction} from './rules/tarot.js';
+import {freshJokerInstance} from './rules/shop.js';
+import {analysisBinding,createConfirmedStore} from './storage/confirmed-store.js';
+
+const known=<T>(value:T):Fact<T>=>({status:'known',source:'manual',value});
+const ok=<T>(r:Result<T>):T=>{if(!r.ok)throw Error(JSON.stringify(r.errors));return r.value;};
+const date='2026-10-18T23:00:00Z',initial=ok(createNewRun({runId:'money-demo',updatedAt:date,deckId:'blue',profileConfirmed:true}));
+const state:GameStateV02={...initial,phase:'shop',phaseData:{origin:known({ante:1,kind:'small'})}};
+state.observed.money=known(16);state.observed.shop=known({shopId:'shop',cardOffers:[],voucherOffers:[],packOffers:[],ignoredOtherOffers:[]});
+state.observed.jokers=known([2,7].map((sale,i)=>({...freshJokerInstance(i?'joker':'egg','owned:'+i),sellValue:known(sale)})));
+state.observed.jokerContext=known({tarotsUsed:known(7),consumables:known(['c_hermit','c_temperance'].map((catalogId,i)=>({instanceId:'tarot:'+i,catalogId,kind:'tarot' as const,edition:'base' as const,sellValue:1})))});
+const values=new Map<string,string>(),storage={getItem:(key:string)=>values.get(key)??null,setItem:(key:string,value:string)=>{values.set(key,value);}},store=createConfirmedStore(()=>storage);
+ok(store.initialize(state));
+const action={type:'use_tarot' as const,instanceId:'tarot:0',targetCardIds:[]},before=structuredClone(state),projection=applyTarotAction(state,action,{expectedRevision:state.revision,updatedAt:date});
+assert.deepEqual(state,before);if(!projection.ok)throw Error(JSON.stringify(projection.errors));
+const confirmed=ok(store.confirm({confirmationId:'real-hermit',confirmed:true,expected:analysisBinding(state),updatedAt:date,action}));
+const reloaded=ok(store.load());assert.ok(reloaded);assert.deepEqual(reloaded,confirmed);assert.deepEqual(confirmed.state.observed.money,known(32));
+const undone=ok(store.undoLatest({confirmationId:'undo-money',confirmed:true,expected:analysisBinding(confirmed.state),updatedAt:date,targetEntryId:'real-hermit',reason:'No usé ese Tarot.'}));assert.deepEqual(undone.state.observed.money,known(16));
+console.log(JSON.stringify({synthetic:true,gameObservation:false,previewOnly:{inputUnchanged:true,money:projection.value.moneyChange,trace:projection.trace},confirmed:{revision:confirmed.state.revision,money:confirmed.state.observed.money,reloadEqual:true},undo:{revision:undone.state.revision,money:undone.state.observed.money},evidence:projection.evidence},null,2));

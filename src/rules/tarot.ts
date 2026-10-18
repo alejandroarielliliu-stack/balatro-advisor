@@ -8,7 +8,8 @@ import {deckCards,fail,need,run,safe,stateInput,valueFact} from './core.js';
 import type {EngineOptions,EngineResult,Trace} from './core.js';
 import type {Mutation} from './shop.js';
 import type {Consumable} from './full-joker-contract.js';
-import {generationEvent} from './generation-jokers.js';
+import {applyMoneyTarotUse,moneyTarotDefinition,recordTarotUse} from './tarot-money.js';
+import type {MoneyTarotChange} from './tarot-money.js';
 import {bossDisabled} from './history-jokers.js';
 
 export type TarotTargetDefinition={catalogId:string;name:string;maxTargets:number}&(
@@ -32,8 +33,9 @@ export const TAROT_TARGETS:readonly TarotTargetDefinition[]=Object.freeze([
 export function tarotDefinition(catalogId:string):TarotTargetDefinition|undefined{
  return TAROT_TARGETS.find(definition=>definition.catalogId===catalogId);
 }
+export const tarotUseDefinition=(id:string)=>tarotDefinition(id)??moneyTarotDefinition(id);
 export interface TarotCardChange{cardId:string;before:Card;after:Card}
-export interface TarotChange{state:GameStateV02;limitations:string[];cardChanges:TarotCardChange[];steps:GameStateV02[]}
+export interface TarotChange{state:GameStateV02;limitations:string[];cardChanges:TarotCardChange[];steps:GameStateV02[];moneyChange?:MoneyTarotChange}
 
 function distinctIds(ids:readonly string[],path:string){
  if(new Set(ids).size!==ids.length)fail(path,'duplicate_id','Selecciona cada carta una sola vez.');
@@ -84,13 +86,7 @@ export function applyTargetedTarotUse(state:GameStateV02,used:Consumable,targetC
   if(!byId.has(id))fail('$action.targetCardIds','unknown_card','La carta no existe en el mazo: '+id+'.');
   if(!available.has(id))fail('$action.targetCardIds','card_not_held','La carta '+id+' no figura en la mano observada. No se puede elegir una carta arbitraria del mazo.');
  }
- const context=state.observed.jokerContext?.status==='known'?state.observed.jokerContext.value:undefined;
- // These twelve Tarot have no other use hook. Missing prior history stays unknown;
- // it does not prevent an independent exact local transformation.
- if(context?.tarotsUsed?.status==='known'){
-  safe(context.tarotsUsed.value+1,'$.observed.jokerContext.tarotsUsed');
-  generationEvent({state,stage:'use_consumable',cards:targetCardIds.map(id=>byId.get(id)!),consumable:used,trace,use});
- }else limitations.push('El total previo de Tarot usados no está registrado; sigue desconocido. No se deriva una bonificación de Fortune Teller a partir de este uso.');
+ recordTarotUse(state,used,targetCardIds.map(id=>byId.get(id)!),trace,use,limitations);
  const changes:TarotCardChange[]=[];
  for(const id of targetCardIds){
   const card=byId.get(id)!,before=structuredClone(card);
@@ -110,14 +106,15 @@ export function applyTarotAction(input:unknown,action:TarotAction,mutation:Mutat
  return run<TarotChange>([],options,(trace,use)=>{
   const checked=checkJsonValue(action);if(!checked.length)tarotActionSchema.check(action,'$action',checked);
   if(checked.length){const first=checked[0]!;fail(first.path,first.code,first.message);}
-  const loaded=stateInput(input,use,['in_round']);
+  const loaded=stateInput(input,use,['in_round','shop']);
   if(loaded.schemaVersion!=='0.2')fail('$.schemaVersion','unsupported_schema','La mano observada y los Tarot dirigidos requieren el formato 0.2.');
-  if(loaded.phase!=='in_round')fail('$.phase','wrong_phase','Esta acción requiere una ronda en curso.');
   const state=loaded;
   if(!mutation||mutation.expectedRevision!==state.revision)fail('$.revision','stale_revision','La partida cambió; recarga antes de registrar la acción.');
   const limitations:string[]=[],cardChanges:TarotCardChange[]=[];
-  const cards=deckCards(state),byId=new Map(cards.map(card=>[card.instanceId,card]));
+  let moneyChange:MoneyTarotChange|undefined;
   if(action.type==='observe_round_hand'){
+   if(state.phase!=='in_round')fail('$.phase','wrong_phase','Registra la mano durante una ronda.');
+   const cards=deckCards(state),byId=new Map(cards.map(card=>[card.instanceId,card]));
    distinctIds(action.cardIds,'$action.cardIds');
    for(const id of action.cardIds)if(!byId.has(id))fail('$action.cardIds','unknown_card','La carta no existe en el mazo registrado: '+id+'.');
    const size=state.observed.resources.handSize;
@@ -132,13 +129,18 @@ export function applyTarotAction(input:unknown,action:TarotAction,mutation:Mutat
    if(!context.consumables)fail('$.observed.jokerContext.consumables','unknown_data','Falta el inventario de consumibles.');
    const items=need(context.consumables,'$.observed.jokerContext.consumables'),index=items.findIndex(item=>item.instanceId===action.instanceId);
    if(index<0)fail('$action.instanceId','missing_consumable','El Tarot indicado no está en el inventario registrado.');
-   const used=items[index]!,held=heldCards(state);
-   guardDebuffRefresh(state);
-   cardChanges.push(...applyTargetedTarotUse(state,used,action.targetCardIds,held,trace,use,limitations));items.splice(index,1);
-   trace.push({ruleId:'tarot.targets',label:'Tarot propio usado y retirado',values:{instanceId:used.instanceId,catalogId:used.catalogId,targets:action.targetCardIds.length}});
+   const used=items[index]!;
+   if(moneyTarotDefinition(used.catalogId))moneyChange=applyMoneyTarotUse(state,used,action.targetCardIds,trace,use,limitations);
+   else{
+    if(state.phase!=='in_round')fail('$.phase','wrong_phase','Los Tarot dirigidos propios requieren una mano observada en ronda.');
+    const held=heldCards(state);guardDebuffRefresh(state);
+    cardChanges.push(...applyTargetedTarotUse(state,used,action.targetCardIds,held,trace,use,limitations));
+   }
+   items.splice(index,1);
+   trace.push({ruleId:moneyChange?'tarot.money':'tarot.targets',label:'Tarot propio usado y retirado',values:{instanceId:used.instanceId,catalogId:used.catalogId,targets:action.targetCardIds.length}});
   }
   state.revision=safe(state.revision+1,'$.revision');state.updatedAt=mutation.updatedAt;
   const validated=validateState(state);if(!validated.ok){const first=validated.errors[0]!;fail(first.path,first.code,first.message);}
-  return{state:validated.value as GameStateV02,limitations,cardChanges,steps:[structuredClone(validated.value as GameStateV02)]};
+  return{state:validated.value as GameStateV02,limitations,cardChanges,steps:[structuredClone(validated.value as GameStateV02)],...(moneyChange?{moneyChange}:{})};
  });
 }

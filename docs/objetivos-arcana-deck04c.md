@@ -1,5 +1,7 @@
 # DECK04c: comparar los objetivos de Arcana
 
+**Ampliación DECK04d:** [Ermitaño/Templanza](tarot-dinero-deck04d.md) añaden una alternativa sin objetivos por efecto de dinero. La política pasa a `arcana-choice-policy-2` para invalidar informes anteriores; no cambia los pesos de composición. La mano solo bloquea las opciones que la necesitan y la conclusión global correspondiente. El alcance original siguiente se conserva como referencia de DECK04c.
+
 Entrega sobre [DECK04b](arcana-deck04b.md). No amplía los doce efectos Tarot ni sus reglas de juego: conecta sus proyecciones con la política contextual existente. La evidencia L12/L13 sigue siendo inspección del ejecutable 1.0.1o-FULL, sin observación nueva en una partida.
 
 ## Uso
