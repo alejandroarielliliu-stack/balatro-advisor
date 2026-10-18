@@ -564,3 +564,25 @@ dialog[open] { animation: panel-arrival .14s ease-out; }
 .pack-choice-bars>div {display:flex;justify-content:space-between;gap:8px;}
 @media(max-width:520px){.pack-comparison-heading{align-items:flex-start;flex-direction:column;gap:8px;}.pack-comparison-heading label{width:100%;}.pack-comparison-heading select{flex:1;min-width:0;}}
 @media(max-width:520px){.pack-panel{padding:12px;}.pack-choice-grid,.pack-observation-grid{grid-template-columns:1fr;}.pack-panel .section-title h2{font-size:23px;}.pack-choice>.joker-art{zoom:.38;}}
+.tarot-panel {margin:16px 0;padding:16px;border:3px solid #758283;border-radius:12px;background:#253e43;box-shadow:0 4px #142e31;}
+.tarot-panel[hidden] {display:none;}
+.tarot-panel>.section-title {display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:10px;}
+.tarot-panel h2 {margin:0;}
+.tarot-panel label {display:grid;gap:5px;max-width:360px;}
+.tarot-panel small {display:block;overflow-wrap:anywhere;}
+.tarot-hand-editor {margin:8px 0 16px;padding:0 0 8px;border:0;border-bottom:1px solid #526e70;}
+.tarot-card-picker {display:flex;flex-wrap:wrap;gap:9px;max-height:240px;overflow:auto;padding:8px 4px 12px;margin:8px 0;}
+.tarot-targets {display:flex;flex-wrap:wrap;gap:12px;padding:12px 4px;}
+.tarot-card {flex-shrink:0;position:relative;min-height:68px;width:48px;height:68px;}
+.tarot-card[aria-pressed="true"] {outline:3px solid #ffcd68;outline-offset:2px;transform:translateY(-3px);}
+.tarot-card[data-enhancement="steel"] {background:linear-gradient(120deg,#d6e2e5,#819999,#e1e9e4)!important;}
+.tarot-card[data-enhancement="gold"] {background:linear-gradient(120deg,#f0d77b,#b49444,#f2da8b)!important;}
+.tarot-card[data-enhancement="stone"] {background:#9daca7!important;}
+.tarot-preview {margin:4px 0 12px;min-height:22px;}
+.tarot-preview details {font-size:12px;margin:8px 0;padding:0;border:0;}
+.tarot-preview summary {min-height:32px;padding:5px 0;}
+.tarot-outcome {display:grid;gap:6px;}
+.tarot-outcome small {display:block;margin:0;}
+.tarot-panel .tarot-card-mark {position:absolute;bottom:4px;left:4px;font-size:9px;line-height:1;color:#214038;}
+.tarot-panel #tarot-use {margin-bottom:10px;}
+@media(max-width:520px){.tarot-panel{padding:12px;}.tarot-panel>.section-title h2{font-size:24px;}.tarot-card-picker{gap:8px;}.tarot-panel #tarot-use{width:100%;}}

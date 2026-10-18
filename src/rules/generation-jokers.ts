@@ -107,14 +107,15 @@ export function generationCardsDestroyed(state:GameState,cards:readonly Card[],s
 function destroyCards(s:Scope,cards:readonly Card[]){const ids=new Set(cards.map(c=>c.instanceId));const original=deck(s.state);const removed=original.filter(c=>ids.has(c.instanceId));if(removed.length!==ids.size)fail('$cards','unknown_card','Destrucción contiene cartas fuera del mazo.');s.state.observed.deck=valueFact({cards:original.filter(c=>!ids.has(c.instanceId))});for(const c of removed)trace(s,'Carta destruida',{cardId:c.instanceId});generationCardsDestroyed(s.state,removed,[],s.trace,s.use);}
 
 export function generationEvent(input:FullEventInput,effective?:readonly JokerInstance[]):void{
- const jokers=physical(input.state);
  if(input.stage==='use_consumable'){
   const used=input.consumable;if(!used)fail('$event.consumable','unknown_data','Falta consumible usado.');const ctx=context(input.state);
   if(used.kind==='tarot'){if(!ctx.tarotsUsed)fail('$.observed.jokerContext.tarotsUsed','unknown_data','Falta historial anterior de Tarot.');ctx.tarotsUsed=valueFact(need(ctx.tarotsUsed,'$tarotsUsed')+1);trace(input,'Tarot usado',{catalogId:used.catalogId,tarotsUsed:need(ctx.tarotsUsed,'$tarotsUsed')});}
+  const jokers=used.kind==='planet'||used.catalogId==='c_hanged_man'?physical(input.state):[];
   if(used.kind==='planet'){if(!ctx.planetsUsed)fail('$.observed.jokerContext.planetsUsed','unknown_data','Falta historial anterior de planetas.');ctx.planetsUsed=valueFact([...new Set([...need(ctx.planetsUsed,'$planetsUsed'),used.catalogId])]);for(const j of jokers)if(j.catalogId==='constellation')update(input,j,'x100',counter(j,'x100')+10);}
   if(used.catalogId==='c_hanged_man'&&jokers.some(j=>j.catalogId==='glass')){if(input.cards.length<1||input.cards.length>2)fail('$event.cards','unknown_data','The Hanged Man necesita una o dos cartas objetivo para evaluar Glass Joker.');const glasses=input.cards.filter(c=>c.enhancement==='glass').length;for(const j of jokers)if(j.catalogId==='glass'&&glasses)update(input,j,'x100',counter(j,'x100')+75*glasses);}
   return;
  }
+ const jokers=physical(input.state);
  if(input.stage==='discard'&&jokers.some(j=>j.catalogId==='burnt'||j.catalogId==='trading')){
   if(input.discardsUsed===undefined)fail('$round.discardsUsed','unknown_data','Falta saber si es el primer descarte.');
   if(input.discardsUsed===0){let destroyed=false;for(const j of [...(effective??jokers)]){

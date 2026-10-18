@@ -39,6 +39,11 @@ import type {ShopAction} from '../rules/shop.js';
 import {applyPackAction} from '../rules/pack-shop.js';
 import type {PackAction} from '../state/pack-contract.js';
 import {renderPackView,renderPackOutcome,packEntryLabel} from './pack-view.js';
+import {applyTarotAction} from '../rules/tarot.js';
+import type {TarotChange} from '../rules/tarot.js';
+import type {TarotAction} from '../state/tarot-contract.js';
+import {renderTarotView,renderTarotOutcome} from './tarot-view.js';
+import {consumableLabel} from './consumable-labels.js';
 import {BOOSTER_CATALOG} from '../catalog/booster-catalog.js';
 import {applyVoucherPurchase} from '../rules/voucher-shop.js';
 import type {VoucherPurchaseAction} from '../rules/voucher-shop.js';
@@ -167,6 +172,8 @@ function renderJourney(){
   });
   let packHost=document.getElementById('pack-panel');if(!packHost){packHost=node('section');packHost.id='pack-panel';$('run-journey').after(packHost);}
   renderPackView(packHost,{state:base?.state??null,writable:lock.owned&&!loadFailed,dirty,confirm:action=>base?confirmAction(action,base.state):'Primero registra una partida.',controlsChanged:updateOwnership});
+  let tarotHost=document.getElementById('tarot-panel');if(!tarotHost){tarotHost=node('section');tarotHost.id='tarot-panel';packHost.after(tarotHost);}
+  renderTarotView(tarotHost,{state:base?.state??null,writable:lock.owned&&!loadFailed,dirty,confirm:action=>base?confirmAction(action,base.state):'Primero registra una partida.',editConsumables:()=>$('inventory-consumables').click(),controlsChanged:updateOwnership});
   renderObservationRequests($('observation-requests'),base?.state??null,{writable:lock.owned&&!loadFailed,dirty,error:text=>message(text,true),submit:answers=>{
     if(!base||!expected)return false;
     const patch=observationPatch(base.state,answers,base.state.revision);if(!patch.ok){problem(patch.errors);return false;}
@@ -458,8 +465,8 @@ function renderScenarios(){
   host.addEventListener('click',e=>{if((e.target as HTMLElement).closest('button'))invalidate('El escenario cambió. Vuelve a calcular con estos supuestos.');});
 }
 
-type ConfirmableShopAction=ShopAction|VoucherPurchaseAction|PackAction;
-function actionText(a:ConfirmableShopAction,state:GameState){const owned=value(state.observed.jokers)??[],offers=value(state.observed.shop)?.cardOffers??[];const name=(id:string)=>names[owned.find(j=>j.instanceId===id)?.catalogId??'']??id;const offer=(id:string)=>names[offers.find(o=>o.offerId===id)?.catalogId??'']??id;switch(a.type){case'hold':return 'Conservar, sin comprar';case'buy':return `Comprar ${offer(a.offerId)}`;case'sell':return `Vender ${name(a.instanceId)}`;case'replace':return `Vender ${name(a.sellInstanceId)} → comprar ${offer(a.offerId)}`;case'buy_pack':{const shop=state.schemaVersion==='0.2'?value(state.observed.shop):undefined;const id=shop?.packOffers?.find(p=>p.offerId===a.offerId)?.catalogId;return 'Abrir '+(BOOSTER_CATALOG.find(p=>p.id===id)?.name??id??a.offerId);}case'observe_pack':return 'Registrar las opciones visibles del sobre';case'choose_pack_item':{const entry=state.schemaVersion==='0.2'&&state.phase==='open_pack'&&state.phaseData.context?.contents.status==='known'?state.phaseData.context.contents.value.find(e=>e.entryId===a.entryId):undefined;return entry?(entry.kind==='joker'?'Elegir ':'Usar ')+packEntryLabel(entry):'Elegir la carta del sobre';}case'skip_open_pack':return 'Omitir las elecciones restantes del sobre';case'sell_pack_joker':return 'Vender '+name(a.instanceId);case'buy_voucher':{const shop=state.schemaVersion==='0.2'?value(state.observed.shop):undefined;const id=shop?.voucherOffers?.find(v=>v.offerId===a.offerId)?.catalogId;return 'Comprar '+(VOUCHER_CATALOG.find(v=>v.id===id)?.name??id??a.offerId);}}}
+type ConfirmableShopAction=ShopAction|VoucherPurchaseAction|PackAction|TarotAction;
+function actionText(a:ConfirmableShopAction,state:GameState){const owned=value(state.observed.jokers)??[],offers=value(state.observed.shop)?.cardOffers??[];const name=(id:string)=>names[owned.find(j=>j.instanceId===id)?.catalogId??'']??id;const offer=(id:string)=>names[offers.find(o=>o.offerId===id)?.catalogId??'']??id;switch(a.type){case'observe_round_hand':return 'Registrar las cartas que veo en mano';case'use_tarot':{const item=value(value(state.observed.jokerContext)?.consumables)?.find(c=>c.instanceId===a.instanceId);return 'Usar '+consumableLabel(item?.catalogId??a.instanceId)+' sobre '+a.targetCardIds.join(', ');}case'hold':return 'Conservar, sin comprar';case'buy':return `Comprar ${offer(a.offerId)}`;case'sell':return `Vender ${name(a.instanceId)}`;case'replace':return `Vender ${name(a.sellInstanceId)} → comprar ${offer(a.offerId)}`;case'buy_pack':{const shop=state.schemaVersion==='0.2'?value(state.observed.shop):undefined;const id=shop?.packOffers?.find(p=>p.offerId===a.offerId)?.catalogId;return 'Abrir '+(BOOSTER_CATALOG.find(p=>p.id===id)?.name??id??a.offerId);}case'observe_pack':return 'Registrar las opciones visibles del sobre';case'choose_pack_item':{const entry=state.schemaVersion==='0.2'&&state.phase==='open_pack'&&state.phaseData.context?.contents.status==='known'?state.phaseData.context.contents.value.find(e=>e.entryId===a.entryId):undefined;return entry?(entry.kind==='joker'?'Elegir ':'Usar ')+packEntryLabel(entry):'Elegir la carta del sobre';}case'skip_open_pack':return 'Omitir las elecciones restantes del sobre';case'sell_pack_joker':return 'Vender '+name(a.instanceId);case'buy_voucher':{const shop=state.schemaVersion==='0.2'?value(state.observed.shop):undefined;const id=shop?.voucherOffers?.find(v=>v.offerId===a.offerId)?.catalogId;return 'Comprar '+(VOUCHER_CATALOG.find(v=>v.id===id)?.name??id??a.offerId);}}}
 function renderAdvice(result:Result<Advice>,state:GameState,isDemo=false){
   $('bounds')?.replaceChildren();
   $('horizon-results')?.replaceChildren();
@@ -496,6 +503,7 @@ function renderAdvice(result:Result<Advice>,state:GameState,isDemo=false){
 $('analyze').onclick=()=>{resetFormErrors();if(dirty){message('Hay datos de partida sin guardar. Guarda la actualización antes de analizar.',true);return;}if(!record){message('Primero registra una partida o abre la demostración independiente.',true);return;}try{const scenarios=scenarioReaders.map(r=>r()).filter(Boolean);const result=adviseShop(record.state,scenarios,{expectedRevision:record.state.revision,updatedAt:now()});renderAdvice(result,record.state);if(result.ok)message('Análisis hipotético generado. La partida registrada no cambió.');}catch(e){message(String(e),true);}};
 $('demo').onclick=()=>{void fetch('./examples/shop-purchase.json').then(r=>r.text()).then(text=>{const loaded=parseState(text);if(!loaded.ok){problem(loaded.errors);return;}const demo=comparisonDemoScenarios(loaded.value)[0]!;renderAdvice(adviseShop(demo.state,[{role:'favorable',plan:demo.plan}],{expectedRevision:demo.state.revision,updatedAt:now()}),demo.state,true);}).catch(e=>message(String(e),true));};
 $('exit-demo').onclick=()=>{invalidate('De vuelta a tu partida. Consulta con tus escenarios.');renderActions();};
+const isTarotAction=(action:ConfirmableShopAction):action is TarotAction=>action.type==='use_tarot'||action.type==='observe_round_hand';
 const isPackAction=(action:ConfirmableShopAction):action is PackAction=>['buy_pack','observe_pack','choose_pack_item','skip_open_pack','sell_pack_joker'].includes(action.type);
 function requestMesaAction(action:ConfirmableShopAction):string|null{
   if(!record)return 'Configura y guarda la partida antes de registrar acciones reales. No se usa una hipótesis como partida.';
@@ -512,19 +520,21 @@ function confirmAction(action:ConfirmableShopAction,state:GameState):string|null
   if(dirty){const text='Guarda o recarga los datos editados antes de confirmar una acción.';message(text,true);return text;}
   if(demoMode){const text='Sal de la demostración para registrar acciones de tu partida.';message(text,true);return text;}
   if(!canWrite())return $('message').textContent??'No se puede guardar.';
-  const expected=analysisBinding(state),mutation={expectedRevision:state.revision,updatedAt:now()};const preview=action.type==='buy_voucher'?applyVoucherPurchase(state,action,mutation):isPackAction(action)?applyPackAction(state,action,mutation):applyShopAction(state,action,mutation);if(!preview.ok){problem(preview.errors);return preview.errors.map(e=>e.message).join(' ');}
+  const expected=analysisBinding(state),mutation={expectedRevision:state.revision,updatedAt:now()};const preview=action.type==='buy_voucher'?applyVoucherPurchase(state,action,mutation):isPackAction(action)?applyPackAction(state,action,mutation):isTarotAction(action)?applyTarotAction(state,action,mutation):applyShopAction(state,action,mutation);if(!preview.ok){problem(preview.errors);return preview.errors.map(e=>e.message).join(' ');}
   const body=node('div');body.append(node('p',actionText(action,state)),node('p',`Saldo calculado tras la acción: $${value(preview.value.state.observed.money)??'desconocido'}. Se validará de nuevo al confirmar.`));
   if(action.type==='buy_voucher'||isPackAction(action))body.append(isPackAction(action)?renderPackOutcome(state,preview.value.state):renderImmediateConsequences(immediateConsequences(state,preview.value.state)),node('small','Reglas provisionales por inspección del ejecutable; falta contraste en partida.','muted'));
+  if(isTarotAction(action))body.append(renderTarotOutcome(preview.value as TarotChange));
+  if(action.type==='observe_round_hand')body.append(node('p','Cartas observadas: '+action.cardIds.join(', ')));
   if(action.type==='replace')body.append(node('p','Confirma solo si hiciste la venta Y la compra. Si solo vendiste, cancela y elige «Vender» en acciones manuales.'));
-  const performed=checkbox('performed',action.type==='observe_pack'?'Confirmo que estas son las opciones que veo en el sobre de Balatro.':'Confirmo que realicé esta acción completa en Balatro, no solo que quiero hacerla.');body.append(performed.wrap);
-  const balance=field('observed-balance','Saldo que ves después (opcional; verifica discrepancias)','number');body.append(balance.wrap);
+  const performed=checkbox('performed',action.type==='observe_pack'?'Confirmo que estas son las opciones que veo en el sobre de Balatro.':action.type==='observe_round_hand'?'Confirmo que estas son todas las cartas que veo ahora en mano en Balatro.':action.type==='use_tarot'?'Confirmo que usé este Tarot sobre estas cartas y que la mano registrada sigue vigente.':'Confirmo que realicé esta acción completa en Balatro, no solo que quiero hacerla.');body.append(performed.wrap);
+  const balance=field('observed-balance','Saldo que ves después (opcional; verifica discrepancias)','number');if(!isTarotAction(action))body.append(balance.wrap);
   const id=uuid();openDialog('Registrar acción realizada',body,'Registrar que la hice',()=>{
     if(!performed.input.checked){message('Marca la confirmación de acción realizada.',true);return false;}
     const jokers=value(preview.value.state.observed.jokers),shop=value(preview.value.state.observed.shop);
     if(balance.input.value.trim()!=='' && (!jokers || !shop)){message('Completa inventario y tienda para contrastar el recibo; también puedes omitir el saldo opcional.',true);return false;}
     const resultState=preview.value.state;
     const receipt=balance.input.value.trim()===''?{}:{observedAfter:{money:Number(balance.input.value),jokerIds:jokers!.map(j=>j.instanceId),offerIds:shop!.cardOffers.map(o=>o.offerId),...(resultState.schemaVersion==='0.2'&&resultState.observed.shop.status==='known'?{packOfferIds:(resultState.observed.shop.value.packOffers??[]).map(p=>p.offerId),phase:resultState.phase,voucherOfferIds:(resultState.observed.shop.value.voucherOffers??[]).map(v=>v.offerId),voucherIds:value(resultState.observed.outOfScope)?.vouchers??[]}: {})}};
-    return commit(()=>shopSession.confirm({confirmationId:id,confirmed:true,expected,updatedAt:now(),action,...receipt}));
+    return commit(()=>(isTarotAction(action)?store:shopSession).confirm({confirmationId:id,confirmed:true,expected,updatedAt:now(),action,...receipt}));
   });
   return null;
 }

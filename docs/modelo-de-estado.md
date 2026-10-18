@@ -166,3 +166,8 @@ El almacén H1 conserva la clave `balatro-advisor.state.v0.1`; el flujo web adop
 Límite 1 MiB de JSON UTF-8, profundidad 60 y 100 000 nodos; rechazo de ciclos, getters, objetos no JSON, claves reservadas, campos extra, arrays dispersos y valores que no sobrevivirían ida/vuelta (undefined, NaN, infinito, -0). Una validación exitosa devuelve copia independiente.
 
 El almacenamiento pertenece al navegador/origen/dispositivo, puede borrarse y no se sincroniza. No se promete una segunda copia de borrador ni recuperación automática de datos corruptos. La migración explícita confirmed-1→confirmed-2 conserva antes el texto original en un único espacio de respaldo descargable; no es un historial de copias ilimitado. [Procedimiento y fallos de migración](fases-y-migracion.md). [Pruebas históricas de H1](evidencia/h1-validacion.md).
+
+
+## DECK04a: uso dirigido de Tarot
+
+No añade campos ni cambia la versión: reutiliza `in_round.heldCardIds`, cartas por instancia y `jokerContext.consumables`/`tarotsUsed`. La mano observada y el uso son acciones actuales separadas de `confirmed-2`; las proyecciones no sustituyen hechos. Un total desconocido no se completa con cero. El formato histórico 0.1 permanece congelado. [Contrato, validaciones, ejemplos y persistencia](tarot-deck04a.md).

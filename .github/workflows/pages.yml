@@ -40,6 +40,8 @@ jobs:
         run: node tools/pack-shop-test.mjs
       - name: Comprobar consejo de opciones visibles de sobres
         run: node tools/pack-choices-test.mjs
+      - name: Comprobar Tarot dirigidos y mano observada
+        run: node tools/tarot-test.mjs
       - name: Comprobar migración recuperable de partidas
         run: node tools/run-migration-test.mjs
       - name: Comprobar recorrido observado de partida
