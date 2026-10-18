@@ -42,7 +42,7 @@ test('Seis sobres pagan 4/6/8, abren sin inventar cartas y conservan la tienda o
 test('Dinero insuficiente, precio distinto y ofertas ajenas rechazan sin modificar entrada',()=>{
  const poor=fixture();poor.observed.money=known(3);rejection(poor,{type:'buy_pack',offerId:'pack'},'insufficient_money');
  rejection(fixture('buffoon-normal',3),{type:'buy_pack',offerId:'pack'},'unsupported_price');
- rejection(fixture('arcana-normal'),{type:'buy_pack',offerId:'pack'},'unsupported_pack');rejection(fixture(),{type:'buy_pack',offerId:'absent'},'missing_offer');
+ rejection(fixture('spectral-normal'),{type:'buy_pack',offerId:'pack'},'unsupported_pack');rejection(fixture(),{type:'buy_pack',offerId:'absent'},'missing_offer');
 });
 test('Crédito físico permite saldo -20, pero Blueprint no concede crédito',()=>{
  const state=fixture();add(state,'credit_card');state.observed.money=known(-16);assert.equal(fact(buy(state).observed.money),-20);

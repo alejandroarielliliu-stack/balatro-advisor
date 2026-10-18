@@ -5,8 +5,9 @@ import type {TarotAction} from '../state/tarot-contract.js';
 import {checkJsonValue} from '../state/schema.js';
 import {validateState} from '../state/validation.js';
 import {deckCards,fail,need,run,safe,stateInput,valueFact} from './core.js';
-import type {EngineOptions,EngineResult} from './core.js';
+import type {EngineOptions,EngineResult,Trace} from './core.js';
 import type {Mutation} from './shop.js';
+import type {Consumable} from './full-joker-contract.js';
 import {generationEvent} from './generation-jokers.js';
 import {bossDisabled} from './history-jokers.js';
 
@@ -67,6 +68,43 @@ function guardDebuffRefresh(state:Extract<GameStateV02,{phase:'in_round'}>){
  fail('$.observed.nextBlind.bossId','unsupported_debuff_refresh','Este jefe puede cambiar el debilitamiento al transformar cartas. Falta implementar esa actualización; puedes registrar la mano sin usar el Tarot.');
 }
 
+/** Shared exact effect. The caller owns a detached state, the real source,
+ * legal phase/debuff context, source removal, and its single revision update.
+ * A pack source is event metadata only: it is never inserted into inventory. */
+export function applyTargetedTarotUse(state:GameStateV02,used:Consumable,targetCardIds:readonly string[],availableCardIds:readonly string[],trace:Trace[],use:(id:string)=>void,limitations:string[]):TarotCardChange[]{
+ use('tarot.targets');
+ const definition=tarotDefinition(used.catalogId);
+ if(!definition||used.kind!=='tarot')fail('$action.instanceId','unsupported_tarot','Esta acción solo admite los doce Tarot dirigidos de DECK04a.');
+ if(used.handId!==undefined)fail('$action.instanceId','incompatible_consumable','Un Tarot no puede identificar una mano Planet.');
+ distinctIds(targetCardIds,'$action.targetCardIds');distinctIds(availableCardIds,'$hand.cardIds');
+ if(targetCardIds.length<1||targetCardIds.length>definition.maxTargets)fail('$action.targetCardIds','invalid_target_count',definition.name+' necesita entre 1 y '+definition.maxTargets+' cartas objetivo.');
+ const cards=deckCards(state),byId=new Map(cards.map(card=>[card.instanceId,card])),available=new Set(availableCardIds);
+ for(const id of available)if(!byId.has(id))fail('$hand.cardIds','unknown_card','La carta de mano no existe en el mazo: '+id+'.');
+ for(const id of targetCardIds){
+  if(!byId.has(id))fail('$action.targetCardIds','unknown_card','La carta no existe en el mazo: '+id+'.');
+  if(!available.has(id))fail('$action.targetCardIds','card_not_held','La carta '+id+' no figura en la mano observada. No se puede elegir una carta arbitraria del mazo.');
+ }
+ const context=state.observed.jokerContext?.status==='known'?state.observed.jokerContext.value:undefined;
+ // These twelve Tarot have no other use hook. Missing prior history stays unknown;
+ // it does not prevent an independent exact local transformation.
+ if(context?.tarotsUsed?.status==='known'){
+  safe(context.tarotsUsed.value+1,'$.observed.jokerContext.tarotsUsed');
+  generationEvent({state,stage:'use_consumable',cards:targetCardIds.map(id=>byId.get(id)!),consumable:used,trace,use});
+ }else limitations.push('El total previo de Tarot usados no está registrado; sigue desconocido. No se deriva una bonificación de Fortune Teller a partir de este uso.');
+ const changes:TarotCardChange[]=[];
+ for(const id of targetCardIds){
+  const card=byId.get(id)!,before=structuredClone(card);
+  if(definition.effect==='enhancement')card.enhancement=definition.enhancement;
+  else card.suit=definition.suit;
+  card.debuff=false;
+  changes.push({cardId:id,before,after:structuredClone(card)});
+  trace.push({ruleId:'tarot.targets',label:definition.name+' · transformación de carta',values:{instanceId:used.instanceId,cardId:id,property:definition.effect,before:definition.effect==='enhancement'?before.enhancement:before.suit,after:definition.effect==='enhancement'?card.enhancement:card.suit,debuffBefore:String(before.debuff??false),debuffAfter:'false'}});
+ }
+ state.observed.deck=valueFact({cards});
+ limitations.push('Transformaciones respaldadas por inspección del ejecutable; todavía sin contraste directo en partida.','Se conservaron identidad, rango, edición, sello y fichas permanentes; cambiar mejora sustituye la anterior. El uso no puntúa una mano ni cobra efectos al final de ronda.');
+ return changes;
+}
+
 /** Pure projected clone. Only T09b may persist a user-confirmed action. */
 export function applyTarotAction(input:unknown,action:TarotAction,mutation:Mutation,options:EngineOptions={}):EngineResult<TarotChange>{
  return run<TarotChange>([],options,(trace,use)=>{
@@ -89,40 +127,15 @@ export function applyTarotAction(input:unknown,action:TarotAction,mutation:Mutat
    trace.push({ruleId:'state.observation',label:'Cartas visibles de la mano registradas',values:{cardIds:action.cardIds.join(', '),count:action.cardIds.length}});
    limitations.push('La observación no infiere robos, orden de robo, cartas jugadas ni cartas descartadas.');
   }else{
-   use('tarot.targets');
-   distinctIds(action.targetCardIds,'$action.targetCardIds');
    const fact=state.observed.jokerContext;if(!fact)fail('$.observed.jokerContext','unknown_data','Falta el inventario de consumibles.');
    const context=need(fact,'$.observed.jokerContext');
    if(!context.consumables)fail('$.observed.jokerContext.consumables','unknown_data','Falta el inventario de consumibles.');
    const items=need(context.consumables,'$.observed.jokerContext.consumables'),index=items.findIndex(item=>item.instanceId===action.instanceId);
    if(index<0)fail('$action.instanceId','missing_consumable','El Tarot indicado no está en el inventario registrado.');
-   const used=items[index]!,definition=tarotDefinition(used.catalogId);
-   if(!definition||used.kind!=='tarot')fail('$action.instanceId','unsupported_tarot','Esta acción solo admite los doce Tarot dirigidos de DECK04a.');
-   if(used.handId!==undefined)fail('$action.instanceId','incompatible_consumable','Un Tarot no puede identificar una mano Planet.');
-   if(action.targetCardIds.length<1||action.targetCardIds.length>definition.maxTargets)fail('$action.targetCardIds','invalid_target_count',definition.name+' necesita entre 1 y '+definition.maxTargets+' cartas objetivo.');
-   const held=new Set(heldCards(state));
-   for(const id of action.targetCardIds){
-    if(!byId.has(id))fail('$action.targetCardIds','unknown_card','La carta no existe en el mazo: '+id+'.');
-    if(!held.has(id))fail('$action.targetCardIds','card_not_held','La carta '+id+' no figura en la mano observada. No se puede elegir una carta arbitraria del mazo.');
-   }
+   const used=items[index]!,held=heldCards(state);
    guardDebuffRefresh(state);
-   // The existing hook handles known lifetime totals; these twelve Tarot have no other use hook.
-   // Unknown history remains unknown, while the independent exact card effect can still apply.
-   if(context.tarotsUsed?.status==='known'){
-    safe(context.tarotsUsed.value+1,'$.observed.jokerContext.tarotsUsed');
-    generationEvent({state,stage:'use_consumable',cards:action.targetCardIds.map(id=>byId.get(id)!),consumable:used,trace,use});
-   }else limitations.push('El total previo de Tarot usados no está registrado; sigue desconocido. No se deriva una bonificación de Fortune Teller a partir de este uso.');
-   for(const id of action.targetCardIds){
-    const card=byId.get(id)!,before=structuredClone(card);
-    if(definition.effect==='enhancement')card.enhancement=definition.enhancement;
-    else card.suit=definition.suit;
-    card.debuff=false;
-    cardChanges.push({cardId:id,before,after:structuredClone(card)});
-    trace.push({ruleId:'tarot.targets',label:definition.name+' · transformación de carta',values:{instanceId:used.instanceId,cardId:id,property:definition.effect,before:definition.effect==='enhancement'?before.enhancement:before.suit,after:definition.effect==='enhancement'?card.enhancement:card.suit,debuffBefore:String(before.debuff??false),debuffAfter:'false'}});
-   }
-   state.observed.deck=valueFact({cards});items.splice(index,1);
+   cardChanges.push(...applyTargetedTarotUse(state,used,action.targetCardIds,held,trace,use,limitations));items.splice(index,1);
    trace.push({ruleId:'tarot.targets',label:'Tarot propio usado y retirado',values:{instanceId:used.instanceId,catalogId:used.catalogId,targets:action.targetCardIds.length}});
-   limitations.push('Transformaciones respaldadas por inspección del ejecutable; todavía sin contraste directo en partida.','Se conservaron identidad, rango, edición, sello y fichas permanentes; cambiar mejora sustituye la anterior. El uso no puntúa una mano ni cobra efectos al final de ronda.');
   }
   state.revision=safe(state.revision+1,'$.revision');state.updatedAt=mutation.updatedAt;
   const validated=validateState(state);if(!validated.ok){const first=validated.errors[0]!;fail(first.path,first.code,first.message);}

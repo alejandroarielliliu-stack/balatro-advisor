@@ -214,7 +214,7 @@ try{
  pass('black-hole-observed-but-not-applied',{kind:'unsupported',money:16,levelsChanged:false,skipAllowed:true},{kind:'unsupported',money:16,levelsChanged:false,skipAllowed:true});await black.context.close();
 
  // 10. Illegal pack branches are explicit and preserve the complete record.
- const rejected=[{id:'buffoon-normal',price:4,money:3,pattern:/insuficiente|dinero|saldo/i},{id:'buffoon-normal',price:3,money:20,pattern:/precio|admitid|cobertura/i},{id:'arcana-normal',price:4,money:20,pattern:/Buffoon|Celestial|implementad|admite|cobertura/i}];
+ const rejected=[{id:'buffoon-normal',price:4,money:3,pattern:/insuficiente|dinero|saldo/i},{id:'buffoon-normal',price:3,money:20,pattern:/precio|admitid|cobertura/i},{id:'spectral-normal',price:4,money:20,pattern:/Buffoon|Celestial|implementad|admite|cobertura/i}];
  for(const example of rejected){
   const current=await session(fixture({money:example.money})),page=current.page,offer=await add(page,example.id,example.price);before=await raw(page);count=await writes(page);
   await tile(page,offer).locator('.store-extra-inspect').click();const button=page.locator(`[data-pack-confirm="${offer}"]`);

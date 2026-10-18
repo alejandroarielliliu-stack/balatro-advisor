@@ -19,11 +19,13 @@ function cardButton(card:Card){
  if(marks[card.enhancement])button.append(el('small',marks[card.enhancement],'tarot-card-mark'));
  return button;
 }
+export {cardButton as tarotCardButton,cardLabel as tarotCardLabel};
 /** Render only the supplied H2 changes; no Tarot formula or projected score. */
-export function renderTarotOutcome(change:TarotChange){
+export function renderTarotOutcome(change:TarotChange,showLimits=true){
  const host=el('div','','tarot-outcome');
  for(const c of change.cardChanges){const before=c.before,after=c.after;host.append(el('small',`${before.rank}${suits[before.suit]} · ${enhancements[before.enhancement]??before.enhancement} → ${after.rank}${suits[after.suit]} · ${enhancements[after.enhancement]??after.enhancement}`));}
- for(const limitation of change.limitations)host.append(el('small',limitation,'muted'));
+ if(change.cardChanges.length&&value(change.state.observed.jokerContext)?.tarotsUsed?.status!=='known')host.append(el('small','Total de Tarot usados desconocido; Fortune Teller no tiene una bonificación exacta.','notice'));
+ if(showLimits&&change.limitations.length){const details=el('details');details.append(el('summary','Reglas provisionales y límites'));for(const limitation of new Set(change.limitations))details.append(el('small',limitation,'muted'));host.append(details);}
  return host;
 }
 export interface TarotViewOptions {state:GameState|null;writable:boolean;dirty:boolean;confirm:(action:TarotAction)=>string|null;editConsumables:()=>void;controlsChanged:()=>void}
@@ -55,7 +57,7 @@ export function renderTarotView(host:HTMLElement,options:TarotViewOptions){
  const action=():TarotAction=>({type:'use_tarot',instanceId:select.value,targetCardIds:(held??[]).filter(c=>selected.has(c.instanceId)).map(c=>c.instanceId)});
  const update=()=>{
   const item=tarots.find(c=>c.instanceId===select.value),definition=item?tarotDefinition(item.catalogId):undefined;
-  instruction.textContent=definition?`Elige de 1 a ${definition.maxTargets} cartas de tu mano registrada.`:'Este Tarot aún no tiene transformación integrada.';
+  instruction.textContent=definition?definition.maxTargets===1?'Elige 1 carta de tu mano registrada.':`Elige de 1 a ${definition.maxTargets} cartas de tu mano registrada.`:'Este Tarot aún no tiene transformación integrada.';
   targets.replaceChildren();for(const card of held??[]){const button=cardButton(card);button.dataset.tarotTarget=card.instanceId;button.setAttribute('aria-pressed',String(selected.has(card.instanceId)));button.onclick=()=>{if(selected.has(card.instanceId))selected.delete(card.instanceId);else selected.add(card.instanceId);update();};targets.append(button);}
   preview.replaceChildren();if(heldIds===undefined)preview.append(el('small','Registra primero las cartas que tienes en mano.'));
   const result=applyTarotAction(state,action(),{expectedRevision:state.revision,updatedAt:state.updatedAt});

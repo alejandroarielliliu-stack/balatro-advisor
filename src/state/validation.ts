@@ -33,6 +33,16 @@ export function validateCurrentState(input: unknown): Result<GameStateV02> {
     if(state.phaseData.returnTo!=='shop')issue(errors,'$.phaseData.returnTo','conflicting_reference','Un sobre con contexto de tienda debe regresar a shop.');
     if(state.observed.shop.status!=='known'||state.observed.shop.value.shopId!==context.shopId)
       issue(errors,`${path}.shopId`,'conflicting_reference','El contexto del sobre no coincide con la tienda registrada.');
+    if(context.heldCardIds?.status==='known'){
+      const seen=new Set<string>(),deck=state.observed.deck;
+      const ids=deck.status==='known'&&'cards' in deck.value?new Set(deck.value.cards.map(card=>card.instanceId)):undefined;
+      context.heldCardIds.value.forEach((id,index)=>{
+        const cardPath=`${path}.heldCardIds.value[${index}]`;
+        if(seen.has(id))issue(errors,cardPath,'duplicate_id',`Identificador repetido: ${id}.`);
+        if(ids&&!ids.has(id))issue(errors,cardPath,'unknown_reference',`La carta ${id} no existe en el mazo explícito.`);
+        seen.add(id);
+      });
+    }
     const selected=new Set<string>();
     context.selectedEntryIds.forEach((id,index)=>{
       if(selected.has(id))issue(errors,`${path}.selectedEntryIds[${index}]`,'duplicate_id','Una entrada del sobre no puede registrarse dos veces.');

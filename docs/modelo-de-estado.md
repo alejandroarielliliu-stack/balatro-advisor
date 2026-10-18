@@ -171,3 +171,8 @@ El almacenamiento pertenece al navegador/origen/dispositivo, puede borrarse y no
 ## DECK04a: uso dirigido de Tarot
 
 No añade campos ni cambia la versión: reutiliza `in_round.heldCardIds`, cartas por instancia y `jokerContext.consumables`/`tarotsUsed`. La mano observada y el uso son acciones actuales separadas de `confirmed-2`; las proyecciones no sustituyen hechos. Un total desconocido no se completa con cero. El formato histórico 0.1 permanece congelado. [Contrato, validaciones, ejemplos y persistencia](tarot-deck04a.md).
+
+
+## DECK04b: mano y objetivos de Arcana
+
+`PackContext.heldCardIds?: Fact<string[]>` registra únicamente la mano observada del sobre; ausencia en copias0.2 anteriores no crea cartas ni obliga a migrarlas. `PackEntry` añade `kind:tarot` por identidad de catálogo; `observe_pack_hand` y los objetivos opcionales de `choose_pack_item` pertenecen solo al contrato actual. H1 comprueba referencias; H2 exige familia/origen, mano completa conocida y objetivos legales. El estado no contiene un consumible ficticio por una opción usada directamente. [Contrato y ejemplos](arcana-deck04b.md).

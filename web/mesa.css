@@ -583,6 +583,12 @@ dialog[open] { animation: panel-arrival .14s ease-out; }
 .tarot-preview summary {min-height:32px;padding:5px 0;}
 .tarot-outcome {display:grid;gap:6px;}
 .tarot-outcome small {display:block;margin:0;}
+.tarot-outcome details {margin:4px 0;padding:0;border:0;}
+.tarot-outcome summary {min-height:30px;padding:4px 0;font-size:11px;}
 .tarot-panel .tarot-card-mark {position:absolute;bottom:4px;left:4px;font-size:9px;line-height:1;color:#214038;}
+.pack-panel .tarot-card-mark {position:absolute;bottom:4px;left:4px;font-size:9px;line-height:1;color:#214038;}
+.pack-choice-info .tarot-targets {gap:8px;padding:8px 3px;}
+.pack-choice-info .tarot-card {width:42px;min-height:60px;height:60px;}
+.pack-choice-info .tarot-outcome {font-size:12px;}
 .tarot-panel #tarot-use {margin-bottom:10px;}
 @media(max-width:520px){.tarot-panel{padding:12px;}.tarot-panel>.section-title h2{font-size:24px;}.tarot-card-picker{gap:8px;}.tarot-panel #tarot-use{width:100%;}}

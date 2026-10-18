@@ -66,7 +66,7 @@ test('SHOP02b DEC00 modo estricto conserva límites de evidencia sin resultados 
 });
 
 test('SHOP02b DEC00 otro pack, descuento e insuficiencia son limitaciones locales y no bloquean compras de comodines',()=>{
- const unsupported=fixture(),unsupportedShop=snapshot(unsupported);shelf(unsupported).packOffers![0]!.catalogId='arcana-normal';unsupportedShop.packs[0]!.family='arcana';
+ const unsupported=fixture(),unsupportedShop=snapshot(unsupported);shelf(unsupported).packOffers![0]!.catalogId='spectral-normal';unsupportedShop.packs[0]!.family='spectral';
  const discounted=fixture(),discountedShop=snapshot(discounted);shelf(discounted).packOffers![0]!.price=known(3);discountedShop.packs[0]!.price=3;
  const poor=fixture();poor.observed.money=known(5);
  for(const [state,shop,index,error]of [[unsupported,unsupportedShop,0,'unsupported_pack'],[discounted,discountedShop,0,'unsupported_price'],[poor,snapshot(poor),1,'insufficient_money']] as const){

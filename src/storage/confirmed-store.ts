@@ -131,7 +131,7 @@ export function createConfirmedStore(getStorage:()=>StoragePort){
       const a=r.action;
       const changed=a.type==='buy_voucher'?applyVoucherPurchase(before,a,mutation,options)
         :a.type==='observe_round_hand'||a.type==='use_tarot'?applyTarotAction(before,a,mutation,options)
-        :a.type==='buy_pack'||a.type==='observe_pack'||a.type==='choose_pack_item'||a.type==='skip_open_pack'||a.type==='sell_pack_joker'
+        :a.type==='buy_pack'||a.type==='observe_pack'||a.type==='observe_pack_hand'||a.type==='choose_pack_item'||a.type==='skip_open_pack'||a.type==='sell_pack_joker'
           ?applyPackAction(before,a,mutation,options):applyShopAction(before,a,mutation,options);
       if(!changed.ok)return {ok:false,errors:changed.errors};
       const after=changed.value.state;
@@ -143,10 +143,9 @@ export function createConfirmedStore(getStorage:()=>StoragePort){
         if(m.status!=='known'||j.status!=='known'||s.status!=='known'||r.observedAfter.money!==m.value || !equal(r.observedAfter.jokerIds,j.value.map(x=>x.instanceId)) || !equal(r.observedAfter.offerIds,s.value.cardOffers.map(x=>x.offerId)) || r.observedAfter.voucherOfferIds!==undefined&&!equal(r.observedAfter.voucherOfferIds,after.schemaVersion==='0.2'&&after.observed.shop.status==='known'?(after.observed.shop.value.voucherOffers??[]).map(x=>x.offerId):[]) || r.observedAfter.voucherIds!==undefined&&!equal(r.observedAfter.voucherIds,after.observed.outOfScope.status==='known'?after.observed.outOfScope.value.vouchers:[]) || r.observedAfter.packOfferIds!==undefined&&!equal(r.observedAfter.packOfferIds,after.schemaVersion==='0.2'&&after.observed.shop.status==='known'?(after.observed.shop.value.packOffers??[]).map(x=>x.offerId):[]) || r.observedAfter.phase!==undefined&&r.observedAfter.phase!==after.phase)
           return issue('model_discrepancy','Lo observado no coincide con H2. No se guardó la transacción: registra una corrección manual con los datos reales y el motivo.');
       }
-      const tarotAction=a.type==='observe_round_hand'||a.type==='use_tarot';
-      const limitations=tarotAction&&'limitations' in changed.value?changed.value.limitations:[];
-      const reason=a.type==='observe_round_hand'
-        ?'El usuario confirmó las cartas visibles de la mano. Registrar esta observación no consume una jugada ni ejecuta robos.'
+      const limitations='limitations' in changed.value?changed.value.limitations:[];
+      const reason=a.type==='observe_round_hand'||a.type==='observe_pack_hand'
+        ?`El usuario confirmó las cartas visibles de la mano${a.type==='observe_pack_hand'?' del sobre':''}. Registrar esta observación no consume una jugada ni ejecuta robos.`
         :'El usuario confirmó que realizó esta acción. Efectos calculados bajo el modelo provisional, no observación validada de las reglas.';
       return append(base.value,{id:r.confirmationId,kind:'action',before,after,action:r.action,reason:[reason,...limitations].join(' · '),targetEntryId:null,evidence:changed.evidence,trace:changed.trace});
     },

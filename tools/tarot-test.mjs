@@ -85,7 +85,7 @@ try{
  assert.deepEqual(await p.locator('[data-tarot-target]').evaluateAll(nodes=>nodes.map(node=>node.dataset.tarotTarget)),['8S','8H','KS']);
  assert.equal(await target(p,'2C').count(),0);assert.equal(await p.locator('#tarot-use').isDisabled(),true);
  await target(p,'8S').click();assert.match(await p.locator('.tarot-preview').innerText(),/Bonificación\s*→\s*8♠\s*·\s*Acero/);
- await p.locator('.tarot-preview details summary').click();assert.match(await p.locator('.tarot-preview').innerText(),/heurístico|composición/i);assert.doesNotMatch(await p.locator('.tarot-preview').innerText(),/\d\s*%/);
+ await p.locator('.tarot-preview').getByText('Efecto sobre tu composición',{exact:true}).click();assert.match(await p.locator('.tarot-preview').innerText(),/heurístico|composición/i);assert.doesNotMatch(await p.locator('.tarot-preview').innerText(),/\d\s*%/);
  await p.locator('#tarot-consumable').selectOption('owned-empress');assert.equal(await target(p,'8S').getAttribute('aria-pressed'),'false');assert.equal(await p.locator('#tarot-use').isDisabled(),true);
  await p.locator('#tarot-consumable').selectOption('owned-chariot');await target(p,'8S').click();assert.equal(await raw(p),before);assert.equal(await writes(p),count);
  await panel(p).screenshot({path:dir+'/desktop-preview.png'});
@@ -123,7 +123,7 @@ try{
  // 6. Missing historical totals affect that total only, not the independent
  // card transformation. The Club's unimplemented debuff refresh blocks use,
  // while recording a hand remains available and does not assert a refresh.
- const missing=await session(fixture({historyKnown:false})),u=missing.page;await target(u,'8S').click();assert.match(await u.locator('.tarot-preview').innerText(),/total previo.*desconocido|sigue desconocido/i);await u.locator('#tarot-use').click();await finish(u);saved=await record(u);assert.deepEqual(saved.state.observed.jokerContext.value.tarotsUsed,unknown);assert.equal(actual(saved.state).enhancement,'steel');await missing.context.close();
+ const missing=await session(fixture({historyKnown:false})),u=missing.page;await target(u,'8S').click();assert.match(await u.locator('.tarot-preview').innerText(),/total previo.*desconocido|sigue desconocido|total de Tarot usados desconocido/i);await u.locator('#tarot-use').click();await finish(u);saved=await record(u);assert.deepEqual(saved.state.observed.jokerContext.value.tarotsUsed,unknown);assert.equal(actual(saved.state).enhancement,'steel');await missing.context.close();
  const club=await session(fixture({held:null,boss:true})),b=club.page;for(const id of ['8S','8H','KS'])await b.locator(`[data-tarot-hand-card="${id}"]`).click();assert.equal(await b.locator('#tarot-observe-hand').isEnabled(),true);await b.locator('#tarot-observe-hand').click();await finish(b);
  before=await raw(b);await target(b,'8S').click();assert.equal(await b.locator('#tarot-use').isDisabled(),true);assert.match(await b.locator('.tarot-preview').innerText(),/jefe.*debilitamiento|falta implementar/i);assert.equal(await raw(b),before);assert.equal((await record(b)).history[0].action.type,'observe_round_hand');
  pass('unknown-history-and-boss-limit-only-affected-operation',{unknownHistoryPreserved:true,independentSteel:true,clubHandObservation:true,clubUseAllowed:false},{unknownHistoryPreserved:true,independentSteel:true,clubHandObservation:true,clubUseAllowed:false});await club.context.close();
