@@ -11,6 +11,7 @@ import {counterSpecs} from '../catalog/joker-counters.js';
 import {immediateConsequences} from '../advisor/consequences.js';
 import {renderImmediateConsequences} from './consequences-view.js';
 import {jokerArt} from './collection.js';
+import {mountPackComparison} from './pack-choice-view.js';
 
 const el=<K extends keyof HTMLElementTagNameMap>(tag:K,text='',cls='')=>{const e=document.createElement(tag);e.textContent=text;e.className=cls;return e;};
 const known=<T>(value:T):Fact<T>=>({status:'known',source:'manual',value});
@@ -82,12 +83,14 @@ export function renderPackView(host:HTMLElement,options:PackViewOptions){
  if(ctx.selectedEntryIds.length===0){buildForm();host.append(form);if(ctx.contents.status==='known'){const edit=el('button','Corregir opciones','secondary');edit.type='button';edit.id='pack-edit-contents';edit.onclick=()=>{form.hidden=!form.hidden;options.controlsChanged();};toolbar.append(edit);}}
  if(ctx.contents.status==='unknown')host.append(el('small','Transcribe las opciones mostradas por Balatro. El asesor no genera el contenido.','muted'));
  else{
+  const comparison=mountPackComparison(host,state);
   const choices=el('div','','pack-choice-grid');
   for(const entry of ctx.contents.value){
    const card=el('article','','pack-choice');card.dataset.packEntry=entry.entryId;const selected=ctx.selectedEntryIds.includes(entry.entryId);card.dataset.selected=String(selected);
    if(entry.kind==='joker')card.append(jokerArt(ALL_JOKER_FACTS[entry.joker.catalogId]?.artId??entry.joker.catalogId,packEntryLabel(entry)));else card.append(el('span','✦','pack-planet-art'));
    const info=el('div','','pack-choice-info');info.append(el('h3',packEntryLabel(entry)));
    if(selected)info.append(el('small','Elegido'));else{
+    const assessment=el('div','','pack-choice-assessment');comparison.addEntry(entry.entryId,assessment);info.append(assessment);
     const action:PackAction={type:'choose_pack_item',entryId:entry.entryId},result=probe(action),button=write(el('button',entry.kind==='planet'?'Usé esta carta':'Elegí esta carta'),!result.ok);button.dataset.packChoose=entry.entryId;button.onclick=()=>request(action);
     if(result.ok){
      info.append(renderPackOutcome(state,result.value.state));

@@ -57,7 +57,9 @@
     "demo:vouchers": "npm run build && node dist/src/demo-vouchers.js",
     "test:voucher-shop": "npm run build && node tools/voucher-shop-test.mjs",
     "demo:packs": "npm run build && node dist/src/demo-packs.js",
-    "test:pack-shop": "npm run build && node tools/pack-shop-test.mjs"
+    "test:pack-shop": "npm run build && node tools/pack-shop-test.mjs",
+    "demo:pack-choices": "npm run build && node dist/src/demo-pack-choices.js",
+    "test:pack-choices": "npm run build && node tools/pack-choices-test.mjs"
   },
   "devDependencies": {
     "@types/node": "24.19.1",
