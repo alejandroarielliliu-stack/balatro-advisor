@@ -55,6 +55,23 @@ function preparation(state:GameState,profile:FitProfile,instance:JokerInstance|u
   const count=owned.filter(j=>artId(j.catalogId)==='j_stencil').length+(instance?0:1),occupied=owned.length+(instance?0:1),factor=slots-occupied+count;
   return factor>1?ready(`Stencil tiene soporte de ${slots-occupied} huecos y ${count} Stencil; llenar huecos lo reduce.`):absent('Sin huecos útiles: Stencil no multiplica por encima de ×1.');
  }
+ if(id==='j_riff_raff'){
+  const slots=v(state.observed.resources.jokerSlots);
+  if(!owned||slots===undefined)return missing('Falta inventario o capacidad para comprobar los huecos después de añadir Riff-Raff.');
+  // H2's capacity already includes Negative's extra slot. Every physical card
+  // occupies one place; excluding Negative again would count its slot twice.
+  const occupied=owned.length+(instance?0:1),room=slots-occupied,maximum=Math.min(2,room);
+  return room<=0?absent(`Sin huecos ${instance?'en el inventario actual':'tras esta adquisición'}: Riff-Raff necesita liberar espacio antes de activarse. No se supone una venta ni una destrucción futura.`):
+   possible(`Hasta ${maximum} ${maximum===1?'comodín común cabría':'comodines comunes cabrían'} al seleccionar la ciega con este inventario. Su identidad y utilidad siguen desconocidas; no son dinero ni puntuación garantizados.`);
+ }
+ if(id==='j_credit_card'){
+  const money=v(state.observed.money);
+  if(money===undefined)return missing('Falta el saldo para conocer la necesidad de crédito; Credit Card no añade dinero ni ingresos.');
+  const inUse=!!instance&&money<0;
+  const p=inUse?ready(`Saldo $${money}: el crédito poseído respalda deuda ya registrada. No es ingreso ni saldo disponible.`):
+   possible(`Saldo $${money}: Credit Card permite hasta $20 de deuda adicional, pero falta demostrar una compra útil que necesite esa financiación. No añade dinero ni puntuación.`);
+  p.signal={id:'credit-need',kind:inUse?'fact':'heuristic',text:p.reason};return p;
+ }
  if(id==='j_baseball'){
   if(!owned)return missing('Falta el inventario para contar comodines inusuales.');
   const n=owned.filter(j=>ALL_JOKER_FACTS[j.catalogId]?.rarity===2).length;
@@ -183,7 +200,9 @@ function preparation(state:GameState,profile:FitProfile,instance:JokerInstance|u
  }
 }
 
-function purchaseFit(state:GameState,id:string,options:FitOptions):QuickFit['purchase']&{projectedState?:GameState} {
+/** Shared H2 projection for a validated state and canonical engine ID. It never
+ * writes the original, confirms an action or substitutes arithmetic for H2. */
+export function projectJokerPurchase(state:GameState,id:string,options:FitOptions):QuickFit['purchase']&{projectedState?:GameState} {
  const none:QuickFit['purchase']={status:'not-requested',errors:[],limitations:[]};if(!options.purchase)return none;
  const definition=jokerDefinition(id);if(!definition)return {status:'unknown',errors:[],limitations:['La transacción de este efecto queda fuera de H2.']};
  const copy=structuredClone(state);let instanceId='hypothetical:quick-fit';while(v(copy.observed.jokers)?.some(j=>j.instanceId===instanceId))instanceId='_'+instanceId;
@@ -218,7 +237,7 @@ export function evaluateJokerFit(input:GameState,catalogId:string,options:FitOpt
  const ante=options.ante??v(state.observed.nextBlind)?.ante;
  const index=ante===undefined||!Number.isInteger(ante)||ante<1||ante>8?-1:ante<=2?0:ante<=5?1:2;
  result.stage=index===0?'early':index===1?'middle':index===2?'late':'unknown';
- const {projectedState,...purchase}=purchaseFit(state,key,options);result.purchase=purchase;
+ const {projectedState,...purchase}=projectJokerPurchase(state,key,options);result.purchase=purchase;
  const effective=structuredClone(state);if(options.replacementId&&owned)effective.observed.jokers=k(owned.filter(j=>j.instanceId!==options.replacementId));
  if(projectedState){effective.observed.money=structuredClone(projectedState.observed.money);effective.observed.resources=structuredClone(projectedState.observed.resources);effective.observed.deck=structuredClone(projectedState.observed.deck);}
  const p=preparation(effective,profile,instance,options);result.readiness=p.status;if(p.signal)result.signals.push(p.signal);

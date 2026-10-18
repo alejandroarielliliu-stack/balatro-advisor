@@ -1,0 +1,38 @@
+{
+  "schemaVersion": "eval01-freeze-1",
+  "frozenOn": "2026-10-18",
+  "authorRole": "independent-fixture-author",
+  "policyImplementationRead": false,
+  "advisorOutputsRead": false,
+  "reservedMayOpenAfter": "Implementation owner records policy freeze; development adjustments complete.",
+  "files": [
+    {
+      "path": "evaluation/fixtures/eval01-development.json",
+      "sha256": "d1654575f6ff4db3e2eaa9befb7fd6e2704437ea7539e9e1790c37fbd164781f",
+      "cases": 14
+    },
+    {
+      "path": "evaluation/fixtures/eval01-reserved.json",
+      "sha256": "e3f1d079cba0461a63748e0f865ab666f654f279cd6252101179b0fec740c34c",
+      "cases": 7
+    }
+  ],
+  "amendments": [
+    {
+      "beforeAnyAdvisorOutputs": true,
+      "reason": "Pre-baseline contract review: H1 cannot represent partial-summary. Partial cases are coverage checks; sidecar material and overlap bounds are audit-only, never policy inputs or a strategic pass.",
+      "previousFiles": [
+        {
+          "path": "evaluation/fixtures/eval01-development.json",
+          "sha256": "6c21f74263f30a35e00cb2a0d76855cc813fae9dd4f07ba4df94b79f6bfd8d0e",
+          "cases": 14
+        },
+        {
+          "path": "evaluation/fixtures/eval01-reserved.json",
+          "sha256": "25f6480b885f67cfa3e2d3197272cba87718bcbd060aa714e2c0983bae810827",
+          "cases": 7
+        }
+      ]
+    }
+  ]
+}

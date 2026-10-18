@@ -1,0 +1,534 @@
+{
+  "contract": "eval01-human-review-1",
+  "input": "docs/evidencia/eval01/development.json",
+  "inputSha256": "8cf50128339725c698cb1dae2d26b94119f5403461ffc66d5343ec5ad6863424",
+  "fixtureHash": "d1654575f6ff4db3e2eaa9befb7fd6e2704437ea7539e9e1790c37fbd164781f",
+  "matcherVersion": "eval01-semantic-2",
+  "policySourceHashes": {
+    "src/advisor/advisor.ts": "741ba1510385b8bc8deae9a8678638028af5c52147c0df254397c1b0ef259669",
+    "src/advisor/arcana-choices.ts": "b7761a8ce403ea95a3639bd9907827f097cad5bfcdb6b3cee338b8103a9f4fb3",
+    "src/advisor/blind-decision.ts": "79475bc96a3468fbc906b0c5e7f823eb3d398c3a69235ae28b010acc108c9700",
+    "src/advisor/composition-policy.ts": "94a1ad53cc59104b263247afd8f14c9f52b1904d0dead9d6ceee40d0bb869610",
+    "src/advisor/composition-signals.ts": "79d2b1cd5d29cfc7eff39a12478a5072cabe40fac7eaea24a999572021044ce1",
+    "src/advisor/composition.ts": "dee6797a8093f3b1f46390df0acf7b26c177bb781555b6f160d6b096ce866f90",
+    "src/advisor/consequences.ts": "9ee719d8d730bafdfca086cd3b424a7c0e5ba549a6140d1fc1fbaf11d4c9ef2e",
+    "src/advisor/decision.ts": "ef1ef8be5b266cc1c073e74bb66e01213988961ddb81f9eb09b8d0c7546adaec",
+    "src/advisor/fit-index.ts": "7460524f378cfae0bf14d4ea186cddddc7d12bf7164dac7b1d9dbaabd5d75e0f",
+    "src/advisor/fit-profiles.ts": "bf63c9d8e4e91ca3301e8eaac2afceced9a18a28f7858cc69e4530100f6a8acb",
+    "src/advisor/horizon-advisor.ts": "9c09afc4592d2fa1d0f6dcb85424e151c8d73c695011eacc82efec448afac4e4",
+    "src/advisor/pack-choices.ts": "eec253ec70152bc33c65567c04254da12f5a8e12307b8b6717560523dda95dec",
+    "src/advisor/policy.ts": "adcdf535d7a3311407ccc33d5ece3c65df1317ac936ee63e721bbe2cf127d22b",
+    "src/advisor/quick-fit.ts": "245e2740b4584cbac8f1a9858d5d4a3490cf9943c9b2ca772f670b6755f95e43",
+    "src/advisor/quick-shop-policy.ts": "7d4d13094d9db2782f38543e1f9d44d71ffeaceeb27c7aa147ddbc678e64f8c0",
+    "src/advisor/ratings.ts": "9e1746d2e87b02a484aafb8e9d5fd5a2f08dd09c7470ce368c009b471f47c3aa",
+    "src/advisor/shop-context.ts": "edc225b4d18c5419ec9eded54e679bca8f0d18dceaffcaedbd6096fbe6690496",
+    "src/catalog/advanced-jokers.ts": "ee1cd586d7f5eeeca5fd3e6b05fae0ca247394b9e9f0e35c8e35846ce4520541",
+    "src/catalog/all-joker-facts.ts": "a152c501c7daf7206b230bd5866601c2b72a1d62c35b387080e64c71b6e34915",
+    "src/catalog/blinds.ts": "bb08f9e743fee2819355a9b9708c73fa71dee2611349fe252146d37087629146",
+    "src/catalog/booster-catalog.ts": "283669dd3268e56f2684a7b972d6bed63d6085c71e258cc272810d8d27eeb8be",
+    "src/catalog/capabilities.ts": "580dcdc8c52030823ef0cbdb2e5f8dc8d5eb439ba09163e581b0d9586969aba3",
+    "src/catalog/collection.ts": "2ec90d00c97bf02d461ce383c3d6e81189f8f14c11a99a2db36df1b529f78885",
+    "src/catalog/decks.ts": "0122bd962cf71a7ab4fa3326ff08e9ce1a5e523243c8f803db29a1d90edc4a15",
+    "src/catalog/economic-jokers.ts": "306214b79d12df48bc6f592822d9adf68c5de168a8f05f3bbc9f34e0537dc7d1",
+    "src/catalog/economy-vouchers.ts": "071b77264581ca0e560d1b93cd6fb443ac624d0c05a31f7280e69562d6d15875",
+    "src/catalog/generation-jokers.ts": "00cdc9dbcb60b0e444dcfa09b581947c57b6f0edda8ce05e107a0ef327631f66",
+    "src/catalog/history-jokers.ts": "3ed1cfb5e139b1cb9781ae2620f23dab38aa5166232edb6d205392a966bd77d7",
+    "src/catalog/initial.ts": "5d3e697ea1959425c2c1aa3829d131e0242da71a02e4abd8223b6166c55b4d31",
+    "src/catalog/joker-counters.ts": "f01f91ccfe3d0042234de1ecac5336c699aa94595435098a88a8ce4423ccf2ac",
+    "src/catalog/joker-resources.ts": "008eae8ec02e2085b4ae51e68fef69d3ec1a450592d8be1a39366db36f919457",
+    "src/catalog/random-jokers.ts": "933902aa9b32286d911b14a46690b3ef7a944b239019723b76ad5b292257ef02",
+    "src/catalog/simple-jokers.ts": "2f4340248b422ea3ce10ebca5885abb524b0c8b1a35ed2c909c462fb28125936",
+    "src/catalog/synergies.ts": "25f5096c5ad5e2f5dcc006a1e84aeb78c5c4d5fd15cccc8d00486940cc0879c7",
+    "src/catalog/tag-effects.ts": "b65019333d3a581b693562514c106974f08720ffb89cf3a92ed158abd806b6eb",
+    "src/catalog/tags.ts": "7d38d9ddd5156528712bd6ceec7195a0168a6d429c6212a07b073b55c7e907fd",
+    "src/catalog/voucher-catalog.ts": "6620b6328b84465085757b4858863d84d1a9c85ba1776bd77495ffa71bc86631",
+    "src/catalog/vouchers.ts": "b4ff65c5cc95e4abd5347c097dee5f385747473d1eea8140d7db574ecd0e35ab",
+    "src/demo-advisor.ts": "9737434e037e89dfe465fdb10cc7db3e22d362794f553f6e4ef2ddf3ed333b0d",
+    "src/demo-arcana-choices.ts": "e6d6f42f0bc64110b14f7685db774116bdab40f95edbc584ac50792dc8fc1a32",
+    "src/demo-arcana.ts": "500b688da0af25a590d368598b5befd0b3299ece8a6afe957d7854d86d0cd07c",
+    "src/demo-blind-decision.ts": "18444bfa4239b88820c72d921ab37f46860b2ce4d30b3ca83d9db38157fd43d8",
+    "src/demo-bound.ts": "1fa4f27957d3b5d54ceca255699b453a1ad62958bf6ea23262c695b5040cba4c",
+    "src/demo-comparison.ts": "f8e7340676a79d8dc7091078b9c93938621620542df2556ca81e2856e2907d6b",
+    "src/demo-confirmation.ts": "57024ed3e919df1d3b3f4d55b8029f731077120c329493a360d5886cf6f54e01",
+    "src/demo-consequences.ts": "7549143b00ce51980b8dd41e24d0519e1b144f5bd6b20ae71370b6d138b9c5f4",
+    "src/demo-decision.ts": "4aef0e9cdccfb6b6d3486c1e45e920a1ab88c75e1cfc8a641766036bd1a8d4f3",
+    "src/demo-horizon.ts": "c1973594e88bd0d447ba4679f91f36b718392eed9b27a4e6613f1c1225b749a4",
+    "src/demo-pack-choices.ts": "7aead2139c86b85fa4e791fbe3fc9157ef7411ba1aa9b4b4b014eaf0ce715a31",
+    "src/demo-packs.ts": "77e4028a5370b7c2b26746366a022100e59957506962f9e6664eac2cfbcd761f",
+    "src/demo-run-migration.ts": "836134a7f60ca22dfc01cde6af1e0991897fe578ce68905da2f9cacb0a9e9425",
+    "src/demo-run-progress.ts": "d3be345d1ca8a7da54d49daa934ca90876b1f6d0ff9046b51091b4b0891da9c5",
+    "src/demo-sales.ts": "ed6b39b63011dae5e23f143e623a4584289527d3f614905cc635067ffa8091b0",
+    "src/demo-scenarios.ts": "58cd0dfc739e81360ca038f73d58e7ff87e8e53d6d1d78c100b0145e0150f1ca",
+    "src/demo-shop-session.ts": "b1408ddcd36844745914d90f07b5a77bdc04621dcad1b3ad3730c8c02b2b893c",
+    "src/demo-tags.ts": "d5cf7e95dfed146b87844174c7d11f95918481d8cc78d5e3453fa3d02ec15db2",
+    "src/demo-tarot-money.ts": "45125ae98d1e0212341eba6b374c0fc910591900dc99e562eca1d9414ba4f47a",
+    "src/demo-tarot.ts": "ff59edf6ca775b6b524890650bed7930e54a193e3b540349a997bd4bd3d78f46",
+    "src/demo-vouchers.ts": "9e2c1356a8f9de6e9e8e0e1cbbd26dacfac80539043bd5d343a4d612fb2429cb",
+    "src/demo.ts": "ca6a4f7f032bfdc79981f0d066ea830f62d44d0be5c8dff906465abcd0a907ce",
+    "src/evaluation/comparison.ts": "1336279716dc751db9f71ebe69c79026f19b0006d804a40d0f675633f0fe9755",
+    "src/evaluation/horizon-comparison.ts": "2b888641f0ec8d452a5bf0b65c3bc430aea59acfe383cad05c8d5e508012e4c7",
+    "src/evaluation/horizon.ts": "646347a7a6f0fd1a0247476e815f2300a51cebec9b8ea055c1f7e3727a199f81",
+    "src/evaluation/joker-preview.ts": "e16a10c72b187cf3fec38b269b3a313a2dc2f6f9608429ad24c587ad5b53a902",
+    "src/evaluation/plan.ts": "594fdc5d41b8d4fe71517dd38e3949d1526f370da26e00caf795c51e14307125",
+    "src/evaluation/shop-bounds.ts": "171250882a87f16d26ac7bcd7c7d4c1a3edba141631c87519b0a1e504b8f4b9c",
+    "src/evaluation/shop-candidates.ts": "c4a91b5e51ed9e672e5b114d107016457094cf7ad558fd298dfbbdc71536dcfc",
+    "src/index.ts": "cb535fdd2fb7b3f63ad33eab84234a150a0d8e2fb1be86dcf72da3877dff5dcc",
+    "src/reference/efhiii-scoring.ts": "570c384359ad84967e596b13e8e12a8168b76108cbe0a0f4005459e3413f0bf1",
+    "src/reference/vendor/efhiii-sim.ts": "4619a959e3cc456e75112480cc6c12e2d8d1a65552e453f5dd02b441167e9430",
+    "src/rules/core.ts": "74c44d6481bed19cc596f2209fe68762744b765bb35d5d2b108a32fda70ea765",
+    "src/rules/economic-jokers.ts": "80d49d5d093e557f31a4c3e3e047c9ed262381fe87c953f20b88ccfd99ba8a46",
+    "src/rules/economy.ts": "17e1ff08a016c3979847209524373b8985b69996acd3209455200aca9444dd87",
+    "src/rules/effect-choices.ts": "bef990d69467f11b17a9fe15997cd6f27a9b7364953a2fc741d597d82d2d9ddd",
+    "src/rules/engine-evidence.ts": "50ef9ab27b888ad8db59823846ec48062df1444bc14a80ed156233b5ccddc2b7",
+    "src/rules/evidence.ts": "1ca70cb0ed022b4a7e95fe80fb826a20bfc38b6cf5a2038c9a13de61e1d64a48",
+    "src/rules/fixed-main-mult.ts": "7ae80ff49bbcb5d854a59f03f18bbecf51c45b5ca4a48664ebd4f3190d26cb05",
+    "src/rules/full-events.ts": "945779f0366ff7cb8b55c52541a4e9ca3d535544272acdce3693db864a0b0589",
+    "src/rules/full-joker-contract.ts": "457bc75f4a594a4fbe068ce48edc5f25ce6d48aacc91db4aa0a615a6dfdba69b",
+    "src/rules/generation-jokers.ts": "eecc6e7f9791b8f5b88d04f91ffca4cfefba0ddf036ffd536f60132507fa7b1d",
+    "src/rules/hand-patterns.ts": "8cfb4cd5cee90c0881e0102f22dc22437e4bfa4f3bc38cecfedb30fb657d6e3d",
+    "src/rules/history-jokers.ts": "93922cd9b2920b52818996b825af83dfcd73c3e492357f5361355e0e535a7784",
+    "src/rules/joker-context.ts": "b6751b7d608dfebbf9631b30ac6e28fbec194755f0acb9b5af2a99a1e3967b0f",
+    "src/rules/joker-counters.ts": "1394ce875bda6ee184cf858bb17f52569acd6c0b16d98f9f2260ba00848f6701",
+    "src/rules/pack-shop.ts": "b096e8a699ca0df37103fb081070b40872b49311a354c2773622ee4e3c9a252e",
+    "src/rules/planet.ts": "0102774ceb5c5dd76937557e1d75904caf5829fe05099c07042250720e46f854",
+    "src/rules/random-jokers.ts": "590bd8b34407996cadc67cddd8f137a406a5c041d8e656f66e448b4e21bf8382",
+    "src/rules/round.ts": "725401f7e27f1a317f2b181937eef1f5827baa9f2b0049f62aa77d1fec58e013",
+    "src/rules/scoring.ts": "a18595b9abd475cb27e467fc2c658e0c33cd1852ce3ef02ccf3547c90bd92fc8",
+    "src/rules/shop.ts": "9ff8992d161c6a8a3349e37892346a3498e3a729864c1fc3171d1639d2c3bd98",
+    "src/rules/simple-jokers.ts": "d49be153c202b29cc98fb17155b29bb5bd91ea49d6fa1601d0ac01cafc510dc9",
+    "src/rules/tags.ts": "b2c28fbde319cbe82d44aa9c809c2060d6b6ec6c5c4c1b449a1a6605eedd155d",
+    "src/rules/tarot-money.ts": "96b6db8d0a3b49283194f1fd06febcc6035055321e7ae20861cd78c33308123d",
+    "src/rules/tarot.ts": "6fbb8f8013d7167e937eac3dc2c57288633ecabedef7f93be223adff39bf5328",
+    "src/rules/upper-bound.ts": "d6828618eb3e65995fbdb7280335b39a45656d921a80bdbf5d62936ce86eec14",
+    "src/rules/voucher-shop.ts": "831d633ff7b853821081ebd08946c793356fdc691964f09d092ddecb00356dfa",
+    "src/run/progress.ts": "219659d81b7b62fee81a1884f388b3c0d05e3e118296e3e57c4f2dbcc49f72c0",
+    "src/run/start.ts": "338d0bbea262cfead3d491a44024082716c5c2ef6d548ca2ac1818f4eed4dd94",
+    "src/server.ts": "b5234ef943d8a446bd9910e7042ed36a189970130d7ab47554dcdbd4bfdf678d",
+    "src/state/effect-choices.ts": "ff7a60fa60bbf655d7d79a8e65b8a72d11fa0d22f3bcde5518dc58ffa6ad6779",
+    "src/state/inventory-changes.ts": "39c271c44e6117d81f80f3d860e579e3da502f16df1f9a9d0d3d5a0610c28df3",
+    "src/state/legacy-model.ts": "3099823c84777ddf7db7fc59b827b110b6a5a3853dff4da68d5d4331023cc618",
+    "src/state/legacy-validation.ts": "a800e6fdca3c4e9c6a5e1cf048b63d06c86fa6055065cbb854a3a04785997ec0",
+    "src/state/migration.ts": "99a10474eb2cae062ed3e7940edb71f4dc181a53cd02a22045db8b001d901b88",
+    "src/state/model.ts": "74ae383f6fa1063f6ff6feafc1eb13815fece725d933483045f007f32b338ffa",
+    "src/state/observations.ts": "6d342a3d449d2bb48b890608bd256eff39a9e155b6a051a3a04cf4caa98e1239",
+    "src/state/observed-details.ts": "9cf6ff83b96f98c1bbcbd75690180f3feca231239fdf452592521675b357e17c",
+    "src/state/pack-contract.ts": "09535e85e5bea9b12b16ece0a2922aaec32d39f08c632255da1ac40e60ca6ff2",
+    "src/state/schema.ts": "b02a375f1715350f1f998544976c4e27149d19902d1422a02162003cf5e39885",
+    "src/state/tarot-contract.ts": "9f46bfb7933f914f573039c2a80df0dc2af65ac18e1b4a2a8888511539427586",
+    "src/state/validation.ts": "e73c6cdbc16121160715950c6fe9feccb9dd2ece2196b202c4369fa121b8e35b",
+    "src/storage/confirmed-record.ts": "ea7671758070c7d91258496d259512ed32c87e8368c648fabfcebe605306f281",
+    "src/storage/confirmed-store.ts": "5387ca14c10638b24f7825ed523ee7f99f2e4ca3ea1ed7c51df27e2e8ad01f29",
+    "src/storage/record-migration.ts": "d424ac5a2eee740a5366cf38babf4e4021ea49c979c8d3b9b5aaa16940a24f8e",
+    "src/storage/shop-session.ts": "ccb393c614f72e796842a3c2b59e12d87bcd5b2b431689793f48392a153210b9",
+    "src/storage/state-store.ts": "8d13f13a62f5dc49ca7726861d344a0f728812ec4e324d8ed371b88ece8ec76c",
+    "src/ui/app.ts": "7e23d16964718244cc15cdcedcfb14dd56c462c7c8c6b801fef7479da95d90dc",
+    "src/ui/arcana-choice-view.ts": "c7546f8f553132cd9e3db3be1cc01095c257b9f9e355463bcdd84a9dabbca93a",
+    "src/ui/blind-decision-view.ts": "34121de8c19c28bceacff5be8a71083ad3f5f1dda7892cb5fb051848701d98a8",
+    "src/ui/collection.ts": "d8a7bbca456ef5c977079ef8a3803ee4cbb7e1da515ded70afc485071c356943",
+    "src/ui/composition-view.ts": "6f4d39750e7a6e2748fa27e6b737d0c37141f83c8ab6974c746d719a34b9d519",
+    "src/ui/consequences-view.ts": "2a303cb906af286b72e6b76db4eea4b9b6c2a486a6f4493a582cd6b101ded4e4",
+    "src/ui/consumable-labels.ts": "c6fed9b38d3f67d2f47e13e54f5a8600b4d80d342b5cbc1085c1af9813b4b358",
+    "src/ui/deck-editor.ts": "2f782fa9ce470e2beccce26ecc6dff1a8309397f1109a268545f8f08289cc226",
+    "src/ui/effect-choices.ts": "a5c8f2a82baa73000a67f3431169c2b9602f4a0acc38d508bb264b0cc0bc1a29",
+    "src/ui/full-joker-data.ts": "ad4415987e421fee0c1e504e4314aa88d7caf842d208af8e44f2b043d73121b7",
+    "src/ui/horizon-ui.ts": "85b81223276f40bcc0cb6efd10d5ce831c912375a510e1c701be8267ab469bd2",
+    "src/ui/inventory-changes-view.ts": "52aeae86777ed10d7bf30565261f37cad2a73c693b37ca251067c70298dd8163",
+    "src/ui/joker-bay.ts": "033fd369f45a958ef3f8bc05695f3ba5de77a20ddfe00fc0de8d431affda26f6",
+    "src/ui/joker-candidates.ts": "cf649525e29807f8c037f474aa0d34dc8f5bec70c5a0d192a033a5cea8059b8e",
+    "src/ui/joker-counters.ts": "4e5bfaa3401a914a0bb25d36d28a6417a85ef280178262a6442f35c2380ca113",
+    "src/ui/joker-drag.ts": "042e7f36d9d62cf01992c40b8a5f7b41dde5df26202f675592a9b021da12bf84",
+    "src/ui/joker-search.ts": "4092fb78263c05d4db0957f04f84fd2fe6de5f827d4123f03295e16d1098a65e",
+    "src/ui/observations-view.ts": "03e6f8dca0cb3aa3614553d1192ed2a44ada6ad8627f45cface4d7f67ba62ef8",
+    "src/ui/observed-details-view.ts": "8d0f7a8aac15a54c9762b15d089c0fc1babf3397c0408e6ee24fc60e3575440f",
+    "src/ui/pack-choice-view.ts": "2a5f0112b043134b0eb73140aa716ef91d0a5147c5a810860c4a2b649d97eb33",
+    "src/ui/pack-view.ts": "0e5b1c023c5dfa2256a1aa3c9a511b65cea4d9904a736202bf3a76878fb85592",
+    "src/ui/preview-state.ts": "3f7258588ebe44df5db10858d191b38dbf455550234c433e6b77697018703bc4",
+    "src/ui/quick-fit-view.ts": "e3993e6b9ce76fdf0cade789f940e26232e7d414da3a5696dee9bfc5efb33a77",
+    "src/ui/run-progress-view.ts": "d578913da0c7b0ad338df26796aecdb5e5465e66ff6ea0b88f5bfba7200b746d",
+    "src/ui/sale-preview.ts": "1eee1bd6a0f0f5404ced6987354b2afd474c8e6458def8d38017437b702e66d6",
+    "src/ui/storefront.ts": "0a1793d6b2257078f83fb73d24ba35a42e6b1b88f4d34f2cf1b8d97059fe74d0",
+    "src/ui/synergies.ts": "23a9d35c36850a6246d427d9d7a77d1d02869e86926d2f1c4cb52843ed04d55f",
+    "src/ui/tarot-view.ts": "470837a2e605714b145a4cc72a90a876582f2927b5f2288db4bfc46e697dc930",
+    "src/ui/vouchers.ts": "974684fac886f2d68391261249187795c556658116b4ae18e1d451aa2fc21373",
+    "src/ui/workspace.ts": "11def9e591e2c703c807d17d1edd9fe02b1611da3813594534fe914fa0428772",
+    "src/ui/writer.ts": "cb95aea26a19d2d3e82cf91157bd0b8d5717fdcaae0a215e5ca67278aa979f21"
+  },
+  "reviewedOn": "2026-10-18",
+  "sourceOfJudgment": "Frozen development acceptance and literal independent oracles; corrected outputs read only to judge their compliance. No reserved data opened, fixtures or matcher changed.",
+  "automatedSummary": {
+    "cases": 14,
+    "executionErrors": 0,
+    "decision": {
+      "pass": 22
+    },
+    "semantic": {
+      "pass": 59,
+      "manual-review-needed": 7
+    },
+    "exact": {
+      "pass": 29,
+      "audit-only": 2
+    }
+  },
+  "manualSemanticResolutions": [
+    {
+      "caseId": "D03",
+      "clauses": [
+        "scoring.same-role-can-help",
+        "scoring.marginal-benefit"
+      ],
+      "status": "pass",
+      "explanation": "Se considera Abstract pese existir Joker y se explica su aporte propio+6Mult después de comprar, con dos comodines. No se presenta como delta total de mano ni como prueba de supervivencia.",
+      "citations": [
+        {
+          "path": "cases[2].variants[0].decision.context.options[1].reasons[2]",
+          "text": "Añade un efecto de puntuación preparado, aunque ya tengas ese rol. Aporte propio en la fase de comodines: +6 Mult. No es una diferencia de puntuación total: depende de la mano, orden, ciega y efectos conservados."
+        }
+      ]
+    },
+    {
+      "caseId": "D04",
+      "clauses": [
+        "economy.more-cost-for-no-active-effect"
+      ],
+      "status": "pass",
+      "explanation": "La recomendación compara ambos precios y la falta de activación actual; no declara imposible transformar el mazo después.",
+      "citations": [
+        {
+          "path": "cases[3].variants[0].decision.context.recommendation.reasons[8]",
+          "text": "Greedy Joker cuesta $5 frente a $2 de Joker y carece de preparación actual: Sin cartas que pueden cumplir el palo requerido en el mazo.. No se presume una transformación futura del mazo."
+        }
+      ]
+    },
+    {
+      "caseId": "D05",
+      "clauses": [
+        "replacement.economy-sacrifice"
+      ],
+      "status": "pass",
+      "explanation": "La subconsulta explícita de vender Golden y comprar Joker explica$4 por final de ronda compatible perdidos. No se promociona la subconsulta a recomendación global ni se confunde el cobro con dinero inmediato.",
+      "citations": [
+        {
+          "path": "cases[4].variants[0].replacements[1].report.context.options[1].reasons[4]",
+          "text": "Vender Golden sacrifica $4 por final de ronda compatible; no es dinero ganado ahora ni una victoria garantizada."
+        }
+      ]
+    },
+    {
+      "caseId": "D11",
+      "clauses": [
+        "shop.visible-offers-and-prices"
+      ],
+      "status": "pass",
+      "explanation": "El título pide artículos y precios; la razón distingue tienda desconocida de vacía y evita exigir52cartas.",
+      "citations": [
+        {
+          "path": "cases[10].variants[0].decision.context.recommendation.title",
+          "text": "Indica las ofertas visibles y sus precios"
+        },
+        {
+          "path": "cases[10].variants[0].decision.context.recommendation.reasons[0]",
+          "text": "La tienda actual es desconocida; no equivale a una tienda vacía. Para compararla bastan los artículos visibles y sus precios; no hace falta transcribir las 52 cartas."
+        }
+      ]
+    },
+    {
+      "caseId": "D12",
+      "clauses": [
+        "coverage.independent-branch-remains"
+      ],
+      "status": "pass",
+      "explanation": "La abstención se refiere a elegir entre todas las ofertas. La rama Joker conserva explicación, saldo8 y H2compatible; TheFool mantiene su límite. No se bloquean los cálculos independientes.",
+      "citations": [
+        {
+          "path": "cases[11].variants[0].decision.context.options[1].reasons[4]",
+          "text": "Saldo hipotético: $10 − $2 = $8. Es aritmética del precio visto, no una transacción confirmada."
+        },
+        {
+          "path": "cases[11].variants[0].decision.context.options[2].limitations[0]",
+          "text": "No se puntúa: falta identidad mecánica, objetivos y evento de compra/uso compatible. Puede cambiar la elección; no se ignora al comparar."
+        }
+      ]
+    },
+    {
+      "caseId": "D14",
+      "clauses": [
+        "deck.income-rule-differs"
+      ],
+      "status": "pass",
+      "explanation": "Las dos configuraciones producen interés0→0 paraVerde y5→4 paraAzul, y reserva útil enambas. Es evidencia explícita de regla económica contextual, aunque el matcher exija el nombreVerde en la misma frase.",
+      "citations": [
+        {
+          "path": "cases[13].variants[0].decision.context.options[1].reasons[5]",
+          "text": "Interés aislado condicionado: $0 → $0 (0). Solo si ganas y no cambia el saldo hasta el cobro; no se paga en la tienda."
+        },
+        {
+          "path": "cases[13].variants[1].decision.context.options[1].reasons[5]",
+          "text": "Interés aislado condicionado: $5 → $4 (-1). Solo si ganas y no cambia el saldo hasta el cobro; no se paga en la tienda."
+        },
+        {
+          "path": "cases[13].variants[0].decision.context.options[1].reasons[4]",
+          "text": "Comprar deja $20; ahorrar conserva $25 para otras compras. El dinero conservado mantiene opciones futuras. No se presume una oferta futura ni se garantiza supervivencia."
+        }
+      ]
+    }
+  ],
+  "caseReviews": [
+    {
+      "caseId": "D01",
+      "caseKind": "strategic-synthetic",
+      "status": "pass",
+      "explanation": "Se conserva con cero ofertas registradas; no se inventa una carta ni una compra.",
+      "citations": [],
+      "decisionClauses": 2,
+      "semanticClauses": 5,
+      "exactClauses": 1,
+      "auditOnlyClauses": 0
+    },
+    {
+      "caseId": "D02",
+      "caseKind": "strategic-synthetic",
+      "status": "pass",
+      "explanation": "Compra condicional con aporte+4Mult y saldo5; explicita supervivencia no evaluada. Testigo520 frente260 permanece separado y no alimenta la política.",
+      "citations": [
+        {
+          "path": "cases[1].variants[0].decision.context.options[1].reasons[3]",
+          "text": "Añade un efecto de puntuación preparado, aunque ya tengas ese rol. Aporte propio en la fase de comodines: +4 Mult. No es una diferencia de puntuación total: depende de la mano, orden, ciega y efectos conservados."
+        },
+        {
+          "path": "cases[1].variants[0].decision.context.options[1].reasons[5]",
+          "text": "Comprar deja $5; ahorrar conserva $7 para otras compras. El dinero conservado mantiene opciones futuras. No se presume una oferta futura ni se garantiza supervivencia."
+        }
+      ],
+      "decisionClauses": 1,
+      "semanticClauses": 6,
+      "exactClauses": 3,
+      "auditOnlyClauses": 0
+    },
+    {
+      "caseId": "D03",
+      "caseKind": "strategic-synthetic",
+      "status": "pass",
+      "explanation": "Corrige el rechazo por rol repetido; acepta la compra condicional y explica aporte propio sin afirmar óptimo global.",
+      "citations": [
+        {
+          "path": "cases[2].variants[0].decision.context.options[1].reasons[2]",
+          "text": "Añade un efecto de puntuación preparado, aunque ya tengas ese rol. Aporte propio en la fase de comodines: +6 Mult. No es una diferencia de puntuación total: depende de la mano, orden, ciega y efectos conservados."
+        }
+      ],
+      "decisionClauses": 1,
+      "semanticClauses": 5,
+      "exactClauses": 3,
+      "auditOnlyClauses": 0
+    },
+    {
+      "caseId": "D04",
+      "caseKind": "strategic-synthetic",
+      "status": "pass",
+      "explanation": "Joker preferido bajo material actual; compara coste y Greedy sin activación, sin negar utilidad futura.",
+      "citations": [
+        {
+          "path": "cases[3].variants[0].decision.context.recommendation.reasons[8]",
+          "text": "Greedy Joker cuesta $5 frente a $2 de Joker y carece de preparación actual: Sin cartas que pueden cumplir el palo requerido en el mazo.. No se presume una transformación futura del mazo."
+        }
+      ],
+      "decisionClauses": 2,
+      "semanticClauses": 3,
+      "exactClauses": 5,
+      "auditOnlyClauses": 0
+    },
+    {
+      "caseId": "D05",
+      "caseKind": "strategic-synthetic",
+      "status": "pass",
+      "explanation": "Principal sin huecos conserva; cada reemplazo se estudia aparte. Runner180 y economíaGolden perdidos están explícitos y no se heredan.",
+      "citations": [
+        {
+          "path": "cases[4].variants[0].replacements[1].report.context.options[1].reasons[4]",
+          "text": "Vender Golden sacrifica $4 por final de ronda compatible; no es dinero ganado ahora ni una victoria garantizada."
+        }
+      ],
+      "decisionClauses": 1,
+      "semanticClauses": 5,
+      "exactClauses": 2,
+      "auditOnlyClauses": 0
+    },
+    {
+      "caseId": "D06",
+      "caseKind": "strategic-synthetic",
+      "status": "pass",
+      "explanation": "Sin reyes y sin reserva posterior no se recomiendaBarón incondicionalmente; se mantiene preparación futura como expectativa.",
+      "citations": [
+        {
+          "path": "cases[5].variants[0].decision.context.options[1].reasons[0]",
+          "text": "Sin reyes que podrías conservar en el mazo."
+        }
+      ],
+      "decisionClauses": 2,
+      "semanticClauses": 5,
+      "exactClauses": 2,
+      "auditOnlyClauses": 0
+    },
+    {
+      "caseId": "D07",
+      "caseKind": "strategic-synthetic",
+      "status": "pass",
+      "explanation": "Mimo carece de soporte retenido; la política no inventa activaciones en mazo estándar intacto.",
+      "citations": [
+        {
+          "path": "cases[6].variants[0].decision.context.options[1].reasons[0]",
+          "text": "Sin cartas con soporte de retención en el mazo."
+        }
+      ],
+      "decisionClauses": 2,
+      "semanticClauses": 5,
+      "exactClauses": 3,
+      "auditOnlyClauses": 0
+    },
+    {
+      "caseId": "D08",
+      "caseKind": "coverage-contract",
+      "status": "coverage-gap",
+      "explanation": "Se abstiene correctamente y declara el límite deH1. No implementa ni evalúa el resumen parcial; los dos límites de intersección siguen solo documentales.",
+      "citations": [
+        {
+          "path": "cases[7].variants[0].decision.context.limitations[5]",
+          "text": "H1 admite el mazo íntegro observado o un dato desconocido; aún no representa un resumen parcial de cantidades e intersecciones. No se fabrican cartas para completarlo."
+        }
+      ],
+      "decisionClauses": 1,
+      "semanticClauses": 6,
+      "exactClauses": 0,
+      "auditOnlyClauses": 2
+    },
+    {
+      "caseId": "D09",
+      "caseKind": "strategic-synthetic",
+      "status": "pass",
+      "explanation": "Explica sacrificio condicional7→6 por35→33 conSeedMoney; no cobra en tienda ni modifica estado real.",
+      "citations": [
+        {
+          "path": "cases[8].variants[0].decision.context.options[1].reasons[6]",
+          "text": "Interés aislado condicionado: $7 → $6 (-1). Solo si ganas y no cambia el saldo hasta el cobro; no se paga en la tienda."
+        }
+      ],
+      "decisionClauses": 1,
+      "semanticClauses": 4,
+      "exactClauses": 4,
+      "auditOnlyClauses": 0
+    },
+    {
+      "caseId": "D10",
+      "caseKind": "contract-negative",
+      "status": "pass",
+      "explanation": "Prueba negativa de legalidad: no recomiendaMoneyTree sinSeed; no cuenta como tienda natural ni como recomendación estratégica.",
+      "citations": [
+        {
+          "path": "cases[9].variants[0].decision.context.options[1].reasons[3]",
+          "text": "Falta el vale base requerido: v_seed_money. Revisa la transcripción de la oferta y las adquisiciones."
+        }
+      ],
+      "decisionClauses": 2,
+      "semanticClauses": 5,
+      "exactClauses": 2,
+      "auditOnlyClauses": 0
+    },
+    {
+      "caseId": "D11",
+      "caseKind": "strategic-synthetic",
+      "status": "pass",
+      "explanation": "Desconocido se distingue de vacío y pregunta solo ofertas/precios necesarios.",
+      "citations": [
+        {
+          "path": "cases[10].variants[0].decision.context.recommendation.reasons[0]",
+          "text": "La tienda actual es desconocida; no equivale a una tienda vacía. Para compararla bastan los artículos visibles y sus precios; no hace falta transcribir las 52 cartas."
+        }
+      ],
+      "decisionClauses": 2,
+      "semanticClauses": 5,
+      "exactClauses": 0,
+      "auditOnlyClauses": 0
+    },
+    {
+      "caseId": "D12",
+      "caseKind": "strategic-synthetic",
+      "status": "pass",
+      "explanation": "Conserva cálculo independiente deJoker y limitaTheFool; abstención global aceptable porque la oferta sinmodelo podría cambiar la elección.",
+      "citations": [
+        {
+          "path": "cases[11].variants[0].decision.context.options[1].reasons[4]",
+          "text": "Saldo hipotético: $10 − $2 = $8. Es aritmética del precio visto, no una transacción confirmada."
+        }
+      ],
+      "decisionClauses": 2,
+      "semanticClauses": 4,
+      "exactClauses": 1,
+      "auditOnlyClauses": 0
+    },
+    {
+      "caseId": "D13",
+      "caseKind": "strategic-synthetic",
+      "status": "pass",
+      "explanation": "MantieneBarón sinpreparar con0reyes enante1/8. Explica que el horizonte no crea material ni suficiencia; no obliga a invertir preferencia porante.",
+      "citations": [
+        {
+          "path": "cases[12].variants[0].decision.context.options[1].reasons[1]",
+          "text": "Ante 1: el horizonte modifica el encaje editorial; no crea material, activaciones ni suficiencia para la siguiente ciega."
+        },
+        {
+          "path": "cases[12].variants[1].decision.context.options[1].reasons[1]",
+          "text": "Ante 8: el horizonte modifica el encaje editorial; no crea material, activaciones ni suficiencia para la siguiente ciega."
+        }
+      ],
+      "decisionClauses": 2,
+      "semanticClauses": 4,
+      "exactClauses": 1,
+      "auditOnlyClauses": 0
+    },
+    {
+      "caseId": "D14",
+      "caseKind": "strategic-synthetic",
+      "status": "pass",
+      "explanation": "Reglas económicasdiferentes quedan cuantificadas y la reserva no pierdevalor enVerde.",
+      "citations": [
+        {
+          "path": "cases[13].variants[0].decision.context.options[1].reasons[5]",
+          "text": "Interés aislado condicionado: $0 → $0 (0). Solo si ganas y no cambia el saldo hasta el cobro; no se paga en la tienda."
+        },
+        {
+          "path": "cases[13].variants[1].decision.context.options[1].reasons[5]",
+          "text": "Interés aislado condicionado: $5 → $4 (-1). Solo si ganas y no cambia el saldo hasta el cobro; no se paga en la tienda."
+        }
+      ],
+      "decisionClauses": 1,
+      "semanticClauses": 4,
+      "exactClauses": 2,
+      "auditOnlyClauses": 0
+    }
+  ],
+  "summary": {
+    "developmentCasesReviewed": 14,
+    "strategicSyntheticCasesAcceptedWithinFrozenCriteria": 12,
+    "contractNegativeCasesAccepted": 1,
+    "coverageCasesStillLimited": 1,
+    "automaticDecisionClausesPassed": 22,
+    "semanticClausesTotal": 66,
+    "automaticSemanticClausesPassed": 59,
+    "manuallyResolvedSemanticClauses": 7,
+    "manualResolutionPass": 7,
+    "manualResolutionFail": 0,
+    "immediateAndAuditH2ExactClausesPassed": 29,
+    "documentaryBoundsExcludedFromGrade": 2,
+    "empiricalWinrateValidated": false,
+    "all150JokersStrategicallyValidated": false
+  },
+  "limitations": [
+    "Synthetic acceptance checks and explanation review do not demonstrate better winrates or optimality.",
+    "No player session or played-game rule observation performed.",
+    "H1 partial summaries remain unrepresentable; audit sidecars were not consumed by policy.",
+    "Replacement subconsultations are explicit independent selections; no global replacement search.",
+    "A fixed-hand witness is not policy input, a prediction, a complete-round survival result or a distribution sample.",
+    "A conditional recommendation is not evidence that spending improves the entire run; advice remains sensitive to missing capacity and futureopportunities."
+  ],
+  "publishedAssertionReport": "evaluation/results/development.json"
+}

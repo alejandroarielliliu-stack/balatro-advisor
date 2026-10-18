@@ -67,7 +67,10 @@
     "demo:arcana-choices": "npm run build && node dist/src/demo-arcana-choices.js",
     "test:arcana-choices": "npm run build && node tools/arcana-choices-test.mjs",
     "demo:tarot-money": "npm run build && node dist/src/demo-tarot-money.js",
-    "test:tarot-money": "npm run build && node tools/tarot-money-test.mjs"
+    "test:tarot-money": "npm run build && node tools/tarot-money-test.mjs",
+    "evaluate:advisor": "npm run build && node tools/evaluate-advisor.mjs --no-build",
+    "test:advisor-eval": "npm run build && node --test tools/evaluate-advisor.test.mjs && node tools/evaluate-advisor.mjs --no-build --split development",
+    "test:quick-shop": "npm run build && node tools/quick-shop-eval-test.mjs"
   },
   "devDependencies": {
     "@types/node": "24.19.1",

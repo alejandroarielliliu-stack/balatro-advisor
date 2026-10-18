@@ -1,0 +1,1232 @@
+{
+  "schemaVersion": "eval01-fixtures-1",
+  "split": "development",
+  "authoredOn": "2026-10-18",
+  "authoredBeforeAdvisorOutputs": true,
+  "scope": "Quick-shop contextual advice; synthetic contract and strategic acceptance, not empirical winrate.",
+  "defaults": {
+    "ruleset": "balatro-pc-1.0.1o-blue-white-v1",
+    "gameVersion": "1.0.1o-FULL",
+    "platform": "pc-steam",
+    "mods": false,
+    "stakeId": "white",
+    "phase": "shop",
+    "deckId": "blue",
+    "ante": 1,
+    "nextBlind": {
+      "kind": "big",
+      "target": 450,
+      "bossId": "none"
+    },
+    "money": 25,
+    "jokers": [],
+    "vouchers": [],
+    "deckMaterial": {
+      "kind": "complete-preset",
+      "preset": "standard52-unmodified",
+      "observedUnchanged": true
+    },
+    "shop": {
+      "status": "known",
+      "offers": [],
+      "voucherOffers": []
+    },
+    "probes": [],
+    "roundPlans": []
+  },
+  "interpretation": {
+    "merge": "Object overrides defaults recursively; arrays replace. pairedSetup overrides merged setup for a separate metamorphic run.",
+    "actions": "hold | buy:<offerId> | replace:<instanceId>:<offerId> | buy-voucher:<offerId>; unconditional: prefixes forbid an unconditional preference but permit an explicitly conditional comparison.",
+    "witness": "auditWitness is ONLY for independent arithmetic/auditor checks, never supplied as a user RoundPlan or survival input to the quick policy.",
+    "exact": "Arithmetic expectations are literal independent derivations, not obtained from implementation outputs. Conditional-cashout facts require unchanged-money-and-won-round assumptions.",
+    "semantics": "mustExplain/mustAskFor/mustNotClaim are semantic acceptance codes mapped by the runner to structured findings plus independently reviewed explanations; code labels themselves are not returned by production logic.",
+    "unknowns": "Partial summaries never synthesize card identities or intersections; absent observations remain unknown.",
+    "strict": "These cases exercise provisional allowed rules; requireObserved mode is separately expected to abstain only affected branches."
+  },
+  "cases": [
+    {
+      "id": "D01",
+      "title": "Sin ofertas observadas no hay una compra que inventar",
+      "setup": {},
+      "acceptance": {
+        "allowedDecisionKinds": [
+          "preference",
+          "conditional",
+          "tradeoff",
+          "tie",
+          "abstention"
+        ],
+        "mustPreferAnyOf": [
+          "hold"
+        ],
+        "mustNotPrefer": [],
+        "mustExplain": [
+          "search.observed-options-only"
+        ],
+        "mustAskFor": [],
+        "mustNotClaim": [
+          "global-optimality",
+          "win-probability",
+          "confidence-percentage",
+          "survival-from-context-index"
+        ],
+        "exact": [
+          {
+            "key": "hold.moneyAfter",
+            "expected": 25,
+            "unit": "USD",
+            "derivation": "Conservar no realiza una operación.",
+            "oracleKind": "independent-arithmetic"
+          }
+        ]
+      },
+      "feasibility": "Tienda ya transcrita sin artículos relevantes; los otros huecos pueden haberse comprado.",
+      "caseKind": "strategic-synthetic",
+      "evidence": [
+        {
+          "ref": "docs/hoja-de-ruta-asesor.md#3-contratos-mínimos",
+          "kind": "existing-primary-inspection-or-product-contract",
+          "observedInGame": false
+        }
+      ]
+    },
+    {
+      "id": "D02",
+      "title": "Una compra puede cruzar el objetivo de una mano sin probar supervivencia general",
+      "setup": {
+        "money": 7,
+        "shop": {
+          "status": "known",
+          "offers": [
+            {
+              "offerId": "o-joker",
+              "catalogId": "joker",
+              "kind": "joker",
+              "price": 2,
+              "edition": "base",
+              "stickers": []
+            }
+          ]
+        }
+      },
+      "auditWitness": {
+        "kind": "fixed-hand-audit-only",
+        "name": "Flush de picas nivel 1",
+        "cards": [
+          "2S",
+          "4S",
+          "6S",
+          "8S",
+          "10S"
+        ],
+        "initialHand": [
+          "2S",
+          "4S",
+          "6S",
+          "8S",
+          "10S",
+          "3H",
+          "5C",
+          "7D"
+        ],
+        "notes": "No se entrega como plan al asesor rápido ni predice robos. Base manual Flush35/4; cartas2+4+6+8+10=30. La mano no es escalera.",
+        "target": 450,
+        "baselineScore": 260,
+        "afterScores": {
+          "buy:o-joker": 520
+        }
+      },
+      "acceptance": {
+        "allowedDecisionKinds": [
+          "preference",
+          "conditional",
+          "tradeoff",
+          "tie",
+          "abstention"
+        ],
+        "mustPreferAnyOf": [],
+        "mustNotPrefer": [],
+        "mustExplain": [
+          "scoring.marginal-benefit",
+          "survival.no-general-proof",
+          "economy.reserve-sacrifice"
+        ],
+        "mustAskFor": [],
+        "mustNotClaim": [
+          "fixed-hand-predicts-draw",
+          "fixed-hand-failure-is-run-loss",
+          "no-benefit-because-no-synergy"
+        ],
+        "exact": [
+          {
+            "key": "buy:o-joker.moneyAfter",
+            "expected": 5,
+            "unit": "USD",
+            "derivation": "7−2=5.",
+            "oracleKind": "independent-arithmetic"
+          },
+          {
+            "key": "witness.hold.score",
+            "expected": 260,
+            "unit": "chips",
+            "derivation": "(35+30)×4=260.",
+            "oracleKind": "independent-arithmetic"
+          },
+          {
+            "key": "witness.buy:o-joker.score",
+            "expected": 520,
+            "unit": "chips",
+            "derivation": "(35+30)×(4+4)=520.",
+            "oracleKind": "independent-arithmetic"
+          }
+        ]
+      },
+      "feasibility": "A1 Big450, Azul con recursos iniciales y cinco cartas de la baraja estándar; ocho cartas iniciales únicas. Otras jugadas siguen posibles.",
+      "caseKind": "strategic-synthetic",
+      "evidence": [
+        {
+          "ref": "docs/evidencia/h2-inspeccion-local.md",
+          "kind": "existing-primary-inspection-or-product-contract",
+          "observedInGame": false
+        },
+        {
+          "ref": "docs/evidencia/h2-oraculos.md",
+          "kind": "existing-primary-inspection-or-product-contract",
+          "observedInGame": false
+        }
+      ]
+    },
+    {
+      "id": "D03",
+      "title": "El refuerzo del mismo rol no se descarta por redundancia",
+      "setup": {
+        "money": 12,
+        "ante": 1,
+        "nextBlind": {
+          "kind": "boss",
+          "target": 600,
+          "bossId": "the_psychic"
+        },
+        "jokers": [
+          {
+            "instanceId": "j-old",
+            "catalogId": "joker",
+            "edition": "base",
+            "stickers": [],
+            "counters": {},
+            "sellValue": 1
+          }
+        ],
+        "shop": {
+          "status": "known",
+          "offers": [
+            {
+              "offerId": "o-abstract",
+              "catalogId": "abstract_joker",
+              "kind": "joker",
+              "price": 4,
+              "edition": "base",
+              "stickers": []
+            }
+          ]
+        }
+      },
+      "auditWitness": {
+        "kind": "fixed-hand-audit-only",
+        "name": "Flush de picas nivel 1",
+        "cards": [
+          "2S",
+          "4S",
+          "6S",
+          "8S",
+          "10S"
+        ],
+        "initialHand": [
+          "2S",
+          "4S",
+          "6S",
+          "8S",
+          "10S",
+          "3H",
+          "5C",
+          "7D"
+        ],
+        "notes": "No se entrega como plan al asesor rápido ni predice robos. Base manual Flush35/4; cartas2+4+6+8+10=30. La mano no es escalera.",
+        "target": 600,
+        "baselineScore": 520,
+        "afterScores": {
+          "buy:o-abstract": 910
+        }
+      },
+      "acceptance": {
+        "allowedDecisionKinds": [
+          "preference",
+          "conditional",
+          "tradeoff",
+          "tie",
+          "abstention"
+        ],
+        "mustPreferAnyOf": [],
+        "mustNotPrefer": [],
+        "mustExplain": [
+          "scoring.same-role-can-help",
+          "scoring.marginal-benefit",
+          "survival.no-general-proof"
+        ],
+        "mustAskFor": [],
+        "mustNotClaim": [
+          "same-role-is-useless",
+          "psychic-blocks-five-card-hand"
+        ],
+        "exact": [
+          {
+            "key": "buy:o-abstract.moneyAfter",
+            "expected": 8,
+            "unit": "USD",
+            "derivation": "12−4=8.",
+            "oracleKind": "independent-arithmetic"
+          },
+          {
+            "key": "witness.hold.score",
+            "expected": 520,
+            "unit": "chips",
+            "derivation": "65×(4+4)=520.",
+            "oracleKind": "independent-arithmetic"
+          },
+          {
+            "key": "witness.buy:o-abstract.score",
+            "expected": 910,
+            "unit": "chips",
+            "derivation": "Abstract cuenta los dos comodines:65×(4+4+3×2)=910.",
+            "oracleKind": "independent-arithmetic"
+          }
+        ]
+      },
+      "feasibility": "Joker y Abstract son distintos; no requiere Showman. La mano tiene cinco cartas, por lo que satisface Psychic.",
+      "caseKind": "strategic-synthetic",
+      "evidence": [
+        {
+          "ref": "docs/evidencia/h2-inspeccion-local.md",
+          "kind": "existing-primary-inspection-or-product-contract",
+          "observedInGame": false
+        },
+        {
+          "ref": "docs/evidencia/h2-oraculos.md",
+          "kind": "existing-primary-inspection-or-product-contract",
+          "observedInGame": false
+        }
+      ]
+    },
+    {
+      "id": "D04",
+      "title": "Una oferta más cara sin activación conocida no gana por una nota editorial",
+      "setup": {
+        "deckId": "checkered",
+        "money": 25,
+        "deckMaterial": {
+          "kind": "complete-preset",
+          "preset": "checkered52-unmodified",
+          "observedUnchanged": true
+        },
+        "shop": {
+          "status": "known",
+          "offers": [
+            {
+              "offerId": "o-joker",
+              "catalogId": "joker",
+              "kind": "joker",
+              "price": 2,
+              "edition": "base",
+              "stickers": []
+            },
+            {
+              "offerId": "o-greedy",
+              "catalogId": "greedy_joker",
+              "kind": "joker",
+              "price": 5,
+              "edition": "base",
+              "stickers": []
+            }
+          ]
+        }
+      },
+      "acceptance": {
+        "allowedDecisionKinds": [
+          "preference",
+          "conditional",
+          "tradeoff",
+          "tie",
+          "abstention"
+        ],
+        "mustPreferAnyOf": [],
+        "mustNotPrefer": [
+          "buy:o-greedy"
+        ],
+        "mustExplain": [
+          "material.trigger-absent",
+          "economy.more-cost-for-no-active-effect"
+        ],
+        "mustAskFor": [],
+        "mustNotClaim": [
+          "future-transformations-impossible"
+        ],
+        "exact": [
+          {
+            "key": "material.diamonds",
+            "expected": 0,
+            "unit": "cards",
+            "derivation": "Checkered inicial solo picas y corazones, confirmado intacto.",
+            "oracleKind": "independent-arithmetic"
+          },
+          {
+            "key": "buy:o-joker.moneyAfter",
+            "expected": 23,
+            "unit": "USD",
+            "derivation": "25−2=23.",
+            "oracleKind": "independent-arithmetic"
+          },
+          {
+            "key": "buy:o-greedy.moneyAfter",
+            "expected": 20,
+            "unit": "USD",
+            "derivation": "25−5=20.",
+            "oracleKind": "independent-arithmetic"
+          },
+          {
+            "key": "observed-material.greedy.mult",
+            "expected": 0,
+            "unit": "Mult",
+            "derivation": "No hay diamantes puntuables; +3 por diamante tiene cero activaciones.",
+            "oracleKind": "independent-arithmetic"
+          },
+          {
+            "key": "joker.unconditionalMult",
+            "expected": 4,
+            "unit": "Mult",
+            "derivation": "Efecto base +4.",
+            "oracleKind": "independent-arithmetic"
+          }
+        ]
+      },
+      "feasibility": "Tienda de dos comodines distintos sobre baraja Checkered sin modificaciones. Dominancia solo del efecto activable sobre material actual; no de toda la ruta futura.",
+      "caseKind": "strategic-synthetic",
+      "evidence": [
+        {
+          "ref": "docs/evidencia/barajas-l03.md",
+          "kind": "existing-primary-inspection-or-product-contract",
+          "observedInGame": false
+        },
+        {
+          "ref": "src/catalog/all-joker-facts.ts",
+          "kind": "catalog-or-contract-shaping",
+          "observedInGame": false
+        }
+      ]
+    },
+    {
+      "id": "D05",
+      "title": "Reemplazar un escalador desarrollado debe mostrar lo que destruye",
+      "setup": {
+        "ante": 5,
+        "nextBlind": {
+          "kind": "big",
+          "target": 16500,
+          "bossId": "none"
+        },
+        "money": 15,
+        "jokers": [
+          {
+            "instanceId": "j-runner",
+            "catalogId": "runner",
+            "edition": "base",
+            "stickers": [],
+            "counters": {
+              "chips": 180
+            },
+            "sellValue": 2
+          },
+          {
+            "instanceId": "j-gold",
+            "catalogId": "golden_joker",
+            "edition": "base",
+            "stickers": [],
+            "counters": {},
+            "sellValue": 3
+          },
+          {
+            "instanceId": "j-mime",
+            "catalogId": "mime",
+            "edition": "base",
+            "stickers": [],
+            "counters": {},
+            "sellValue": 2
+          },
+          {
+            "instanceId": "j-business",
+            "catalogId": "business",
+            "edition": "base",
+            "stickers": [],
+            "counters": {},
+            "sellValue": 2
+          },
+          {
+            "instanceId": "j-half",
+            "catalogId": "half_joker",
+            "edition": "base",
+            "stickers": [],
+            "counters": {},
+            "sellValue": 2
+          }
+        ],
+        "shop": {
+          "status": "known",
+          "offers": [
+            {
+              "offerId": "o-joker",
+              "catalogId": "joker",
+              "kind": "joker",
+              "price": 2,
+              "edition": "base",
+              "stickers": []
+            }
+          ]
+        }
+      },
+      "acceptance": {
+        "allowedDecisionKinds": [
+          "preference",
+          "conditional",
+          "tradeoff",
+          "tie",
+          "abstention"
+        ],
+        "mustPreferAnyOf": [],
+        "mustNotPrefer": [],
+        "mustExplain": [
+          "replacement.loss-of-developed-counter",
+          "replacement.counter-not-inherited",
+          "replacement.economy-sacrifice"
+        ],
+        "mustAskFor": [],
+        "mustNotClaim": [
+          "counter-is-always-worth-keeping",
+          "higher-counter-guarantees-utility"
+        ],
+        "exact": [
+          {
+            "key": "replace:j-runner:o-joker.moneyAfter",
+            "expected": 15,
+            "unit": "USD",
+            "derivation": "15+2−2=15.",
+            "oracleKind": "independent-arithmetic"
+          },
+          {
+            "key": "replace:j-runner:o-joker.lostRunnerChips",
+            "expected": 180,
+            "unit": "chips-per-scoring-hand",
+            "derivation": "Se vende el Runner que tenía180; el Joker nuevo no hereda ese contador.",
+            "oracleKind": "independent-arithmetic"
+          }
+        ]
+      },
+      "feasibility": "Runner puede acumular180 tras doce escaleras antes de A5; cinco comodines distintos, todos vendibles. No se impone una compra ni una venta globalmente óptima.",
+      "caseKind": "strategic-synthetic",
+      "evidence": [
+        {
+          "ref": "docs/evidencia/cat04-history.md",
+          "kind": "existing-primary-inspection-or-product-contract",
+          "observedInGame": false
+        },
+        {
+          "ref": "src/catalog/joker-counters.ts",
+          "kind": "catalog-or-contract-shaping",
+          "observedInGame": false
+        }
+      ]
+    },
+    {
+      "id": "D06",
+      "title": "Barón no está preparado en Abandonada sin reyes",
+      "setup": {
+        "deckId": "abandoned",
+        "money": 8,
+        "ante": 1,
+        "deckMaterial": {
+          "kind": "complete-preset",
+          "preset": "abandoned40-unmodified",
+          "observedUnchanged": true
+        },
+        "shop": {
+          "status": "known",
+          "offers": [
+            {
+              "offerId": "o-baron",
+              "catalogId": "baron",
+              "kind": "joker",
+              "price": 8,
+              "edition": "base",
+              "stickers": []
+            }
+          ]
+        }
+      },
+      "acceptance": {
+        "allowedDecisionKinds": [
+          "preference",
+          "conditional",
+          "tradeoff",
+          "tie",
+          "abstention"
+        ],
+        "mustPreferAnyOf": [],
+        "mustNotPrefer": [
+          "unconditional:buy:o-baron"
+        ],
+        "mustExplain": [
+          "material.trigger-absent",
+          "economy.reserve-sacrifice",
+          "preparation.future-investment-only"
+        ],
+        "mustAskFor": [],
+        "mustNotClaim": [
+          "baron-requires-steel",
+          "baron-guarantees-held-kings"
+        ],
+        "exact": [
+          {
+            "key": "material.kings",
+            "expected": 0,
+            "unit": "cards",
+            "derivation": "Abandoned intacta elimina J,Q,K.",
+            "oracleKind": "independent-arithmetic"
+          },
+          {
+            "key": "buy:o-baron.moneyAfter",
+            "expected": 0,
+            "unit": "USD",
+            "derivation": "8−8=0.",
+            "oracleKind": "independent-arithmetic"
+          }
+        ]
+      },
+      "feasibility": "Barón puede aparecer en Abandonada; no se excluye del pool por no haber reyes. Se puede transformar el mazo después, pero no está hecho.",
+      "caseKind": "strategic-synthetic",
+      "evidence": [
+        {
+          "ref": "docs/evidencia/barajas-l03.md",
+          "kind": "existing-primary-inspection-or-product-contract",
+          "observedInGame": false
+        },
+        {
+          "ref": "docs/evidencia/sinergias-l02.md",
+          "kind": "existing-primary-inspection-or-product-contract",
+          "observedInGame": false
+        }
+      ]
+    },
+    {
+      "id": "D07",
+      "title": "Mimo sin efectos de cartas retenidas no recibe sinergias ficticias",
+      "setup": {
+        "money": 10,
+        "shop": {
+          "status": "known",
+          "offers": [
+            {
+              "offerId": "o-mime",
+              "catalogId": "mime",
+              "kind": "joker",
+              "price": 5,
+              "edition": "base",
+              "stickers": []
+            }
+          ]
+        }
+      },
+      "acceptance": {
+        "allowedDecisionKinds": [
+          "preference",
+          "conditional",
+          "tradeoff",
+          "tie",
+          "abstention"
+        ],
+        "mustPreferAnyOf": [],
+        "mustNotPrefer": [
+          "unconditional:buy:o-mime"
+        ],
+        "mustExplain": [
+          "material.held-effect-absent",
+          "preparation.future-investment-only",
+          "survival.no-general-proof"
+        ],
+        "mustAskFor": [],
+        "mustNotClaim": [
+          "mime-retriggers-all-scored-cards",
+          "standard-kings-alone-enable-mime"
+        ],
+        "exact": [
+          {
+            "key": "material.steel",
+            "expected": 0,
+            "unit": "cards",
+            "derivation": "Estándar intacta no tiene mejoras.",
+            "oracleKind": "independent-arithmetic"
+          },
+          {
+            "key": "material.gold",
+            "expected": 0,
+            "unit": "cards",
+            "derivation": "Estándar intacta no tiene mejoras.",
+            "oracleKind": "independent-arithmetic"
+          },
+          {
+            "key": "material.blueSeals",
+            "expected": 0,
+            "unit": "cards",
+            "derivation": "Estándar intacta no tiene sellos.",
+            "oracleKind": "independent-arithmetic"
+          }
+        ]
+      },
+      "feasibility": "Mimo comprado sin Barón/efectos retenidos y mazo normal no mejora por sí solo ninguna activación retenida actual.",
+      "caseKind": "strategic-synthetic",
+      "evidence": [
+        {
+          "ref": "docs/evidencia/sinergias-l02.md",
+          "kind": "existing-primary-inspection-or-product-contract",
+          "observedInGame": false
+        }
+      ]
+    },
+    {
+      "id": "D08",
+      "title": "Reyes y Acero no revelan su intersección ni retención futura",
+      "setup": {
+        "money": 20,
+        "jokers": [
+          {
+            "instanceId": "j-baron",
+            "catalogId": "baron",
+            "edition": "base",
+            "stickers": [],
+            "counters": {},
+            "sellValue": 4
+          }
+        ],
+        "deckMaterial": {
+          "kind": "partial-summary",
+          "size": 50,
+          "kings": 5,
+          "steel": 6,
+          "kingSteel": {
+            "status": "unknown"
+          },
+          "otherHeldEffects": {
+            "status": "unknown"
+          }
+        },
+        "shop": {
+          "status": "known",
+          "offers": [
+            {
+              "offerId": "o-mime",
+              "catalogId": "mime",
+              "kind": "joker",
+              "price": 5,
+              "edition": "base",
+              "stickers": []
+            }
+          ]
+        }
+      },
+      "acceptance": {
+        "allowedDecisionKinds": [
+          "preference",
+          "conditional",
+          "tradeoff",
+          "tie",
+          "abstention"
+        ],
+        "mustPreferAnyOf": [],
+        "mustNotPrefer": [],
+        "mustExplain": [
+          "coverage.partial-summary-not-represented",
+          "data.material-unknown"
+        ],
+        "mustAskFor": [],
+        "mustNotClaim": [
+          "king-steel-overlap-equals-minimum",
+          "all-kings-will-be-held",
+          "material-count-is-draw-probability",
+          "partial-summary-consumed-by-policy-without-contract"
+        ],
+        "exact": [
+          {
+            "key": "material.kingSteel.minimum",
+            "expected": 0,
+            "unit": "cards",
+            "derivation": "max(0,5+6−50)=0.",
+            "oracleKind": "independent-arithmetic",
+            "scope": "audit-only-not-policy-grade"
+          },
+          {
+            "key": "material.kingSteel.maximum",
+            "expected": 5,
+            "unit": "cards",
+            "derivation": "min(5,6)=5.",
+            "oracleKind": "independent-arithmetic",
+            "scope": "audit-only-not-policy-grade"
+          }
+        ]
+      },
+      "feasibility": "Resumen parcial coherente; intersección0..5. No se sintetizan50 cartas ni se da este resumen al puntuador exacto. La intersección solo debe preguntarse si se usa para diferenciar alternativas; Barón+Mimo también funciona con reyes sin Acero.",
+      "caseKind": "coverage-contract",
+      "evidence": [
+        {
+          "ref": "docs/evidencia/sinergias-l02.md",
+          "kind": "existing-primary-inspection-or-product-contract",
+          "observedInGame": false
+        },
+        {
+          "ref": "docs/plan-asesor-de-partida.md#2-cómo-pedir-pocos-datos-sin-inventar-los-demás",
+          "kind": "existing-primary-inspection-or-product-contract",
+          "observedInGame": false
+        }
+      ],
+      "representationNote": "H1 actual no almacena partial-summary. El adaptador conserva deck desconocido; setup.deckMaterial es sidecar de auditoría, no un hecho consumido por la política. No fabricar cartas. Una limitación o abstención explicada es aceptable."
+    },
+    {
+      "id": "D09",
+      "title": "El vale de interés cambia el coste de oportunidad calculable",
+      "setup": {
+        "money": 35,
+        "vouchers": [
+          "v_seed_money"
+        ],
+        "shop": {
+          "status": "known",
+          "offers": [
+            {
+              "offerId": "o-joker",
+              "catalogId": "joker",
+              "kind": "joker",
+              "price": 2,
+              "edition": "base",
+              "stickers": []
+            }
+          ]
+        }
+      },
+      "acceptance": {
+        "allowedDecisionKinds": [
+          "preference",
+          "conditional",
+          "tradeoff",
+          "tie",
+          "abstention"
+        ],
+        "mustPreferAnyOf": [],
+        "mustNotPrefer": [],
+        "mustExplain": [
+          "economy.interest-opportunity-cost",
+          "evidence.economy-provisional"
+        ],
+        "mustAskFor": [],
+        "mustNotClaim": [
+          "interest-paid-in-shop",
+          "projected-income-is-real-balance"
+        ],
+        "exact": [
+          {
+            "key": "buy:o-joker.moneyAfter",
+            "expected": 33,
+            "unit": "USD",
+            "derivation": "35−2=33.",
+            "oracleKind": "independent-arithmetic"
+          },
+          {
+            "key": "conditional-cashout.hold.interest",
+            "expected": 7,
+            "unit": "USD-per-won-round",
+            "derivation": "min(floor(35/5),10)=7, si no cambia el saldo antes de cobro.",
+            "oracleKind": "independent-arithmetic"
+          },
+          {
+            "key": "conditional-cashout.buy:o-joker.interest",
+            "expected": 6,
+            "unit": "USD-per-won-round",
+            "derivation": "min(floor(33/5),10)=6 bajo la misma premisa.",
+            "oracleKind": "independent-arithmetic"
+          },
+          {
+            "key": "conditional-cashout.interestSacrifice",
+            "expected": 1,
+            "unit": "USD-per-won-round",
+            "derivation": "7−6=1; es oportunidad condicional, no gasto adicional ni ingreso confirmado.",
+            "oracleKind": "independent-arithmetic"
+          }
+        ]
+      },
+      "feasibility": "Seed Money comprado previamente y saldo35. La comparación mantiene igual todo cambio externo de dinero, sin afirmar que ganará.",
+      "caseKind": "strategic-synthetic",
+      "evidence": [
+        {
+          "ref": "docs/evidencia/h2-inspeccion-local.md",
+          "kind": "existing-primary-inspection-or-product-contract",
+          "observedInGame": false
+        },
+        {
+          "ref": "docs/evidencia/voucher-shop/README.md",
+          "kind": "existing-primary-inspection-or-product-contract",
+          "observedInGame": false
+        }
+      ]
+    },
+    {
+      "id": "D10",
+      "title": "Un vale mejorado no se compra sin su prerrequisito",
+      "setup": {
+        "money": 25,
+        "shop": {
+          "status": "known",
+          "offers": [],
+          "voucherOffers": [
+            {
+              "offerId": "v-tree",
+              "catalogId": "v_money_tree",
+              "price": 10
+            }
+          ]
+        }
+      },
+      "acceptance": {
+        "allowedDecisionKinds": [
+          "preference",
+          "conditional",
+          "tradeoff",
+          "tie",
+          "abstention"
+        ],
+        "mustPreferAnyOf": [],
+        "mustNotPrefer": [
+          "buy-voucher:v-tree"
+        ],
+        "mustExplain": [
+          "legality.voucher-prerequisite"
+        ],
+        "mustAskFor": [],
+        "mustNotClaim": [
+          "global-optimality",
+          "win-probability",
+          "confidence-percentage",
+          "survival-from-context-index"
+        ],
+        "exact": [
+          {
+            "key": "voucher.moneyTree.requiredVoucher",
+            "expected": "v_seed_money",
+            "unit": "catalog-id",
+            "derivation": "Árbol de dinero es la mejora de Siembra dinero.",
+            "oracleKind": "independent-arithmetic"
+          },
+          {
+            "key": "hold.moneyAfter",
+            "expected": 25,
+            "unit": "USD",
+            "derivation": "La oferta inválida no se aplica.",
+            "oracleKind": "independent-arithmetic"
+          }
+        ]
+      },
+      "feasibility": "Prueba negativa de observación errónea/importación: esta oferta sin prerrequisito no es una tienda naturalmente generada. Se conserva como caso de legalidad de entrada, no como decisión estratégica real.",
+      "caseKind": "contract-negative",
+      "evidence": [
+        {
+          "ref": "docs/evidencia/voucher-shop/README.md",
+          "kind": "existing-primary-inspection-or-product-contract",
+          "observedInGame": false
+        },
+        {
+          "ref": "src/catalog/voucher-catalog.ts",
+          "kind": "catalog-or-contract-shaping",
+          "observedInGame": false
+        }
+      ]
+    },
+    {
+      "id": "D11",
+      "title": "Una tienda desconocida requiere ofertas, no cartas irrelevantes",
+      "setup": {
+        "shop": {
+          "status": "unknown",
+          "reason": "Aún no transcrita."
+        }
+      },
+      "acceptance": {
+        "allowedDecisionKinds": [
+          "preference",
+          "conditional",
+          "tradeoff",
+          "tie",
+          "abstention"
+        ],
+        "mustPreferAnyOf": [
+          "hold",
+          "ask",
+          "abstain"
+        ],
+        "mustNotPrefer": [],
+        "mustExplain": [
+          "data.shop-unknown"
+        ],
+        "mustAskFor": [
+          "shop.visible-offers-and-prices"
+        ],
+        "mustNotClaim": [
+          "invented-shop-offer",
+          "unknown-shop-means-run-lost",
+          "all-52-card-details-required"
+        ],
+        "exact": []
+      },
+      "feasibility": "Partida real recuperada antes de registrar la tienda; inventario y saldo conocidos.",
+      "caseKind": "strategic-synthetic",
+      "evidence": [
+        {
+          "ref": "docs/hoja-de-ruta-asesor.md#3-contratos-mínimos",
+          "kind": "existing-primary-inspection-or-product-contract",
+          "observedInGame": false
+        }
+      ]
+    },
+    {
+      "id": "D12",
+      "title": "Una carta no compatible limita su rama y no todas las alternativas",
+      "setup": {
+        "money": 10,
+        "shop": {
+          "status": "known",
+          "offers": [
+            {
+              "offerId": "o-joker",
+              "catalogId": "joker",
+              "kind": "joker",
+              "price": 2,
+              "edition": "base",
+              "stickers": []
+            },
+            {
+              "offerId": "o-fool",
+              "catalogId": "c_fool",
+              "kind": "unsupported",
+              "price": 3,
+              "edition": "base",
+              "stickers": []
+            }
+          ]
+        }
+      },
+      "acceptance": {
+        "allowedDecisionKinds": [
+          "preference",
+          "conditional",
+          "tradeoff",
+          "tie",
+          "abstention"
+        ],
+        "mustPreferAnyOf": [],
+        "mustNotPrefer": [
+          "buy:o-fool"
+        ],
+        "mustExplain": [
+          "coverage.unsupported-candidate",
+          "coverage.independent-branch-remains"
+        ],
+        "mustAskFor": [],
+        "mustNotClaim": [
+          "unsupported-equals-bad-card",
+          "all-analysis-blocked"
+        ],
+        "exact": [
+          {
+            "key": "buy:o-joker.moneyAfter",
+            "expected": 8,
+            "unit": "USD",
+            "derivation": "10−2=8; la otra oferta no cambia esta compra.",
+            "oracleKind": "independent-arithmetic"
+          }
+        ]
+      },
+      "feasibility": "Una tienda ordinaria puede contener Joker y The Fool. El catálogo puede mostrarlo sin habilitar su uso; no se expande la cobertura.",
+      "caseKind": "strategic-synthetic",
+      "evidence": [
+        {
+          "ref": "docs/hoja-de-ruta-asesor.md#3-contratos-mínimos",
+          "kind": "existing-primary-inspection-or-product-contract",
+          "observedInGame": false
+        },
+        {
+          "ref": "src/state/legacy-model.ts",
+          "kind": "catalog-or-contract-shaping",
+          "observedInGame": false
+        }
+      ]
+    },
+    {
+      "id": "D13",
+      "title": "El ante cambia horizonte, no fabrica preparación ni suficiencia",
+      "setup": {
+        "money": 8,
+        "ante": 1,
+        "shop": {
+          "status": "known",
+          "offers": [
+            {
+              "offerId": "o-baron",
+              "catalogId": "baron",
+              "kind": "joker",
+              "price": 8,
+              "edition": "base",
+              "stickers": []
+            }
+          ]
+        },
+        "deckMaterial": {
+          "kind": "complete-modified",
+          "fromPreset": "standard52-unmodified",
+          "removeRanks": [
+            "K"
+          ]
+        }
+      },
+      "pairedSetup": {
+        "ante": 8,
+        "nextBlind": {
+          "kind": "big",
+          "target": 75000,
+          "bossId": "none"
+        }
+      },
+      "acceptance": {
+        "allowedDecisionKinds": [
+          "preference",
+          "conditional",
+          "tradeoff",
+          "tie",
+          "abstention"
+        ],
+        "mustPreferAnyOf": [],
+        "mustNotPrefer": [
+          "unconditional:buy:o-baron"
+        ],
+        "mustExplain": [
+          "stage.horizon-is-not-preparation",
+          "material.trigger-absent"
+        ],
+        "mustAskFor": [],
+        "mustNotClaim": [
+          "late-ante-alone-enables-baron",
+          "early-ante-alone-forbids-baron"
+        ],
+        "exact": [
+          {
+            "key": "material.kings",
+            "expected": 0,
+            "unit": "cards",
+            "derivation": "Se registraron retirados los cuatro reyes; el ante no los repone.",
+            "oracleKind": "independent-arithmetic"
+          }
+        ]
+      },
+      "feasibility": "Mazo48 sin reyes tras retiradas reales, en A1 oA8. El segundo estado es una comparación contextual contrafactual legal, no una afirmación de historial idéntico.",
+      "caseKind": "strategic-synthetic",
+      "evidence": [
+        {
+          "ref": "docs/evidencia/sinergias-l02.md",
+          "kind": "existing-primary-inspection-or-product-contract",
+          "observedInGame": false
+        },
+        {
+          "ref": "docs/evidencia/barajas-l03.md",
+          "kind": "existing-primary-inspection-or-product-contract",
+          "observedInGame": false
+        }
+      ]
+    },
+    {
+      "id": "D14",
+      "title": "Verde y Azul no comparten el coste de oportunidad de intereses",
+      "setup": {
+        "deckId": "green",
+        "money": 25,
+        "shop": {
+          "status": "known",
+          "offers": [
+            {
+              "offerId": "o-half",
+              "catalogId": "half_joker",
+              "kind": "joker",
+              "price": 5,
+              "edition": "base",
+              "stickers": []
+            }
+          ]
+        }
+      },
+      "pairedSetup": {
+        "deckId": "blue"
+      },
+      "acceptance": {
+        "allowedDecisionKinds": [
+          "preference",
+          "conditional",
+          "tradeoff",
+          "tie",
+          "abstention"
+        ],
+        "mustPreferAnyOf": [],
+        "mustNotPrefer": [],
+        "mustExplain": [
+          "deck.income-rule-differs",
+          "economy.reserve-is-not-only-interest"
+        ],
+        "mustAskFor": [],
+        "mustNotClaim": [
+          "green-earns-interest",
+          "green-saving-is-useless"
+        ],
+        "exact": [
+          {
+            "key": "green.conditional-cashout.interestSacrifice",
+            "expected": 0,
+            "unit": "USD-per-won-round",
+            "derivation": "Verde no paga intereses con25 ni20.",
+            "oracleKind": "independent-arithmetic"
+          },
+          {
+            "key": "blue.conditional-cashout.interestSacrifice",
+            "expected": 1,
+            "unit": "USD-per-won-round",
+            "derivation": "Tope base5:floor(25/5)=5 frentefloor(20/5)=4.",
+            "oracleKind": "independent-arithmetic"
+          }
+        ]
+      },
+      "feasibility": "Mismos hechos observados, distintas barajas iniciales con sus recursos propios; la comparación no copia recursos de Azul a Verde.",
+      "caseKind": "strategic-synthetic",
+      "evidence": [
+        {
+          "ref": "docs/evidencia/barajas-l03.md",
+          "kind": "existing-primary-inspection-or-product-contract",
+          "observedInGame": false
+        },
+        {
+          "ref": "docs/evidencia/h2-inspeccion-local.md",
+          "kind": "existing-primary-inspection-or-product-contract",
+          "observedInGame": false
+        }
+      ]
+    }
+  ]
+}

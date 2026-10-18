@@ -1,5 +1,7 @@
 # Tienda de la Mesa — primera entrega
 
+**Política vigente desde EVAL01a:** `quick-shop-2`, descrita y evaluada en [este contrato](evaluacion-asesor-eval01.md). El índice 70 y un rol ausente ya no son permisos universales para comprar. Refuerzo preparado, pérdida al reemplazar, condiciones económicas y legalidad se distinguen. Las secciones SHOP01 siguientes conservan el diseño original como historial; donde difieran, prevalece EVAL01a.
+
 **Actualización 2026-10-16:** [SHOP03a](tienda-persistente.md) sustituye el contrato de sesión descrito aquí para los comodines: sus ofertas ahora se guardan en `observed.shop`, y las acciones realizadas pueden confirmarse desde Mesa. Vales, sobres y otras cartas ofertadas siguen temporales. Esta página conserva la política contextual y el antecedente SHOP01; sus menciones de tienda independiente/no persistida son históricas.
 
 Implementación2026-10-14. Sustituye Candidatos por la transcripción de una tienda, con ofertas de comodines, vales, sobres y otras cartas visibles. Reutiliza los perfiles, composición y H2; consultar no compra ni guarda nada. Se mantiene separado el cálculo exacto por manos y el registro confirmado.

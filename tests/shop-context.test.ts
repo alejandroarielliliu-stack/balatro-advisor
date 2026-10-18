@@ -8,11 +8,14 @@ import {evaluateJokerFit} from '../src/advisor/quick-fit.js';
 import {standardDeck} from '../src/catalog/initial.js';
 import {VOUCHER_CATALOG} from '../src/catalog/voucher-catalog.js';
 import {known} from './helpers.js';
+import {migrateState} from '../src/state/migration.js';
+import {voucherResources} from '../src/catalog/vouchers.js';
 
 // Literal software oracles: SHOP03–08 and L06 documented before this module.
 // These are not observations of a played game or evidence of strategy efficacy.
 function fixture(money=25):GameState {
- const state=JSON.parse(readFileSync(new URL('../../examples/shop-purchase.json',import.meta.url),'utf8')) as GameState;
+ const migrated=migrateState(JSON.parse(readFileSync(new URL('../../examples/shop-purchase.json',import.meta.url),'utf8')));assert.ok(migrated.ok);const state=migrated.value;
+ const totals=voucherResources('blue',[]);state.observed.resources.handsPerRound=known(totals.hands);state.observed.resources.discardsPerRound=known(totals.discards);state.observed.resources.handSize=known(totals.handSize);state.observed.resources.jokerSlots=known(totals.jokerSlots);
  state.assumptions.probes=[];state.assumptions.roundPlans=[];
  state.observed.money=known(money);return state;
 }
@@ -46,12 +49,13 @@ test('shop context: zero Steel cards cannot become a useful Steel Joker by purch
  assert.deepEqual(report.recommendation.offerIds,['hold']);assert.match(report.recommendation.title,/Ahorra/);
 });
 
-test('shop context: another supported effect of an existing role needs an actual improvement',()=>{
+test('shop context: an existing role does not negate another prepared scoring effect',()=>{
  const state=fixture(),snapshot=shop();state.observed.jokers=known([joker('joker','owned-basic')]);
  snapshot.jokers=[offer('joker',2,'second-basic')];
  const report=evaluateShopContext(state,snapshot,{ante:1});
  assert.equal(report.options.find(o=>o.id==='second-basic')?.fit?.score,70);
- assert.deepEqual(report.recommendation.offerIds,['hold']);
+ assert.deepEqual(report.recommendation.offerIds,['second-basic']);
+ assert.match(report.recommendation.reasons.join(' '),/ya tengas ese rol/);
 });
 
 test('shop context: prepared distinct roles stay incomparable, even with unequal index and price',()=>{
@@ -103,12 +107,12 @@ test('shop context: Eternal replacement is blocked and no sale money is invented
  assert.ok(buy.fit?.purchase.errors.some(e=>e.code==='eternal_joker'));assert.deepEqual(report.recommendation.offerIds,['hold']);
 });
 
-test('shop context: a developed owned counter protects selected replacement without global-score comparison',()=>{
+test('shop context: a developed counter is a replacement sacrifice, not an automatic veto',()=>{
  const state=fixture(),snapshot=shop();state.observed.jokers=known([joker('green_joker','developed',2,{greenMult:known(20)})]);
  snapshot.jokers=[{...offer('stuntman',7,'replacement'),replacementId:'developed'}];
  const report=evaluateShopContext(state,snapshot,{ante:1}),buy=report.options.find(o=>o.id==='replacement')!;
  assert.equal(buy.moneyAfter,20);assert.match(buy.reasons.join(' '),/greenMult=20/);
- assert.match(buy.reasons.join(' '),/Conserva el desarrollo/);assert.deepEqual(report.recommendation.offerIds,['hold']);
+ assert.match(buy.reasons.join(' '),/Conserva el desarrollo/);assert.deepEqual(report.recommendation.offerIds,['hold','replacement']);assert.equal(report.recommendation.status,'tie');
  assert.equal(state.observed.jokers.status==='known'&&state.observed.jokers.value[0]?.counters.greenMult?.status,'known');
 });
 
@@ -159,6 +163,7 @@ test('shop context: all 32 voucher descriptions are evaluated, exactly 10 effect
  for(const voucher of VOUCHER_CATALOG){
   const state=fixture(70),snapshot=shop();
   state.observed.outOfScope=known({vouchers:[...voucher.requires],consumables:[],pendingTags:[],otherModifiers:[]});
+  const totals=voucherResources('blue',voucher.requires);state.observed.resources.handsPerRound=known(totals.hands);state.observed.resources.discardsPerRound=known(totals.discards);state.observed.resources.handSize=known(totals.handSize);state.observed.resources.jokerSlots=known(totals.jokerSlots);
   snapshot.vouchers=[{offerId:voucher.id,catalogId:voucher.id,price:10}];
   const evaluated=option(state,snapshot,voucher.id);
   assert.equal(evaluated.title,voucher.name);assert.equal(evaluated.moneyAfter,60);assert.equal(evaluated.fit,undefined);
@@ -176,24 +181,25 @@ test('shop context: Seed Money changes a cap without creating cash and Green can
  state.observed.deckId=known('green');assert.equal(option(state,snapshot,'seed').resourceChanges?.interestCap,0);
 });
 
-test('shop context: interest vouchers require the next whole $5 band before showing present usefulness',()=>{
+test('shop context: a free observed interest voucher keeps its cap projection without certifying an unsupported purchase',()=>{
  const seedShop=shop();seedShop.vouchers=[{offerId:'seed',catalogId:'v_seed_money',price:0}];
  const at26=fixture(26),at30=fixture(30);
  const belowBand=evaluateShopContext(at26,seedShop,{ante:1}),firstBand=evaluateShopContext(at30,seedShop,{ante:1});
  // floor(26/5)=5: the ordinary $5 cap already covers this balance.
- assert.deepEqual(belowBand.recommendation.offerIds,['hold']);
+ assert.equal(belowBand.recommendation.status,'abstain');
  assert.equal(belowBand.options.find(o=>o.id==='seed')?.moneyAfter,26);
  assert.equal(belowBand.options.find(o=>o.id==='seed')?.resourceChanges?.interestCap,10);
  // floor(30/5)=6: Seed permits an extra dollar only at a future eligible cashout.
- assert.deepEqual(firstBand.recommendation.offerIds,['seed']);assert.equal(firstBand.recommendation.status,'conditional');
+ assert.deepEqual(firstBand.recommendation.offerIds,['seed']);assert.equal(firstBand.recommendation.status,'abstain');
+ assert.match(firstBand.options.find(o=>o.id==='seed')!.limitations.join(' '),/precio base/);
  assert.equal(firstBand.options.find(o=>o.id==='seed')?.moneyAfter,30);
  assert.deepEqual(firstBand.options.find(o=>o.id==='seed')?.resourceChanges,{interestCap:10});
  assert.equal(at30.observed.money.status==='known'&&at30.observed.money.value,30);
  const treeShop=shop();treeShop.vouchers=[{offerId:'tree',catalogId:'v_money_tree',price:0}];
- for(const [balance,recommended] of [[54,'hold'],[55,'tree']] as const){
+ for(const balance of [54,55]){
   const state=fixture(balance);state.observed.outOfScope=known({vouchers:['v_seed_money'],consumables:[],pendingTags:[],otherModifiers:[]});
   const report=evaluateShopContext(state,treeShop,{ante:1});
-  assert.deepEqual(report.recommendation.offerIds,[recommended]);
+  assert.equal(report.recommendation.status,'abstain');
   assert.equal(report.options.find(o=>o.id==='tree')?.moneyAfter,balance);
  }
 });
@@ -309,11 +315,11 @@ test('shop context: strict observed mode keeps price arithmetic and descriptive 
 });
 
 test('shop context: strict voucher projections retain factual costs but await observed L06 evidence',()=>{
- const state=fixture(),snapshot=shop();snapshot.vouchers=[{offerId:'grabber',catalogId:'v_grabber',price:4}];
+ const state=fixture(),snapshot=shop();snapshot.vouchers=[{offerId:'grabber',catalogId:'v_grabber',price:10}];
  const strict=evaluateShopContext(state,snapshot,{ante:1,requireObserved:true}),voucher=strict.options.find(o=>o.id==='grabber')!;
  assert.equal(strict.recommendation.status,'abstain');assert.equal(voucher.coverage,'limited');
- assert.equal(voucher.moneyAfter,21);assert.equal(voucher.resourceChanges?.handsPerRound,6);
+ assert.equal(voucher.moneyAfter,15);assert.equal(voucher.resourceChanges?.handsPerRound,6);
  assert.match(voucher.limitations.join(' '),/L06.*inspección estática.*sin observación/);
  const provisional=evaluateShopContext(state,snapshot,{ante:1,requireObserved:false});
- assert.equal(provisional.recommendation.status,'conditional');assert.equal(provisional.options.find(o=>o.id==='grabber')?.coverage,'modeled');
+ assert.equal(provisional.recommendation.status,'tie');assert.deepEqual(provisional.recommendation.offerIds,['hold','grabber']);assert.equal(provisional.options.find(o=>o.id==='grabber')?.coverage,'modeled');
 });

@@ -136,7 +136,9 @@ export function generationEvent(input:FullEventInput,effective?:readonly JokerIn
    if(j.catalogId==='marble'||j.catalogId==='certificate'){const c=validateCard(choice(input,j.instanceId+':'+j.catalogId,'card'));if(j.catalogId==='marble'&&(c.enhancement!=='stone'||c.edition!=='base'||c.seal!=='none'||c.extraChips!==0))fail('$choices','invalid_outcome','Marble genera una carta Stone base sin sello.');if(j.catalogId==='certificate'&&(c.enhancement!=='none'||c.edition!=='base'||c.seal==='none'||c.extraChips!==0))fail('$choices','invalid_outcome','Certificate genera carta base con un sello.');addCard(input,c);generatedPlace(input,c.instanceId,j.catalogId==='certificate'?'hand':'deck');}
    if(j.catalogId==='cartomancer')createConsumable(input,j,'cartomancer','tarot');
    if(j.catalogId==='riff_raff')for(let n=1;n<=2;n++){
-    const slots=need(input.state.observed.resources.jokerSlots,'$jokerSlots'),occupied=jokers.filter(x=>need(x.edition,'$edition')!=='negative').length;if(occupied>=slots)break;
+    // card.lua 2529–2530 counts all physical cards against the adjusted limit.
+    // Negative already increased jokerSlots when acquired; do not exclude it twice.
+    const slots=need(input.state.observed.resources.jokerSlots,'$jokerSlots'),occupied=jokers.length;if(occupied>=slots)break;
     const result=choice(input,j.instanceId+':riff_raff:'+n,'joker');if(!result||typeof result!=='object'||!('counters'in result)||!('sellValue'in result)||!('catalogId'in result)||!('stickers'in result))fail('$choices','invalid_outcome','Riff-Raff requiere un comodín común explícito.');const created=structuredClone(result as JokerInstance);
     if(jokers.some(x=>x.instanceId===created.instanceId)||ALL_JOKER_FACTS[created.catalogId]?.rarity!==1||need(created.edition,'$edition')!=='base'||need(created.stickers,'$stickers').length)fail('$choices','invalid_outcome','Riff-Raff solo genera comunes base con ID nuevo.');jokers.push(created);trace(input,'Riff-Raff · comodín creado',{created:created.instanceId,catalogId:created.catalogId});
    }

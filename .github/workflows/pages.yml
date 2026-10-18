@@ -28,10 +28,14 @@ jobs:
         run: npm ci
       - name: Comprobar tipos y pruebas
         run: npm run check
+      - name: Comprobar aceptación sintética del asesor
+        run: node --test tools/evaluate-advisor.test.mjs && node tools/evaluate-advisor.mjs --no-build --split development --output docs/evidencia/eval01/ci-development.json
       - name: Construir la web
         run: npm run build:site
       - name: Instalar Chrome para la prueba estática
         run: npx --no-install playwright install --with-deps chrome
+      - name: Comprobar consejo rápido y separación del registro
+        run: node tools/quick-shop-eval-test.mjs
       - name: Comprobar registro desde la tienda
         run: node tools/shop-session-test.mjs
       - name: Comprobar compras registradas de vales

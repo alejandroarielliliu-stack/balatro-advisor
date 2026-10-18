@@ -1,0 +1,222 @@
+{
+  "contract": "eval01-human-review-1",
+  "input": "docs/evidencia/eval01/reserved.json",
+  "inputSha256": "205228d2afd6833e2da2ebebecaad3fb208904b10007811f381ac282cbe3b15e",
+  "fixtureHash": "e3f1d079cba0461a63748e0f865ab666f654f279cd6252101179b0fec740c34c",
+  "matcherVersion": "eval01-semantic-2",
+  "policyFreeze": "evaluation/policy-freeze.json",
+  "policyFreezeMatchesOutputSources": true,
+  "policyFreezeMatchesFixture": true,
+  "reviewedOn": "2026-10-18",
+  "protocol": "Reserved was opened for review only after the owner recorded the policy freeze and its first evaluation. No production, matcher or fixture adjustment made following reserved results.",
+  "automatedSummary": {
+    "cases": 7,
+    "executionErrors": 0,
+    "decision": {
+      "pass": 11
+    },
+    "semantic": {
+      "pass": 31,
+      "manual-review-needed": 2
+    },
+    "exact": {
+      "pass": 11,
+      "audit-only": 1
+    }
+  },
+  "manualSemanticResolutions": [
+    {
+      "caseId": "R04",
+      "clauses": [
+        "material.trigger-absent"
+      ],
+      "status": "pass",
+      "explanation": "La ausencia de material se expresa literalmente; el matcher no reconoce esta redacción equivalente. El resultado H2×1 se contrasta por separado, sin usarlo para sustituir la explicación.",
+      "citations": [
+        {
+          "path": "cases[3].variants[0].decision.context.options[1].reasons[0]",
+          "text": "Sin Acero: no aumenta su multiplicador."
+        }
+      ]
+    },
+    {
+      "caseId": "R07",
+      "clauses": [
+        "coverage.independent-branch-remains"
+      ],
+      "status": "pass",
+      "explanation": "Joker mantiene cálculo y preferencia condicional, con saldo6. Abstract conserva precio desconocido y aviso de que puede cambiar la elección; no se usa el precio base ni se bloquea toda la comparación.",
+      "citations": [
+        {
+          "path": "cases[6].variants[0].decision.context.options[2].reasons[4]",
+          "text": "Saldo hipotético: $8 − $2 = $6. Es aritmética del precio visto, no una transacción confirmada."
+        },
+        {
+          "path": "cases[6].variants[0].decision.context.options[1].limitations[8]",
+          "text": "Precio actual sin transcribir; no se sustituye por el precio base."
+        },
+        {
+          "path": "cases[6].variants[0].decision.context.recommendation.reasons[8]",
+          "text": "Otras ofertas tienen datos pendientes y podrían cambiar la elección: Abstract Joker."
+        }
+      ]
+    }
+  ],
+  "caseReviews": [
+    {
+      "caseId": "R01",
+      "caseKind": "strategic-synthetic",
+      "status": "pass",
+      "explanation": "No recomienda la compra inasequible. Explica el saldo que excede el crédito; conservar mantiene1 dólar.",
+      "citations": [
+        {
+          "path": "cases[0].variants[0].decision.context.options[1].reasons[5]",
+          "text": "El saldo posterior excede el crédito conocido; no puede financiar esta opción."
+        }
+      ],
+      "decisionClauses": 3,
+      "semanticClauses": 5,
+      "exactClauses": 1,
+      "auditOnlyClauses": 0
+    },
+    {
+      "caseId": "R02",
+      "caseKind": "strategic-synthetic",
+      "status": "pass",
+      "explanation": "Reconoce Photo+Chad con figuras disponibles pero exige que primera puntuada y primera figura coincidan. No atribuye el combo a cualquier mano ni garantiza supervivencia.",
+      "citations": [
+        {
+          "path": "cases[1].variants[0].decision.context.options[1].reasons[1]",
+          "text": "12 figuras para Fotografía y Chad elegibles en el mazo conocido. Fotografía y Chad pueden aprovechar la misma carta. Falta que la primera carta puntuada sea también la primera figura puntuada. Tener figuras no demuestra ese orden ni la mano."
+        }
+      ],
+      "decisionClauses": 1,
+      "semanticClauses": 5,
+      "exactClauses": 1,
+      "auditOnlyClauses": 0
+    },
+    {
+      "caseId": "R03",
+      "caseKind": "coverage-contract",
+      "status": "coverage-gap",
+      "explanation": "El resumen parcial de12reyes/8Acero no entra aH1. La política recibe unknown, comunica límite y retencióncondicional, y se abstiene. El saldo22 siguecalculable porque comprar no depende del material. No se valida la recomendación sobre esa composición parcial.",
+      "citations": [
+        {
+          "path": "cases[2].variants[0].decision.context.limitations[5]",
+          "text": "H1 admite el mazo íntegro observado o un dato desconocido; aún no representa un resumen parcial de cantidades e intersecciones. No se fabrican cartas para completarlo."
+        },
+        {
+          "path": "cases[2].variants[0].decision.context.options[1].reasons[1]",
+          "text": "Falta la composición actual para contar cartas de Acero o reyes con Barón. Mimo repite efectos retenidos y Barón puede aportar sobre reyes reales. Falta robar y conservar esas cartas al puntuar; jugarlas no activa esta retención. Mimo no repite el efecto independiente de Steel Joker."
+        }
+      ],
+      "decisionClauses": 1,
+      "semanticClauses": 6,
+      "exactClauses": 1,
+      "auditOnlyClauses": 1
+    },
+    {
+      "caseId": "R04",
+      "caseKind": "strategic-synthetic",
+      "status": "pass",
+      "explanation": "Aceroausente y multiplicador×1 hacen que no se prefiera SteelJoker. La etapa6 no crea activación; la preparación futura se conserva como posibilidad.",
+      "citations": [
+        {
+          "path": "cases[3].variants[0].decision.context.options[1].reasons[0]",
+          "text": "Sin Acero: no aumenta su multiplicador."
+        }
+      ],
+      "decisionClauses": 2,
+      "semanticClauses": 4,
+      "exactClauses": 2,
+      "auditOnlyClauses": 0
+    },
+    {
+      "caseId": "R05",
+      "caseKind": "strategic-synthetic",
+      "status": "pass",
+      "explanation": "Sin huecos el principal conserva. En reemplazo explícito, Runner0 no se protege de forma absoluta ni hereda contadores: se muestra empate condicional con pérdida0, coste neto2 y Abstractcon5comodines(+15Mult). No declara búsquedaglobal.",
+      "citations": [
+        {
+          "path": "cases[4].variants[0].replacements[0].report.context.options[1].reasons[1]",
+          "text": "Vender Runner sacrifica su efecto y sus contadores (chips=0). La compra no hereda ese desarrollo."
+        }
+      ],
+      "decisionClauses": 1,
+      "semanticClauses": 4,
+      "exactClauses": 2,
+      "auditOnlyClauses": 0
+    },
+    {
+      "caseId": "R06",
+      "caseKind": "strategic-synthetic",
+      "status": "pass",
+      "explanation": "Con Seed+MoneyTree se explica interés10→9 para50→48, sin sumar dos veces topes, pagar en tienda ni registrar ingresos proyectados.",
+      "citations": [
+        {
+          "path": "cases[5].variants[0].decision.context.options[1].reasons[6]",
+          "text": "Interés aislado condicionado: $10 → $9 (-1). Solo si ganas y no cambia el saldo hasta el cobro; no se paga en la tienda."
+        }
+      ],
+      "decisionClauses": 1,
+      "semanticClauses": 4,
+      "exactClauses": 3,
+      "auditOnlyClauses": 0
+    },
+    {
+      "caseId": "R07",
+      "caseKind": "strategic-synthetic",
+      "status": "pass",
+      "explanation": "Abstract mantiene precio desconocido y no es preferido incondicionalmente. Joker se puede comparar de forma independiente; se avisa que completar precio puede cambiar la decisión.",
+      "citations": [
+        {
+          "path": "cases[6].variants[0].decision.context.options[1].limitations[8]",
+          "text": "Precio actual sin transcribir; no se sustituye por el precio base."
+        },
+        {
+          "path": "cases[6].variants[0].decision.context.recommendation.reasons[8]",
+          "text": "Otras ofertas tienen datos pendientes y podrían cambiar la elección: Abstract Joker."
+        }
+      ],
+      "decisionClauses": 2,
+      "semanticClauses": 5,
+      "exactClauses": 1,
+      "auditOnlyClauses": 0
+    }
+  ],
+  "summary": {
+    "reservedCasesReviewed": 7,
+    "strategicSyntheticCasesAcceptedWithinFrozenCriteria": 6,
+    "coverageCasesStillLimited": 1,
+    "automaticDecisionClausesPassed": 11,
+    "semanticClausesTotal": 33,
+    "automaticSemanticClausesPassed": 31,
+    "manuallyResolvedSemanticClauses": 2,
+    "manualResolutionPass": 2,
+    "manualResolutionFail": 0,
+    "immediateAndAuditH2ExactClausesPassed": 11,
+    "documentaryBoundsExcludedFromGrade": 1,
+    "empiricalWinrateValidated": false,
+    "all150JokersStrategicallyValidated": false
+  },
+  "nonBlockingObservations": [
+    {
+      "caseId": "R07",
+      "observation": "DEC00 asks broadly to recheck offer identity/price/modifiers when the price alone is unknown; the per-card notice does identify the missing price. More precise field-level questions remain a UX improvement.",
+      "changesMade": false
+    },
+    {
+      "caseId": "R05",
+      "observation": "The main full-inventory card shows a hypothetical Abstract contribution+18 and the explicit no-space warning; its legal replacement subconsultation correctly shows+15. Marking unavailable projections more compactly would reduce confusion. The illegal main action is not recommended.",
+      "changesMade": false
+    }
+  ],
+  "limitations": [
+    "Six held-out synthetic strategic cases do not establish winrate improvement, universal advice quality or coverage of all150jokers.",
+    "R03 remains a representation gap rather than a tested prepared-Baron policy decision.",
+    "All arithmetic expectations were frozen before outputs; exact calculations and advice explanations remain separate.",
+    "Rules retain their static-inspection/provisional status; no new game session observed.",
+    "If reserved cases are used for later tuning they become development cases; a new holdout is required."
+  ],
+  "publishedAssertionReport": "evaluation/results/reserved.json"
+}

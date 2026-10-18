@@ -1,4 +1,5 @@
 import {verifyOrScoreEfhiii} from '../reference/efhiii-scoring.js';
+import {fixedMainMult} from './fixed-main-mult.js';
 import {randomBeforeJoker,randomCard,randomHeld,randomMain} from './random-jokers.js';
 import {historyBefore,historyBeforeJoker,historyMain,historyCard,historyRoundResources} from './history-jokers.js';
 import {generationBeforeJoker,generationCard,generationMain} from './generation-jokers.js';
@@ -200,9 +201,9 @@ export function scoreInternal(original: GameState, input: HandInput, trace: Trac
       finishJoker(actor);continue;
     }
     switch (joker.catalogId) {
-      case 'joker': use('joker.effect'); add('joker.effect', joker.instanceId + ': Joker', 0, FX.jokerMult); break;
+      case 'joker': use('joker.effect'); add('joker.effect', joker.instanceId + ': Joker', 0, fixedMainMult(joker.catalogId,physical.length)!); break;
       case 'half_joker': use('half_joker.effect'); add('half_joker.effect', joker.instanceId + ': Half (cartas jugadas)', 0, cards.length <= FX.halfMaxCards ? FX.halfMult : 0); break;
-      case 'abstract_joker': use('abstract_joker.effect'); add('abstract_joker.effect', joker.instanceId + ': Abstract (incluye sí mismo)', 0, FX.abstractPerJoker * physical.length); break;
+      case 'abstract_joker': use('abstract_joker.effect'); add('abstract_joker.effect', joker.instanceId + ': Abstract (incluye sí mismo)', 0, fixedMainMult(joker.catalogId,physical.length)!); break;
       case 'banner': use('banner.effect'); add('banner.effect', joker.instanceId + ': Banner', FX.bannerPerDiscard * input.discardsRemaining, 0); break;
       case 'green_joker': add('green.timing', joker.instanceId + ': Green', 0, greenAfter[joker.instanceId]!); break;
       case 'golden_joker': use('golden_joker.effect'); add('golden_joker.effect', joker.instanceId + ': Golden (sin puntos)', 0, 0); break;

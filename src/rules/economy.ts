@@ -8,6 +8,7 @@ import { blindInfo, deckCards, fail, guardPendingTags, inventory, need, resource
 import type { EngineOptions, Trace } from './core.js';
 
 export interface Cashout { balanceBefore: number; blindReward: number; unusedHands: number; unusedDiscards?: number; goldenIncome: number; tagIncome?:number; otherJokerIncome?:number; interest: number; earned: number; balanceAfter: number }
+export const GOLDEN_ROUND_INCOME=4;
 export function interestInternal(balance: number, trace: Trace[], cap=5): number {
   bankBalance(balance);
   const interest = Math.min(cap, Math.max(0,Math.floor(balance / 5)));
@@ -46,8 +47,8 @@ export function cashoutInternal(state: GameState, handsRemaining: number, won: b
   } else {use('interest.timing');use('interest.formula');}
   let goldenIncome = 0;
   for (const joker of inventory(state)) if (joker.catalogId === 'golden_joker') {
-    use('golden_joker.effect'); goldenIncome += 4;
-    trace.push({ ruleId: 'golden_joker.effect', label: 'Golden al cobro', values: { instanceId: joker.instanceId, dollars: 4 } });
+    use('golden_joker.effect'); goldenIncome += GOLDEN_ROUND_INCOME;
+    trace.push({ ruleId: 'golden_joker.effect', label: 'Golden al cobro', values: { instanceId: joker.instanceId, dollars: GOLDEN_ROUND_INCOME } });
   }
   const vouchers=need(state.observed.outOfScope,'$.observed.outOfScope').vouchers;if(income.interest&&vouchers.some(id=>['v_seed_money','v_money_tree'].includes(id)))use('vouchers.interest');
   let otherJokerIncome=generationRoundIncome(state)+(settings.additionalJokerIncome??0);

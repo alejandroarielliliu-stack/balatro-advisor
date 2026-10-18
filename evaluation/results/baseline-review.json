@@ -1,0 +1,98 @@
+{
+  "contract": "eval01-human-review-1",
+  "input": "docs/evidencia/eval01/baseline.json",
+  "regraded": "docs/evidencia/eval01/baseline-regraded.json",
+  "policyOutputsReviewed": "Only the immutable e53746c42598e6e8850c54558c22d2aefd908355 baseline; no corrected production outputs.",
+  "scope": "Review of automatic unresolved clauses, not global optimality; preserves all raw reports and fixture bytes.",
+  "judgments": [
+    {
+      "caseId": "D03",
+      "clauses": [
+        "scoring.same-role-can-help",
+        "scoring.marginal-benefit"
+      ],
+      "status": "fail",
+      "quote": "No identifica un rol faltante ni una relación con soporte actual que justifique mejorar la composición.",
+      "reason": "Abstract está ready70, pero la compra se excluye por no aportar rol faltante. El testigo independiente520→910 prueba un refuerzo actual real, sin probar supervivencia general ni exigir comprar a cualquier precio."
+    },
+    {
+      "caseId": "D04",
+      "clauses": [
+        "economy.more-cost-for-no-active-effect"
+      ],
+      "status": "fail",
+      "quote": "Sin cartas que pueden cumplir el palo requerido en el mazo.",
+      "reason": "Joker es preferido correctamente y Greedy no tiene material activo. Las opciones muestran precios por separado, pero falta explicar el intercambio concreto más caro/sin activación actual. Es fallo de explicación comparativa, no de acción preferida."
+    },
+    {
+      "caseId": "D05",
+      "clauses": [
+        "replacement.economy-sacrifice"
+      ],
+      "status": "fail",
+      "quote": "Vender Golden Joker pierde su efecto y sus contadores actuales (sin contador). No se heredan en la compra.",
+      "reason": "La subconsulta de reemplazo Golden menciona una pérdida genérica sin explicar los$4 por cobro. Runner180 sí está explícitamente preservado y no heredado; no se cambia ese aprobado."
+    },
+    {
+      "caseId": "D08",
+      "clauses": [
+        "coverage.partial-summary-not-represented"
+      ],
+      "status": "coverage-gap",
+      "quote": "Falta la composición actual del mazo.",
+      "reason": "H1 recibió deckunknown por falta de contrato para resumen parcial. La abstención no inventa cartas y es prudente; no informa el límite de representación del resumen. No calificarlo como fallo estratégico sobre5reyes/6Acero que nunca recibió."
+    },
+    {
+      "caseId": "D09",
+      "clauses": [
+        "economy.interest-opportunity-cost"
+      ],
+      "status": "fail",
+      "quote": "Ahorrar conserva dinero e interés potencial al cierre; aquí no se cobra ni se pierde interés de forma inmediata.",
+      "reason": "El aviso genérico es cierto, pero no conecta SeedMoney con el sacrificio condicional7→6 para35→33. Los valores H2 correctos en exact no sustituyen una explicación del consejo."
+    },
+    {
+      "caseId": "D11",
+      "clauses": [
+        "data.shop-unknown",
+        "shop.visible-offers-and-prices"
+      ],
+      "status": "fail",
+      "quote": "Ahorra mientras no haya una mejora conocida",
+      "reason": "Estado con tienda desconocida recibió consejo idéntico a tienda vacía; no se pregunta por ofertas y precios. No se exige introducir52cartas."
+    },
+    {
+      "caseId": "D12",
+      "clauses": [
+        "coverage.independent-branch-remains"
+      ],
+      "status": "pass",
+      "quote": "Mult inmediato sin condición de mano; aporte fijo que no crece.",
+      "reason": "La opciónJoker sigue modeled/legal y presenta saldo8 y encaje; TheFool se conserva unknown con motivo. Abstenerse de una preferencia global por la rama desconocida no bloquea los cálculos independientes."
+    },
+    {
+      "caseId": "D13",
+      "clauses": [
+        "stage.horizon-is-not-preparation"
+      ],
+      "status": "fail",
+      "quote": "Sin reyes que podrías conservar en el mazo.",
+      "reason": "La preferencia mantienehold en ambos antes y no inventa reyes: esa parte es correcta. Falta explicar el papel del horizonte frente a preparación; se registra como fallo de explicación de etapa, no como necesidad de invertir la recomendación."
+    },
+    {
+      "caseId": "D14",
+      "clauses": [
+        "deck.income-rule-differs"
+      ],
+      "status": "fail",
+      "quote": "Ahorrar conserva dinero e interés potencial al cierre; aquí no se cobra ni se pierde interés de forma inmediata.",
+      "reason": "Se repite también en Verde. Debe separar reserva útil de intereses inexistentes y declarar la regla específica. Los oráculosH2 de intereses0/1 ya pasan, pero no se usan en la explicación."
+    }
+  ],
+  "matcherAmendment": {
+    "version": "eval01-semantic-2",
+    "reason": "Hardened to inspect only quick context/questions; excludes H2 traces/results. Fixed wording-equivalent false reviews for absent suit material and held support, negated forbidden claims, and a false question match caused by treating '-prices' as a single-offer price field. Regraded the same frozen raw baseline offline; did not call current production.",
+    "originalBaselinePreserved": true
+  },
+  "publishedAssertionReport": "evaluation/results/baseline-regraded.json"
+}
