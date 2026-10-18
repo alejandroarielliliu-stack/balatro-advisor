@@ -2,3 +2,7 @@
 # Preserve the exact vendored bytes checked by provenance tests.
 web/assets/** -text
 tools/reference/** -text
+
+# Keep independently frozen fixture bytes identical on Windows and Linux.
+/evaluation/fixtures/eval01-development.json -text
+/evaluation/fixtures/eval01-reserved.json -text

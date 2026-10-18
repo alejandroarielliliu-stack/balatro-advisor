@@ -31,6 +31,8 @@ Desarrollo incluye 12 situaciones estratégicas sintéticas, una comprobación d
 
 La revisión del contrato anterior a la línea base detectó que H1 todavía no representa resúmenes parciales. En esos casos el adaptador mantiene el mazo desconocido y conserva el resumen solo en la auditoría. Los límites de intersección son oráculos documentales, no requisitos de salida de una política que no recibió esos datos. Se comprueba que comunica la limitación y no fabrica cartas ni afirma haber usado el resumen. El manifiesto conserva los hashes previos y la razón de esta enmienda antes de consultar salidas; no es un ajuste a una recomendación observada.
 
+Los dos JSON congelados se guardan con sus bytes originales mediante `.gitattributes -text`: la conversión automática CRLF→LF de Git no debe cambiar sus hashes. El primer intento de CI detectó esa conversión y se detuvo antes de publicar; se preservaron los archivos originales, sin cambiar expectativas ni recalificar el reservado.
+
 El autor del banco puede leer contratos, catálogo y evidencia documental para construir estados. La implementación del adaptador no convierte los resultados esperados en salidas del motor: los literales y sus derivaciones se conservan en los JSON. El conjunto reservado está cerrado para el implementador hasta el paso 4. No se afirma independencia frente a todo conocimiento humano previo ni una muestra representativa de todas las partidas.
 
 ### Casos de desarrollo
