@@ -44,6 +44,8 @@ jobs:
         run: node tools/tarot-test.mjs
       - name: Comprobar Arcana y uso directo sobre la mano observada
         run: node tools/arcana-test.mjs
+      - name: Comprobar comparación de objetivos de Arcana
+        run: node tools/arcana-choices-test.mjs
       - name: Comprobar migración recuperable de partidas
         run: node tools/run-migration-test.mjs
       - name: Comprobar recorrido observado de partida

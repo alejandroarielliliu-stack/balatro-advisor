@@ -57,7 +57,7 @@ const invalid=(code:string,message:string,path='$packChoices'):Result<never>=>({
 const optionSchema=object({},{intendedHand:enumeration(...Object.keys(HAND_BASES) as [HandId,...HandId[]]),requireObserved:boolean});
 const label=(entry:PackEntry)=>entry.kind==='joker'?ALL_JOKER_FACTS[entry.joker.catalogId]?.name??entry.joker.catalogId:entry.catalogId;
 
-function compositionDelta(before:CompositionReport,after:CompositionReport):PackCompositionDelta {
+export function compositionDelta(before:CompositionReport,after:CompositionReport):PackCompositionDelta {
  return {before:structuredClone(before),after:structuredClone(after),globalDelta:before.global.value===null||after.global.value===null?null:compositionRound(after.global.value-before.global.value),
   sections:before.sections.map(b=>{const a=after.sections.find(s=>s.id===b.id)!;return {id:b.id,label:b.label,before:b.value,after:a.value,delta:b.value===null||a.value===null?null:compositionRound(a.value-b.value),beforeStatus:b.status,afterStatus:a.status};})};
 }
@@ -85,16 +85,18 @@ function projection(state:GameStateV02,action:PackChoiceOption['action'],entry:P
 }
 
 /** Only equal-applicability, fully known section vectors may dominate one another. */
-function sectionRelation(a:PackChoiceOption,b:PackChoiceOption):'better'|'same'|'worse'|'incomparable'{
- if(!a.composition||!b.composition)return 'incomparable';
+export function compositionSectionRelation(a:CompositionReport,b:CompositionReport):'better'|'same'|'worse'|'incomparable'{
  let up=false,down=false;
  for(const id of PACK_CHOICE_POLICY.criteria){
-  const first=a.composition.after.sections.find(s=>s.id===id)!,second=b.composition.after.sections.find(s=>s.id===id)!;
+  const first=a.sections.find(s=>s.id===id)!,second=b.sections.find(s=>s.id===id)!;
   if(first.status==='not-applicable'&&second.status==='not-applicable')continue;
   if(first.status!=='known'||second.status!=='known'||first.value===null||second.value===null)return 'incomparable';
   if(first.value>second.value)up=true;if(first.value<second.value)down=true;
  }
  return up&&down?'incomparable':up?'better':down?'worse':'same';
+}
+function sectionRelation(a:PackChoiceOption,b:PackChoiceOption):'better'|'same'|'worse'|'incomparable'{
+ return a.composition&&b.composition?compositionSectionRelation(a.composition.after,b.composition.after):'incomparable';
 }
 function fronts(options:PackChoiceOption[]):PackChoiceOption[][]{
  let remaining=options.filter(o=>o.projection.ok);const ordered:PackChoiceOption[][]=[];

@@ -63,7 +63,9 @@
     "demo:tarot": "npm run build && node dist/src/demo-tarot.js",
     "test:tarot": "npm run build && node tools/tarot-test.mjs",
     "demo:arcana": "npm run build && node dist/src/demo-arcana.js",
-    "test:arcana": "npm run build && node tools/arcana-test.mjs"
+    "test:arcana": "npm run build && node tools/arcana-test.mjs",
+    "demo:arcana-choices": "npm run build && node dist/src/demo-arcana-choices.js",
+    "test:arcana-choices": "npm run build && node tools/arcana-choices-test.mjs"
   },
   "devDependencies": {
     "@types/node": "24.19.1",

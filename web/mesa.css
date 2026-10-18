@@ -592,3 +592,15 @@ dialog[open] { animation: panel-arrival .14s ease-out; }
 .pack-choice-info .tarot-outcome {font-size:12px;}
 .tarot-panel #tarot-use {margin-bottom:10px;}
 @media(max-width:520px){.tarot-panel{padding:12px;}.tarot-panel>.section-title h2{font-size:24px;}.tarot-card-picker{gap:8px;}.tarot-panel #tarot-use{width:100%;}}
+
+/* Arcana target suggestions are previews; confirmation remains separate. */
+.arcana-comparison {border-color:#8c85a1;background:#2e424a;}
+.arcana-preferred {padding:7px 0;color:#ffe3a0;}
+.arcana-entry-comparison {padding-bottom:4px;}
+.arcana-target-list {display:grid;gap:8px;max-height:380px;overflow:auto;overscroll-behavior:contain;margin:8px 0;}
+.arcana-target-option {display:grid;gap:5px;padding:9px;background:#233f41;border:1px solid #536c71;border-radius:5px;}
+.arcana-target-option>b {font-size:12px;line-height:1.5;overflow-wrap:anywhere;}
+.arcana-target-option button {margin:2px 0 0;padding:7px 9px;min-height:36px;}
+.arcana-target-option small {margin:0;font-size:11px;}
+.arcana-comparison .pack-choice-status {line-height:1.5;}
+@media(max-width:520px){.arcana-target-option button{min-height:44px;}.arcana-target-list{max-height:350px;}}

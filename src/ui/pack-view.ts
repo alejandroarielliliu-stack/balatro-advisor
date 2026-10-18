@@ -12,6 +12,7 @@ import {immediateConsequences} from '../advisor/consequences.js';
 import {renderImmediateConsequences} from './consequences-view.js';
 import {jokerArt} from './collection.js';
 import {mountPackComparison} from './pack-choice-view.js';
+import {mountArcanaComparison} from './arcana-choice-view.js';
 import {CONSUMABLE_KINDS} from '../catalog/generation-jokers.js';
 import {inventoryCards} from '../state/inventory-changes.js';
 import {tarotDefinition} from '../rules/tarot.js';
@@ -106,7 +107,7 @@ export function renderPackView(host:HTMLElement,options:PackViewOptions){
  if(ctx.contents.status==='unknown')host.append(el('small','Transcribe las opciones mostradas por Balatro. El asesor no genera el contenido.','muted'));
  else{
   const comparison=family==='arcana'?null:mountPackComparison(host,state);
-  if(family==='arcana')host.append(el('small','Elige una carta y sus objetivos. No se comparan todas las combinaciones de cartas.','muted'));
+  const arcana=family==='arcana'?mountArcanaComparison(host,state):null;
   const choices=el('div','','pack-choice-grid');
   for(const entry of ctx.contents.value){
    const card=el('article','','pack-choice');card.dataset.packEntry=entry.entryId;const selected=ctx.selectedEntryIds.includes(entry.entryId);card.dataset.selected=String(selected);
@@ -122,7 +123,9 @@ export function renderPackView(host:HTMLElement,options:PackViewOptions){
       if(result.ok){preview.append(renderTarotOutcome(result.value));const before=evaluateComposition(state),after=evaluateComposition(result.value.state);if(before.global.value!==null&&after.global.value!==null){const detail=el('details');detail.append(el('summary','Efecto sobre tu composición'),el('small',`Índice heurístico ${before.global.value.toFixed(1)} → ${after.global.value.toFixed(1)}. No son fichas de una mano.`));preview.append(detail);}}
       else if(picked.size||held===undefined)preview.append(el('small',result.errors.map(e=>e.message).join(' '),'error'));options.controlsChanged();};
      button.onclick=()=>request(action());refresh();
+     arcana?.addEntry(entry.entryId,assessment,ids=>{picked.clear();for(const id of ids)picked.add(id);refresh();});
     }else{
+    arcana?.addEntry(entry.entryId,assessment,()=>{});
     const action:PackAction={type:'choose_pack_item',entryId:entry.entryId},result=probe(action),button=write(el('button',entry.kind==='planet'?'Usé esta carta':'Elegí esta carta'),!result.ok);button.dataset.packChoose=entry.entryId;button.onclick=()=>request(action);
     if(result.ok){
      info.append(renderPackOutcome(state,result.value.state));
