@@ -1,5 +1,23 @@
 # Backlog — seguimiento de partida en desarrollo
 
+## Prioridad vigente: pocas entradas y consejo útil
+
+Revisión18-10-2026: [plan investigado y criterios de cierre](hoja-de-ruta-asesor.md). Esta tabla sustituye el orden de los siguientes históricos. **UX01 implementada:** [consejo compacto y verificación](consejo-compacto-ux01.md). El resto de tareas de esta tabla sigue pendiente.
+
+| Orden | Tarea | Dependencia real | Aceptación breve | Estado |
+|---|---|---|---|---|
+| 1 | UX01 — conclusión compacta en tienda | DEC00/UI actuales; independiente de OBS01d | Acción, beneficio, sacrificio y pregunta decisiva visibles; detalles recuperables;390px y consulta sin escrituras | Implementada como software; validación de uso EVAL01b pendiente |
+| 2 | UX01b — observaciones básicas sin Guardar | H1/T09b actuales; independiente del resumen | Dinero/contador/inventario/vales persisten al terminar edición válida; ofertas y recarga sin `dirty` tras éxito, errores conservan copia y borrador; ante/fase por recorrido actual | Pendiente |
+| 3 | OBS01d.1 — resumen de material y guardado | H1/T09b; no requiere ampliar catálogo | Conocido/desconocido/intersecciones validados; edición válida sin pasar por Registro, recuperación y archivos antiguos compatibles, sin cartas ficticias | Pendiente |
+| 4 | OBS01d.2 — Barón/Mimo/Steel Joker y preguntas pertinentes | OBS01d.1 | Datos resumidos cambian solo efectos pertinentes; preguntas bajo demanda, no52cartas; conservar cálculo independiente | Pendiente |
+| 5 | DEC02 — comparación acotada y preferencia parcial | UX01 y datos necesarios de OBS01d | Mejora/ahorro/reemplazo con motivos derivados, sin ordenar por nota o ante; ofertas pendientes no borran resultados | Pendiente |
+| Transversal y cierre | EVAL01b — utilidad y casos nuevos | Empieza con UX01; cierra sobre las anteriores | Casos/expectativas previos al ajuste; comprensión/esfuerzo medidos; reglas por lote y reservado nuevo cuando proceda | Pendiente |
+
+Fuerza/DECK04e, nuevas familias, jugar/saltar ampliado y simulación quedan **aplazados**, no eliminados. Se retoman por un problema comprobado tras cerrar el recorrido de tienda. EVAL01a mantiene sus resultados acotados; H2 empírico y validación de partidas no se cierran con esta revisión.
+
+## Historial de entregas
+
+
 **EVAL01a (2026-10-18), aceptación acotada del consejo rápido:** [evaluación y resultados](evaluacion-asesor-eval01.md). Política `quick-shop-2`: admite refuerzo del mismo rol, distingue efecto preparado de nota editorial, explica reemplazos/efectos temporales, reserva e intereses condicionales, y limita compras a H2. Banco congelado antes de las salidas: 12 casos estratégicos de desarrollo y 6 reservados cumplen sus criterios sintéticos; un caso negativo de legalidad y dos límites de representación se informan aparte. 920 pruebas de código, ocho del runner y siete grupos web nuevos; 0 fallos, diez TODO manuales. **No cierra la eficacia estratégica ni la evidencia de partida.** Prioridad siguiente: OBS01d, resumen parcial del mazo con intersecciones desconocidas; sesiones reales EVAL01b y SURV02 siguen abiertas. Fuerza/DECK04e conserva su alcance y pasa después de esta prioridad.
 
 **DECK04d (2026-10-18), dinero de Tarot:** [contrato y L14](tarot-dinero-deck04d.md). Ermitaño/Templanza propios desde tienda/ronda y directos desde Arcana: ingreso/saldo, consumo e historial atómicos, dependencias específicas, sin exigir mazo/mano para dinero. Catorce Tarot integrados; comparación contextual incluye una alternativa sin objetivos por efecto monetario y mantiene el bloqueo global si faltan opciones dirigidas. Motor0.9.3; 898 pruebas aprobadas/0 fallos/10 TODO manuales, 13 nuevas y seis grupos web. **DECK04 sigue parcial.** Siguiente DECK04e: Fuerza/cambios de rango; destrucción/copia después, junto con los otros efectos pendientes. EVAL01/SURV02 siguen independientes.
@@ -54,7 +72,7 @@
 | DECK04b / Arcana — entregado como software | SHOP02b/c + DECK04a + mano de sobre observada | Apertura y contenido, mano real completa y objetivos separados, uso directo sin inventario ficticio, Mega/omisión, T09b y regresiones. |
 | DECK04c — entregado como software | DECK04b + composición/encaje y legalidad H2 | Combinaciones de objetivos y omitir, cobertura y límite explícitos, sacrificios, proyecciones y elección manual sin escritura; preferencia contextual o abstención. |
 | DECK04d — entregado como software | DECK04a/b/c + dependencias económicas por efecto | Ermitaño y Templanza propios/directos, ingreso inmediato, historial y consumo con T09b; faltantes por efecto y comparación sin objetivos. |
-| DECK04e — después de OBS01d | DECK04a/b/c + evidencia del cambio de rango | Fuerza: límites, transición A→2 y propiedades preservadas; H2/confirmación/Arcana y comparación antes de destrucción/copia. |
+| DECK04e — aplazado tras el recorrido simple | DECK04a/b/c + evidencia del cambio de rango | Fuerza: límites, transición A→2 y propiedades preservadas; H2/confirmación/Arcana y comparación antes de destrucción/copia. |
 | SHOP03 — continuación | SHOP03a + operaciones de SHOP02a que se integren | Confirmación y persistencia atómicas también de apertura/elección; las operaciones no implementadas limitan su rama. |
 | SHOP04 | Operaciones específicas + datos de efectos | Descuentos, stickers fuera de White, vales22 restantes, Tarot/Spectral y renovaciones con nuevo stock transcrito. Regla pendiente limita solo su dependencia. |
 

@@ -36,6 +36,8 @@ jobs:
         run: npx --no-install playwright install --with-deps chrome
       - name: Comprobar consejo rápido y separación del registro
         run: node tools/quick-shop-eval-test.mjs
+      - name: Comprobar resumen compacto y detalle recuperable
+        run: node tools/compact-advice-test.mjs
       - name: Comprobar registro desde la tienda
         run: node tools/shop-session-test.mjs
       - name: Comprobar compras registradas de vales

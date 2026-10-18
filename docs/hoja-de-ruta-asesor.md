@@ -1,4 +1,151 @@
-# Plan de ejecución: asesor de partida con pocas entradas
+# Plan vigente: un asesor útil con pocas entradas
+
+Revisión: 18 de octubre de 2026. **Esta sección fija las prioridades actuales** y sustituye los órdenes de ejecución anteriores. El detalle histórico se conserva plegado al final; el [backlog](backlog.md) contiene las tareas activas. La [primera entrega UX01](consejo-compacto-ux01.md) ya implementa el consejo compacto; la siguiente es UX01b. El resto se mantiene como plan, sin nuevas capacidades declaradas.
+
+## 1. Qué queremos conseguir
+
+Durante una partida, el usuario indica lo básico, transcribe la tienda y obtiene una orientación breve: **comprar, ahorrar o reemplazar**, con el beneficio, el sacrificio y la condición que podría cambiar el consejo. La composición conserva su puntaje y las barras existentes. Las manos concretas permanecen en Análisis y no son requisito del recorrido principal.
+
+El objetivo final hasta ante8 sigue vigente. El siguiente producto comprobable es **la tienda con pocos datos**; jugar/saltar y decisiones de sobres se mejorarán después de que ese recorrido sea útil. No necesitamos recrear toda la partida para orientar compras, aunque algunos cálculos exactos sí requieren más información.
+
+Requisitos establecidos por el usuario: composición y sinergias reales; etapa; baraja y modificaciones; vales pertinentes; actualización dinámica; interfaz de Balatro; pocas entradas; decisiones realizadas separadas de hipótesis. No se retiran las herramientas ya construidas.
+
+Propuesta de esta revisión: tres entregas pequeñas, con evaluación de uso desde la primera. No se añade simulación ni se completa el catálogo por inercia. Los objetivos numéricos de uso que siguen son **criterios iniciales de producto**, no resultados obtenidos ni umbrales científicos.
+
+## 2. Qué hay y qué falta realmente
+
+Auditoría del repositorio independiente en `c93149dbe53955afcb20db5430e45dfbad1ced7a`; sin AGENTS.md aplicable encontrado. Referencia verificable: [EVAL01a](evaluacion-asesor-eval01.md).
+
+| Ya existe y se reutiliza | Brecha que sí merece trabajo |
+|---|---|
+| H1, guardado/recuperación, revisión, autoguardado de acciones y deshacer T09b | El mazo se representa íntegro o desconocido; no admite resúmenes parciales utilizables |
+| H2, compras/ventas legales y consecuencias puras; modo estricto | No convertir una transacción desconocida en compra certificada para facilitar una recomendación |
+| 150 perfiles, 17 familias ejecutables, seis barras y puntaje contextual | Ni una nota alta ni un rol ausente demuestran utilidad; no crear otra nota ni nuevos pesos sin casos que lo justifiquen |
+| Consejo `quick-shop-2`, composición y contrato DEC00 | Varias ofertas preparadas suelen empatar sin diferenciar bien coste, condición y sacrificio |
+| T07b/H3 para escenarios explícitos; EFHIII como contraste puntual | El recorrido rápido no debe exigir escribir manos ni convertir esas herramientas en predictores de una partida |
+| Web pública estática y almacenamiento local | La explicación actual es demasiado extensa; pide datos de forma poco dirigida |
+| 920 pruebas de código, ocho del evaluador; aceptación de 12 casos estratégicos de desarrollo y seis reservados | Falta demostrar que alguien entiende el consejo con poco esfuerzo durante una partida |
+
+Diagnóstico: el problema principal es **foco de producto y utilidad del consejo**, no falta de infraestructura. Completar más Tarot no resuelve por sí solo ninguna de estas brechas.
+
+## 3. Qué aprendemos de la investigación
+
+| Fuente consultada | Decisión que fundamenta | Lo que no prueba |
+|---|---|---|
+| [NNGroup: divulgación progresiva](https://www.nngroup.com/articles/progressive-disclosure/) | Mostrar conclusión y datos decisivos; desplegar trazas, premisas extensas y herramientas avanzadas | No permite esconder un coste, ilegalidad o condición que cambie la acción |
+| [NNGroup: reconocimiento frente a recuerdo](https://www.nngroup.com/articles/recognition-and-recall/) | Inventario/ofertas visibles, selección visual y datos anteriores conservados; evitar recordar candidatos o repetir el mazo | No justifica inferir datos que el jugador no indicó |
+| [NNGroup: reducir carga en formularios](https://www.nngroup.com/articles/4-principles-reduce-cognitive-load/) | Preguntas concretas con contexto, respuesta «no lo sé» y explicación breve de para qué sirve | Reducir campos no elimina incertidumbre |
+| [GOV.UK: probar las partes arriesgadas en alpha](https://www.gov.uk/service-manual/agile-delivery/how-the-alpha-phase-works) | Comprobar primero si pocos datos producen una decisión entendible; ampliar solo después | No trasladamos su burocracia, plazos ni métricas gubernamentales al proyecto |
+| [Martin Fowler: YAGNI](https://martinfowler.com/bliki/Yagni.html) | Aplazar funcionalidades y abstracciones para necesidades futuras no demostradas; conservar código fácil de cambiar y pruebas útiles | No significa abandonar validaciones, claridad o mantenimiento necesario |
+| [EFHIII: repositorio original](https://github.com/EFHIII/balatro-calculator) | Reutilizar el contraste de manos concretas cuando sea pertinente; no duplicar su herramienta en el recorrido básico | No es una política de tienda, prueba directa en Balatro ni validador universal |
+
+Reglas mecánicas: siguen las fuentes y la versión compatible ya documentadas en [reglas y fuentes](reglas-y-fuentes.md) y [evidencia EVAL01a](evaluacion-asesor-eval01.md). Esta investigación no aporta una nueva observación en el juego. Las guías de jugadores y vídeos sirven para proponer hipótesis estratégicas; no se importan tiers, pesos o afirmaciones generales como verdad. No se atribuyen decisiones a vídeos que solo se hayan localizado por sus metadatos.
+
+## 4. Información mínima: preguntar por la decisión presente
+
+**Base que se conserva:** baraja, ante/ciega, dinero, comodines y sus datos dinámicos pertinentes, vales y ofertas visibles con precio. Perfil compatible se confirma una vez; orden y edición se reutilizan cuando importan. Con esto debe existir una primera valoración contextual sin manos de prueba ni guardado manual adicional.
+
+**Datos adicionales bajo demanda:** solo los que use un comodín poseído o una oferta concreta. Ejemplos: reyes para Barón, Acero para Steel Joker, efectos retenidos para Mimo, contador de un escalador, requisito/efecto del vale visible. No pedir inicialmente todos los palos, rangos, mejoras, niveles y consumibles.
+
+**Lo desconocido sigue desconocido:** cero se registra solo cuando el usuario lo confirma. La baraja inicial proporciona la composición inicial únicamente cuando se inicia una partida o se confirma que sigue intacta; no reconstruye el mazo modificado. Una elección «no lo sé» permite continuar con consejo parcial. Las ediciones válidas de hechos básicos y resumen se guardarán al terminar el campo o grupo mediante las observaciones/T09b existentes: no habrá que pasar por Registro para obtener o conservar ese consejo. No crear una entrada por tecla. Un fallo de guardado conserva el último estado válido y se muestra en el mismo lugar; las compras reales mantienen su confirmación explícita.
+
+Resumen inicial propuesto: tamaño, cantidades pertinentes y, si hace falta, solapamientos observados. Empezar por reyes, Acero y otros efectos retenidos relevantes (Oro/sello azul); otros campos se añaden cuando una familia existente los consume y hay un caso que exige hacerlo. No construir un formulario universal vacío.
+
+- Cinco reyes y seis Acero no dicen cuántos reyes son de Acero. Si tamaño y cuentas son exactos, la intersección queda entre `max(0, reyes + acero − tamaño)` y `min(reyes, acero)`. Es un límite combinatorio, no probabilidad de robo ni dato observado.
+- Barón necesita reyes retenidos para activarse; **Acero no es un requisito de Barón**. Mimo puede apoyar otros efectos retenidos. El resumen no demuestra qué cartas estarán en mano.
+- No se deducen manos, orden, cartas ficticias, robos ni frecuencia de activación. El resumen no entra al puntuador exacto ni a T07b como si fuera un mazo completo.
+- Una transformación o cambio de mazo invalida únicamente las cuentas afectadas que no puedan actualizarse con certeza. Recibir información completa compatible permite calcular sus cuentas; una contradicción pide corrección, no elige silenciosamente una fuente.
+
+No hace falta construir un algoritmo general de «valor de información». Un mapa pequeño de requisitos de las familias presentes basta: comprobar qué falta, a qué opciones afecta y cuál es la siguiente pregunta útil. Primero material/requisito ausente que cambia preparación; después refinamientos. Mostrar una pregunta principal por vez; no forzar respuestas irrelevantes para una compra independiente.
+
+## 5. Cómo debe aconsejar
+
+Se conservan tres niveles de evidencia: consecuencia exacta compatible de H2; expectativa heurística con hechos conocidos; aspecto no evaluado. Las seis barras son un resumen editorial y no arbitran por sí solas una compra.
+
+Orden de comparación propuesto, sin sumar unidades distintas:
+
+1. Excluir acciones ilegales y señalar operaciones no compatibles. Una descripción o precio pagable no certifica la operación.
+2. Identificar el efecto que funciona ahora, su condición y soporte. Diferenciar una sinergia preparada de una promesa de desarrollo futuro. La etapa modifica horizonte y coste de empezar, no reemplaza la preparación ni impone una regla rígida por ante.
+3. Mostrar el coste neto, saldo, reserva, interés condicional y efectos perdidos. No comparar cifras de puntuación total sin una mano/escenario compatible ni equiparar fichas, dólares y contadores.
+4. Preferir solo cuando la evidencia admita una diferencia clara dentro del alcance: por ejemplo, una mejora utilizable frente a material ausente. Preferir menor coste por efectos equivalentes exige comprobar también edición, condiciones, cambios de saldo y beneficios conservados; no basta el mismo rol o una nota mayor.
+5. Si hay intercambio, dar una condición útil: «A si necesitas reforzar X ahora; conservar mantiene Y». Si una oferta no está modelada, presentar «Entre las opciones evaluadas…» y la limitación global. No borrar las comparaciones independientes ni declarar una ganadora sobre lo desconocido.
+
+Opciones del próximo alcance: ahorrar, compras individuales compatibles y reemplazos venta→compra cuando falten huecos o el usuario lo pida. Enumerar cuáles se compararon. Sin búsqueda de varias compras, renovaciones futuras, secuencias de sobres o estrategia global óptima. No inferir necesidad de puntuación solo por el ante, los roles, el índice o un resultado favorable anterior.
+
+**Presentación principal:** una acción, empate útil o pregunta; un beneficio y un sacrificio; importe o dato clave. Como máximo dos frases de motivos visibles, con «Ver por qué» para el resto. Si falta un dato decisivo, se muestra junto a esa conclusión. No ocultar la limitación importante entre advertencias repetidas.
+
+Ejemplo de forma, no recomendación preasignada: «Entre lo evaluado, considera A · cuesta $4 y deja $8. Refuerza tu Mult; B depende de un material todavía no confirmado». Las explicaciones deben salir de los hechos/resultados de esa ejecución, no de párrafos copiados por caso.
+
+## 6. Tres entregas, seis tareas y dependencias reales
+
+| Entrega / tarea | Cambio pequeño y reutilización | Dependencias | Aceptación comprobable |
+|---|---|---|---|
+| **A — UX01: entender el consejo** | Compactar `src/ui/storefront.ts` usando resultados actuales: acción, beneficio, sacrificio, dato pendiente y detalle desplegable. Análisis/Registro continúan accesibles | H2/DEC00 actuales; independiente del resumen parcial | En390px la conclusión no queda detrás de párrafos; precio/saldo y condición decisiva visibles. Abrir detalle conserva trazas. Consulta/cierre/recarga no escriben acciones. No cambia la política para acomodar la UI |
+| **A — UX01b: hechos sin Guardar** | Persistir una observación completa al terminar el campo/cerrar el editor con `store.correct`, revisión, pestaña escritora y deshacer existentes. Dinero, contador, inventario y vales; ante/fase usan el recorrido actual | H1/T09b actuales; independiente del resumen | Editar dinero y un contador, registrar ofertas y recargar sin pasar por Registro ni bloqueo `dirty` tras éxito. No guardar por tecla, simular compra al transcribir ni inventar transiciones. Ante error conservar registro previo y borrador visible |
+| **B — OBS01d.1: resumen seguro** | Extensión mínima de H1 y observaciones/T09b existentes; una consulta de material compartida por `composition`, `quick-fit` y `composition-signals` | Modelo actual, validaciones y T09b | Resúmenes conocidos/parciales se guardan y recuperan; antiguos0.1/0.2 siguen legibles. Cuentas imposibles/contradictorias dan errores claros. No se fabrican cartas ni se rompe la recuperación ante fallos; una edición válida no exige Registro y consultar no guarda hipótesis |
+| **B — OBS01d.2: tres condiciones y preguntas** | Conectar Barón, Mimo y Steel Joker al resumen, manteniendo sus diferencias y vales ya integrados. Preguntas pequeñas ligadas a las ofertas/familias presentes | OBS01d.1 | Reyes/Acero/cantidades en el mazo de cartas con efectos de retención cambian la valoración pertinente; desconocido no vale cero; no pide los52 naipes ni otras mejoras irrelevantes. Una compra independiente de esos datos sigue evaluable. Después solo ampliar si aparecen decisiones que lo necesitan |
+| **C — DEC02: comparar con criterio** | Reutilizar `shop-context`, DEC00 y proyecciones H2. Beneficio preparado, sacrificio, comparaciones acotadas y preferencia parcial; no otro motor | UX01; datos necesarios de OBS01d para las ramas materiales | Distingue mejora/ahorro/inversión; no gana por rareza, nota, rol o ante solamente. Reemplazo no hereda contadores y muestra pérdida. Empate o condición cuando no puede justificar orden. Oferta pendiente no borra lo calculable |
+| **C — EVAL01b: comprobar utilidad** | Revisar el recorrido completo y un lote nuevo antes de ajustar DEC02; usar el evaluador y los scripts web existentes | Empieza con UX01; cierra sobre B/C | Datos pedidos, comprensión, errores y desacuerdos registrados. Casos nuevos/expectativas congelados antes del ajuste; reservado nuevo si se reclama evaluación independiente. Contraste manual de reglas por dependencia; ninguna observación inventada |
+
+**Orden:** UX01 → UX01b → OBS01d.1 → OBS01d.2 → DEC02. EVAL01b acompaña cada entrega y tiene un cierre final; las incertidumbres de una regla bloquean solo su operación. Una entrega fallida se corrige o limita antes de ampliar cobertura. No se necesita completar todos los Tarot, todos los comodines ni la simulación.
+
+### Casos mínimos que deben orientar el siguiente lote
+
+| Situación | Qué se quiere distinguir, sin afirmar optimalidad |
+|---|---|
+| Mazo desconocido, Joker simple en oferta | Beneficio propio contextual disponible sin exigir composición completa; supervivencia sin demostrar |
+| Barón sin reyes vs con reyes, en etapas distintas | Material ausente frente a potencial real; la etapa cambia horizonte, no crea reyes ni exige Acero |
+| Mimo con cero Acero pero Oro o sellos azules confirmados | No confundir ausencia de Acero con ausencia de todo soporte; distinguir ingreso/nivel de puntuación |
+| Reyes y Acero por separado, solapamiento desconocido | No inventar reyes de Acero; preguntar solo si cambia la comparación concreta |
+| Oferta preparada frente a ahorro y otra oferta pendiente | Conservar consejo parcial y expresar coste de oportunidad sin prometer la tienda futura |
+| Inventario lleno y comodín desarrollado o temporal | Venta→compra legal, pérdida real y beneficios que no se heredan; no veto automático por contador |
+| Mismo inventario, un vale adquirido distinto | Cambian recursos/reglas pertinentes, sin añadir una «sinergia» por el nombre del vale |
+| Paso a otra ciega con un cambio de mazo | Reutilizar datos vigentes e invalidar los afectados, sin repetir todo ni reconstruir hechos desconocidos |
+
+Para que DEC02 no cierre simplemente cambiando el nombre de los empates, el lote deberá contener estos contrastes concretos, completando estado/precios válidos y expectativas **antes** de tocar la política:
+
+- **Comprar condicionado:** Burglar poseído y Cumbre mística ofrecida, con los recursos resultantes confirmados. Reconocer el soporte de cero descartes y el refuerzo propio; preferencia condicional frente a una oferta sin material, sin garantizar supervivencia.
+- **Ahorrar condicionado:** Seed Money ofrecido a precio base con saldo20. La compra deja10 y no aprovecha el tope adicional en ese saldo; no preferirla como ingreso inmediato ni por una nota de economía. Explicar la inversión futura si se ofrece como alternativa.
+- **Reemplazar condicionado:** Riff-Raff en inventario lleno sin otro efecto que libere huecos, frente a Abstract en una venta→compra compatible. Para una prioridad declarada de refuerzo actual, contrastar el aporte propio preparado con la generación actualmente sin huecos; conservar el beneficio futuro sacrificado y el coste. No exigir reemplazar si falta ese contexto o hay otro intercambio relevante.
+- **Empate útil:** una mejora de puntuación frente a ingreso al final de ronda, sin evidencia de necesidad de puntuación. Explicar qué condición favorece cada opción; no inventar una ganadora sumando dólares y puntos.
+
+Son borradores de aceptación cualitativa, no nuevos casos ya ejecutados ni pruebas de optimalidad. Los casos nuevos que vayan a reservarse se escribirán aparte sin consultar la política ajustada; no reutilizar el reservado abierto de EVAL01a como si siguiera oculto.
+
+Las expectativas mecánicas se fijan independientemente del código, con evidencia compatible. Los casos de estrategia aceptan alternativas condicionadas justificadas; no exigen una única acción por intuición del implementador. EVAL01a es regresión; su reservado ya abierto no vuelve a considerarse nuevo.
+
+## 7. Cómo sabremos que esta versión sirve
+
+Objetivos iniciales de aceptación, a medir y ajustar con uso, no requisitos para inventar resultados:
+
+- Con los datos básicos registrados, consultar una tienda no exige introducir manos,52cartas ni nuevas bases. Solo se preguntan los datos que usa esa decisión.
+- El usuario identifica acción/condición y sacrificio mirando la conclusión, sin leer trazas. Objetivo de prueba: hacerlo en unos diez segundos en una tarea concreta; registrar si no ocurre.
+- Completar un cambio simple tras una ciega pide ese cambio, no reintroducir inventario/baraja/vales. No atribuir ahorro de tiempo hasta medirlo.
+- Comparar recorrido actual y revisado con las mismas situaciones: número de respuestas nuevas, repeticiones, errores de transcripción, tiempo y comprensión. Usar una ficha local de observaciones; no analytics, cuentas ni plataforma experimental.
+- Primera revisión con el usuario y, si están disponibles, otros jugadores: pequeña muestra cualitativa (propuesta de 3–5) para encontrar fricción, no prueba estadística ni porcentaje de eficacia. La ausencia de participantes no bloquea software independiente; mantiene abierta la aceptación de uso.
+- Las condiciones mecánicas utilizadas se contrastan por un lote mínimo. PC y móvil emulado siguen siendo pruebas de interfaz; Android físico permanece aplazado por decisión del usuario.
+
+Se publica como **asesor heurístico con cobertura declarada** al superar A–C en su alcance y dejar visibles las limitaciones. La calidad durante partidas completas conserva una comprobación propia y no se deduce de compilar o aprobar casos sintéticos.
+
+## 8. Freno a la sobreingeniería
+
+Antes de aceptar otra tarea: **¿qué decisión o esfuerzo del jugador mejora?, ¿qué módulo existente se aprovecha?, ¿qué caso demuestra esa mejora?** Si no hay respuesta concreta, se aplaza.
+
+- Un flujo principal en Mesa, una partida persistente y un contrato de decisión. Sin nuevos frameworks, backend, cuentas, base de datos, servicios de IA, arquitectura de eventos ni lenguaje genérico de reglas.
+- Un pequeño acceso compartido al material evita duplicación real; no construir un sistema universal de predicados, consultas de información o plugins por posibilidades futuras.
+- No sumar nuevos indicadores ni recalibrar puntajes para que parezcan más precisos. Primero utilidad y comprensión; conservar pruebas de invariantes y reglas que importan.
+- Fuerza, el resto de Tarot, 150 efectos completos, más dificultades y expansión de barajas quedan aplazados, salvo un efecto indispensable para un caso seleccionado. Ese cambio debe justificar qué consejo desbloquea.
+- No Monte Carlo, aprendizaje automático, OCR, lectura de guardados o búsqueda profunda en A–C. Considerar automatización/simulación solo después de observar un fallo repetido que estos cambios pequeños no resuelvan, y comparar una prueba acotada con la alternativa sencilla.
+- Jugar/saltar es la continuación una vez útil la tienda: reutilizar TAG01, pedir etiqueta/jefe que importe y comparar oportunidad/economía sin tienda ni robos ficticios. Se planifica su lote entonces; no bloquea A–C ni se promete cobertura completa ahora.
+- No borrar las capacidades anteriores ni reescribir módulos sanos. Mantener H2 separado de interfaz/guardado; reglas provisionales, vigencia y confirmación explícita continúan intactas.
+
+**UX01 implementada:** [resultado y pruebas](consejo-compacto-ux01.md). Compra, intercambio y dato pendiente se presentan de forma compacta con detalle recuperable, escritorio/390px y consulta sin escrituras. **Siguiente tarea concreta: UX01b**, observaciones básicas sin Guardar mediante la corrección/recuperación T09b existente; ante y fase conservan el recorrido observado.
+
+---
+
+<details>
+<summary>Plan y entregas anteriores: conservados como historial, no como cola de ejecución vigente</summary>
+
+## Hoja histórica: ejecución del asesor de partida
 
 **EVAL01a (2026-10-18), aceptación acotada del consejo rápido:** [evaluación y resultados](evaluacion-asesor-eval01.md). Política `quick-shop-2`: admite refuerzo del mismo rol, distingue efecto preparado de nota editorial, explica reemplazos/efectos temporales, reserva e intereses condicionales, y limita compras a H2. Banco congelado antes de las salidas: 12 casos estratégicos de desarrollo y 6 reservados cumplen sus criterios sintéticos; un caso negativo de legalidad y dos límites de representación se informan aparte. 920 pruebas de código, ocho del runner y siete grupos web nuevos; 0 fallos, diez TODO manuales. **No cierra la eficacia estratégica ni la evidencia de partida.** Prioridad siguiente: OBS01d, resumen parcial del mazo con intersecciones desconocidas; sesiones reales EVAL01b y SURV02 siguen abiertas. Fuerza/DECK04e conserva su alcance y pasa después de esta prioridad.
 
@@ -201,3 +348,6 @@ El modelo existente ya admite estado `0.2` y registro `confirmed-2`, con datos d
 **TAG01a/b entregados con alcance acotado:** [registro](etiquetas-tag01.md) y [comparación](comparacion-ciegas-tag01b.md). Economía/Inversión proyectadas, sin copiar el resultado al registro; planes actuales/siguientes explícitos por DEC00/H3/T07b. Preferencia condicional para los ocho efectos iniciales retenidos, sin probabilidades ni precio de tienda futura. TAG01 permanece parcial por los otros premios, política ampliada y contraste en partida.
 
 **SHOP02a, lote de diez vales entregado como software:** [contrato y evidencia](compras-vales-shop02a.md), compra confirmada con precio observado, prerrequisitos y cambio de recursos mediante H2/T09b; consultar no adquiere. Otros 22 vales y descuentos pendientes, sin ranking H3 de vales. **SHOP02b entregado como software:** [seis sobres y elecciones observadas](sobres-shop02b.md), sin generar contenido ni ingreso futuro. **SHOP02c entregado como software:** [próxima elección visible](comparacion-sobres-shop02c.md), dominancia contextual conservadora, intención Celestial y omitir, sin una búsqueda de secuencias Mega. **DECK04a entregado:** doce Tarot propios con objetivos en ronda. **DECK04b entregado: Arcana con mano y contenido observados**. Siguiente DECK04c, comparación de objetivos legales; demás Tarot, Black Hole, Spectral/Standard y descuentos siguen en DECK04/SHOP04. SURV02 y EVAL01 conservan sus dependencias independientes.
+
+
+</details>

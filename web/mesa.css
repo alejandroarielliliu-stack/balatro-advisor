@@ -455,6 +455,27 @@ dialog[open] { animation: panel-arrival .14s ease-out; }
 .shop-advice-dialog { width: min(680px,calc(100vw - 24px)); }
 .shop-advice-dialog>h3 { color: var(--gold); }
 .shop-advice-dialog p { font-size: 13px; line-height: 1.55; }
+.shop-advice-dialog>.section-title { margin-bottom: 16px; }
+.shop-advice-dialog>.section-title h2 { font-size: 28px; }
+.shop-advice-overview { padding: 17px; border: 2px solid #7b9687; border-radius: 8px; background: #19363b; box-shadow: 0 3px #12292d; overflow-wrap: anywhere; }
+.shop-advice-status { display: block; color: #c5d8cb; font-size: 11px; letter-spacing: .04em; }
+.shop-advice-overview h3 { margin: 7px 0 13px; color: var(--gold); font: 30px/1.05 var(--pixel); }
+.shop-advice-overview[data-status=abstain] { border-color: #c69c6f; }
+.shop-advice-overview[data-status=abstain] h3 { color: #f4c594; }
+.shop-advice-choices { list-style: none; display: grid; grid-template-columns: repeat(auto-fit,minmax(190px,1fr)); gap: 7px; padding: 0; margin: 0 0 12px; }
+.shop-advice-choices li { display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 3px 10px; align-items: baseline; padding: 9px 10px; border-radius: 5px; background: #2c4849; }
+.shop-advice-choices b { font-size: 12px; overflow-wrap: anywhere; }
+.shop-advice-choices span { color: var(--gold); font: 19px/1.1 var(--pixel); white-space: nowrap; }
+.shop-advice-choices small { color: #c3d2ca; grid-column: 1 / -1; font-size: 11px; }
+.shop-advice-overview p { margin: 9px 0; }
+.shop-advice-overview p>b { color: #eef2e2; }
+.shop-advice-pending { margin-top: 12px; padding: 9px 10px; border-left: 3px solid #e8b569; background: #4c4832; color: #ffe2b7; font-size: 12px; line-height: 1.4; }
+.shop-advice-scope { display: block; padding-top: 11px; color: #b4c7c0; font-size: 10px; line-height: 1.5; }
+.shop-advice-disclosure { margin: 0; padding: 0; border: 0; border-bottom: 1px solid #587071; }
+.shop-advice-disclosure>summary { padding: 14px 1px; font-size: 13px; color: #d8e2d5; }
+.shop-advice-disclosure[open] { padding-bottom: 12px; }
+.shop-advice-disclosure>.toolbar { margin-top: 5px; }
+.shop-advice-disclosure .store-advice-option:first-of-type { margin-top: 0; }
 .store-advice-option { border-top: 1px solid #5b757c; margin-top: 14px; padding-top: 14px; }
 .store-advice-option>b { display: block; font-size: 14px; }
 .store-advice-option>small { display: block; margin-top: 5px; color: var(--gold); }
@@ -483,6 +504,12 @@ dialog[open] { animation: panel-arrival .14s ease-out; }
  .store-extra-inspect>.voucher-art, .store-extra-inspect>.booster-art { zoom: 1.25; }
  .store-add-offer { flex-basis: 68px; font-size: 17px; min-height: 95px; }
  .store-item-editor, .shop-advice-dialog { padding: 16px; }
+ .shop-advice-dialog>.section-title { gap: 10px; }
+ .shop-advice-dialog>.section-title h2 { font-size: 25px; }
+ .shop-advice-dialog>.section-title button { padding: 8px 12px; }
+ .shop-advice-overview { padding: 13px; }
+ .shop-advice-overview h3 { font-size: 28px; }
+ .shop-advice-choices { grid-template-columns: minmax(0,1fr); }
 }
 
 /* Observed inventory: compact controls, the staged editor never writes on selection. */

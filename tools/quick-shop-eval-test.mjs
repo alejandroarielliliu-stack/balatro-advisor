@@ -52,7 +52,7 @@ try{
  const go=(page,screen)=>page.locator(`[data-screen="${screen}"]`).click();
  const ready=page=>page.waitForFunction(()=>document.querySelector('#ownership')?.textContent.includes('Esta pestaña tiene'));
  const watch=page=>{lastPage=page;page.on('pageerror',error=>report.pageErrors.push(error.message));};
- const open=async page=>{await page.locator('#shop-recommendation').click();await page.locator('#shop-advice-dialog').waitFor({state:'visible'});};
+ const open=async page=>{await page.locator('#shop-recommendation').click();await page.locator('#shop-advice-dialog').waitFor({state:'visible'});await page.locator('#shop-advice-alternatives > summary').click();};
  const close=page=>page.locator('#shop-advice-dialog').getByRole('button',{name:'Cerrar',exact:true}).click();
  const option=page=>page.locator('[data-advice-offer="visible-joker"]');
  const inspect=async(page,options={})=>page.evaluate(async({storageKey,options})=>{

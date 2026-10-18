@@ -133,7 +133,7 @@ try{
   await page.locator('#confirmation').waitFor({state:'hidden'});
  };
  const messages=async page=>(await page.locator('#shop-session-status,#message,#dialog-error,#store-item-error').allTextContents()).join(' ');
- const openAdvice=async page=>{await page.locator('#shop-recommendation').click();await page.locator('#shop-advice-dialog').waitFor({state:'visible'});};
+ const openAdvice=async page=>{await page.locator('#shop-recommendation').click();await page.locator('#shop-advice-dialog').waitFor({state:'visible'});await page.locator('#shop-advice-alternatives > summary').click();};
  const closeAdvice=page=>page.locator('#shop-advice-dialog').getByRole('button',{name:'Cerrar',exact:true}).click();
  const buyJoker=async page=>{
   await page.locator('.candidate-card[data-offer-id="o1"] .candidate-hero').click();

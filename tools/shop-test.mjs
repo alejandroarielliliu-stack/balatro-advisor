@@ -111,6 +111,7 @@ try {
     const advice = async () => {
       await page.locator('#shop-recommendation').click();
       await page.locator('#shop-advice-dialog').waitFor({ state: 'visible' });
+      await page.locator('#shop-advice-alternatives > summary').click();
       return page.locator('#shop-advice-dialog');
     };
     const close = async () => { await page.keyboard.press('Escape'); };
