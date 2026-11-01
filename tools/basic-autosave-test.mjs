@@ -53,7 +53,7 @@ try{
  const editMoney=async(page,value)=>{await page.locator('#money').fill(String(value));await page.locator('#money').press('Tab');};
  const row=(page,id)=>page.locator(`.joker-editor[data-instance-id="${id}"]`);
  const openJoker=async(page,id)=>{await row(page,id).locator('.joker-portrait').click();await page.locator('#bay-dialog').waitFor({state:'visible'});await page.locator('#bay-edit').click();await row(page,id).locator('.joker-edit-drawer').waitFor({state:'visible'});};
- const closeJoker=async(page,id)=>{const dialog=row(page,id).locator('.joker-edit-drawer');if(await dialog.isVisible())await dialog.getByRole('button',{name:'Cerrar edición',exact:true}).click();};
+ const closeJoker=async(page,id)=>{const dialog=row(page,id).locator('.joker-edit-drawer');if(await dialog.isVisible()){await dialog.evaluate(element=>{element.dataset.testCloseComplete='pending';element.addEventListener('close',()=>queueMicrotask(()=>{element.dataset.testCloseComplete='done';}),{once:true});});await dialog.getByRole('button',{name:'Cerrar edición',exact:true}).click();await dialog.waitFor({state:'hidden'});await dialog.locator('xpath=self::*[@data-test-close-complete="done"]').waitFor({state:'attached'});}};
  const unchanged=async(page,before,count)=>{assert.equal(await raw(page),before);assert.equal(await writes(page),count);};
  const sameIndependent=(before,after)=>{for(const field of ['deck','handBases','shop','jokerContext','outOfScope','nextBlind','lastCleared'])assert.deepEqual(after.observed[field],before.observed[field],field+' remains exact');assert.deepEqual(after.assumptions,before.assumptions);assert.equal(after.phase,before.phase);assert.deepEqual(after.phaseData,before.phaseData);};
 
@@ -61,7 +61,7 @@ try{
  // without an observed change is a no-op and the existing input node survives.
  const primary=await session(),p=primary.page;let before=await raw(p),count=await writes(p),prior=(await record(p)).state;
  await p.locator('#money').evaluate(input=>input.dataset.autosaveTestToken='same-input');
- await p.locator('#money').fill('0');await p.locator('#money').fill('25');await p.locator('#money').press('Tab');await unchanged(p,before,count);assert.equal(await p.locator('#draft-status').isHidden(),true,'Returning to the saved value clears dirty even when no change event is emitted');
+ await p.locator('#money').fill('0');await p.locator('#money').fill('25');await p.locator('#money').press('Tab');await p.locator('#draft-status').waitFor({state:'hidden'});await unchanged(p,before,count);assert.equal(await p.locator('#draft-status').isHidden(),true,'Returning to the saved value clears dirty even when no change event is emitted');
  await p.locator('#money').fill('31');await unchanged(p,before,count);await p.locator('#money').press('Tab');let saved=await revision(p,1);
  assert.equal(saved.state.observed.money.value,31);assert.equal(saved.history.length,1);assert.equal(saved.history[0].kind,'correction');assert.equal(saved.history[0].action,null);sameIndependent(prior,saved.state);assert.equal(await p.locator('#money').getAttribute('data-autosave-test-token'),'same-input');assert.equal(await writes(p),count+1);
  before=await raw(p);count=await writes(p);await p.locator('#money').focus();await p.locator('#money').press('Tab');await unchanged(p,before,count);
@@ -155,3 +155,4 @@ try{
  assert.equal(report.cases.length,14);assert.deepEqual(report.pageErrors,[]);report.status='passed';await writeFile(dir+'/browser.json',JSON.stringify(report,null,2)+'\n');console.log('PASS UX01b',report.cases.length,'browser groups; synthetic observations, not gameplay');
 }catch(error){report.status='failed';report.error=error.stack||String(error);await writeFile(dir+'/browser.json',JSON.stringify(report,null,2)+'\n');if(lastPage&&!lastPage.isClosed())await lastPage.screenshot({path:dir+'/browser-failed.png',fullPage:true}).catch(()=>{});throw error;}
 finally{await browser?.close();server?.kill();}
+
