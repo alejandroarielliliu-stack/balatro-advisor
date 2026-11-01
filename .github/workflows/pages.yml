@@ -38,6 +38,8 @@ jobs:
         run: node tools/quick-shop-eval-test.mjs
       - name: Comprobar resumen compacto y detalle recuperable
         run: node tools/compact-advice-test.mjs
+      - name: Comprobar observaciones básicas sin Guardar
+        run: node tools/basic-autosave-test.mjs
       - name: Comprobar registro desde la tienda
         run: node tools/shop-session-test.mjs
       - name: Comprobar compras registradas de vales

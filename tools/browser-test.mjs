@@ -12,6 +12,7 @@ const results=[],errors=[];let context;
 const key='balatro-advisor.confirmed.v1';
 const raw=p=>p.evaluate(k=>localStorage.getItem(k),key);
 const state=async p=>JSON.parse(await raw(p));
+const revision=async(p,expected)=>{await p.waitForFunction(({key,expected})=>JSON.parse(localStorage.getItem(key)).state.revision===expected,{key,expected});return state(p);};
 const revealDetails=async(p,selector)=>{const d=p.locator(selector);if(await d.count()&&!await d.evaluate(e=>e.open))await d.locator(':scope > summary').click();};
 const go=async(p,screen)=>{const link=p.locator('[data-screen="'+screen+'"]');if(await link.getAttribute('aria-current')!=='page')await link.click();};
 const storage=async p=>{if(!await p.locator('.storage-status').evaluate(e=>e.open))await p.locator('.storage-status > summary').click();};
@@ -27,7 +28,7 @@ try{
   await page.goto(base);await page.waitForFunction(()=>document.querySelector('#ownership').textContent.includes('Esta pestaña tiene'));
   await check('crear partida mediante formularios, errores junto al campo y valores desconocidos',async()=>{
     assert.equal(await page.locator('#edit-reason').count(),0);assert.equal(await page.locator('#revision').innerText(),'Sin copia guardada');
-    await go(page,'table');await revealDetails(page,'.coverage-note');await page.locator('#coverage').check();await go(page,'table');await page.locator('#money').fill('-21'); // Debt through -20 is structurally supported.
+    await go(page,'table');await revealDetails(page,'.coverage-note');await page.locator('#coverage').check();await go(page,'table');await page.locator('#money').fill('-20.5'); // Observed balances may be negative; fractions are structurally invalid.
     await go(page,'archive');await page.getByRole('button',{name:'Crear y guardar mi partida'}).click();await go(page,'table');assert.match(await page.locator('#money-error').innerText(),/entero/);assert.equal(await raw(page),null);
     await go(page,'table');await page.locator('#money').fill('7');await page.locator('#blind-kind').selectOption('big');assert.equal(await page.locator('#target').inputValue(),'450');assert.equal(await page.locator('#reward').inputValue(),'4');
     await go(page,'archive');await page.getByRole('button',{name:'Crear y guardar mi partida'}).click();await go(page,'table');
@@ -59,8 +60,7 @@ try{
   });
   await check('recarga recupera partida y permite corregir/deshacer sin borrar historial',async()=>{
     await page.reload();await page.waitForFunction(()=>document.querySelector('#ownership').textContent.includes('Esta pestaña tiene'));
-    assert.equal(await page.locator('#money').inputValue(),'2');await go(page,'table');await page.locator('#money').fill('3');await go(page,'archive');await page.locator('#edit-reason').fill('Corregí el saldo transcrito');
-    await go(page,'archive');await page.getByRole('button',{name:'Guardar actualización que transcribí'}).click();await go(page,'table');assert.equal((await state(page)).state.revision,observationCount+2);
+    assert.equal(await page.locator('#money').inputValue(),'2');await go(page,'table');const before=await raw(page);await page.locator('#money').fill('3');assert.equal(await raw(page),before);await page.locator('#money').press('Tab');const corrected=await revision(page,observationCount+2);assert.equal(corrected.history.at(-1).kind,'correction');assert.equal(corrected.history.at(-1).action,null);
     await go(page,'archive');await page.getByRole('button',{name:'Deshacer la última entrada'}).click();await page.locator('#undo-reason').fill('La corrección fue un error');await page.locator('#dialog-accept').click();
     assert.equal((await state(page)).state.revision,observationCount+3);assert.equal((await state(page)).state.observed.money.value,2);assert.equal((await state(page)).history.length,observationCount+3);
   });
@@ -73,8 +73,8 @@ try{
   });
   await check('fallo de almacenamiento no anuncia éxito ni cambia estado/historial',async()=>{
     const before=await raw(page);await page.evaluate(()=>{window.originalSetItem=Storage.prototype.setItem;Storage.prototype.setItem=function(){throw new DOMException('test quota','QuotaExceededError');};});
-    await go(page,'table');await page.locator('#money').fill('4');await go(page,'archive');await page.locator('#edit-reason').fill('Prueba de cuota');await go(page,'archive');await page.getByRole('button',{name:'Guardar actualización que transcribí'}).click();await go(page,'table');
-    assert.equal(await raw(page),before);assert.match(await page.locator('#message').innerText(),/No se pudo guardar/);
+    await go(page,'table');await page.locator('#money').fill('4');assert.equal(await raw(page),before);await page.locator('#money').press('Tab');await page.locator('#basic-save-status[data-state=error]').waitFor();
+    assert.equal(await raw(page),before);assert.equal(await page.locator('#money').inputValue(),'4');assert.match(await page.locator('#basic-save-message').innerText(),/No se pudo guardar/);
     await page.evaluate(()=>Storage.prototype.setItem=window.originalSetItem);await page.reload();await page.waitForFunction(()=>document.querySelector('#ownership').textContent.includes('Esta pestaña tiene'));
   });
   const second=await context.newPage();second.on('pageerror',e=>errors.push(e.message));
@@ -85,7 +85,7 @@ try{
     const locks=await second.evaluate(()=>navigator.locks.query());assert.equal(locks.held.length,1);assert.equal(locks.pending.length,1);
     await storage(page);await page.getByRole('button',{name:'Liberar control'}).click();await second.waitForFunction(()=>document.querySelector('#ownership').textContent.includes('Esta pestaña tiene'));
     await go(page,'archive');assert.equal(await page.getByRole('button',{name:'Guardar actualización que transcribí'}).isDisabled(),true);
-    await go(second,'table');await second.locator('#money').fill('6');await go(second,'archive');await second.locator('#edit-reason').fill('Registro desde pestaña nueva');await go(second,'archive');await second.getByRole('button',{name:'Guardar actualización que transcribí'}).click();await go(second,'table');
+    await go(second,'table');const before=await raw(second);await second.locator('#money').fill('6');assert.equal(await raw(second),before);await second.locator('#money').press('Tab');await revision(second,observationCount+4);
     await page.waitForFunction(()=>document.querySelector('#money').value==='6');assert.equal((await state(page)).state.revision,observationCount+4);
   });
   await check('cierre del escritor libera bloqueo y permite continuar',async()=>{
@@ -148,8 +148,9 @@ try{
       assert.match(await p.locator('#bounds').innerText(),/reglas provisionales/);assert.equal(await raw(p),before);
       await p.setViewportSize({width:360,height:800});assert.equal(await p.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
       await p.locator('.app-header').evaluate(el=>el.hidden=true); await p.locator('#bounds').screenshot({path:`${evidenceDir}/cotas-s09.png`}); await p.locator('.app-header').evaluate(el=>el.hidden=false);
-      await go(p,'table');await p.locator('#money').fill('29');assert.equal(await p.locator('#bounds').innerText(),'');
-      await go(p,'evaluation');await p.locator('#check-bounds').click();assert.match(await p.locator('#message').innerText(),/Guarda los datos/);assert.equal(await raw(p),before);
+      await go(p,'table');const previous=(await state(p)).state.revision;await p.locator('#money').fill('29');assert.equal(await p.locator('#bounds').innerText(),'');assert.equal(await raw(p),before);
+      await p.locator('#money').press('Tab');const saved=await revision(p,previous+1),after=await raw(p);assert.equal(saved.state.observed.money.value,29);assert.equal(saved.history.at(-1).kind,'correction');assert.equal(saved.history.at(-1).action,null);
+      await go(p,'evaluation');await p.locator('#check-bounds').click();assert.match(await p.locator('#bounds').innerText(),/151125/);assert.match(await p.locator('#bounds').innerText(),/169000/);assert.equal(await raw(p),after);
     }finally{await ctx.close();}
   });
   assert.deepEqual(errors,[]);
@@ -207,8 +208,11 @@ try{
       await p.locator('#horizon-target-1').fill('1200');await go(p,'evaluation');await p.locator('#analyze-horizon').tap();
       await p.locator('input[id^="description-"]').fill('Plan modificado');assert.equal(await results.innerText(),'');
       await go(p,'evaluation');await p.locator('#analyze-horizon').tap();assert.match(await results.innerText(),/50/);
-      await go(p,'table');await p.locator('#money').fill('24');assert.equal(await results.innerText(),'');await go(p,'evaluation');await p.locator('#analyze-horizon').tap();
-      assert.match(await p.locator('#message').innerText(),/Guarda los datos editados/);assert.equal(await raw(p),before);
+      await go(p,'table');const previous=(await state(p)).state.revision;await p.locator('#money').fill('24');assert.equal(await results.innerText(),'');assert.equal(await raw(p),before);await p.locator('#money').press('Tab');
+      const saved=await revision(p,previous+1),after=await raw(p);assert.equal(saved.state.observed.money.value,24);assert.equal(saved.history.at(-1).kind,'correction');assert.equal(saved.history.at(-1).action,null);
+      await go(p,'evaluation');await p.locator('#analyze-horizon').tap();
+      // Independent cashflow arithmetic: hold24+3+4+4=35, then35+4+4+5=48; Golden18+3+4+3+4=32, then32+4+4+5+4=49.
+      assert.match(await hold.innerText(),/saldo tras cobro: 35/);assert.match(await hold.innerText(),/saldo tras cobro: 48/);assert.match(await buy.innerText(),/saldo tras cobro: 32/);assert.match(await buy.innerText(),/saldo tras cobro: 49/);assert.equal(await raw(p),after);
     }finally{await ctx.close();}
   });
   assert.deepEqual(errors,[]);

@@ -453,6 +453,11 @@ dialog[open] { animation: panel-arrival .14s ease-out; }
 .store-item-editor select, .store-item-editor input, .candidate-dialog>label, .candidate-dialog>select { margin-bottom: 14px; }
 .store-item-editor .section-title, .shop-advice-dialog .section-title { align-items: start; }
 .shop-advice-dialog { width: min(680px,calc(100vw - 24px)); }
+.basic-save-status { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin: 0 0 12px; color: #c8d8ce; font-size: 12px; }
+.basic-save-status[hidden] { display: none; }
+.basic-save-status[data-state=saved] { color: #badb9c; }
+.basic-save-status[data-state=error] { border-left: 3px solid #e5a66b; background: #3d3430; padding: 10px 12px; color: #ffdbb3; }
+.basic-save-status button { padding: 7px 10px; min-height: 34px; font-size: 13px; }
 .shop-advice-dialog>h3 { color: var(--gold); }
 .shop-advice-dialog p { font-size: 13px; line-height: 1.55; }
 .shop-advice-dialog>.section-title { margin-bottom: 16px; }

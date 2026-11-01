@@ -34,8 +34,10 @@ const candidates:ListedJoker[]=[],voucherOffers:ShopSnapshot['vouchers']=[],pack
 let rerollCost:number|null=null,binding:string|undefined,shelfBinding:string|undefined,mountId=0,shopId='mesa-shop';
 const catalogId=(joker:JokerReference)=>Object.keys(ALL_JOKER_FACTS).find(id=>ALL_JOKER_FACTS[id]!.artId===joker.id)??joker.id;
 export const readShopSnapshot=():ShopSnapshot=>({id:shopId,jokers:candidates.map(c=>({offerId:c.offerId,catalogId:catalogId(c.joker),price:c.price,edition:c.edition,stickers:[...c.stickers],...(c.sellId?{replacementId:c.sellId}:{})})),vouchers:structuredClone(voucherOffers),packs:structuredClone(packOffers),others:structuredClone(otherOffers),rerollCost});
-let invalidate=()=>{};let timer:ReturnType<typeof setTimeout>|undefined;
+let invalidate=()=>{},refreshControls=()=>{};let timer:ReturnType<typeof setTimeout>|undefined;
 export function invalidateCandidates(){invalidate();}
+/** Refresh a saved revision without replacing a dialog the user just opened. */
+export function refreshCandidateControls(){clearTimeout(timer);refreshControls();}
 export function mountCandidates(host:HTMLElement,preview:PreviewRenderer,replacements:()=>{id:string;name:string}[],context?:ShopContext){
  const mounted=++mountId;
  let hydrated=false,extrasHydrated=false;
@@ -73,6 +75,7 @@ export function mountCandidates(host:HTMLElement,preview:PreviewRenderer,replace
  const editor=el('dialog','','store-item-editor');editor.id='store-item-editor';editor.setAttribute('aria-label','Registrar oferta');
  host.append(heading,status,layout,adviceDialog,editor);
  let report:ShopDecision['context']|null=null,decision:ShopDecision|null=null,useScenarios=false,scenarioError='';
+ const confirmationRefreshers=new Set<()=>void>();let refreshExtraConfirmation=()=>{};
  const snapshot=readShopSnapshot;
  const renderAdvice=()=>{
   const expanded=new Set(adviceDialog.open?Array.from(adviceDialog.querySelectorAll<HTMLDetailsElement>('details[id][open]'),d=>d.id):[]);
@@ -131,6 +134,7 @@ export function mountCandidates(host:HTMLElement,preview:PreviewRenderer,replace
    localDisabled(confirmed,!!reason);confirmationNote.textContent=reason??'Compra provisional por inspección del ejecutable; falta contraste en partida.';
    consequences.replaceChildren();if(probe?.consequences&&saved)consequences.append(renderImmediateConsequences(probe.consequences));context?.controlsChanged?.();
   };
+  refreshExtraConfirmation=refreshConfirm;
   select.onchange=()=>{const pack=BOOSTER_CATALOG.find(p=>p.id===select.value);let amount=pack?.basePrice;try{if(pack&&context)amount=generationShopPrice(context.state(),pack.family==='celestial'?'celestial_pack':'other_pack',pack.basePrice) as typeof amount;}catch{/* The observed price can still be transcribed explicitly. */}price.input.value=kind==='voucher'?'10':String(amount??'');updateDescription();refreshConfirm();};price.input.oninput=refreshConfirm;updateDescription();
   save.onclick=()=>{const amount=priceValue(price.input);if(amount!==null&&(!Number.isSafeInteger(amount)||amount<0)){error.textContent='Introduce un precio entero no negativo o déjalo desconocido.';return;}const id=offerId??crypto.randomUUID();
    if(kind==='voucher'){
@@ -156,7 +160,7 @@ export function mountCandidates(host:HTMLElement,preview:PreviewRenderer,replace
   for(const [kind,label,id,shelf,min] of [['voucher','＋ Vale','store-voucher-add',voucherShelf,1],['pack','＋ Sobre','store-pack-add',packShelf,2],['other','＋ Otra carta','store-other-add',otherShelf,0]] as const){const b=el('button',label,'store-add-offer');b.type='button';if(kind!=='other')b.dataset.write='';b.id=id;b.onclick=()=>editExtra(kind);shelf.append(b);if(kind!=='other')for(let i=shelf.querySelectorAll('.store-extra-tile').length+1;i<min;i++){const slot=el('button',label,'store-add-offer store-empty-offer');slot.type='button';slot.onclick=()=>editExtra(kind);shelf.append(slot);}}
  };
  const render=(calculate:boolean)=>{
-  if(calculate)clearTimeout(timer);grid.replaceChildren();
+  if(calculate)clearTimeout(timer);grid.replaceChildren();confirmationRefreshers.clear();
   for(const c of candidates){const card=el('article','','candidate-card');card.dataset.candidate=c.joker.id;card.dataset.offerId=c.offerId;const hero=el('div','','candidate-hero'),info=el('div','','candidate-info'),cost=el('small',`$${c.price??'?'}`,'store-joker-price');info.append(el('h4',c.joker.names.es),cost);hero.append(jokerArt(c.joker.id,c.joker.names.es),info);
    const select=el('select');select.setAttribute('aria-label','Reemplazo para '+c.joker.names.es);const empty=el('option','Comprar sin vender');empty.value='';select.append(empty);for(const r of replacements()){const o=el('option','Vender '+r.name);o.value=r.id;select.append(o);}if(host.isConnected&&!replacements().some(r=>r.id===c.sellId))c.sellId='';select.value=c.sellId;
    const remove=write(el('button','×','candidate-remove'));remove.type='button';remove.setAttribute('aria-label','Quitar candidato');remove.title='Quitar oferta';remove.onclick=()=>{observe(()=>candidates.splice(candidates.indexOf(c),1));render(true);};
@@ -166,6 +170,7 @@ export function mountCandidates(host:HTMLElement,preview:PreviewRenderer,replace
    const refreshConfirm=()=>{confirmed.textContent=c.sellId?'Vendí y compré':'Compré';const reason=context?.status?.();localDisabled(confirmed,!context?.confirm||!!reason);confirmNote.textContent=reason??'Registra solo si ya lo hiciste en el juego.';context?.controlsChanged?.();};
    confirmed.onclick=()=>{const error=context?.confirm?.(c.offerId,c.sellId)??null;if(error){showStatus(error,true);confirmNote.textContent=error;}refreshUndo();};
    const renderLocal=()=>{cost.textContent=`$${c.price??'?'}`;info.querySelector('.fit-score')?.remove();const offer={price:c.price===null?{status:'unknown' as const,reason:'Precio sin transcribir.'}:known(c.price),edition:c.edition==='unknown'?{status:'unknown' as const,reason:'Edición sin transcribir.'}:known(c.edition),stickers:c.stickers.includes('unknown')?{status:'unknown' as const,reason:'Pegatinas sin transcribir.'}:known(c.stickers)};const result=calculate?preview(c.joker,c.sellId,undefined,offer):el('p','Calculando…','candidate-pending');card.dataset.previewStatus=calculate?result.dataset.previewStatus??'unavailable':'updating';resultHost.replaceChildren(result);if(result.dataset.fitLabel){const badge=el('strong',result.dataset.fitLabel,'fit-score '+(result.dataset.fitTone??'unknown'));badge.title=result.dataset.fitReason??'';info.append(badge);card.dataset.fitLabel=result.dataset.fitLabel;}};
+   confirmationRefreshers.add(()=>{calculate=true;renderLocal();refreshConfirm();});
    const recalculate=()=>{calculate=true;renderLocal();refreshAdvice();refreshConfirm();};
    const editError=el('p','','error');editError.setAttribute('role','status');
    // Persist on committed changes, never on each keystroke. Keep this dialog and focus intact.
@@ -178,6 +183,7 @@ export function mountCandidates(host:HTMLElement,preview:PreviewRenderer,replace
   renderExtras();refreshAdvice();refreshUndo();context?.controlsChanged?.();
  };
  const reset=write(el('button','Vaciar ofertas visibles','secondary store-reset'));reset.type='button';reset.id='store-new-shop';reset.title='Vaciar únicamente las ofertas representadas; conserva las incompatibles del registro';reset.onclick=()=>{const error=observe(()=>{candidates.length=0;voucherOffers.length=0;packOffers.length=0;});if(!error){otherOffers.length=0;rerollCost=null;}render(true);};localDisabled(reset,true);heading.append(reset);
+ refreshControls=()=>{refreshAdvice();for(const refresh of confirmationRefreshers)refresh();if(editor.open)refreshExtraConfirmation();refreshUndo();};
  invalidate=()=>{clearTimeout(timer);render(false);timer=setTimeout(()=>render(true),220);};render(false);invalidate();
  // The parent finishes mounting form inputs before the first live-state read.
  queueMicrotask(()=>{if(mounted===mountId)refreshAdvice();});

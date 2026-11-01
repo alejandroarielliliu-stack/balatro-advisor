@@ -6,6 +6,8 @@ import {mountComposition} from './composition-view.js';
 import {renderRunJourney} from './run-progress-view.js';
 import {createNewRun} from '../run/start.js';
 import {observationPatch} from '../state/observations.js';
+import {prepareBasicObservation} from '../state/basic-observations.js';
+import type {BasicObservationRequest} from '../state/basic-observations.js';
 import {renderObservationRequests} from './observations-view.js';
 import {inventoryChanges} from '../state/inventory-changes.js';
 import {renderInventoryChanges} from './inventory-changes-view.js';
@@ -17,7 +19,7 @@ import {mountCounterFields} from './joker-counters.js';
 import {jokerResourceDelta} from '../catalog/joker-resources.js';
 import {cataloguedVouchers,voucherResources} from '../catalog/vouchers.js';
 import {mountVouchers} from './vouchers.js';
-import {invalidateCandidates,readShopSnapshot} from './storefront.js';
+import {invalidateCandidates,readShopSnapshot,refreshCandidateControls} from './storefront.js';
 import {blindRequirement} from '../catalog/blinds.js';
 import {previewJoker} from '../evaluation/joker-preview.js';
 import {contextRatings} from '../advisor/ratings.js';
@@ -77,6 +79,8 @@ let refreshCashout=()=>{};let cashoutTimer:ReturnType<typeof setTimeout>|undefin
 let readLiveState:((quick?:boolean)=>GameState)|null=null;let quietRead=false;
 let refreshOwnedFits=()=>{};
 let handRequest=0;
+let flushBasicEdits=()=>true;
+let preserveBasicDraft=(_text:string)=>{};
 function liveState(quick=false){quietRead=true;try{if(!readLiveState)throw new Error('Completa los datos de la partida.');return readLiveState(quick);}finally{quietRead=false;}}
 let dialogAction:(()=>boolean)|null=null;
 const lock=new WriterLock(()=>updateOwnership());
@@ -128,6 +132,7 @@ $('dialog-accept').onclick=()=>{if(!dialogAction)return;const b=$<HTMLButtonElem
 $<HTMLDialogElement>('confirmation').addEventListener('cancel',()=>{dialogAction=null;});
 
 function reload(){
+  flushBasicEdits=()=>true;preserveBasicDraft=()=>{};
   dirty=false;
   const loaded=store.load();loadFailed=!loaded.ok;record=loaded.ok?loaded.value:null;
   try{seenRaw=localStorage.getItem(CONFIRMED_STORAGE_KEY);}catch{loadFailed=true;}
@@ -146,7 +151,7 @@ function unsupportedForEditor(s:GameState){
   if(d && ('preset'in d?d.preset!=='standard52-unmodified':d.cards.some(c=>!['base','foil','holographic','polychrome'].includes(c.edition)||!['none','bonus','mult','wild','glass','steel','stone','gold','lucky'].includes(c.enhancement)||!['none','red','blue','gold','purple'].includes(c.seal)||c.extraChips<0)) || extra && (!cataloguedVouchers(extra.vouchers)||extra.consumables.length||extra.pendingTags.length||extra.otherModifiers.length))return true;
   // Shop observations are preserved even when a particular offer cannot be
   // rendered or purchased. H2 limits that operation, not the whole editor.
-  return !!value(o.jokers)?.some(j=>!names[j.catalogId]||!['base','foil','holographic','polychrome','negative'].includes(value(j.edition)??'')||(value(j.stickers)?.some(s=>s!=='eternal')??true));
+  return !!value(o.jokers)?.some(j=>!names[j.catalogId]||j.edition.status==='known'&&!['base','foil','holographic','polychrome','negative'].includes(j.edition.value)||(value(j.stickers)?.some(s=>s!=='eternal')??false));
 }
 function renderJourney(){
   const base=record,expected=base?analysisBinding(base.state):null,raw=seenRaw,id=uuid();
@@ -196,6 +201,15 @@ function renderRecord(){
     host.append(node('p',text,'notice'),details('Datos importados, sin cambios',s));return;
   }
   const form=node('form');form.id='run-form';form.noValidate=true;const fieldset=node('fieldset');form.append(fieldset);host.append(form);
+  const saveStatus=node('div','','basic-save-status');saveStatus.id='basic-save-status';saveStatus.hidden=true;saveStatus.setAttribute('role','status');saveStatus.setAttribute('aria-live','polite');
+  const saveMessage=node('span');saveMessage.id='basic-save-message';
+  const retry=button('Reintentar',()=>flushBasicEdits());retry.id='basic-save-retry';retry.dataset.write='true';retry.hidden=true;
+  const discard=button('Descartar borrador y recargar',()=>reload());discard.id='basic-save-reload';discard.hidden=true;saveStatus.append(saveMessage,retry,discard);form.prepend(saveStatus);
+  type BasicGroup='money'|'jokers'|'vouchers';
+  const pendingBasic=new Set<BasicGroup>();let advancedDirty=false,advancedResourcesDirty=false,basicTimer:ReturnType<typeof setTimeout>|undefined;
+  const showBasic=(text:string,status:'saved'|'pending'|'error')=>{saveStatus.hidden=false;saveStatus.dataset.state=status;saveMessage.textContent=text;retry.hidden=status!=='error';discard.hidden=status!=='error';updateOwnership();};
+  const markBasic=(group:BasicGroup,finished=false)=>{pendingBasic.add(group);dirty=true;showBasic(s?'Edición pendiente de terminar.':'Crea o importa una partida para conservar estos datos.','pending');invalidate('Vista actual modificada. Candidatos en actualización.',!finished);if(finished){refreshCandidateControls();clearTimeout(basicTimer);basicTimer=setTimeout(()=>{if(form.isConnected)flushBasicEdits();},0);}};
+  const markAdvanced=(resources=false)=>{advancedDirty=true;advancedResourcesDirty||=resources;dirty=true;invalidate('Cambio avanzado pendiente de guardar en Registro.');};
   const coverage=checkbox('coverage','Partida compatible · datos confirmados',!!s);
   coverage.input.setAttribute('aria-describedby','coverage-description');
   const coverageDescription=node('p','Steam 1.0.1o-FULL sin mods, baraja seleccionada / White Stake; composición, cartas y modificadores transcritos. Vales compatibles. Los efectos aleatorios necesitan resultados explícitos de escenario. Vacío = desconocido. Transcribe los precios del juego.','muted');coverageDescription.id='coverage-description';
@@ -217,15 +231,37 @@ function renderRecord(){
   manualReward.input.onchange=()=>updateReward();for(const control of [ante.input,kind.input,boss.input,startingDeck.input])control.addEventListener('input',()=>updateReward());updateReward(true);
   const savedVouchers=value(s?.observed.outOfScope)?.vouchers??[];
   let priorVouchers=[...savedVouchers];
-  let priorResourceDelta=jokerResourceDelta((value(s?.observed.jokers)??[]).map(j=>j.catalogId));
   const vouchers=mountVouchers(savedVouchers,ids=>{
    const changed=(keys:string[])=>keys.some(id=>ids.includes(id)!==priorVouchers.includes(id));
    updateVoucherResources();
    if(ids.includes('v_hieroglyph')&&changed(['v_hieroglyph','v_grabber','v_nacho_tong']))$<HTMLInputElement>('hands').value='';
    if(ids.includes('v_petroglyph')&&changed(['v_petroglyph','v_wasteful','v_recyclomancy']))$<HTMLInputElement>('discards').value='';
-   priorVouchers=[...ids];dirty=true;invalidate('Vales actualizados.');
+   priorVouchers=[...ids];markBasic('vouchers',true);
   });
-  const updateVoucherResources=()=>{const ids=vouchers.read(),r=voucherResources(startingDeck.input.value,ids),delta=jokerResourceDelta(Array.from(ownedHost.querySelectorAll<HTMLSelectElement>('select[id^=joker-]')).map(s=>s.value));r.hands+=delta.hands;r.discards+=delta.discards;r.handSize+=delta.handSize;try{r.handSize+=historyResourceDelta(Array.from(ownedHost.querySelectorAll<HTMLElement>(':scope > .joker-editor')).map(row=>ownedReaders.get(row)!())).handSize;}catch{return;}r.jokerSlots+=Array.from(ownedHost.querySelectorAll<HTMLSelectElement>('select[id^=edition-]')).filter(s=>s.value==='negative').length;for(const [id,n] of [['hands',r.hands],['discards',r.discards],['size',r.handSize],['slots',r.jokerSlots]] as const){const limited=id==='hands'&&ids.includes('v_hieroglyph')||id==='discards'&&ids.includes('v_petroglyph');if(!limited)$<HTMLInputElement>(id).value=String(n);else if(id==='hands'&&delta.hands!==priorResourceDelta.hands||id==='discards'&&delta.discards!==priorResourceDelta.discards)$<HTMLInputElement>(id).value='';}priorResourceDelta=delta;fillJokerSlots(ownedHost,r.jokerSlots);};
+  type ResourceId='hands'|'discards'|'size'|'slots';
+  let priorCalculatedResources:Record<ResourceId,number|undefined>|undefined;
+  let priorUnknownEditions:string[]=[];
+  const unknownEditions=()=>Array.from(ownedHost.querySelectorAll<HTMLSelectElement>('select[id^=edition-]')).filter(control=>control.value==='unknown').map(control=>control.id).sort();
+  const calculatedResources=():Record<ResourceId,number|undefined>=>{
+    const ids=vouchers.read(),r=voucherResources(startingDeck.input.value,ids),delta=jokerResourceDelta(Array.from(ownedHost.querySelectorAll<HTMLSelectElement>('select[id^=joker-]')).map(control=>control.value));
+    let size:number|undefined=r.handSize+delta.handSize;
+    try{size+=historyResourceDelta(Array.from(ownedHost.querySelectorAll<HTMLElement>(':scope > .joker-editor')).map(row=>ownedReaders.get(row)!())).handSize;}catch{size=undefined;}
+    return {hands:ids.includes('v_hieroglyph')?undefined:r.hands+delta.hands,discards:ids.includes('v_petroglyph')?undefined:r.discards+delta.discards,size,slots:r.jokerSlots+Array.from(ownedHost.querySelectorAll<HTMLSelectElement>('select[id^=edition-]')).filter(control=>control.value==='negative').length};
+  };
+  const updateVoucherResources=(reset=false)=>{
+    const next=calculatedResources(),unknownNow=unknownEditions(),capacityUncertain=priorCalculatedResources&&JSON.stringify(unknownNow)!==JSON.stringify(priorUnknownEditions);
+    for(const id of ['hands','discards','size','slots'] as const){
+      const input=$<HTMLInputElement>(id),before=priorCalculatedResources?.[id],after=next[id];
+      if(reset)input.value=after===undefined?'':String(after);
+      else if(id==='slots'&&capacityUncertain)input.value=unknownNow.length||after===undefined?'':String(after);
+      else if(priorCalculatedResources&&before!==after){
+        const current=input.value.trim()===''?undefined:Number(input.value);
+        input.value=after===undefined?'':before===undefined?String(after):current===undefined?'':String(current+after-before);
+      }
+    }
+    priorCalculatedResources=next;priorUnknownEditions=unknownNow;
+    fillJokerSlots(ownedHost,Number($<HTMLInputElement>('slots').value)||0);
+  };
   const cashoutBox=node('details');cashoutBox.id='cashout-preview';cashoutBox.append(node('summary','Cobro de ronda · automático'));
   const cashoutRows=node('div');cashoutRows.id='cashout-results';cashoutBox.append(cashoutRows);
   const manualCashout=checkbox('cashout-manual','Corregir total por cartas u otros efectos');const cashoutOverride=field('cashout-override','Total manual de referencia ($)','number');cashoutOverride.wrap.hidden=true;
@@ -255,7 +291,7 @@ function renderRecord(){
   for(const control of [ante.input,kind.input,boss.input,startingDeck.input])control.addEventListener('input',()=>updateTarget());
   updateTarget(true);
   const deckNote=node('p','','muted');const deckDetails=node('details');deckDetails.id='deck-conditions';const deckFacts=node('div');deckDetails.append(node('summary','Condiciones de esta baraja'),deckFacts);
-  const deckEditor=mountDeckEditor(grid,s?.observed.deck??known({preset:'standard52-unmodified'}),()=>startingDeck.input.value,()=>{dirty=true;invalidate('Mazo editado. Candidatos recalculados con la composición actual.');},!s);
+  const deckEditor=mountDeckEditor(grid,s?.observed.deck??known({preset:'standard52-unmodified'}),()=>startingDeck.input.value,()=>{markAdvanced();},!s);
   const showDeck=()=>{const d=resolveDeck(startingDeck.input.value);deckNote.textContent=`${d.effect} Inicio: $${d.startingMoney}. El saldo actual se transcribe; cambiar de baraja no lo repone. ${d.engine?'':d.limitation}`;
     const w=d.shopWeights,total=Object.values(w).reduce((a,b)=>a+b,0);
     deckFacts.replaceChildren(deckNote,node('p',`${d.hands} manos · ${d.discards} descartes · mano de ${d.handSize} · ${d.jokerSlots} comodines · ${d.consumableSlots} consumibles`),node('p',`Tienda inicial: ${d.shopSlots} espacios. Pesos: comodín ${w.joker}, Tarot ${w.tarot}, planeta ${w.planet}, espectral ${w.spectral}; total ${total}.`),node('small','Pesos para espacios normales de tienda, sin otros modificadores. No describen los sobres ni predicen la siguiente tienda.'));
@@ -270,7 +306,7 @@ function renderRecord(){
   const selectedDeck=resolveDeck(startingDeck.input.value);
   const resourceFields=[['hands','Manos por ronda',s?value(s.observed.resources.handsPerRound):selectedDeck.hands],['discards','Descartes por ronda',s?value(s.observed.resources.discardsPerRound):selectedDeck.discards],['size','Tamaño de mano',s?value(s.observed.resources.handSize):8],['slots','Espacios de comodín',s?value(s.observed.resources.jokerSlots):5]] as const;
   resourceFields.forEach(([id,label,v])=>resources.append(field(id,label,'number',String(v??'')).wrap));
-  startingDeck.input.addEventListener('change',()=>{const ids=vouchers.read(),d=voucherResources(startingDeck.input.value,ids);for(const [id,n] of [['hands',d.hands],['discards',d.discards],['size',d.handSize],['slots',d.jokerSlots]] as const)$<HTMLInputElement>(id).value=id==='hands'&&ids.includes('v_hieroglyph')||id==='discards'&&ids.includes('v_petroglyph')?'':String(n);updateVoucherResources();showDeck();deckEditor.changeDeck();dirty=true;invalidate('Baraja inicial cambiada. Candidatos recalculados con sus condiciones.');});
+  startingDeck.input.addEventListener('change',()=>{const ids=vouchers.read(),d=voucherResources(startingDeck.input.value,ids);for(const [id,n] of [['hands',d.hands],['discards',d.discards],['size',d.handSize],['slots',d.jokerSlots]] as const)$<HTMLInputElement>(id).value=id==='hands'&&ids.includes('v_hieroglyph')||id==='discards'&&ids.includes('v_petroglyph')?'':String(n);updateVoucherResources(true);showDeck();deckEditor.changeDeck();markAdvanced(true);});
   const base=value(s?.observed.handBases);const levels=select('levels','Bases de manos',{'unknown':'Desconocidas','preset':'Todas estándar, nivel 1','manual':'Transcribir niveles, fichas y Mult'},base && 'values'in base?'manual':s && !base?'unknown':'preset');context.append(levels.wrap);
   const handRows=node('div');context.append(handRows);handRows.hidden=levels.input.value!=='manual';levels.input.onchange=()=>handRows.hidden=levels.input.value!=='manual';
   for(const [id,basePair] of Object.entries(HAND_BASES)){const v=base && 'values'in base?value(base.values[id as keyof typeof HAND_BASES]):undefined;const missing=base && 'values'in base && !v;const row=node('div','','row');row.append(node('h3',handNames[id]!));const g=node('div','','grid');g.append(field('level-'+id,'Nivel','number',missing?'':String(v?.level??1)).wrap,field('chips-'+id,'Fichas base','number',missing?'':String(v?.chips??basePair[0])).wrap,field('mult-'+id,'Mult base','number',missing?'':String(v?.mult??basePair[1])).wrap);row.append(g);handRows.append(row);}
@@ -278,11 +314,24 @@ function renderRecord(){
   fieldset.append(node('p','150 comodines en el catálogo. Los disponibles para comparar se indican en sus detalles; algunos necesitan contadores o datos del escenario.','muted'));
   const jokerKnown=checkbox('jokers-known','Conozco mi inventario (sin filas = ningún comodín)',s?s.observed.jokers.status==='known':true);fieldset.append(jokerKnown.wrap);
   const ownedHost=node('div');fieldset.append(ownedHost);ownedHost.addEventListener('change',event=>{if((event.target as HTMLElement).matches('select[id^=joker-]'))updateVoucherResources();});const ownedReaders=new Map<HTMLElement,()=>JokerInstance>();
-  function addOwned(j?:JokerInstance){const id=j?.instanceId??uuid();const row=node('div','','row');const g=node('div','','grid');const name=select('joker-'+id,'Comodín',names,j?.catalogId??'joker');const ed=select('edition-'+id,'Edición',{base:'Base',foil:'Foil',holographic:'Holográfica',polychrome:'Policroma',negative:'Negativa'},j?value(j.edition)??'base':'base');ed.input.addEventListener('change',()=>updateVoucherResources());const stickers=j?.stickers??known([]);const sell=field('sell-'+id,'Valor de venta ($)','number',String(j?value(j.sellValue)??'':jokerDefinition('joker')!.sell));const counter=field('green-'+id,'Green: Mult actual','number',String(j?value(j.counters.greenMult)??'':''));counter.wrap.hidden=name.input.value!=='green_joker';name.input.onchange=()=>{sell.input.value=String(jokerDefinition(name.input.value)!.sell);counter.wrap.hidden=name.input.value!=='green_joker';};g.append(name.wrap,ed.wrap,sell.wrap,counter.wrap);const readCounters=mountCounterFields(g,name.input,j);row.append(g,button('Quitar fila',()=>{row.remove();updateVoucherResources();fillJokerSlots(ownedHost,Math.min(6,Number($<HTMLInputElement>('slots').value)||0));}));decorateJoker(row,name.input,false,!!j);ownedHost.append(row);fillJokerSlots(ownedHost,Math.min(6,Number($<HTMLInputElement>('slots').value)||0));
-    ownedReaders.set(row,()=>({instanceId:id,catalogId:name.input.value,edition:known(ed.input.value),stickers,sellValue:numFact(sell.input,0),counters:name.input.value==='green_joker'?{greenMult:numFact(counter.input,0)}:readCounters()}));
-    const order=node('div','','joker-order');for(const [label,offset] of [['← Mover',-1],['Mover →',1]] as const){const b=button(label,()=>{const rows=Array.from(ownedHost.querySelectorAll<HTMLElement>(':scope > .joker-editor')),index=rows.indexOf(row),other=rows[index+offset];if(other){if(offset<0)ownedHost.insertBefore(row,other);else ownedHost.insertBefore(other,row);fillJokerSlots(ownedHost,Math.min(6,Number($<HTMLInputElement>('slots').value)||0));}});b.setAttribute('aria-label',offset<0?'Mover comodín a la izquierda':'Mover comodín a la derecha');order.append(b);}row.querySelector('.joker-edit-drawer')!.append(order);fillJokerSlots(ownedHost,Math.min(6,Number($<HTMLInputElement>('slots').value)||0));
+  function addOwned(j?:JokerInstance){
+    const id=j?.instanceId??uuid(),row=node('div','','row'),g=node('div','','grid');
+    const name=select('joker-'+id,'Comodín',names,j?.catalogId??'joker');
+    const ed=select('edition-'+id,'Edición',{unknown:'Desconocida',base:'Base',foil:'Foil',holographic:'Holográfica',polychrome:'Policroma',negative:'Negativa'},j?value(j.edition)??'unknown':'base');
+    ed.input.addEventListener('change',()=>updateVoucherResources());
+    const stickers=j?.stickers??known([]),sell=field('sell-'+id,'Valor de venta ($)','number',String(j?value(j.sellValue)??'':jokerDefinition('joker')!.sell));
+    const counter=field('green-'+id,'Green: Mult actual','number',String(j?value(j.counters.greenMult)??'':''));counter.wrap.hidden=name.input.value!=='green_joker';
+    name.input.onchange=()=>{sell.input.value=String(jokerDefinition(name.input.value)!.sell);counter.wrap.hidden=name.input.value!=='green_joker';counter.input.value='';};
+    g.append(name.wrap,ed.wrap,sell.wrap,counter.wrap);const readCounters=mountCounterFields(g,name.input,j);
+    row.append(g,button('Quitar fila',()=>{row.remove();updateVoucherResources();fillJokerSlots(ownedHost,Number($<HTMLInputElement>('slots').value)||0);markBasic('jokers',true);}));
+    decorateJoker(row,name.input,false,!!j);ownedHost.append(row);
+    ownedReaders.set(row,()=>{const current=value(record?.state.observed.jokers)?.find(copy=>copy.instanceId===id),baseline=record?current:j;return {instanceId:id,catalogId:name.input.value,edition:ed.input.value==='unknown'?unknown():known(ed.input.value),stickers,sellValue:numFact(sell.input,0),counters:{...(baseline?.catalogId===name.input.value?baseline.counters:{}),...(name.input.value==='green_joker'?{greenMult:numFact(counter.input,0)}:readCounters())}};});
+    row.querySelector('dialog')?.addEventListener('close',()=>{if(pendingBasic.has('jokers'))flushBasicEdits();});
+    const order=node('div','','joker-order');
+    for(const [label,offset] of [['← Mover',-1],['Mover →',1]] as const){const b=button(label,()=>{const rows=Array.from(ownedHost.querySelectorAll<HTMLElement>(':scope > .joker-editor')),index=rows.indexOf(row),other=rows[index+offset];if(other){if(offset<0)ownedHost.insertBefore(row,other);else ownedHost.insertBefore(other,row);fillJokerSlots(ownedHost,Number($<HTMLInputElement>('slots').value)||0);markBasic('jokers',true);}});b.setAttribute('aria-label',offset<0?'Mover comodín a la izquierda':'Mover comodín a la derecha');order.append(b);}
+    row.querySelector('.joker-edit-drawer')!.append(order);fillJokerSlots(ownedHost,Number($<HTMLInputElement>('slots').value)||0);
   }
-  (value(s?.observed.jokers)??[]).forEach(addOwned);fillJokerSlots(ownedHost,Number($<HTMLInputElement>('slots').value)||0);
+  (value(s?.observed.jokers)??[]).forEach(addOwned);priorCalculatedResources=calculatedResources();priorUnknownEditions=unknownEditions();fillJokerSlots(ownedHost,Number($<HTMLInputElement>('slots').value)||0);
   const addFromGallery=(j:JokerReference):string|null=>{
     const engine=j.engineId??Object.keys(ALL_JOKER_FACTS).find(id=>ALL_JOKER_FACTS[id]!.artId===j.id);
     if(!engine||!jokerDefinition(engine))return 'Este comodín no tiene un perfil registrado.';
@@ -292,14 +341,17 @@ function renderRecord(){
     if(rows.length>=slots)return 'No quedan espacios. Quita un comodín antes de añadir otro.';
 
     addOwned({instanceId:uuid(),catalogId:engine,edition:known('base'),stickers:known([]),sellValue:known(jokerDefinition(engine)!.sell),counters:engine==='green_joker'?{greenMult:unknown()}:{}});
-    updateVoucherResources();dirty=true;invalidate('Comodín añadido a la vista actual. Candidatos recalculados automáticamente.');return null;
+    updateVoucherResources();markBasic('jokers',true);return null;
   };
   fieldset.append(node('h3','Ofertas de la tienda'));
   const shopReadout=node('p','Registra los comodines en la Tienda de la Mesa. Esas mismas ofertas se utilizan en Análisis.','muted');fieldset.append(shopReadout);
   const reason=s?field('edit-reason','Motivo de corrección o actualización'):null;if(reason){reason.wrap.dataset.saveControl='true';fieldset.append(reason.wrap);}
   const submit=node('button',s?'Guardar actualización que transcribí':'Crear y guardar mi partida');submit.type='submit';submit.dataset.write='true';submit.dataset.saveControl='true';fieldset.append(submit);
-  form.oninput=event=>{if((event.target as HTMLElement).dataset.counter==='hSize')updateVoucherResources();fillJokerSlots(ownedHost,Math.min(6,Number($<HTMLInputElement>('slots').value)||0));dirty=true;invalidate('Vista actual modificada. Candidatos en actualización.');};
-  form.addEventListener('click',e=>{if((e.target as HTMLElement).closest('button[type=button]')){dirty=true;invalidate('Inventario modificado. Candidatos en actualización.');}});
+  const basicGroup=(target:EventTarget|null):BasicGroup|null=>{if(!(target instanceof HTMLElement))return null;if(target.id==='money')return 'money';if(target.id==='jokers-known'||target.closest('.joker-editor')&&ownedHost.contains(target))return 'jokers';return null;};
+  form.oninput=event=>{const target=event.target as HTMLElement;if(['cashout-manual','cashout-override'].includes(target.id)){refreshCashout();return;}const group=basicGroup(target);if(target.dataset.counter==='hSize')updateVoucherResources();fillJokerSlots(ownedHost,Math.min(6,Number($<HTMLInputElement>('slots').value)||0));if(group)markBasic(group,target.classList.contains('joker-editor'));else if(target.matches('input,select,textarea')&&!target.closest('.joker-bay,.storefront'))markAdvanced(['starting-deck','hands','discards','size','slots'].includes(target.id));};
+  form.addEventListener('change',event=>{const group=basicGroup(event.target);if(group)markBasic(group,true);});
+  form.addEventListener('focusout',event=>{const group=basicGroup(event.target);if(group&&pendingBasic.has(group))markBasic(group,true);});
+  form.addEventListener('keydown',event=>{if(event.key==='Enter'&&basicGroup(event.target)){event.preventDefault();flushBasicEdits();}});
   const workingBase=s?structuredClone(s):createDraft(uuid(),now());
   readLiveState=(quick=false)=>{
     if(!quick&&!deckDefinition(startingDeck.input.value))throw new Error('Baraja fuera del cálculo compatible.');
@@ -308,7 +360,7 @@ function renderRecord(){
     // Only legacy drafts need this editor projection. A current state keeps its
     // discriminated phase; editing fields never records a game transition.
     if(state.schemaVersion==='0.1')state.phase='shop';
-    const o=state.observed;o.gameVersion=coverage.input.checked?known(GAME_VERSION):unknown();o.gamePlatform=coverage.input.checked?known('pc-steam'):unknown();o.modsPresent=coverage.input.checked?known(false):unknown();o.deckId=known(startingDeck.input.value);o.stakeId=coverage.input.checked?known('white'):unknown();o.deck=deckEditor.read();o.outOfScope=known({vouchers:vouchers.read(),consumables:[],pendingTags:[],otherModifiers:[]});o.money=numFact(money.input,-20);
+    const o=state.observed;o.gameVersion=coverage.input.checked?known(GAME_VERSION):unknown();o.gamePlatform=coverage.input.checked?known('pc-steam'):unknown();o.modsPresent=coverage.input.checked?known(false):unknown();o.deckId=known(startingDeck.input.value);o.stakeId=coverage.input.checked?known('white'):unknown();o.deck=deckEditor.read();o.outOfScope=workingBase.observed.outOfScope.status==='known'?known({...structuredClone(workingBase.observed.outOfScope.value),vouchers:vouchers.read()}):record?structuredClone(workingBase.observed.outOfScope):known({vouchers:vouchers.read(),consumables:[],pendingTags:[],otherModifiers:[]});o.money=numFact(money.input,Number.MIN_SAFE_INTEGER);
     o.resources={handsPerRound:numFact($<HTMLInputElement>('hands'),0),discardsPerRound:numFact($<HTMLInputElement>('discards'),0),handSize:numFact($<HTMLInputElement>('size'),0),jokerSlots:numFact($<HTMLInputElement>('slots'),0)};
     if(kind.input.value){const a=number(ante.input,1);if(a>8)throwField('ante','Solo se admiten antes 1 a 8.');o.nextBlind=known({ante:a,kind:kind.input.value as 'small'|'big'|'boss',bossId:kind.input.value==='boss'?(boss.input.value?known(boss.input.value):unknown()):known('none'),target:!manualTarget.input.checked&&targetCalculated&&target.input.value!==''?{status:'known',source:'confirmedPreset',value:number(target.input,1)}:numFact(target.input,1),reward:!manualReward.input.checked&&rewardCalculated&&reward.input.value!==''?{status:'known',source:'confirmedPreset',value:number(reward.input,0)}:numFact(reward.input,0)});}else o.nextBlind=unknown();
     o.jokers=jokerKnown.input.checked?known(Array.from(ownedHost.querySelectorAll<HTMLElement>(':scope > .joker-editor')).map(row=>ownedReaders.get(row)!())):unknown();
@@ -316,6 +368,42 @@ function renderRecord(){
     if(levels.input.value==='unknown')o.handBases=unknown();else if(levels.input.value==='preset')o.handBases=known({preset:'all-standard-level1'});else {const values=Object.fromEntries(Object.keys(HAND_BASES).map(id=>{const inputs=['level-','chips-','mult-'].map(prefix=>$<HTMLInputElement>(prefix+id));return [id,inputs.some(input=>input.value.trim()==='')?unknown():known({level:number(inputs[0]!,1),chips:number(inputs[1]!,1),mult:number(inputs[2]!,1)})];}));o.handBases=known({values} as Exclude<NonNullable<ReturnType<typeof value<GameState['observed']['handBases'] extends Fact<infer T>?T:never>>>,{preset:string}>);}
     if(deckEditor.discardSavedScenarios()){state.assumptions.probes=[];state.assumptions.roundPlans=[];}
     const valid=validateState(state);if(!valid.ok)throw new Error(valid.errors.map(e=>e.message).join(' '));return valid.value;
+  };
+  preserveBasicDraft=text=>{showBasic(text,'error');invalidate('La copia cambió; el borrador no se aplicó.',false);};
+  flushBasicEdits=()=>{
+    clearTimeout(basicTimer);
+    if(!form.isConnected)return false;
+    if(!pendingBasic.size)return true;
+    if(!record){showBasic('Crea o importa una partida antes de autoguardar estos datos.','pending');return false;}
+    const fail=(text:string)=>{showBasic(text,'error');return false;};
+    if(!lock.owned)return fail('Esta pestaña es de lectura. El borrador no se guardó.');
+    if(loadFailed)return fail('No se pudo leer el registro. Se conserva el borrador y la copia anterior.');
+    if(advancedResourcesDirty&&(pendingBasic.has('jokers')||pendingBasic.has('vouchers')))return fail('Hay cambios avanzados de baraja o recursos pendientes. Regístralos o recarga antes de guardar este grupo.');
+    try{
+      if(localStorage.getItem(CONFIRMED_STORAGE_KEY)!==seenRaw)return fail('La partida cambió en otra pestaña. Se conserva el borrador; recarga para revisar la copia actual.');
+      for(const input of [money.input,...Array.from(ownedHost.querySelectorAll<HTMLInputElement>('input'))]){if(input.id){const error=$(input.id+'-error');if(error)error.textContent='';}input.removeAttribute('aria-invalid');}
+      const request:BasicObservationRequest={};
+      const checkNumbers=(root:HTMLElement)=>{for(const input of root.querySelectorAll<HTMLInputElement>('input[type=number]'))if(input.validity.badInput)throw new Error('Termina el número que estás editando.');};
+      if(pendingBasic.has('money')){if(money.input.validity.badInput)throw new Error('Termina el saldo que estás editando.');request.money=numFact(money.input,Number.MIN_SAFE_INTEGER);}
+      if(pendingBasic.has('jokers')){checkNumbers(ownedHost);request.jokers=jokerKnown.input.checked?known(Array.from(ownedHost.querySelectorAll<HTMLElement>(':scope > .joker-editor')).map(row=>ownedReaders.get(row)!())):unknown();}
+      if(pendingBasic.has('vouchers'))request.voucherIds=vouchers.read();
+      if(pendingBasic.has('jokers')||pendingBasic.has('vouchers')){
+        request.resources={};
+        for(const [id,key] of [['hands','handsPerRound'],['discards','discardsPerRound'],['size','handSize'],['slots','jokerSlots']] as const){const input=$<HTMLInputElement>(id);if(input.validity.badInput)throw new Error('Termina el recurso que estás editando.');request.resources[key]=numFact(input,0);}
+      }
+      const prepared=prepareBasicObservation(record.state,request);
+      if(!prepared.ok)return fail(prepared.errors.map(e=>e.message).join(' '));
+      if(prepared.value.changed){
+        const saved=store.correct({confirmationId:uuid(),confirmed:true,expected:analysisBinding(record.state),updatedAt:now(),patch:prepared.value.patch,reason:prepared.value.description+' Observación al terminar la edición; no es una compra ni una jugada.'});
+        if(!saved.ok)return fail(saved.errors.map(e=>e.message).join(' '));
+        record=saved.value;Object.assign(workingBase,structuredClone(record.state));
+        try{seenRaw=localStorage.getItem(CONFIRMED_STORAGE_KEY);}catch{loadFailed=true;}
+        $('revision').textContent=`Revisión ${record.state.revision}`;
+      }
+      pendingBasic.clear();dirty=advancedDirty;
+      showBasic(loadFailed?'Los datos se guardaron, pero no se pudo releer la copia. Recarga antes de seguir.':advancedDirty?'Datos básicos guardados; quedan cambios avanzados pendientes en Registro.':prepared.value.changed?'Guardado.':'Sin cambios pendientes.',loadFailed?'error':'saved');
+      invalidate('Datos observados actualizados; consulta sobre la revisión actual.',false);refreshCandidateControls();renderHistory();renderActions();updateOwnership();return !loadFailed;
+    }catch(error){return fail(error instanceof Error?error.message:'No se pudo guardar. Se conserva el borrador.');}
   };
   form.onsubmit=e=>{e.preventDefault();resetFormErrors();try{
     if(!deckDefinition(startingDeck.input.value)){message(resolveDeck(startingDeck.input.value).limitation+' No se ha cambiado la partida.',true);return;}
@@ -325,6 +413,7 @@ function renderRecord(){
     else commit(()=>store.initialize(state));
   }catch(err){if(err instanceof Error)message(err.message,true);}};
   const observeShelf=(snapshot:ShopSnapshot,scope:'all'|'voucher'|'pack'='all'):string|null=>{
+    if(!flushBasicEdits())return saveMessage.textContent??'No se pudieron guardar los datos editados.';
     if(record&&dirty)return 'Hay otros datos editados sin guardar. Guarda la transcripción o recárgala antes de registrar ofertas.';
     if(demoMode)return 'Sal de la demostración antes de registrar ofertas reales.';
     if(!canWrite())return $('message').textContent??'No se pudo guardar.';
@@ -426,7 +515,7 @@ function renderHandPreview(j:JokerReference,sellId:string,inputState?:GameState,
 }
 function throwField(id:string,text:string):never{formError(id,text);if(!quietRead)$(id)?.focus();throw new Error(text);}
 function number(input:HTMLInputElement,min:number){const n=Number(input.value);if(input.value.trim()===''||!Number.isSafeInteger(n)||n<min)throwField(input.id,`Introduce un entero de al menos ${min}.`);return n;}
-function numFact(input:HTMLInputElement,min:number):Fact<number>{return input.value.trim()===''?unknown():known(number(input,min));}
+function numFact(input:HTMLInputElement,min:number):Fact<number>{if(input.validity.badInput)throwField(input.id,'Termina el número que estás editando.');return input.value.trim()===''?unknown():known(number(input,min));}
 
 function scenarioCards(){let d;try{d=value(liveState().observed.deck);}catch{d=value(record?.state.observed.deck);}return d?('cards' in d?d.cards:standardDeck()):[];}
 function cardField(id:string,label:string,ids:string[]=[]){
@@ -507,6 +596,7 @@ $('exit-demo').onclick=()=>{invalidate('De vuelta a tu partida. Consulta con tus
 const isTarotAction=(action:ConfirmableShopAction):action is TarotAction=>action.type==='use_tarot'||action.type==='observe_round_hand';
 const isPackAction=(action:ConfirmableShopAction):action is PackAction=>['buy_pack','observe_pack','observe_pack_hand','choose_pack_item','skip_open_pack','sell_pack_joker'].includes(action.type);
 function requestMesaAction(action:ConfirmableShopAction):string|null{
+  if(!flushBasicEdits())return $('basic-save-message')?.textContent??'Revisa los datos pendientes.';
   if(!record)return 'Configura y guarda la partida antes de registrar acciones reales. No se usa una hipótesis como partida.';
   return confirmAction(action,record.state);
 }
@@ -597,7 +687,7 @@ $<HTMLInputElement>('import-file').onchange=async()=>{
   }catch{message('No se pudo leer la copia o el almacenamiento. No se anunció un guardado exitoso.',true);}
 };
 $('legacy').dataset.write='true';$('legacy').onclick=()=>commit(()=>store.migrateLegacy());
-window.addEventListener('storage',e=>{if(e.key===CONFIRMED_STORAGE_KEY || e.key===null){reload();message('Se recibió un cambio de otra pestaña. Se invalidaron los consejos y formularios anteriores.');}});
+window.addEventListener('storage',e=>{if(e.key===CONFIRMED_STORAGE_KEY || e.key===null){if(dirty){preserveBasicDraft('La partida cambió en otra pestaña. El borrador se conserva sin aplicar; recarga para revisar la copia actual.');return;}reload();message('Se recibió un cambio de otra pestaña. Se invalidaron los consejos y formularios anteriores.');}});
 window.addEventListener('pagehide',()=>lock.release());window.addEventListener('pageshow',()=>{if(!lock.owned)lock.acquire();});
 const boundsHost=node('div');boundsHost.id='bounds';$('advice').after(boundsHost);
 const boundsButton=button('Comprobar límite de puntuación',()=>{

@@ -73,6 +73,8 @@ try{
   for(const id of ['j_joker','j_banner','j_greedy_joker','j_lusty_joker','j_even_steven'])await add(p,id,'#bay-add');
   assert.equal(await stored(p),null,'Transcribing the initial inventory remains a draft until it is explicitly recorded.');
   await p.locator('.coverage-note>summary').click();await p.locator('#coverage').check();
+  await go(p,'archive');await p.getByRole('button',{name:'Crear y guardar mi partida'}).click();await go(p,'table');
+  const initialized=JSON.parse(await stored(p));assert.equal(initialized.state.observed.money.value,20);assert.equal(initialized.state.observed.jokers.value.length,5);assert.equal(initialized.history.length,0);
   for(const id of ['j_half','j_sly','j_crafty'])await add(p,id,'#bay-candidate');
   await p.waitForFunction(()=>document.querySelectorAll('.inventory-panel .fit-score').length===5&&document.querySelectorAll('.candidate-info>.fit-score').length===3&&[...document.querySelectorAll('.candidate-info>.fit-score')].every(n=>/^\d+\.\d$/.test(n.textContent)));
   assert.equal(await p.locator('.scenario').count(),0);
@@ -83,7 +85,7 @@ try{
   assert.equal(observedShelf.state.observed.money.value,20);assert.equal(observedShelf.state.observed.jokers.value.length,5);
   assert.equal(observedShelf.state.observed.shop.value.cardOffers.length,3);assert.equal(observedShelf.history.filter(entry=>entry.kind==='action').length,0);
   for(const path of ['web/assets/fonts/m6x11plus.ttf','web/assets/jokers/catalog.json','web/assets/jokers/atlas.png','web/assets/vouchers/atlas.png'])assert.ok(loaded.has(base+path),'Asset should be loaded from project subpath: '+path);
-  pass('basic-fit','150 entries/assets load; five transcribed owned and three observed offers rated without plans/acquisition; first observation records configured run',{gallery:150,indices:labels,plans:0,owned:5,offers:3,confirmedPurchases:0});
+  pass('basic-fit','150 entries/assets load; five transcribed owned and three observed offers rated without plans/acquisition; explicit creation records configured run before offers',{gallery:150,indices:labels,plans:0,owned:5,offers:3,confirmedPurchases:0});
   await p.waitForFunction(()=>document.querySelectorAll('#composition-overview .composition-bar').length===6);
   assert.equal(await p.locator('#table-view #composition-overview').count(),1);
   const compositionSections=await p.locator('#composition-overview .composition-bar').evaluateAll(bars=>bars.map(bar=>bar.dataset.section));
@@ -113,6 +115,7 @@ try{
     const template=await fetch(base+'examples/round-plan.json');assert.equal(template.status,200);assert.equal((await template.json()).schemaVersion,'scenario-1');
     await e.locator('.coverage-note>summary').click();await e.locator('#coverage').check();
     await e.locator('#money').fill('7');await e.locator('#blind-kind').selectOption('big');
+    await go(e,'archive');await e.getByRole('button',{name:'Crear y guardar mi partida'}).click();await go(e,'table');
     await add(e,'j_half','#bay-candidate');
     const initialObservedRaw=await stored(e);assert.ok(initialObservedRaw);
     await go(e,'evaluation');

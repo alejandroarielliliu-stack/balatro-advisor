@@ -27,7 +27,7 @@ Se comprobó que las 116 fuentes previas fuera de `src/ui` conservan sus hashes 
 
 Persisten límites del consejo original. Si la política no aporta una consecuencia estructurada suficiente, el presentador no fabrica una cifra ni una explicación estratégica nueva. La ampliación de comparaciones y pérdidas específicas permanece en DEC02.
 
-**UX01b continúa pendiente:** algunas ediciones básicas aún pasan por Registro. Esta entrega no implementa el autoguardado adicional ni el resumen parcial OBS01d. Consultar, desplegar, cerrar o comparar sigue sin registrar acciones reales.
+**Actualización 2026-11-01:** [UX01b](autoguardado-basico-ux01b.md) añade guardado al terminar las ediciones básicas mediante T09b. El resumen parcial OBS01d sigue pendiente. Consultar, desplegar, cerrar o comparar sigue sin registrar acciones reales.
 
 ## Comprobaciones
 
