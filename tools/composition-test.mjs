@@ -87,7 +87,9 @@ try{
  assert.equal(await bar(p,'growth').getAttribute('data-status'),'partial');
  await p.locator('#composition-overview').screenshot({path:dir+'/partial.png'});
  const green=await ownedRow(p,'green_joker');await green.locator('.card-settings>summary').click();
- await green.locator('input[id^="green-"]').fill('20');await green.getByRole('button',{name:'Cerrar edición',exact:true}).click();
+ await green.locator('input[id^="green-"]').fill('20');
+ const greenDrawer=green.locator('.joker-edit-drawer');await greenDrawer.evaluate(dialog=>{dialog.dataset.testCloseComplete='pending';dialog.addEventListener('close',()=>queueMicrotask(()=>{dialog.dataset.testCloseComplete='done';}),{once:true});});
+ await green.getByRole('button',{name:'Cerrar edición',exact:true}).click();await greenDrawer.waitFor({state:'hidden'});await greenDrawer.locator('xpath=self::*[@data-test-close-complete="done"]').waitFor({state:'attached'});
  await waitValue(p,'growth',92.5);
  // Green20: base80+bonus10=90; Blue's extra hand offers2.5 editorially early.
  await p.locator('#ante').fill('8');await waitValue(p,'growth',80);
@@ -173,3 +175,4 @@ try{
 }catch(error){
  report.status='failed';report.error=error.message;await writeFile(dir+'/report.json',JSON.stringify(report,null,2)+'\n');throw error;
 }finally{await browser?.close();server.kill();}
+
