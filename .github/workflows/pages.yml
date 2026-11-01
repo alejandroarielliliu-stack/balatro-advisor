@@ -40,6 +40,10 @@ jobs:
         run: node tools/compact-advice-test.mjs
       - name: Comprobar observaciones básicas sin Guardar
         run: node tools/basic-autosave-test.mjs
+      - name: Comprobar mazo actual y valoraciones derivadas
+        run: node tools/deck-material-test.mjs
+      - name: Comprobar composición y detalle al editar
+        run: node tools/composition-test.mjs
       - name: Comprobar registro desde la tienda
         run: node tools/shop-session-test.mjs
       - name: Comprobar compras registradas de vales

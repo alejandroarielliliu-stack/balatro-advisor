@@ -1,9 +1,8 @@
 import type {GameState,Fact,Issue} from '../state/model.js';
 import {validateState} from '../state/validation.js';
 import {ALL_JOKER_FACTS} from '../catalog/all-joker-facts.js';
-import {standardDeck} from '../catalog/initial.js';
 import type {Card} from '../catalog/initial.js';
-import {deckProfile,resolveDeck} from '../catalog/decks.js';
+import {currentDeckCards,summarizeDeckCards} from '../state/deck-material.js';
 import {VOUCHER_CATALOG} from '../catalog/voucher-catalog.js';
 import {supportsVoucher} from '../catalog/vouchers.js';
 import {FIT_PROFILES} from './fit-profiles.js';
@@ -63,20 +62,12 @@ const families:Readonly<Record<string,{title:string;actors:readonly string[]}>>=
  'midas-vampire':{title:'Midas y Vampiro',actors:['j_midas_mask','j_vampire','j_pareidolia']},
  'hack-fibonacci':{title:'Hack y Fibonacci',actors:['j_hack','j_fibonacci']}
 };
-function cardsOf(state:GameState):readonly Card[]|undefined {
- const deck=value(state.observed.deck);if(!deck)return undefined;
- if('cards' in deck)return deck.cards;
- const id=value(state.observed.deckId);
- return deck.preset==='standard52-unmodified'&&id&&deckProfile(id)&&resolveDeck(id).composition==='standard52'?standardDeck():undefined;
-}
 function materialOf(cards:readonly Card[]|undefined):CompositionMaterial {
  if(!cards)return nullMaterial();
- const usable=cards.filter(c=>!c.debuff),rank=(c:Card,r:string)=>c.enhancement!=='stone'&&c.rank===r;
- return {total:cards.length,usable:usable.length,kings:usable.filter(c=>rank(c,'K')).length,
-  queens:usable.filter(c=>rank(c,'Q')).length,faces:usable.filter(c=>c.enhancement!=='stone'&&['J','Q','K'].includes(c.rank)).length,
-  twos:usable.filter(c=>rank(c,'2')).length,steel:cards.filter(c=>c.enhancement==='steel').length,
-  gold:cards.filter(c=>c.enhancement==='gold').length,blueSeals:cards.filter(c=>c.seal==='blue').length,
-  stone:cards.filter(c=>c.enhancement==='stone').length};
+ const {full,usable}=summarizeDeckCards(cards);
+ return {total:full.total,usable:usable.total,kings:usable.ranks.K,queens:usable.ranks.Q,faces:usable.faces,
+  twos:usable.ranks['2'],steel:full.enhancements.steel??0,gold:full.enhancements.gold??0,
+  blueSeals:full.seals.blue??0,stone:full.enhancements.stone??0};
 }
 function collectSynergies(state:GameState,actors:readonly string[]):CompositionFinding[] {
  const collected=new Map<string,CompositionFinding>();
@@ -288,7 +279,7 @@ export function evaluateComposition(input:GameState,options:{ante?:number}={}):C
  const base:CompositionReport={policy:'composition-1',status:'needs-data',heading:'Tu composición',summary:'',stage:'Etapa sin registrar',material:nullMaterial(),roles:roleIds.map(role=>({role,status:'unknown',count:0})),fits:[],strengths:[],weaknesses:[],priorities:[],synergies:[],vouchers:[],limitations:[],errors:[],sections:[],global:{value:null,range:null,status:'partial',weights:{scoring:0,economy:0,synergy:0,deck:0,growth:0,resources:0},reasons:['Datos inválidos o todavía sin evaluar.']}};
  if(!checked.ok)return {...base,summary:'Revisa los datos de la partida.',errors:checked.errors};
  const state=checked.value,ante=options.ante??value(state.observed.nextBlind)?.ante,owned=value(state.observed.jokers),actors=[...new Set((owned??[]).map(j=>art(j.catalogId)))];
- const fits=evaluateOwnedFits(state,ante===undefined?{}:{ante}),cards=cardsOf(state),material=materialOf(cards);
+ const fits=evaluateOwnedFits(state,ante===undefined?{}:{ante}),cards=currentDeckCards(state),material=materialOf(cards);
  const report:CompositionReport={...base,stage:stageOf(ante),material,fits,
   heading:owned?.length?headingOf(actors,fits):owned?'Sin comodines registrados':'Inventario sin registrar',
   synergies:owned?collectSynergies(state,actors):[],vouchers:voucherFindings(state,actors,fits)};

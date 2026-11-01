@@ -5,9 +5,10 @@ import {validateConfirmedRecord} from '../storage/confirmed-record.js';
 import type {ConfirmedRecord} from '../storage/confirmed-record.js';
 import {array,boolean,checkJsonValue,enumeration,integer,object,text,union} from './schema.js';
 import type {Infer} from './schema.js';
-import {RANKS,standardDeck} from '../catalog/initial.js';
+import {RANKS} from '../catalog/initial.js';
 import type {Card} from '../catalog/initial.js';
 import {CONSUMABLE_KINDS} from '../catalog/generation-jokers.js';
+import {currentDeckCards} from './deck-material.js';
 const fields=object({},{rank:enumeration(...RANKS),suit:enumeration('S','H','D','C'),edition:text(),enhancement:text(),seal:text(),extraChips:integer(),debuff:boolean});
 const cardOperation=union(object({type:enumeration('add'),card:cardSchema}),union(object({type:enumeration('remove'),instanceId:text()}),object({type:enumeration('update'),instanceId:text(),changes:fields})));
 const consumableOperation=union(object({type:enumeration('add'),item:consumableSchema}),union(object({type:enumeration('remove'),instanceId:text()}),union(object({type:enumeration('update'),instanceId:text(),changes:object({},{edition:enumeration('base','negative'),sellValue:integer(0)})}),object({type:enumeration('confirm_empty')}))));
@@ -24,9 +25,16 @@ export function inventoryReference(record:ConfirmedRecord,target:'deck'|'consuma
  const found=[...all].reverse().find(s=>target==='deck'?s.observed.deck.status==='known':s.observed.jokerContext?.status==='known'&&s.observed.jokerContext.value.consumables?.status==='known');return found?structuredClone(found):undefined;
 }
 export function inventoryCards(state:GameState):Card[]|undefined{
- const fact=state.observed.deck;if(fact.status!=='known')return;
- if('cards'in fact.value)return structuredClone(fact.value.cards);
- if(fact.value.preset==='standard52-unmodified'&&state.observed.deckId.status==='known'&&!['abandoned','checkered','erratic'].includes(state.observed.deckId.value))return standardDeck();
+ const cards=currentDeckCards(state);return cards?structuredClone([...cards]):undefined;
+}
+export interface ObservedDeckChanges {added:boolean;removed:boolean;changed:boolean}
+/** Observing changed cards does not reconstruct the event that caused them.
+ * Keep potentially affected growth unknown until its counter is observed. */
+export function invalidateDeckGrowth(jokers:GameState['observed']['jokers'],changes:ObservedDeckChanges):GameState['observed']['jokers']{
+ const result=structuredClone(jokers);if(result.status!=='known')return result;
+ for(const joker of result.value)if(joker.catalogId==='hologram'&&changes.added||['caino','glass'].includes(joker.catalogId)&&changes.removed||joker.catalogId==='vampire'&&changes.changed)
+  joker.counters.x100={status:'unknown',reason:'El cambio de cartas podría afectar este crecimiento. Transcribe el contador observado; no se reconstruye su causa.'};
+ return result;
 }
 /** A reconciliation of observed objects, not the execution of a Tarot, sale or purchase. */
 export function inventoryChanges(input:unknown,requestInput:unknown):Result<InventoryChangeResult>{
@@ -48,11 +56,8 @@ export function inventoryChanges(input:unknown,requestInput:unknown):Result<Inve
     if(op.type==='remove')cards.splice(index,1);else{if(!Object.keys(op.changes).length)return fail('empty_changes','Indica qué cambió en la carta.');Object.assign(cards[index]!,structuredClone(op.changes));}}
   }
   patch.deck=known({cards});
-  if(current.observed.jokers.status==='known'){
-   const added=request.operations.some(o=>o.type==='add'),removed=request.operations.some(o=>o.type==='remove'),changed=request.operations.some(o=>o.type==='update');
-   const affected=current.observed.jokers.value.filter(j=>j.catalogId==='hologram'&&added||['caino','glass'].includes(j.catalogId)&&removed||j.catalogId==='vampire'&&changed);
-   if(affected.length){patch.jokers=structuredClone(current.observed.jokers);for(const j of patch.jokers.value)if(affected.some(a=>a.instanceId===j.instanceId))j.counters.x100={status:'unknown',reason:'El cambio de cartas podría afectar este crecimiento. Transcribe el contador observado; no se reconstruye su causa.'};}
-  }
+  const jokers=invalidateDeckGrowth(current.observed.jokers,{added:request.operations.some(o=>o.type==='add'),removed:request.operations.some(o=>o.type==='remove'),changed:request.operations.some(o=>o.type==='update')});
+  if(JSON.stringify(jokers)!==JSON.stringify(current.observed.jokers))patch.jokers=jokers;
  }else{
   const empty=request.operations.some(o=>o.type==='confirm_empty');
   if(empty&&request.operations.length!==1)return fail('invalid_sequence','Confirmar una lista vacía debe hacerse sin otras operaciones.');

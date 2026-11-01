@@ -2,8 +2,7 @@ import type {GameState,Fact} from '../state/model.js';
 import type {Card} from '../catalog/initial.js';
 import type {FitSignal} from './quick-fit.js';
 import {ALL_JOKER_FACTS} from '../catalog/all-joker-facts.js';
-import {standardDeck} from '../catalog/initial.js';
-import {deckProfile,resolveDeck} from '../catalog/decks.js';
+import {currentDeckCards,summarizeDeckCards} from '../state/deck-material.js';
 
 /** Structural support, not a played-hand trace. Predicates are deliberately
  * explicit: SYN01's participant lists are documentary, not AND expressions.
@@ -11,16 +10,6 @@ import {deckProfile,resolveDeck} from '../catalog/decks.js';
 const value=<T>(fact:Fact<T>|undefined):T|undefined=>fact?.status==='known'?fact.value:undefined;
 const art=(id:string)=>ALL_JOKER_FACTS[id]?.artId??id;
 const knownArtIds=new Set(Object.values(ALL_JOKER_FACTS).map(j=>j.artId));
-
-function composition(state:GameState):readonly Card[]|undefined {
- const deck=value(state.observed.deck);if(!deck)return undefined;
- if('cards' in deck)return deck.cards;
- const deckId=value(state.observed.deckId);
- // An initial deck name is never used to fabricate its current cards. Only
- // an explicitly known standard preset consistent with that deck is expanded.
- if(deck.preset!=='standard52-unmodified'||!deckId||!deckProfile(deckId)||resolveDeck(deckId).composition!=='standard52')return undefined;
- return standardDeck();
-}
 
 /** Pure inspection of a valid state plus a hypothetical candidate. A replaced
  * instance is excluded before testing relations; no shop action is applied. */
@@ -32,7 +21,7 @@ export function inspectCompositions(state:GameState,candidateArtId:string,replac
  actors.add(candidate);
  const has=(id:string)=>actors.has(id),any=(ids:readonly string[])=>ids.some(has);
  const related=(ids:readonly string[])=>ids.includes(candidate);
- const deck=composition(state),usable=deck?.filter(card=>!card.debuff);
+ const deck=currentDeckCards(state),counts=deck?summarizeDeckCards(deck):undefined,usable=deck?.filter(card=>!card.debuff);
  const count=(predicate:(card:Card)=>boolean)=>usable?.filter(predicate).length;
  const rank=(card:Card,...ranks:Card['rank'][])=>card.enhancement!=='stone'&&ranks.includes(card.rank);
  const face=(card:Card)=>has('j_pareidolia')||(card.enhancement!=='stone'&&['J','Q','K'].includes(card.rank));
@@ -44,10 +33,10 @@ export function inspectCompositions(state:GameState,candidateArtId:string,replac
  };
 
  // Held scoring: an eligible king must really be K, even with Pareidolia.
- const steel=count(c=>c.enhancement==='steel'),kings=count(c=>rank(c,'K'));
+ const steel=counts?(counts.usable.enhancements.steel??0):undefined,kings=counts?.usable.ranks.K;
  if(related(['j_mime','j_baron'])&&has('j_mime')&&(has('j_baron')||(steel??0)>0||steel===undefined)){
   const support=count(c=>c.enhancement==='steel'||has('j_baron')&&rank(c,'K'));
-  const steelKings=count(c=>c.enhancement==='steel'&&rank(c,'K'));
+  const steelKings=counts?.usable.steelKings;
   material('mime-steel-baron',support,'cartas de Acero o reyes con Barón',
    `Mimo repite efectos retenidos${has('j_baron')?' y Barón puede aportar sobre reyes reales':''}.${steel!==undefined?` Acero: ${steel}; reyes reales: ${kings}; reyes de Acero: ${steelKings}.`:''}`,
    'Falta robar y conservar esas cartas al puntuar; jugarlas no activa esta retención. Mimo no repite el efecto independiente de Steel Joker.');

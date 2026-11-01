@@ -1,6 +1,6 @@
 # UX01b — datos básicos sin Guardar
 
-Entrega de software: 1 de noviembre de 2026. Continúa [UX01](consejo-compacto-ux01.md) y reutiliza [T09b](confirmaciones-t09b.md). No cambia la política del asesor, las fórmulas H2 ni el catálogo. El resumen parcial del mazo OBS01d sigue pendiente.
+Entrega de software: 1 de noviembre de 2026. Continúa [UX01](consejo-compacto-ux01.md) y reutiliza [T09b](confirmaciones-t09b.md). No cambia la política del asesor, las fórmulas H2 ni el catálogo. [OBS01d](mazo-actual-obs01d.md) amplía después el autoguardado a las cartas actuales; por aclaración del usuario, sus recuentos se derivan sin otro formulario parcial.
 
 ## Qué se guarda y cuándo
 
@@ -38,6 +38,6 @@ Capturas e informes runtime en `docs/evidencia/ux01b/`, ignorados conforme a la 
 
 El workflow de Pages ejecuta el nuevo script antes de publicar. Para contrastar el artefacto público, el script admite `AUTOSAVE_BASE_URL`, `AUTOSAVE_COMMIT` y `AUTOSAVE_WORKFLOW`: compara HTML, CSS y18 módulos críticos (20 archivos) con `out/` y repite los14 grupos en perfiles aislados.
 
-## Próxima entrega
+## Continuación implementada
 
-OBS01d.1: resumen parcial de material del mazo, con cuentas conocidas/desconocidas e intersecciones explícitas. Debe reutilizar este guardado y las validaciones existentes, sin fabricar cartas ni obligar a introducir los52 naipes. Barón/Mimo/Steel Joker se conectarán después, en OBS01d.2; esta entrega no afirma haberlos mejorado.
+[OBS01d](mazo-actual-obs01d.md) añade correcciones de las cartas actuales al mismo guardado y comparte sus recuentos entre composición, comodines y tienda. La propuesta de otro esquema de cantidades parciales se aplaza por aclaración del usuario: se parte de la composición inicial y se registran cambios, sin pedir los datos dos veces. La próxima tarea es DEC02.

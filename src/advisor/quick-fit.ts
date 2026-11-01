@@ -1,7 +1,8 @@
 import type {GameState,Fact,JokerInstance,Issue} from '../state/model.js';
 import {validateState} from '../state/validation.js';
 import {ALL_JOKER_FACTS} from '../catalog/all-joker-facts.js';
-import {standardDeck,jokerDefinition} from '../catalog/initial.js';
+import {jokerDefinition} from '../catalog/initial.js';
+import {currentDeckCards,summarizeDeckCards} from '../state/deck-material.js';
 import type {Card} from '../catalog/initial.js';
 import {initialCounters,counterSpecs} from '../catalog/joker-counters.js';
 import {applyShopAction} from '../rules/shop.js';
@@ -28,12 +29,6 @@ const v=<T>(fact:Fact<T>|undefined):T|undefined=>fact?.status==='known'?fact.val
 const k=<T>(value:T):Fact<T>=>({status:'known',source:'manual',value});
 const engineId=(id:string)=>Object.hasOwn(ALL_JOKER_FACTS,id)?id:Object.keys(ALL_JOKER_FACTS).find(key=>ALL_JOKER_FACTS[key]!.artId===id);
 const artId=(id:string)=>ALL_JOKER_FACTS[engineId(id)??'']?.artId??id;
-function cardsOf(state:GameState):Card[]|undefined {
- const deck=v(state.observed.deck);if(!deck)return undefined;
- if('cards' in deck)return deck.cards;
- if(deck.preset!=='standard52-unmodified'||['abandoned','checkered','erratic'].includes(v(state.observed.deckId)??''))return undefined;
- return standardDeck();
-}
 interface Preparation {value:number|null;status:QuickFit['readiness'];reason:string;signal?:FitSignal;materialRatio?:number}
 const ready=(reason:string):Preparation=>({value:3,status:'ready',reason});
 const possible=(reason:string):Preparation=>({value:2,status:'potential',reason});
@@ -41,8 +36,8 @@ const missing=(reason:string):Preparation=>({value:null,status:'unknown',reason}
 const absent=(reason:string):Preparation=>({value:0,status:'unavailable',reason});
 const future=(reason:string):Preparation=>({value:1,status:'potential',reason});
 function preparation(state:GameState,profile:FitProfile,instance:JokerInstance|undefined,options:FitOptions):Preparation {
- const id=profile.id,cards=cardsOf(state),owned=v(state.observed.jokers),has=(key:string)=>owned?.some(j=>artId(j.catalogId)===key)??false;
- const usable=cards?.filter(c=>!c.debuff),count=(predicate:(c:Card)=>boolean)=>usable?.filter(predicate).length;
+ const id=profile.id,cards=currentDeckCards(state),owned=v(state.observed.jokers),has=(key:string)=>owned?.some(j=>artId(j.catalogId)===key)??false;
+ const counts=cards?summarizeDeckCards(cards):undefined,usable=cards?.filter(c=>!c.debuff),count=(predicate:(c:Card)=>boolean)=>usable?.filter(predicate).length;
  const material=(n:number|undefined,label:string):Preparation=>{
   if(n===undefined||!cards?.length)return missing('Falta la composición actual del mazo.');
   if(n===0)return absent('Sin '+label+' en el mazo.');
@@ -103,12 +98,12 @@ function preparation(state:GameState,profile:FitProfile,instance:JokerInstance|u
  }
  if(['j_burnt','j_trading','j_delayed_grat'].includes(id)&&has('j_burglar'))return absent('Ladrón elimina los descartes; pierde la condición basada en usar o conservar descartes.');
  if(id==='j_mime'){
-  const steel=count(c=>c.enhancement==='steel');
+  const steel=counts?(counts.usable.enhancements.steel??0):undefined;
   const supported=count(c=>c.enhancement==='steel'||c.enhancement==='gold'||c.seal==='blue'||has('j_baron')&&c.enhancement!=='stone'&&c.rank==='K'||has('j_shoot_the_moon')&&c.enhancement!=='stone'&&c.rank==='Q');
   const p=material(supported,'cartas con soporte de retención');p.signal={id:'steel-held',kind:'potential',text:steel===undefined?'Acero retenido: composición desconocida.':`${steel} Acero en el mazo. Mimo exige conservar la carta en mano; no repite Steel Joker.`};return p;
  }
  if(id==='j_steel_joker'){
-  const n=cards?.filter(c=>c.enhancement==='steel').length;
+  const n=counts?(counts.full.enhancements.steel??0):undefined;
   return n===undefined?missing('Falta el número de cartas de Acero del mazo completo.'):n===0?absent('Sin Acero: no aumenta su multiplicador.'):ready(`${n} cartas de Acero en el mazo completo; no exige retenerlas.`);
  }
  if(id==='j_erosion'){
@@ -125,8 +120,8 @@ function preparation(state:GameState,profile:FitProfile,instance:JokerInstance|u
  }
  if(id==='j_ride_the_bus'&&has('j_pareidolia'))return absent('Pareidolia convierte las cartas puntuadas en figuras y reinicia Ride the Bus al jugar.');
  if(id==='j_triboulet')return material(count(c=>['Q','K'].includes(c.rank)&&c.enhancement!=='stone'),'reinas o reyes');
- if(id==='j_baron')return material(count(c=>c.rank==='K'&&c.enhancement!=='stone'),'reyes que podrías conservar');
- if(id==='j_shoot_the_moon')return material(count(c=>c.rank==='Q'&&c.enhancement!=='stone'),'reinas que podrías conservar');
+ if(id==='j_baron')return material(counts?.usable.ranks.K,'reyes que podrías conservar');
+ if(id==='j_shoot_the_moon')return material(counts?.usable.ranks.Q,'reinas que podrías conservar');
  if(id==='j_raised_fist')return cards?possible('Depende de la carta de menor rango que conserves en mano.'):missing('Falta el mazo; no se conoce la carta que conservarás.');
  if(id==='j_banner'&&has('j_burglar'))return absent('Ladrón elimina los descartes al seleccionar la ciega; Estandarte pierde ese soporte.');
  if(id==='j_photograph')return material(faces,'figuras puntuables');
@@ -248,11 +243,12 @@ export function evaluateJokerFit(input:GameState,catalogId:string,options:FitOpt
  const peerProfiles=owned?.filter(j=>j.instanceId!==options.instanceId&&j.instanceId!==options.replacementId).map(j=>FIT_PROFILES[artId(j.catalogId)]).filter((p):p is FitProfile=>!!p);
  if(peerProfiles&&profile.roles.some(role=>!peerProfiles.some(p=>p.roles.includes(role))))integration=2;
  const has=(wanted:string)=>peerProfiles?.some(p=>p.id===wanted)??false;
- const cards=cardsOf(state),faces=cards?.filter(c=>!c.debuff&&(has('j_pareidolia')||c.enhancement!=='stone'&&['J','Q','K'].includes(c.rank))).length;
+ const cards=currentDeckCards(state),faces=cards?.filter(c=>!c.debuff&&(has('j_pareidolia')||c.enhancement!=='stone'&&['J','Q','K'].includes(c.rank))).length;
  if((id==='j_photograph'&&has('j_hanging_chad')||id==='j_hanging_chad'&&has('j_photograph'))&&faces!==undefined&&faces>0){
   integration=3;result.signals.push({id:'photo-chad',kind:'potential',text:'Fotografía + Chad: potencial al repetir la primera figura puntuada; hacen falta esa carta y el orden de juego.'});
  }
- if(id==='j_mime'&&cards?.some(c=>c.enhancement==='steel')||id==='j_baron'&&has('j_mime')&&cards?.some(c=>c.rank==='K'))integration=3;
+ const heldMaterial=cards?summarizeDeckCards(cards).usable:undefined;
+ if(id==='j_mime'&&(heldMaterial?.enhancements.steel??0)>0||id==='j_baron'&&has('j_mime')&&(heldMaterial?.ranks.K??0)>0)integration=3;
  if((id==='j_banner'&&has('j_burglar'))||(id==='j_burglar'&&has('j_banner'))){integration=0;result.signals.push({id:'banner-burglar',kind:'conflict',text:'Ladrón elimina los descartes al seleccionar la ciega: Estandarte pierde su aporte por descartes.'});}
  if(['j_dna','j_marble'].includes(id)&&has('j_erosion')){integration=0;result.signals.push({id:'erosion-growth-conflict',kind:'conflict',text:'Añadir cartas aumenta el mazo y reduce el soporte de Erosión; no invalida los otros beneficios de la compra.'});}
  if((id==='j_midas_mask'&&has('j_vampire'))||(id==='j_vampire'&&has('j_midas_mask'))){integration=3;result.signals.push({id:'midas-vampire',kind:'potential',text:'Midas puede proporcionar mejoras a Vampiro; depende de figuras puntuadas y del orden de comodines.'});}

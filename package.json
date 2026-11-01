@@ -72,7 +72,8 @@
     "test:advisor-eval": "npm run build && node --test tools/evaluate-advisor.test.mjs && node tools/evaluate-advisor.mjs --no-build --split development",
     "test:quick-shop": "npm run build && node tools/quick-shop-eval-test.mjs",
     "test:compact-advice": "npm run build && node tools/compact-advice-test.mjs",
-    "test:basic-autosave": "npm run build && node tools/basic-autosave-test.mjs"
+    "test:basic-autosave": "npm run build && node tools/basic-autosave-test.mjs",
+    "test:deck-material": "npm run build && node tools/deck-material-test.mjs"
   },
   "devDependencies": {
     "@types/node": "24.19.1",

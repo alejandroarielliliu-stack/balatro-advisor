@@ -2,14 +2,14 @@
 
 ## Prioridad vigente: pocas entradas y consejo útil
 
-Revisión 01-11-2026: [plan investigado y criterios de cierre](hoja-de-ruta-asesor.md). Esta tabla sustituye el orden de los siguientes históricos. **UX01 y UX01b implementadas como software:** [consejo compacto](consejo-compacto-ux01.md) y [autoguardado básico](autoguardado-basico-ux01b.md). Siguiente: OBS01d.1. Las demás tareas de esta tabla siguen pendientes.
+Revisión 01-11-2026: [plan investigado y criterios de cierre](hoja-de-ruta-asesor.md). Esta tabla sustituye el orden de los siguientes históricos. **UX01 y UX01b implementadas como software:** [consejo compacto](consejo-compacto-ux01.md) y [autoguardado básico](autoguardado-basico-ux01b.md). [OBS01d](mazo-actual-obs01d.md) conecta el mazo actual y su guardado. Por aclaración del usuario, los recuentos se derivan de sus cartas, sin un formulario duplicado ni un nuevo esquema parcial. Siguiente: DEC02; la evaluación de uso y las ampliaciones de cobertura siguen abiertas.
 
 | Orden | Tarea | Dependencia real | Aceptación breve | Estado |
 |---|---|---|---|---|
 | 1 | UX01 — conclusión compacta en tienda | DEC00/UI actuales; independiente de OBS01d | Acción, beneficio, sacrificio y pregunta decisiva visibles; detalles recuperables;390px y consulta sin escrituras | Implementada como software; validación de uso EVAL01b pendiente |
 | 2 | UX01b — observaciones básicas sin Guardar | H1/T09b actuales; independiente del resumen | Dinero/contador/inventario/vales persisten al terminar edición válida; ofertas y recarga sin `dirty` tras éxito, errores conservan copia y borrador; ante/fase por recorrido actual | Implementada como software; 947 pruebas de código y 14 grupos web nuevos; uso real EVAL01b pendiente |
-| 3 | OBS01d.1 — resumen de material y guardado | H1/T09b; no requiere ampliar catálogo | Conocido/desconocido/intersecciones validados; edición válida sin pasar por Registro, recuperación y archivos antiguos compatibles, sin cartas ficticias | Pendiente |
-| 4 | OBS01d.2 — Barón/Mimo/Steel Joker y preguntas pertinentes | OBS01d.1 | Datos resumidos cambian solo efectos pertinentes; preguntas bajo demanda, no52cartas; conservar cálculo independiente | Pendiente |
+| 3 | OBS01d.1 — material derivado del mazo actual y guardado | H1/T09b/UX01b; no requiere ampliar catálogo | Inicio compatible, cartas actuales con IDs persistentes, recuentos compartidos sin duplicar entrada, edición válida sin Registro y sin fabricar cartas desconocidas | Implementada para mazo completo conocido; no añade recuentos parciales persistidos |
+| 4 | OBS01d.2 — Barón/Mimo/Steel Joker con las cartas actuales | OBS01d.1 | Modificar material cambia las valoraciones pertinentes; diferencias entre retención y recuento del mazo, desconocido distinto de cero y etapa/vales conservados | Conectada y probada con mazos conocidos; material desconocido limita su rama |
 | 5 | DEC02 — comparación acotada y preferencia parcial | UX01 y datos necesarios de OBS01d | Mejora/ahorro/reemplazo con motivos derivados, sin ordenar por nota o ante; ofertas pendientes no borran resultados | Pendiente |
 | Transversal y cierre | EVAL01b — utilidad y casos nuevos | Empieza con UX01; cierra sobre las anteriores | Casos/expectativas previos al ajuste; comprensión/esfuerzo medidos; reglas por lote y reservado nuevo cuando proceda | Pendiente |
 

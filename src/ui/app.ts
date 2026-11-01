@@ -205,7 +205,7 @@ function renderRecord(){
   const saveMessage=node('span');saveMessage.id='basic-save-message';
   const retry=button('Reintentar',()=>flushBasicEdits());retry.id='basic-save-retry';retry.dataset.write='true';retry.hidden=true;
   const discard=button('Descartar borrador y recargar',()=>reload());discard.id='basic-save-reload';discard.hidden=true;saveStatus.append(saveMessage,retry,discard);form.prepend(saveStatus);
-  type BasicGroup='money'|'jokers'|'vouchers';
+  type BasicGroup='money'|'jokers'|'vouchers'|'deck';
   const pendingBasic=new Set<BasicGroup>();let advancedDirty=false,advancedResourcesDirty=false,basicTimer:ReturnType<typeof setTimeout>|undefined;
   const showBasic=(text:string,status:'saved'|'pending'|'error')=>{saveStatus.hidden=false;saveStatus.dataset.state=status;saveMessage.textContent=text;retry.hidden=status!=='error';discard.hidden=status!=='error';updateOwnership();};
   const markBasic=(group:BasicGroup,finished=false)=>{pendingBasic.add(group);dirty=true;showBasic(s?'Edición pendiente de terminar.':'Crea o importa una partida para conservar estos datos.','pending');invalidate('Vista actual modificada. Candidatos en actualización.',!finished);if(finished){refreshCandidateControls();clearTimeout(basicTimer);basicTimer=setTimeout(()=>{if(form.isConnected)flushBasicEdits();},0);}};
@@ -291,7 +291,7 @@ function renderRecord(){
   for(const control of [ante.input,kind.input,boss.input,startingDeck.input])control.addEventListener('input',()=>updateTarget());
   updateTarget(true);
   const deckNote=node('p','','muted');const deckDetails=node('details');deckDetails.id='deck-conditions';const deckFacts=node('div');deckDetails.append(node('summary','Condiciones de esta baraja'),deckFacts);
-  const deckEditor=mountDeckEditor(grid,s?.observed.deck??known({preset:'standard52-unmodified'}),()=>startingDeck.input.value,()=>{markAdvanced();},!s);
+  const deckEditor=mountDeckEditor(grid,s?.observed.deck??known({preset:'standard52-unmodified'}),()=>startingDeck.input.value,()=>{markBasic('deck',true);},!s);
   const showDeck=()=>{const d=resolveDeck(startingDeck.input.value);deckNote.textContent=`${d.effect} Inicio: $${d.startingMoney}. El saldo actual se transcribe; cambiar de baraja no lo repone. ${d.engine?'':d.limitation}`;
     const w=d.shopWeights,total=Object.values(w).reduce((a,b)=>a+b,0);
     deckFacts.replaceChildren(deckNote,node('p',`${d.hands} manos · ${d.discards} descartes · mano de ${d.handSize} · ${d.jokerSlots} comodines · ${d.consumableSlots} consumibles`),node('p',`Tienda inicial: ${d.shopSlots} espacios. Pesos: comodín ${w.joker}, Tarot ${w.tarot}, planeta ${w.planet}, espectral ${w.spectral}; total ${total}.`),node('small','Pesos para espacios normales de tienda, sin otros modificadores. No describen los sobres ni predicen la siguiente tienda.'));
@@ -347,10 +347,10 @@ function renderRecord(){
   const shopReadout=node('p','Registra los comodines en la Tienda de la Mesa. Esas mismas ofertas se utilizan en Análisis.','muted');fieldset.append(shopReadout);
   const reason=s?field('edit-reason','Motivo de corrección o actualización'):null;if(reason){reason.wrap.dataset.saveControl='true';fieldset.append(reason.wrap);}
   const submit=node('button',s?'Guardar actualización que transcribí':'Crear y guardar mi partida');submit.type='submit';submit.dataset.write='true';submit.dataset.saveControl='true';fieldset.append(submit);
-  const basicGroup=(target:EventTarget|null):BasicGroup|null=>{if(!(target instanceof HTMLElement))return null;if(target.id==='money')return 'money';if(target.id==='jokers-known'||target.closest('.joker-editor')&&ownedHost.contains(target))return 'jokers';return null;};
+  const basicGroup=(target:EventTarget|null):BasicGroup|null=>{if(!(target instanceof HTMLElement))return null;if(target.id==='money')return 'money';if(target.closest('#deck-editor'))return 'deck';if(target.id==='jokers-known'||target.closest('.joker-editor')&&ownedHost.contains(target))return 'jokers';return null;};
   form.oninput=event=>{const target=event.target as HTMLElement;if(['cashout-manual','cashout-override'].includes(target.id)){refreshCashout();return;}const group=basicGroup(target);if(target.dataset.counter==='hSize')updateVoucherResources();fillJokerSlots(ownedHost,Math.min(6,Number($<HTMLInputElement>('slots').value)||0));if(group)markBasic(group,target.classList.contains('joker-editor'));else if(target.matches('input,select,textarea')&&!target.closest('.joker-bay,.storefront'))markAdvanced(['starting-deck','hands','discards','size','slots'].includes(target.id));};
   form.addEventListener('change',event=>{const group=basicGroup(event.target);if(group)markBasic(group,true);});
-  form.addEventListener('focusout',event=>{const group=basicGroup(event.target);if(group&&pendingBasic.has(group))markBasic(group,true);});
+  form.addEventListener('focusout',event=>{const group=basicGroup(event.target);if(group&&pendingBasic.has(group)&&event.target instanceof Element&&event.target.matches('input,select,textarea')&&!(event.relatedTarget instanceof Element&&event.relatedTarget.closest('#basic-save-status')))markBasic(group,true);});
   form.addEventListener('keydown',event=>{if(event.key==='Enter'&&basicGroup(event.target)){event.preventDefault();flushBasicEdits();}});
   const workingBase=s?structuredClone(s):createDraft(uuid(),now());
   readLiveState=(quick=false)=>{
@@ -378,7 +378,7 @@ function renderRecord(){
     const fail=(text:string)=>{showBasic(text,'error');return false;};
     if(!lock.owned)return fail('Esta pestaña es de lectura. El borrador no se guardó.');
     if(loadFailed)return fail('No se pudo leer el registro. Se conserva el borrador y la copia anterior.');
-    if(advancedResourcesDirty&&(pendingBasic.has('jokers')||pendingBasic.has('vouchers')))return fail('Hay cambios avanzados de baraja o recursos pendientes. Regístralos o recarga antes de guardar este grupo.');
+    if(advancedResourcesDirty&&(pendingBasic.has('jokers')||pendingBasic.has('vouchers')||pendingBasic.has('deck')))return fail('Hay cambios avanzados de baraja o recursos pendientes. Regístralos o recarga antes de guardar este grupo.');
     try{
       if(localStorage.getItem(CONFIRMED_STORAGE_KEY)!==seenRaw)return fail('La partida cambió en otra pestaña. Se conserva el borrador; recarga para revisar la copia actual.');
       for(const input of [money.input,...Array.from(ownedHost.querySelectorAll<HTMLInputElement>('input'))]){if(input.id){const error=$(input.id+'-error');if(error)error.textContent='';}input.removeAttribute('aria-invalid');}
@@ -387,6 +387,7 @@ function renderRecord(){
       if(pendingBasic.has('money')){if(money.input.validity.badInput)throw new Error('Termina el saldo que estás editando.');request.money=numFact(money.input,Number.MIN_SAFE_INTEGER);}
       if(pendingBasic.has('jokers')){checkNumbers(ownedHost);request.jokers=jokerKnown.input.checked?known(Array.from(ownedHost.querySelectorAll<HTMLElement>(':scope > .joker-editor')).map(row=>ownedReaders.get(row)!())):unknown();}
       if(pendingBasic.has('vouchers'))request.voucherIds=vouchers.read();
+      if(pendingBasic.has('deck')){request.deck=deckEditor.read();request.discardSavedScenarios=deckEditor.discardSavedScenarios();}
       if(pendingBasic.has('jokers')||pendingBasic.has('vouchers')){
         request.resources={};
         for(const [id,key] of [['hands','handsPerRound'],['discards','discardsPerRound'],['size','handSize'],['slots','jokerSlots']] as const){const input=$<HTMLInputElement>(id);if(input.validity.badInput)throw new Error('Termina el recurso que estás editando.');request.resources[key]=numFact(input,0);}
@@ -394,14 +395,16 @@ function renderRecord(){
       const prepared=prepareBasicObservation(record.state,request);
       if(!prepared.ok)return fail(prepared.errors.map(e=>e.message).join(' '));
       if(prepared.value.changed){
-        const saved=store.correct({confirmationId:uuid(),confirmed:true,expected:analysisBinding(record.state),updatedAt:now(),patch:prepared.value.patch,reason:prepared.value.description+' Observación al terminar la edición; no es una compra ni una jugada.'});
+        const saved=store.correct({confirmationId:uuid(),confirmed:true,expected:analysisBinding(record.state),updatedAt:now(),patch:prepared.value.patch,discardSavedScenarios:request.discardSavedScenarios??false,reason:prepared.value.description+' Observación al terminar la edición; no es una compra ni una jugada.'});
         if(!saved.ok)return fail(saved.errors.map(e=>e.message).join(' '));
         record=saved.value;Object.assign(workingBase,structuredClone(record.state));
         try{seenRaw=localStorage.getItem(CONFIRMED_STORAGE_KEY);}catch{loadFailed=true;}
         $('revision').textContent=`Revisión ${record.state.revision}`;
+        if(prepared.value.patch.jokers){for(const row of ownedHost.querySelectorAll<HTMLElement>(':scope > .joker-editor')){const joker=value(record.state.observed.jokers)?.find(j=>j.instanceId===row.dataset.instanceId);for(const input of row.querySelectorAll<HTMLInputElement>('input[data-counter]')){const fact=joker?.counters[input.dataset.counter!];input.value=fact?.status==='known'?String(fact.value):'';}}}
+        if(request.discardSavedScenarios)deckEditor.clearDiscardSavedScenarios();
       }
       pendingBasic.clear();dirty=advancedDirty;
-      showBasic(loadFailed?'Los datos se guardaron, pero no se pudo releer la copia. Recarga antes de seguir.':advancedDirty?'Datos básicos guardados; quedan cambios avanzados pendientes en Registro.':prepared.value.changed?'Guardado.':'Sin cambios pendientes.',loadFailed?'error':'saved');
+      showBasic(loadFailed?'Los datos se guardaron, pero no se pudo releer la copia. Recarga antes de seguir.':advancedDirty?'Datos básicos guardados; quedan cambios avanzados pendientes en Registro.':prepared.value.changed?request.deck&&prepared.value.patch.jokers?'Guardado. Revisa los contadores afectados por el cambio de cartas.':'Guardado.':'Sin cambios pendientes.',loadFailed?'error':'saved');
       invalidate('Datos observados actualizados; consulta sobre la revisión actual.',false);refreshCandidateControls();renderHistory();renderActions();updateOwnership();return !loadFailed;
     }catch(error){return fail(error instanceof Error?error.message:'No se pudo guardar. Se conserva el borrador.');}
   };

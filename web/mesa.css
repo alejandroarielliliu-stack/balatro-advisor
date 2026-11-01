@@ -636,3 +636,10 @@ dialog[open] { animation: panel-arrival .14s ease-out; }
 .arcana-target-option small {margin:0;font-size:11px;}
 .arcana-comparison .pack-choice-status {line-height:1.5;}
 @media(max-width:520px){.arcana-target-option button{min-height:44px;}.arcana-target-list{max-height:350px;}}
+
+/* Current-deck facts stay within the compact Partida panel. */
+#deck-material-summary { display:block; color:var(--gold); margin:.5rem 0; line-height:1.5; }
+.blind-panel .deck-card-editor>div { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:.4rem; }
+.blind-panel .deck-card-editor select { width:100%; min-width:0; }
+
+.blind-panel .deck-card-grid { grid-template-columns:1fr; }
