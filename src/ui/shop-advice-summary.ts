@@ -31,7 +31,8 @@ function sacrifice(option:ShopOption,capability:Capability|undefined):string|nul
  const removed=capability?.consequences?.removed??[];
  for(const joker of removed){
   const counters=Object.entries(joker.counters).map(([key,f])=>`${key}=${f.status==='known'?f.value:'desconocido'}`);
-  parts.push(`pierdes ${name(joker.catalogId)}${counters.length?' ('+counters.join(', ')+')':''} y su efecto; sus contadores no se heredan`);
+  const effect=option.findings?.some(f=>f.ruleId===QUICK_SHOP_POLICY.rules.generationLoss)?' y su generación futura si liberas huecos':' y su efecto';
+  parts.push(`pierdes ${name(joker.catalogId)}${counters.length?' ('+counters.join(', ')+')':''}${effect}; sus contadores no se heredan`);
  }
  const interest=option.economics?.interest;
  if(interest&&interest.change!==0)parts.push(`interés aislado $${interest.before} → $${interest.after}, solo si ganas y mantienes esos saldos hasta cobrar`);
@@ -88,11 +89,14 @@ export function buildShopAdviceSummary(decision:ShopDecision):ShopAdviceSummary 
  const capabilities:Capability[]=[...decision.actions,...decision.voucherActions,...decision.packActions];
  let benefit:string|null=null,cost:string|null=null;
  if(recommendation.status!=='abstain'){
-  if(selected.length===1){const option=selected[0]!;benefit=preparedBenefit(option);cost=sacrifice(option,capabilities.find(c=>c.optionId===option.id));}
+  if(selected.length===1){const option=selected[0]!,comparison=decision.context.comparisons?.find(c=>c.preferredId===option.id);benefit=comparison?`Mult propio con este inventario: +${comparison.values.preferredMult} por $${comparison.values.preferredNetCost}, frente a +${comparison.values.otherMult} por $${comparison.values.otherNetCost}.`:preparedBenefit(option);cost=sacrifice(option,capabilities.find(c=>c.optionId===option.id));}
   else if(selected.length>1){benefit='Las compras ofrecen efectos distintos; el cálculo no demuestra una ganadora.';cost='Compara los saldos y lo que sustituye cada opción en sus detalles.';}
-  else if(choices.some(o=>o.id==='hold')){const hold=choices.find(o=>o.id==='hold')!;benefit=hold.moneyAfter===null?'Conservas tus comodines actuales.':`Conservas $${hold.moneyAfter} y tus comodines actuales.`;}
+  else if(choices.some(o=>o.id==='hold')){const hold=choices.find(o=>o.id==='hold')!;benefit=hold.moneyAfter===null?'Conservas tus comodines actuales.':`Conservas $${hold.moneyAfter} y tus comodines actuales.`;
+   const investment=decision.context.options.find(o=>o.findings?.some(f=>f.ruleId===QUICK_SHOP_POLICY.rules.futureInvestment));
+   if(investment)benefit+=` ${investment.title} deja $${investment.moneyAfter??'?'} y ese saldo no aprovecha el tope mayor; su utilidad exige preparar un saldo futuro.`;
+  }
  }
  const provisional=capabilities.some(c=>c.status==='provisional');
- const scope=(decision.scenarios===null?'Heurístico · supervivencia sin evaluar':'Heurístico · consulta los resultados de los planes fijos; no predicen la partida')+(provisional?' · reglas provisionales':'');
+ const scope=(decision.context.recommendation.scope==='evaluated-options'?'Comparación parcial · ':'')+(decision.scenarios===null?'Heurístico · supervivencia sin evaluar':'Heurístico · consulta los resultados de los planes fijos; no predicen la partida')+(provisional?' · reglas provisionales':'');
  return {title:recommendation.title,status:recommendation.status,benefit,sacrifice:cost,pending:pending(decision,selected,capabilities),scope,choices};
 }

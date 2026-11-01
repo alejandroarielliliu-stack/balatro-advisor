@@ -250,12 +250,13 @@ test('shop context: an unmodeled future catalog ID preserves uncertainty instead
  assert.equal(future.fit?.score,null);assert.equal(future.coverage,'unknown');assert.equal(report.recommendation.status,'abstain');
 });
 
-test('shop context: manual other name is raw data, unscored, and can change a buy recommendation',()=>{
+test('shop context: manual other remains raw and unscored beside a partial known recommendation',()=>{
  const state=fixture(),snapshot=shop();snapshot.jokers=[offer('joker',2,'buy')];
  snapshot.others=[{offerId:'manual',kind:'tarot',name:'<b>The Fool?</b>',price:3}];
  const report=evaluateShopContext(state,snapshot,{ante:1}),other=report.options.find(o=>o.id==='manual')!;
  assert.equal(other.title,'<b>The Fool?</b>');assert.equal(other.moneyAfter,22);assert.equal(other.fit,undefined);
- assert.equal(other.coverage,'unknown');assert.equal(report.recommendation.status,'abstain');assert.ok(report.recommendation.offerIds.includes('manual'));
+ assert.equal(other.coverage,'unknown');assert.equal(report.recommendation.status,'conditional');assert.deepEqual(report.recommendation.offerIds,['buy']);
+ assert.equal(report.recommendation.scope,'evaluated-options');assert.deepEqual(report.recommendation.pendingOfferIds,['manual']);assert.match(report.recommendation.title,/Entre lo evaluado/);
 });
 
 test('shop context: duplicate IDs across areas, reserved IDs and invalid typed prices are rejected',()=>{

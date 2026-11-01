@@ -2,7 +2,7 @@
 
 ## Prioridad vigente: pocas entradas y consejo útil
 
-Revisión 01-11-2026: [plan investigado y criterios de cierre](hoja-de-ruta-asesor.md). Esta tabla sustituye el orden de los siguientes históricos. **UX01 y UX01b implementadas como software:** [consejo compacto](consejo-compacto-ux01.md) y [autoguardado básico](autoguardado-basico-ux01b.md). [OBS01d](mazo-actual-obs01d.md) conecta el mazo actual y su guardado. Por aclaración del usuario, los recuentos se derivan de sus cartas, sin un formulario duplicado ni un nuevo esquema parcial. Siguiente: DEC02; la evaluación de uso y las ampliaciones de cobertura siguen abiertas.
+Revisión 01-11-2026: [plan investigado y criterios de cierre](hoja-de-ruta-asesor.md). Esta tabla sustituye el orden de los siguientes históricos. **UX01 y UX01b implementadas como software:** [consejo compacto](consejo-compacto-ux01.md) y [autoguardado básico](autoguardado-basico-ux01b.md). [OBS01d](mazo-actual-obs01d.md) conecta el mazo actual y su guardado. Por aclaración del usuario, los recuentos se derivan de sus cartas, sin un formulario duplicado ni un nuevo esquema parcial. [DEC02](comparacion-dec02.md) entrega una primera comparación acotada y consejo parcial. Siguiente: EVAL01b; la utilidad real y las ampliaciones de cobertura siguen abiertas.
 
 | Orden | Tarea | Dependencia real | Aceptación breve | Estado |
 |---|---|---|---|---|
@@ -10,8 +10,10 @@ Revisión 01-11-2026: [plan investigado y criterios de cierre](hoja-de-ruta-ases
 | 2 | UX01b — observaciones básicas sin Guardar | H1/T09b actuales; independiente del resumen | Dinero/contador/inventario/vales persisten al terminar edición válida; ofertas y recarga sin `dirty` tras éxito, errores conservan copia y borrador; ante/fase por recorrido actual | Implementada como software; 947 pruebas de código y 14 grupos web nuevos; uso real EVAL01b pendiente |
 | 3 | OBS01d.1 — material derivado del mazo actual y guardado | H1/T09b/UX01b; no requiere ampliar catálogo | Inicio compatible, cartas actuales con IDs persistentes, recuentos compartidos sin duplicar entrada, edición válida sin Registro y sin fabricar cartas desconocidas | Implementada para mazo completo conocido; no añade recuentos parciales persistidos |
 | 4 | OBS01d.2 — Barón/Mimo/Steel Joker con las cartas actuales | OBS01d.1 | Modificar material cambia las valoraciones pertinentes; diferencias entre retención y recuento del mazo, desconocido distinto de cero y etapa/vales conservados | Conectada y probada con mazos conocidos; material desconocido limita su rama |
-| 5 | DEC02 — comparación acotada y preferencia parcial | UX01 y datos necesarios de OBS01d | Mejora/ahorro/reemplazo con motivos derivados, sin ordenar por nota o ante; ofertas pendientes no borran resultados | Pendiente |
+| 5 | DEC02 — comparación acotada y preferencia parcial | UX01 y datos necesarios de OBS01d | Mejora/ahorro/reemplazo con motivos derivados, sin ordenar por nota o ante; ofertas pendientes no borran resultados | Primera entrega acotada implementada; seis casos congelados y diez grupos web. No ordena todas las familias |
 | Transversal y cierre | EVAL01b — utilidad y casos nuevos | Empieza con UX01; cierra sobre las anteriores | Casos/expectativas previos al ajuste; comprensión/esfuerzo medidos; reglas por lote y reservado nuevo cuando proceda | Pendiente |
+
+[Reporte del estado y ajustes, 01-11-2026](reporte-hoja-de-ruta-2026-11-01.md). DEC02a/b: primera entrega completada con cuatro contrastes y dos casos adicionales congelados. [Cobertura y evidencia](comparacion-dec02.md). La siguiente tarea EVAL01b comprueba comprensión/esfuerzo con el usuario; no hay participantes ni resultados de uso registrados. Son subtareas del alcance existente, sin otra infraestructura ni una nueva puntuación.
 
 Fuerza/DECK04e, nuevas familias, jugar/saltar ampliado y simulación quedan **aplazados**, no eliminados. Se retoman por un problema comprobado tras cerrar el recorrido de tienda. EVAL01a mantiene sus resultados acotados; H2 empírico y validación de partidas no se cierran con esta revisión.
 

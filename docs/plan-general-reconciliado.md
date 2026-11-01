@@ -1,6 +1,6 @@
 # Plan general y estado de ejecución
 
-Revisión del 2026-10-10, posterior a la recepción del plan Word y a la decisión del usuario de aplazar Android físico y probar formato móvil en web.
+Revisión inicial del 2026-10-10, posterior a la recepción del plan Word y a la decisión del usuario de aplazar Android físico y probar formato móvil en web. Actualización de estado: 2026-11-01. El orden de implementación vigente está en [la hoja del asesor](hoja-de-ruta-asesor.md); las tareas PG02–PG04/PG06 de simulación quedan aplazadas mientras se cierra el consejo básico de tienda. [Reporte actual](reporte-hoja-de-ruta-2026-11-01.md).
 
 Fuente leída íntegramente: `C:\Users\usuario\Downloads\Plan_general_Balatro_Strategic_Advisor.docx`, plan versión 1.0 del 8 de octubre de 2026. SHA-256 `BE57A0AA4F9CFC58EF790B6FBFDBCDFEFC8CBBD7915ABE46AEFB20033EEA96BD`. El archivo original se conservó sin cambios. Sus propuestas de v0.1 se concretaron en H0 y en las instrucciones posteriores del usuario; el documento es referencia del producto, no evidencia de reglas verificadas.
 
@@ -13,13 +13,13 @@ El plan pide H2 contrastado con Balatro y revisión de fidelidad del simulador; 
 | Hito del plan original | Correspondencia actual | Cierre que falta |
 | --- | --- | --- |
 | H0 especificación | Especificación v0.1 y backlog implementable; cerrado como planificación. | Las propuestas iniciales de calidad se complementan con presupuestos prospectivos de rendimiento, no retroactivamente atribuidos a H0. |
-| H1 estado | Modelo, validación, ejemplos y persistencia implementados. | Ningún bloqueo del núcleo. La estructura puede conservar datos fuera de cobertura; H2 rechaza las operaciones afectadas. |
+| H1 estado | Modelo, validación, persistencia, revisiones/recuperación y autoguardado de hechos y cartas implementados; material derivado del mazo actual. | Ningún bloqueo del núcleo para DEC02. La estructura conserva datos fuera de cobertura; H2 limita las operaciones afectadas. |
 | H2 reglas | Motor provisional, oráculos independientes, inspección del ejecutable y contraste EFHIII. | Completar evidencia en partida por módulo y resolver discrepancias. O-I1 solo acredita su caso. |
-| H3 asesor básico | Asesor h3-2, comparación, ventas, explicaciones, cotas y horizontes; auditoría T08c completa como software. | No constituye eficacia estratégica validada ni sustituye el cierre empírico H2. |
+| H3 asesor básico | Escenarios h3-2/T07b y consejo rápido con composición, etapa, vales y material actual; UX01/UX01b/OBS01d publicados. | DEC02 tiene una primera comparación acotada publicada junto a casos congelados. EVAL01b: comprobar utilidad y detectar comparaciones necesarias durante el uso. No acredita eficacia estratégica ni cierra la evidencia H2. |
 | H4 simulador | No implementado. Los planes fijos no cuentan como simulación probabilística. | Definir azar y política, implementar muestreo reproducible, probar invariantes y contrastar fidelidad. |
 | H5 asesor simulado | No implementado. | H4 y referencias previas; escenarios de desarrollo/ajuste/reserva separados; condiciones equivalentes, presupuesto e incertidumbre. |
-| H6 web utilizable | Flujo v0.1 completo; 17 grupos en Chrome y Firefox, formato/tacto móvil emulado; rendimiento del PC medido. | Prueba de comprensión/transcripción con personas y mediciones en dispositivos objetivo. Android físico aplazado por el usuario, no declarado aprobado. La integración del futuro H5 no existe aún. |
-| H7 beta evaluada | Documentación y evidencia locales; sin publicación pública. | Cobertura de la beta, evaluación correspondiente, control de fallos, paquete reproducible y procedimiento de vuelta atrás; publicación solo después de los criterios pertinentes. |
+| H6 web utilizable | Web pública en GitHub Pages y flujo local; última entrega contrastada en Chrome/escritorio y390px. Las17 comprobaciones Firefox y el rendimiento medido son evidencias de revisiones anteriores. | Comprensión/esfuerzo con jugadores y repetición pertinente por navegador tras cambios. Android físico aplazado; integración de H5 pendiente. |
+| H7 beta evaluada | Publicación pública operativa y verificada; documentación, pruebas y recuperación disponibles. | Sigue pendiente la aceptación de una beta evaluada: calidad del consejo, uso real y cobertura declarada. El despliegue ya no es una tarea pendiente. |
 
 ## Trabajo completado al contrastar este plan
 

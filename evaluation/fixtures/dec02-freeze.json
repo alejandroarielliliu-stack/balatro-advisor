@@ -1,0 +1,27 @@
+{
+  "freezeVersion": "dec02-freeze-1",
+  "frozenAt": "2026-11-01T21:42:21.509001Z",
+  "phase": "before-policy-adjustment-and-before-first-evaluator-execution",
+  "fixtures": [
+    {
+      "path": "evaluation/fixtures/dec02-development.json",
+      "sha256": "b9ad6643331c67d9caf4efc7a850cd27e4c5e6f0f31687640a0732918fdf1cd0",
+      "caseIds": [
+        "DEC02-01",
+        "DEC02-02",
+        "DEC02-03",
+        "DEC02-04",
+        "DEC02-05",
+        "DEC02-06"
+      ],
+      "caseCount": 6
+    }
+  ],
+  "expectationAuthoring": {
+    "readPolicySource": false,
+    "consultedEvaluatorOutputs": false,
+    "evidence": "Roadmap acceptance cases, H1/H2/state contracts and documented mechanical source evidence only.",
+    "reservedEval01Touched": false
+  },
+  "interpretation": "Frozen development acceptance set, not a new hidden/reserved evaluation. Synthetic cases and provisional mechanical evidence do not establish strategy optimality, gameplay fidelity or user utility."
+}

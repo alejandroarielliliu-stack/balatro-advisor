@@ -1,0 +1,2220 @@
+{
+  "fixtureVersion": "dec02-development-1",
+  "split": "development",
+  "independentExpectationContract": {
+    "gameProfile": "Steam PC 1.0.1o-FULL, White Stake, sin mods",
+    "kind": "synthetic_acceptance",
+    "claimLimits": [
+      "Mecánicas y aritmética fijadas por fuente local/documentación antes de ejecutar H2 o la política.",
+      "No son observaciones directas de Balatro, una prueba de supervivencia, una medida de utilidad real ni una prueba de optimalidad.",
+      "Cada alternativa parte de la misma instantánea; no se concatenan compras ni se inventa la tienda futura.",
+      "Los precios son base, sin descuentos implícitos, y todas las instancias tienen edición base y ningún sticker."
+    ],
+    "sources": [
+      {
+        "id": "DEC02-roadmap",
+        "path": "docs/hoja-de-ruta-asesor.md",
+        "locator": "Casos mínimos que deben orientar el siguiente lote: cuatro contrastes concretos."
+      },
+      {
+        "id": "L08-burglar",
+        "path": "docs/evidencia/cat04-history.md",
+        "locator": "Burglar; card.lua 2522–2527. Recursos de ronda +3 manos y cero descartes; no cambia bases persistentes."
+      },
+      {
+        "id": "L06-summit",
+        "path": "docs/comodines-cat02.md",
+        "locator": "Recursos: Mystic Summit +15 Mult con cero descartes restantes; evidencia L06."
+      },
+      {
+        "id": "L07-baron",
+        "path": "docs/comodines-cat03.md",
+        "locator": "Mano retenida y evidencia L07: Baron requiere reyes retenidos."
+      },
+      {
+        "id": "L05-interest",
+        "path": "docs/cobro-automatico.md",
+        "locator": "Vales integrados y evidencia L05: min(floor(dollars/5), interest_cap/5), topes de ingreso 5/10/20."
+      },
+      {
+        "id": "voucher-purchase",
+        "path": "docs/compras-vales-shop02a.md",
+        "locator": "Seed Money/Money Tree: compra base 10, solo cambia tope de cobro posterior; no ingreso inmediato."
+      },
+      {
+        "id": "L08-riff",
+        "path": "docs/evidencia/cat04-generation.md",
+        "locator": "Riff-Raff: setting_blind, hasta dos comunes según capacidad; lleno genera ninguno. card.lua 2529–2530 según corrección documentada en EVAL01a."
+      },
+      {
+        "id": "H2-initial",
+        "path": "docs/reglas-y-fuentes.md",
+        "locator": "Joker +4 Mult precio/venta 2/1; Abstract +3 por comodín incluyéndose precio/venta 4/2; Golden +4 dólares por cobro ganado, sin puntos, precio/venta 6/3."
+      },
+      {
+        "id": "H1",
+        "path": "src/state/model.ts",
+        "locator": "GameStateV02: shop, recursos persistentes y ofertas observadas; no campo de prioridad estratégica en DecisionOptions actual."
+      }
+    ]
+  },
+  "cases": [
+    {
+      "id": "DEC02-01",
+      "title": "Burglar prepara Cumbre mística frente a Barón sin reyes",
+      "state": {
+        "schemaVersion": "0.2",
+        "rulesetId": "balatro-pc-1.0.1o-blue-white-v1",
+        "runId": "DEC02-01",
+        "revision": 0,
+        "updatedAt": "2026-11-01T12:00:00Z",
+        "phase": "shop",
+        "phaseData": {
+          "origin": {
+            "status": "known",
+            "value": {
+              "ante": 2,
+              "kind": "small"
+            },
+            "source": "manual"
+          }
+        },
+        "observed": {
+          "gameVersion": {
+            "status": "known",
+            "value": "1.0.1o-FULL",
+            "source": "manual"
+          },
+          "gamePlatform": {
+            "status": "known",
+            "value": "pc-steam",
+            "source": "manual"
+          },
+          "deckId": {
+            "status": "known",
+            "value": "blue",
+            "source": "manual"
+          },
+          "stakeId": {
+            "status": "known",
+            "value": "white",
+            "source": "manual"
+          },
+          "modsPresent": {
+            "status": "known",
+            "value": false,
+            "source": "manual"
+          },
+          "money": {
+            "status": "known",
+            "value": 20,
+            "source": "manual"
+          },
+          "lastCleared": {
+            "status": "known",
+            "value": {
+              "ante": 2,
+              "kind": "small"
+            },
+            "source": "manual"
+          },
+          "nextBlind": {
+            "status": "known",
+            "value": {
+              "ante": 2,
+              "kind": "big",
+              "bossId": {
+                "status": "known",
+                "value": "none",
+                "source": "manual"
+              },
+              "target": {
+                "status": "known",
+                "value": 1200,
+                "source": "manual"
+              },
+              "reward": {
+                "status": "known",
+                "value": 4,
+                "source": "manual"
+              }
+            },
+            "source": "manual"
+          },
+          "visibleBoss": {
+            "status": "unknown",
+            "reason": "El jefe no afecta las operaciones de esta tienda y no se ha transcrito."
+          },
+          "resources": {
+            "handsPerRound": {
+              "status": "known",
+              "value": 5,
+              "source": "manual"
+            },
+            "discardsPerRound": {
+              "status": "known",
+              "value": 3,
+              "source": "manual"
+            },
+            "handSize": {
+              "status": "known",
+              "value": 8,
+              "source": "manual"
+            },
+            "jokerSlots": {
+              "status": "known",
+              "value": 5,
+              "source": "manual"
+            }
+          },
+          "deck": {
+            "status": "known",
+            "value": {
+              "cards": [
+                {
+                  "instanceId": "2S",
+                  "rank": "2",
+                  "suit": "S",
+                  "edition": "base",
+                  "enhancement": "none",
+                  "seal": "none",
+                  "extraChips": 0
+                },
+                {
+                  "instanceId": "3S",
+                  "rank": "3",
+                  "suit": "S",
+                  "edition": "base",
+                  "enhancement": "none",
+                  "seal": "none",
+                  "extraChips": 0
+                },
+                {
+                  "instanceId": "4S",
+                  "rank": "4",
+                  "suit": "S",
+                  "edition": "base",
+                  "enhancement": "none",
+                  "seal": "none",
+                  "extraChips": 0
+                },
+                {
+                  "instanceId": "5S",
+                  "rank": "5",
+                  "suit": "S",
+                  "edition": "base",
+                  "enhancement": "none",
+                  "seal": "none",
+                  "extraChips": 0
+                },
+                {
+                  "instanceId": "6S",
+                  "rank": "6",
+                  "suit": "S",
+                  "edition": "base",
+                  "enhancement": "none",
+                  "seal": "none",
+                  "extraChips": 0
+                },
+                {
+                  "instanceId": "7S",
+                  "rank": "7",
+                  "suit": "S",
+                  "edition": "base",
+                  "enhancement": "none",
+                  "seal": "none",
+                  "extraChips": 0
+                },
+                {
+                  "instanceId": "8S",
+                  "rank": "8",
+                  "suit": "S",
+                  "edition": "base",
+                  "enhancement": "none",
+                  "seal": "none",
+                  "extraChips": 0
+                },
+                {
+                  "instanceId": "9S",
+                  "rank": "9",
+                  "suit": "S",
+                  "edition": "base",
+                  "enhancement": "none",
+                  "seal": "none",
+                  "extraChips": 0
+                },
+                {
+                  "instanceId": "10S",
+                  "rank": "10",
+                  "suit": "S",
+                  "edition": "base",
+                  "enhancement": "none",
+                  "seal": "none",
+                  "extraChips": 0
+                },
+                {
+                  "instanceId": "JS",
+                  "rank": "J",
+                  "suit": "S",
+                  "edition": "base",
+                  "enhancement": "none",
+                  "seal": "none",
+                  "extraChips": 0
+                },
+                {
+                  "instanceId": "QS",
+                  "rank": "Q",
+                  "suit": "S",
+                  "edition": "base",
+                  "enhancement": "none",
+                  "seal": "none",
+                  "extraChips": 0
+                },
+                {
+                  "instanceId": "AS",
+                  "rank": "A",
+                  "suit": "S",
+                  "edition": "base",
+                  "enhancement": "none",
+                  "seal": "none",
+                  "extraChips": 0
+                },
+                {
+                  "instanceId": "2H",
+                  "rank": "2",
+                  "suit": "H",
+                  "edition": "base",
+                  "enhancement": "none",
+                  "seal": "none",
+                  "extraChips": 0
+                },
+                {
+                  "instanceId": "3H",
+                  "rank": "3",
+                  "suit": "H",
+                  "edition": "base",
+                  "enhancement": "none",
+                  "seal": "none",
+                  "extraChips": 0
+                },
+                {
+                  "instanceId": "4H",
+                  "rank": "4",
+                  "suit": "H",
+                  "edition": "base",
+                  "enhancement": "none",
+                  "seal": "none",
+                  "extraChips": 0
+                },
+                {
+                  "instanceId": "5H",
+                  "rank": "5",
+                  "suit": "H",
+                  "edition": "base",
+                  "enhancement": "none",
+                  "seal": "none",
+                  "extraChips": 0
+                },
+                {
+                  "instanceId": "6H",
+                  "rank": "6",
+                  "suit": "H",
+                  "edition": "base",
+                  "enhancement": "none",
+                  "seal": "none",
+                  "extraChips": 0
+                },
+                {
+                  "instanceId": "7H",
+                  "rank": "7",
+                  "suit": "H",
+                  "edition": "base",
+                  "enhancement": "none",
+                  "seal": "none",
+                  "extraChips": 0
+                },
+                {
+                  "instanceId": "8H",
+                  "rank": "8",
+                  "suit": "H",
+                  "edition": "base",
+                  "enhancement": "none",
+                  "seal": "none",
+                  "extraChips": 0
+                },
+                {
+                  "instanceId": "9H",
+                  "rank": "9",
+                  "suit": "H",
+                  "edition": "base",
+                  "enhancement": "none",
+                  "seal": "none",
+                  "extraChips": 0
+                },
+                {
+                  "instanceId": "10H",
+                  "rank": "10",
+                  "suit": "H",
+                  "edition": "base",
+                  "enhancement": "none",
+                  "seal": "none",
+                  "extraChips": 0
+                },
+                {
+                  "instanceId": "JH",
+                  "rank": "J",
+                  "suit": "H",
+                  "edition": "base",
+                  "enhancement": "none",
+                  "seal": "none",
+                  "extraChips": 0
+                },
+                {
+                  "instanceId": "QH",
+                  "rank": "Q",
+                  "suit": "H",
+                  "edition": "base",
+                  "enhancement": "none",
+                  "seal": "none",
+                  "extraChips": 0
+                },
+                {
+                  "instanceId": "AH",
+                  "rank": "A",
+                  "suit": "H",
+                  "edition": "base",
+                  "enhancement": "none",
+                  "seal": "none",
+                  "extraChips": 0
+                },
+                {
+                  "instanceId": "2D",
+                  "rank": "2",
+                  "suit": "D",
+                  "edition": "base",
+                  "enhancement": "none",
+                  "seal": "none",
+                  "extraChips": 0
+                },
+                {
+                  "instanceId": "3D",
+                  "rank": "3",
+                  "suit": "D",
+                  "edition": "base",
+                  "enhancement": "none",
+                  "seal": "none",
+                  "extraChips": 0
+                },
+                {
+                  "instanceId": "4D",
+                  "rank": "4",
+                  "suit": "D",
+                  "edition": "base",
+                  "enhancement": "none",
+                  "seal": "none",
+                  "extraChips": 0
+                },
+                {
+                  "instanceId": "5D",
+                  "rank": "5",
+                  "suit": "D",
+                  "edition": "base",
+                  "enhancement": "none",
+                  "seal": "none",
+                  "extraChips": 0
+                },
+                {
+                  "instanceId": "6D",
+                  "rank": "6",
+                  "suit": "D",
+                  "edition": "base",
+                  "enhancement": "none",
+                  "seal": "none",
+                  "extraChips": 0
+                },
+                {
+                  "instanceId": "7D",
+                  "rank": "7",
+                  "suit": "D",
+                  "edition": "base",
+                  "enhancement": "none",
+                  "seal": "none",
+                  "extraChips": 0
+                },
+                {
+                  "instanceId": "8D",
+                  "rank": "8",
+                  "suit": "D",
+                  "edition": "base",
+                  "enhancement": "none",
+                  "seal": "none",
+                  "extraChips": 0
+                },
+                {
+                  "instanceId": "9D",
+                  "rank": "9",
+                  "suit": "D",
+                  "edition": "base",
+                  "enhancement": "none",
+                  "seal": "none",
+                  "extraChips": 0
+                },
+                {
+                  "instanceId": "10D",
+                  "rank": "10",
+                  "suit": "D",
+                  "edition": "base",
+                  "enhancement": "none",
+                  "seal": "none",
+                  "extraChips": 0
+                },
+                {
+                  "instanceId": "JD",
+                  "rank": "J",
+                  "suit": "D",
+                  "edition": "base",
+                  "enhancement": "none",
+                  "seal": "none",
+                  "extraChips": 0
+                },
+                {
+                  "instanceId": "QD",
+                  "rank": "Q",
+                  "suit": "D",
+                  "edition": "base",
+                  "enhancement": "none",
+                  "seal": "none",
+                  "extraChips": 0
+                },
+                {
+                  "instanceId": "AD",
+                  "rank": "A",
+                  "suit": "D",
+                  "edition": "base",
+                  "enhancement": "none",
+                  "seal": "none",
+                  "extraChips": 0
+                },
+                {
+                  "instanceId": "2C",
+                  "rank": "2",
+                  "suit": "C",
+                  "edition": "base",
+                  "enhancement": "none",
+                  "seal": "none",
+                  "extraChips": 0
+                },
+                {
+                  "instanceId": "3C",
+                  "rank": "3",
+                  "suit": "C",
+                  "edition": "base",
+                  "enhancement": "none",
+                  "seal": "none",
+                  "extraChips": 0
+                },
+                {
+                  "instanceId": "4C",
+                  "rank": "4",
+                  "suit": "C",
+                  "edition": "base",
+                  "enhancement": "none",
+                  "seal": "none",
+                  "extraChips": 0
+                },
+                {
+                  "instanceId": "5C",
+                  "rank": "5",
+                  "suit": "C",
+                  "edition": "base",
+                  "enhancement": "none",
+                  "seal": "none",
+                  "extraChips": 0
+                },
+                {
+                  "instanceId": "6C",
+                  "rank": "6",
+                  "suit": "C",
+                  "edition": "base",
+                  "enhancement": "none",
+                  "seal": "none",
+                  "extraChips": 0
+                },
+                {
+                  "instanceId": "7C",
+                  "rank": "7",
+                  "suit": "C",
+                  "edition": "base",
+                  "enhancement": "none",
+                  "seal": "none",
+                  "extraChips": 0
+                },
+                {
+                  "instanceId": "8C",
+                  "rank": "8",
+                  "suit": "C",
+                  "edition": "base",
+                  "enhancement": "none",
+                  "seal": "none",
+                  "extraChips": 0
+                },
+                {
+                  "instanceId": "9C",
+                  "rank": "9",
+                  "suit": "C",
+                  "edition": "base",
+                  "enhancement": "none",
+                  "seal": "none",
+                  "extraChips": 0
+                },
+                {
+                  "instanceId": "10C",
+                  "rank": "10",
+                  "suit": "C",
+                  "edition": "base",
+                  "enhancement": "none",
+                  "seal": "none",
+                  "extraChips": 0
+                },
+                {
+                  "instanceId": "JC",
+                  "rank": "J",
+                  "suit": "C",
+                  "edition": "base",
+                  "enhancement": "none",
+                  "seal": "none",
+                  "extraChips": 0
+                },
+                {
+                  "instanceId": "QC",
+                  "rank": "Q",
+                  "suit": "C",
+                  "edition": "base",
+                  "enhancement": "none",
+                  "seal": "none",
+                  "extraChips": 0
+                },
+                {
+                  "instanceId": "AC",
+                  "rank": "A",
+                  "suit": "C",
+                  "edition": "base",
+                  "enhancement": "none",
+                  "seal": "none",
+                  "extraChips": 0
+                }
+              ]
+            },
+            "source": "manual"
+          },
+          "handBases": {
+            "status": "known",
+            "value": {
+              "preset": "all-standard-level1"
+            },
+            "source": "manual"
+          },
+          "jokers": {
+            "status": "known",
+            "value": [
+              {
+                "instanceId": "owned-burglar",
+                "catalogId": "burglar",
+                "edition": {
+                  "status": "known",
+                  "value": "base",
+                  "source": "manual"
+                },
+                "stickers": {
+                  "status": "known",
+                  "value": [],
+                  "source": "manual"
+                },
+                "sellValue": {
+                  "status": "known",
+                  "value": 3,
+                  "source": "manual"
+                },
+                "counters": {}
+              }
+            ],
+            "source": "manual"
+          },
+          "shop": {
+            "status": "known",
+            "value": {
+              "shopId": "DEC02-01-shop",
+              "cardOffers": [
+                {
+                  "offerId": "summit",
+                  "catalogId": "mystic_summit",
+                  "label": "mystic_summit",
+                  "kind": "joker",
+                  "price": {
+                    "status": "known",
+                    "value": 5,
+                    "source": "manual"
+                  },
+                  "edition": {
+                    "status": "known",
+                    "value": "base",
+                    "source": "manual"
+                  },
+                  "stickers": {
+                    "status": "known",
+                    "value": [],
+                    "source": "manual"
+                  }
+                },
+                {
+                  "offerId": "baron",
+                  "catalogId": "baron",
+                  "label": "baron",
+                  "kind": "joker",
+                  "price": {
+                    "status": "known",
+                    "value": 8,
+                    "source": "manual"
+                  },
+                  "edition": {
+                    "status": "known",
+                    "value": "base",
+                    "source": "manual"
+                  },
+                  "stickers": {
+                    "status": "known",
+                    "value": [],
+                    "source": "manual"
+                  }
+                }
+              ],
+              "voucherOffers": [],
+              "packOffers": [],
+              "ignoredOtherOffers": []
+            },
+            "source": "manual"
+          },
+          "outOfScope": {
+            "status": "known",
+            "value": {
+              "vouchers": [],
+              "consumables": [],
+              "pendingTags": [],
+              "otherModifiers": []
+            },
+            "source": "manual"
+          }
+        },
+        "assumptions": {
+          "probes": [],
+          "roundPlans": [],
+          "horizonRounds": 1,
+          "cashflow": {
+            "assumeRoundWon": false,
+            "handsUsedByRound": [],
+            "noSpendingBetweenRounds": false,
+            "noMoneyChangesDuringRound": false
+          }
+        }
+      },
+      "snapshot": {
+        "id": "DEC02-01-shop",
+        "jokers": [
+          {
+            "offerId": "summit",
+            "catalogId": "mystic_summit",
+            "price": 5,
+            "edition": "base",
+            "stickers": []
+          },
+          {
+            "offerId": "baron",
+            "catalogId": "baron",
+            "price": 8,
+            "edition": "base",
+            "stickers": []
+          }
+        ],
+        "vouchers": [],
+        "packs": [],
+        "others": [],
+        "rerollCost": 5
+      },
+      "decisionOptions": {
+        "ante": 2
+      },
+      "context": "Se han retirado los cuatro reyes mediante cambios previos observados; el mazo completo actual tiene 48 cartas. Burglar permanece poseído. Los recursos persistentes registrados son Blue 5/3 y, al seleccionar la siguiente ciega sin otro modificador, los resultantes son 8 manos/0 descartes.",
+      "mechanicalOracles": {
+        "moneyBefore": 20,
+        "moneyAfterByOption": {
+          "hold": 20,
+          "summit": 15,
+          "baron": 12
+        },
+        "netCostByOption": {
+          "summit": 5,
+          "baron": 8
+        },
+        "physicalJokersAfterByOption": {
+          "summit": 2,
+          "baron": 2
+        },
+        "deckCards": 48,
+        "kings": 0,
+        "persistentHands": 5,
+        "persistentDiscards": 3,
+        "resultingRoundHands": 8,
+        "resultingRoundDiscards": 0,
+        "summitOwnMainMult": 15,
+        "baronEligibleKings": 0,
+        "baronHeldFactorWithoutKings": 1
+      },
+      "recommendationOracle": {
+        "acceptedStatuses": [
+          "conditional"
+        ],
+        "requiredPreferredOfferIds": [
+          "summit"
+        ],
+        "forbiddenPreferredOfferIds": [
+          "baron"
+        ],
+        "mustExplain": [
+          "Burglar deja cero descartes al seleccionar ciega y prepara el +15 Mult propio de Cumbre.",
+          "Barón no tiene reyes actuales y requeriría cambiar el material y retenerlos.",
+          "Comprar Cumbre cuesta 5 y deja 15; la preferencia es condicional, sin garantizar supervivencia."
+        ],
+        "mustNotClaim": [
+          "La rareza o nota editorial hace ganadora a Cumbre.",
+          "Los recursos persistentes en tienda son 8/0.",
+          "Se garantiza superar la siguiente ciega."
+        ]
+      },
+      "sourceIds": [
+        "DEC02-roadmap",
+        "L08-burglar",
+        "L06-summit",
+        "L07-baron",
+        "H1"
+      ]
+    },
+    {
+      "id": "DEC02-02",
+      "title": "Ahorrar frente a Seed Money sin aprovechar el tope",
+      "state": {
+        "schemaVersion": "0.2",
+        "rulesetId": "balatro-pc-1.0.1o-blue-white-v1",
+        "runId": "DEC02-02",
+        "revision": 0,
+        "updatedAt": "2026-11-01T12:00:00Z",
+        "phase": "shop",
+        "phaseData": {
+          "origin": {
+            "status": "known",
+            "value": {
+              "ante": 2,
+              "kind": "small"
+            },
+            "source": "manual"
+          }
+        },
+        "observed": {
+          "gameVersion": {
+            "status": "known",
+            "value": "1.0.1o-FULL",
+            "source": "manual"
+          },
+          "gamePlatform": {
+            "status": "known",
+            "value": "pc-steam",
+            "source": "manual"
+          },
+          "deckId": {
+            "status": "known",
+            "value": "blue",
+            "source": "manual"
+          },
+          "stakeId": {
+            "status": "known",
+            "value": "white",
+            "source": "manual"
+          },
+          "modsPresent": {
+            "status": "known",
+            "value": false,
+            "source": "manual"
+          },
+          "money": {
+            "status": "known",
+            "value": 20,
+            "source": "manual"
+          },
+          "lastCleared": {
+            "status": "known",
+            "value": {
+              "ante": 2,
+              "kind": "small"
+            },
+            "source": "manual"
+          },
+          "nextBlind": {
+            "status": "known",
+            "value": {
+              "ante": 2,
+              "kind": "big",
+              "bossId": {
+                "status": "known",
+                "value": "none",
+                "source": "manual"
+              },
+              "target": {
+                "status": "known",
+                "value": 1200,
+                "source": "manual"
+              },
+              "reward": {
+                "status": "known",
+                "value": 4,
+                "source": "manual"
+              }
+            },
+            "source": "manual"
+          },
+          "visibleBoss": {
+            "status": "unknown",
+            "reason": "El jefe no afecta las operaciones de esta tienda y no se ha transcrito."
+          },
+          "resources": {
+            "handsPerRound": {
+              "status": "known",
+              "value": 5,
+              "source": "manual"
+            },
+            "discardsPerRound": {
+              "status": "known",
+              "value": 3,
+              "source": "manual"
+            },
+            "handSize": {
+              "status": "known",
+              "value": 8,
+              "source": "manual"
+            },
+            "jokerSlots": {
+              "status": "known",
+              "value": 5,
+              "source": "manual"
+            }
+          },
+          "deck": {
+            "status": "known",
+            "value": {
+              "preset": "standard52-unmodified"
+            },
+            "source": "manual"
+          },
+          "handBases": {
+            "status": "known",
+            "value": {
+              "preset": "all-standard-level1"
+            },
+            "source": "manual"
+          },
+          "jokers": {
+            "status": "known",
+            "value": [],
+            "source": "manual"
+          },
+          "shop": {
+            "status": "known",
+            "value": {
+              "shopId": "DEC02-02-shop",
+              "cardOffers": [],
+              "voucherOffers": [
+                {
+                  "offerId": "seed",
+                  "catalogId": "v_seed_money",
+                  "price": {
+                    "status": "known",
+                    "value": 10,
+                    "source": "manual"
+                  }
+                }
+              ],
+              "packOffers": [],
+              "ignoredOtherOffers": []
+            },
+            "source": "manual"
+          },
+          "outOfScope": {
+            "status": "known",
+            "value": {
+              "vouchers": [],
+              "consumables": [],
+              "pendingTags": [],
+              "otherModifiers": []
+            },
+            "source": "manual"
+          }
+        },
+        "assumptions": {
+          "probes": [],
+          "roundPlans": [],
+          "horizonRounds": 1,
+          "cashflow": {
+            "assumeRoundWon": false,
+            "handsUsedByRound": [],
+            "noSpendingBetweenRounds": false,
+            "noMoneyChangesDuringRound": false
+          }
+        }
+      },
+      "snapshot": {
+        "id": "DEC02-02-shop",
+        "jokers": [],
+        "vouchers": [
+          {
+            "offerId": "seed",
+            "catalogId": "v_seed_money",
+            "price": 10
+          }
+        ],
+        "packs": [],
+        "others": [],
+        "rerollCost": 5
+      },
+      "decisionOptions": {
+        "ante": 2
+      },
+      "context": "Sin cambio de dinero durante un cobro hipotético; no se proporciona victoria ni futuro ingreso como hecho. El saldo actual de 20 está bajo el tope base y comprar deja 10.",
+      "mechanicalOracles": {
+        "moneyBefore": 20,
+        "moneyAfterByOption": {
+          "hold": 20,
+          "seed": 10
+        },
+        "netCostByOption": {
+          "seed": 10
+        },
+        "baseInterestCap": 5,
+        "seedInterestCap": 10,
+        "isolatedInterestOnHoldBalance": 4,
+        "isolatedInterestOnBuyBalanceWithSeed": 2,
+        "isolatedInterestOnBuyBalanceWithoutSeed": 2,
+        "incrementFromRaisedCapOnBuyBalance": 0,
+        "immediateIncomeFromPurchase": 0
+      },
+      "recommendationOracle": {
+        "acceptedStatuses": [
+          "conditional"
+        ],
+        "requiredPreferredOfferIds": [
+          "hold"
+        ],
+        "forbiddenPreferredOfferIds": [
+          "seed"
+        ],
+        "mustExplain": [
+          "La compra cuesta 10 y deja 10; el tope adicional no aumenta el interés de ese saldo.",
+          "Conservar 20 mantiene liquidez y, bajo igual saldo al cobro, 4 de interés frente a 2 después de gastar.",
+          "Seed Money solo puede justificarse como inversión futura si el saldo crece por encima del tope previo; no se promete ese crecimiento."
+        ],
+        "mustNotClaim": [
+          "Comprar produce ingreso inmediato.",
+          "Una nota o rol económico basta para preferir comprar.",
+          "Los 4/2 de interés están ganados ahora o hay victoria demostrada."
+        ]
+      },
+      "sourceIds": [
+        "DEC02-roadmap",
+        "L05-interest",
+        "voucher-purchase",
+        "H1"
+      ]
+    },
+    {
+      "id": "DEC02-03",
+      "title": "Reemplazo Riff-Raff por Abstract con inventario lleno",
+      "state": {
+        "schemaVersion": "0.2",
+        "rulesetId": "balatro-pc-1.0.1o-blue-white-v1",
+        "runId": "DEC02-03",
+        "revision": 0,
+        "updatedAt": "2026-11-01T12:00:00Z",
+        "phase": "shop",
+        "phaseData": {
+          "origin": {
+            "status": "known",
+            "value": {
+              "ante": 2,
+              "kind": "small"
+            },
+            "source": "manual"
+          }
+        },
+        "observed": {
+          "gameVersion": {
+            "status": "known",
+            "value": "1.0.1o-FULL",
+            "source": "manual"
+          },
+          "gamePlatform": {
+            "status": "known",
+            "value": "pc-steam",
+            "source": "manual"
+          },
+          "deckId": {
+            "status": "known",
+            "value": "blue",
+            "source": "manual"
+          },
+          "stakeId": {
+            "status": "known",
+            "value": "white",
+            "source": "manual"
+          },
+          "modsPresent": {
+            "status": "known",
+            "value": false,
+            "source": "manual"
+          },
+          "money": {
+            "status": "known",
+            "value": 20,
+            "source": "manual"
+          },
+          "lastCleared": {
+            "status": "known",
+            "value": {
+              "ante": 2,
+              "kind": "small"
+            },
+            "source": "manual"
+          },
+          "nextBlind": {
+            "status": "known",
+            "value": {
+              "ante": 2,
+              "kind": "big",
+              "bossId": {
+                "status": "known",
+                "value": "none",
+                "source": "manual"
+              },
+              "target": {
+                "status": "known",
+                "value": 1200,
+                "source": "manual"
+              },
+              "reward": {
+                "status": "known",
+                "value": 4,
+                "source": "manual"
+              }
+            },
+            "source": "manual"
+          },
+          "visibleBoss": {
+            "status": "unknown",
+            "reason": "El jefe no afecta las operaciones de esta tienda y no se ha transcrito."
+          },
+          "resources": {
+            "handsPerRound": {
+              "status": "known",
+              "value": 5,
+              "source": "manual"
+            },
+            "discardsPerRound": {
+              "status": "known",
+              "value": 3,
+              "source": "manual"
+            },
+            "handSize": {
+              "status": "known",
+              "value": 8,
+              "source": "manual"
+            },
+            "jokerSlots": {
+              "status": "known",
+              "value": 5,
+              "source": "manual"
+            }
+          },
+          "deck": {
+            "status": "known",
+            "value": {
+              "preset": "standard52-unmodified"
+            },
+            "source": "manual"
+          },
+          "handBases": {
+            "status": "known",
+            "value": {
+              "preset": "all-standard-level1"
+            },
+            "source": "manual"
+          },
+          "jokers": {
+            "status": "known",
+            "value": [
+              {
+                "instanceId": "owned-riff",
+                "catalogId": "riff_raff",
+                "edition": {
+                  "status": "known",
+                  "value": "base",
+                  "source": "manual"
+                },
+                "stickers": {
+                  "status": "known",
+                  "value": [],
+                  "source": "manual"
+                },
+                "sellValue": {
+                  "status": "known",
+                  "value": 3,
+                  "source": "manual"
+                },
+                "counters": {}
+              },
+              {
+                "instanceId": "owned-joker",
+                "catalogId": "joker",
+                "edition": {
+                  "status": "known",
+                  "value": "base",
+                  "source": "manual"
+                },
+                "stickers": {
+                  "status": "known",
+                  "value": [],
+                  "source": "manual"
+                },
+                "sellValue": {
+                  "status": "known",
+                  "value": 1,
+                  "source": "manual"
+                },
+                "counters": {}
+              },
+              {
+                "instanceId": "owned-banner",
+                "catalogId": "banner",
+                "edition": {
+                  "status": "known",
+                  "value": "base",
+                  "source": "manual"
+                },
+                "stickers": {
+                  "status": "known",
+                  "value": [],
+                  "source": "manual"
+                },
+                "sellValue": {
+                  "status": "known",
+                  "value": 2,
+                  "source": "manual"
+                },
+                "counters": {}
+              },
+              {
+                "instanceId": "owned-scholar",
+                "catalogId": "scholar",
+                "edition": {
+                  "status": "known",
+                  "value": "base",
+                  "source": "manual"
+                },
+                "stickers": {
+                  "status": "known",
+                  "value": [],
+                  "source": "manual"
+                },
+                "sellValue": {
+                  "status": "known",
+                  "value": 2,
+                  "source": "manual"
+                },
+                "counters": {}
+              },
+              {
+                "instanceId": "owned-half",
+                "catalogId": "half_joker",
+                "edition": {
+                  "status": "known",
+                  "value": "base",
+                  "source": "manual"
+                },
+                "stickers": {
+                  "status": "known",
+                  "value": [],
+                  "source": "manual"
+                },
+                "sellValue": {
+                  "status": "known",
+                  "value": 2,
+                  "source": "manual"
+                },
+                "counters": {}
+              }
+            ],
+            "source": "manual"
+          },
+          "shop": {
+            "status": "known",
+            "value": {
+              "shopId": "DEC02-03-shop",
+              "cardOffers": [
+                {
+                  "offerId": "abstract",
+                  "catalogId": "abstract_joker",
+                  "label": "abstract_joker",
+                  "kind": "joker",
+                  "price": {
+                    "status": "known",
+                    "value": 4,
+                    "source": "manual"
+                  },
+                  "edition": {
+                    "status": "known",
+                    "value": "base",
+                    "source": "manual"
+                  },
+                  "stickers": {
+                    "status": "known",
+                    "value": [],
+                    "source": "manual"
+                  }
+                }
+              ],
+              "voucherOffers": [],
+              "packOffers": [],
+              "ignoredOtherOffers": []
+            },
+            "source": "manual"
+          },
+          "outOfScope": {
+            "status": "known",
+            "value": {
+              "vouchers": [],
+              "consumables": [],
+              "pendingTags": [],
+              "otherModifiers": []
+            },
+            "source": "manual"
+          }
+        },
+        "assumptions": {
+          "probes": [],
+          "roundPlans": [],
+          "horizonRounds": 1,
+          "cashflow": {
+            "assumeRoundWon": false,
+            "handsUsedByRound": [],
+            "noSpendingBetweenRounds": false,
+            "noMoneyChangesDuringRound": false
+          }
+        }
+      },
+      "snapshot": {
+        "id": "DEC02-03-shop",
+        "jokers": [
+          {
+            "offerId": "abstract",
+            "catalogId": "abstract_joker",
+            "price": 4,
+            "edition": "base",
+            "stickers": [],
+            "replacementId": "owned-riff"
+          }
+        ],
+        "vouchers": [],
+        "packs": [],
+        "others": [],
+        "rerollCost": 5
+      },
+      "decisionOptions": {
+        "ante": 2
+      },
+      "context": "Solo se compara el reemplazo seleccionado Riff-Raff→Abstract. Cinco instancias físicas, cinco huecos, sin Negative, generadores destructivos, temporales o efectos que alteren capacidad. El API actual no admite una prioridad declarada de refuerzo: se acepta intercambio condicionado; una preferencia por reemplazar debe supeditarse expresamente a priorizar puntuación actual.",
+      "mechanicalOracles": {
+        "moneyBefore": 20,
+        "moneyAfterByOption": {
+          "hold": 20,
+          "abstract": 19
+        },
+        "riffSaleValue": 3,
+        "abstractPrice": 4,
+        "replacementNetCost": 1,
+        "moneyAfterSale": 23,
+        "physicalJokersBefore": 5,
+        "physicalJokersAfter": 5,
+        "jokerCapacity": 5,
+        "freeSlotsBefore": 0,
+        "freeSlotsAfter": 0,
+        "riffGeneratedAtNextSelectionIfUnchanged": 0,
+        "abstractOwnMainMultAfterReplacement": 15,
+        "newAbstractCounters": {},
+        "removedInstanceId": "owned-riff",
+        "preservedInstanceIds": [
+          "owned-joker",
+          "owned-banner",
+          "owned-scholar",
+          "owned-half"
+        ]
+      },
+      "recommendationOracle": {
+        "acceptedStatuses": [
+          "conditional",
+          "tie"
+        ],
+        "requiredConsideredOfferIds": [
+          "abstract"
+        ],
+        "requiredPreferredOfferIds": [],
+        "mustExplain": [
+          "Riff-Raff lleno no genera ahora, pero venderlo sacrifica su generación futura si se abren huecos.",
+          "Vender por 3 y comprar por 4 deja 19: coste neto 1 y cinco comodines físicos.",
+          "Abstract aporta +15 Mult propio preparado contando los cinco e incluyéndose a sí mismo; es una instancia nueva sin crecimiento heredado.",
+          "El reemplazo puede preferirse si se prioriza refuerzo actual; el contrato actual sin esa prioridad admite conservar como intercambio."
+        ],
+        "mustNotClaim": [
+          "Riff-Raff es inútil en todo horizonte.",
+          "Abstract hereda un contador o crecimiento de la instancia vendida.",
+          "El reemplazo es obligatorio sin una necesidad declarada.",
+          "Comprar sin vender es legal con cinco huecos llenos."
+        ]
+      },
+      "sourceIds": [
+        "DEC02-roadmap",
+        "L08-riff",
+        "H2-initial",
+        "H1"
+      ]
+    },
+    {
+      "id": "DEC02-04",
+      "title": "Empate útil entre puntuación preparada e ingreso de ronda",
+      "state": {
+        "schemaVersion": "0.2",
+        "rulesetId": "balatro-pc-1.0.1o-blue-white-v1",
+        "runId": "DEC02-04",
+        "revision": 0,
+        "updatedAt": "2026-11-01T12:00:00Z",
+        "phase": "shop",
+        "phaseData": {
+          "origin": {
+            "status": "known",
+            "value": {
+              "ante": 2,
+              "kind": "small"
+            },
+            "source": "manual"
+          }
+        },
+        "observed": {
+          "gameVersion": {
+            "status": "known",
+            "value": "1.0.1o-FULL",
+            "source": "manual"
+          },
+          "gamePlatform": {
+            "status": "known",
+            "value": "pc-steam",
+            "source": "manual"
+          },
+          "deckId": {
+            "status": "known",
+            "value": "blue",
+            "source": "manual"
+          },
+          "stakeId": {
+            "status": "known",
+            "value": "white",
+            "source": "manual"
+          },
+          "modsPresent": {
+            "status": "known",
+            "value": false,
+            "source": "manual"
+          },
+          "money": {
+            "status": "known",
+            "value": 20,
+            "source": "manual"
+          },
+          "lastCleared": {
+            "status": "known",
+            "value": {
+              "ante": 2,
+              "kind": "small"
+            },
+            "source": "manual"
+          },
+          "nextBlind": {
+            "status": "known",
+            "value": {
+              "ante": 2,
+              "kind": "big",
+              "bossId": {
+                "status": "known",
+                "value": "none",
+                "source": "manual"
+              },
+              "target": {
+                "status": "known",
+                "value": 1200,
+                "source": "manual"
+              },
+              "reward": {
+                "status": "known",
+                "value": 4,
+                "source": "manual"
+              }
+            },
+            "source": "manual"
+          },
+          "visibleBoss": {
+            "status": "unknown",
+            "reason": "El jefe no afecta las operaciones de esta tienda y no se ha transcrito."
+          },
+          "resources": {
+            "handsPerRound": {
+              "status": "known",
+              "value": 5,
+              "source": "manual"
+            },
+            "discardsPerRound": {
+              "status": "known",
+              "value": 3,
+              "source": "manual"
+            },
+            "handSize": {
+              "status": "known",
+              "value": 8,
+              "source": "manual"
+            },
+            "jokerSlots": {
+              "status": "known",
+              "value": 5,
+              "source": "manual"
+            }
+          },
+          "deck": {
+            "status": "known",
+            "value": {
+              "preset": "standard52-unmodified"
+            },
+            "source": "manual"
+          },
+          "handBases": {
+            "status": "known",
+            "value": {
+              "preset": "all-standard-level1"
+            },
+            "source": "manual"
+          },
+          "jokers": {
+            "status": "known",
+            "value": [],
+            "source": "manual"
+          },
+          "shop": {
+            "status": "known",
+            "value": {
+              "shopId": "DEC02-04-shop",
+              "cardOffers": [
+                {
+                  "offerId": "scoring",
+                  "catalogId": "joker",
+                  "label": "joker",
+                  "kind": "joker",
+                  "price": {
+                    "status": "known",
+                    "value": 2,
+                    "source": "manual"
+                  },
+                  "edition": {
+                    "status": "known",
+                    "value": "base",
+                    "source": "manual"
+                  },
+                  "stickers": {
+                    "status": "known",
+                    "value": [],
+                    "source": "manual"
+                  }
+                },
+                {
+                  "offerId": "income",
+                  "catalogId": "golden_joker",
+                  "label": "golden_joker",
+                  "kind": "joker",
+                  "price": {
+                    "status": "known",
+                    "value": 6,
+                    "source": "manual"
+                  },
+                  "edition": {
+                    "status": "known",
+                    "value": "base",
+                    "source": "manual"
+                  },
+                  "stickers": {
+                    "status": "known",
+                    "value": [],
+                    "source": "manual"
+                  }
+                }
+              ],
+              "voucherOffers": [],
+              "packOffers": [],
+              "ignoredOtherOffers": []
+            },
+            "source": "manual"
+          },
+          "outOfScope": {
+            "status": "known",
+            "value": {
+              "vouchers": [],
+              "consumables": [],
+              "pendingTags": [],
+              "otherModifiers": []
+            },
+            "source": "manual"
+          }
+        },
+        "assumptions": {
+          "probes": [],
+          "roundPlans": [],
+          "horizonRounds": 1,
+          "cashflow": {
+            "assumeRoundWon": false,
+            "handsUsedByRound": [],
+            "noSpendingBetweenRounds": false,
+            "noMoneyChangesDuringRound": false
+          }
+        }
+      },
+      "snapshot": {
+        "id": "DEC02-04-shop",
+        "jokers": [
+          {
+            "offerId": "scoring",
+            "catalogId": "joker",
+            "price": 2,
+            "edition": "base",
+            "stickers": []
+          },
+          {
+            "offerId": "income",
+            "catalogId": "golden_joker",
+            "price": 6,
+            "edition": "base",
+            "stickers": []
+          }
+        ],
+        "vouchers": [],
+        "packs": [],
+        "others": [],
+        "rerollCost": 5
+      },
+      "decisionOptions": {
+        "ante": 2
+      },
+      "context": "No hay evidencia de falta de puntuación ni una prioridad económica declarada; no hay planes, manos ni victoria asumida.",
+      "mechanicalOracles": {
+        "moneyBefore": 20,
+        "moneyAfterByOption": {
+          "hold": 20,
+          "scoring": 18,
+          "income": 14
+        },
+        "netCostByOption": {
+          "scoring": 2,
+          "income": 6
+        },
+        "jokerOwnMainMult": 4,
+        "goldenOwnMainMult": 0,
+        "goldenIncomePerWonRoundIfRetained": 4,
+        "immediateIncomeFromGoldenPurchase": 0,
+        "physicalJokersAfterEitherPurchase": 1
+      },
+      "recommendationOracle": {
+        "acceptedStatuses": [
+          "tie",
+          "conditional"
+        ],
+        "requiredConsideredOfferIds": [
+          "scoring",
+          "income"
+        ],
+        "requiredPreferredOfferIds": [],
+        "mustExplain": [
+          "Joker ofrece +4 Mult propio preparado y cuesta 2; sirve si se busca reforzar puntuación.",
+          "Golden cuesta 6 y ofrece 4 dólares al final de una ronda ganada si se conserva; sirve si se prioriza ingreso posterior.",
+          "Falta evidencia para ordenar universalmente ambas necesidades; conservar también preserva liquidez."
+        ],
+        "mustNotClaim": [
+          "Existe una única ganadora demostrada sin añadir necesidad.",
+          "Se suman dólares y Mult como una unidad común.",
+          "Golden otorga dinero o puntos inmediatamente al comprarlo.",
+          "Cualquiera garantiza supervivencia."
+        ]
+      },
+      "sourceIds": [
+        "DEC02-roadmap",
+        "H2-initial",
+        "H1"
+      ]
+    },
+    {
+      "id": "DEC02-05",
+      "title": "Comparación acotada de Mult propio con inventario vacío",
+      "state": {
+        "schemaVersion": "0.2",
+        "rulesetId": "balatro-pc-1.0.1o-blue-white-v1",
+        "runId": "DEC02-05",
+        "revision": 0,
+        "updatedAt": "2026-11-01T12:00:00Z",
+        "phase": "shop",
+        "phaseData": {
+          "origin": {
+            "status": "known",
+            "value": {
+              "ante": 2,
+              "kind": "small"
+            },
+            "source": "manual"
+          }
+        },
+        "observed": {
+          "gameVersion": {
+            "status": "known",
+            "value": "1.0.1o-FULL",
+            "source": "manual"
+          },
+          "gamePlatform": {
+            "status": "known",
+            "value": "pc-steam",
+            "source": "manual"
+          },
+          "deckId": {
+            "status": "known",
+            "value": "blue",
+            "source": "manual"
+          },
+          "stakeId": {
+            "status": "known",
+            "value": "white",
+            "source": "manual"
+          },
+          "modsPresent": {
+            "status": "known",
+            "value": false,
+            "source": "manual"
+          },
+          "money": {
+            "status": "known",
+            "value": 25,
+            "source": "manual"
+          },
+          "lastCleared": {
+            "status": "known",
+            "value": {
+              "ante": 2,
+              "kind": "small"
+            },
+            "source": "manual"
+          },
+          "nextBlind": {
+            "status": "known",
+            "value": {
+              "ante": 2,
+              "kind": "big",
+              "bossId": {
+                "status": "known",
+                "value": "none",
+                "source": "manual"
+              },
+              "target": {
+                "status": "known",
+                "value": 1200,
+                "source": "manual"
+              },
+              "reward": {
+                "status": "known",
+                "value": 4,
+                "source": "manual"
+              }
+            },
+            "source": "manual"
+          },
+          "visibleBoss": {
+            "status": "unknown",
+            "reason": "El jefe no afecta las operaciones de esta tienda y no se ha transcrito."
+          },
+          "resources": {
+            "handsPerRound": {
+              "status": "known",
+              "value": 5,
+              "source": "manual"
+            },
+            "discardsPerRound": {
+              "status": "known",
+              "value": 3,
+              "source": "manual"
+            },
+            "handSize": {
+              "status": "known",
+              "value": 8,
+              "source": "manual"
+            },
+            "jokerSlots": {
+              "status": "known",
+              "value": 5,
+              "source": "manual"
+            }
+          },
+          "deck": {
+            "status": "known",
+            "value": {
+              "preset": "standard52-unmodified"
+            },
+            "source": "manual"
+          },
+          "handBases": {
+            "status": "known",
+            "value": {
+              "preset": "all-standard-level1"
+            },
+            "source": "manual"
+          },
+          "jokers": {
+            "status": "known",
+            "value": [],
+            "source": "manual"
+          },
+          "shop": {
+            "status": "known",
+            "value": {
+              "shopId": "DEC02-05-shop",
+              "cardOffers": [
+                {
+                  "offerId": "joker",
+                  "catalogId": "joker",
+                  "label": "joker",
+                  "kind": "joker",
+                  "price": {
+                    "status": "known",
+                    "value": 2,
+                    "source": "manual"
+                  },
+                  "edition": {
+                    "status": "known",
+                    "value": "base",
+                    "source": "manual"
+                  },
+                  "stickers": {
+                    "status": "known",
+                    "value": [],
+                    "source": "manual"
+                  }
+                },
+                {
+                  "offerId": "abstract",
+                  "catalogId": "abstract_joker",
+                  "label": "abstract_joker",
+                  "kind": "joker",
+                  "price": {
+                    "status": "known",
+                    "value": 4,
+                    "source": "manual"
+                  },
+                  "edition": {
+                    "status": "known",
+                    "value": "base",
+                    "source": "manual"
+                  },
+                  "stickers": {
+                    "status": "known",
+                    "value": [],
+                    "source": "manual"
+                  }
+                }
+              ],
+              "voucherOffers": [],
+              "packOffers": [],
+              "ignoredOtherOffers": []
+            },
+            "source": "manual"
+          },
+          "outOfScope": {
+            "status": "known",
+            "value": {
+              "vouchers": [],
+              "consumables": [],
+              "pendingTags": [],
+              "otherModifiers": []
+            },
+            "source": "manual"
+          }
+        },
+        "assumptions": {
+          "probes": [],
+          "roundPlans": [],
+          "horizonRounds": 1,
+          "cashflow": {
+            "assumeRoundWon": false,
+            "handsUsedByRound": [],
+            "noSpendingBetweenRounds": false,
+            "noMoneyChangesDuringRound": false
+          }
+        }
+      },
+      "snapshot": {
+        "id": "DEC02-05-shop",
+        "jokers": [
+          {
+            "offerId": "joker",
+            "catalogId": "joker",
+            "price": 2,
+            "edition": "base",
+            "stickers": []
+          },
+          {
+            "offerId": "abstract",
+            "catalogId": "abstract_joker",
+            "price": 4,
+            "edition": "base",
+            "stickers": []
+          }
+        ],
+        "vouchers": [],
+        "packs": [],
+        "others": [],
+        "rerollCost": 5
+      },
+      "decisionOptions": {
+        "ante": 2
+      },
+      "context": "Inventario vacío: cada compra independiente deja un único comodín físico. La comparación cubre aporte principal propio y dinero actual; Abstract puede mejorar al llenar inventario en el futuro y esa posibilidad no se elimina.",
+      "mechanicalOracles": {
+        "moneyBefore": 25,
+        "moneyAfterByOption": {
+          "hold": 25,
+          "joker": 23,
+          "abstract": 21
+        },
+        "netCostByOption": {
+          "joker": 2,
+          "abstract": 4
+        },
+        "physicalJokersAfterEitherPurchase": 1,
+        "jokerOwnMainMult": 4,
+        "abstractOwnMainMult": 3,
+        "abstractOwnMainMultIfLaterFivePhysicalJokers": 15
+      },
+      "recommendationOracle": {
+        "acceptedStatuses": [
+          "conditional"
+        ],
+        "requiredPreferredOfferIds": [
+          "joker"
+        ],
+        "forbiddenPreferredOfferIds": [
+          "abstract"
+        ],
+        "mustExplain": [
+          "En el inventario resultante actual Joker aporta +4 Mult propio por 2 frente a Abstract +3 por 4.",
+          "La preferencia por Joker se limita a ese componente preparado y coste actual.",
+          "Abstract depende del inventario futuro y podría cambiar el intercambio al ocupar más huecos."
+        ],
+        "mustNotClaim": [
+          "Joker domina globalmente cualquier desarrollo futuro de Abstract.",
+          "Abstract cuenta comodines aún no adquiridos.",
+          "Se demuestra supervivencia o una ruta óptima."
+        ]
+      },
+      "sourceIds": [
+        "H2-initial",
+        "H1"
+      ]
+    },
+    {
+      "id": "DEC02-06",
+      "title": "Preferencia parcial preservada junto a Tarot manual no evaluado",
+      "state": {
+        "schemaVersion": "0.2",
+        "rulesetId": "balatro-pc-1.0.1o-blue-white-v1",
+        "runId": "DEC02-06",
+        "revision": 0,
+        "updatedAt": "2026-11-01T12:00:00Z",
+        "phase": "shop",
+        "phaseData": {
+          "origin": {
+            "status": "known",
+            "value": {
+              "ante": 2,
+              "kind": "small"
+            },
+            "source": "manual"
+          }
+        },
+        "observed": {
+          "gameVersion": {
+            "status": "known",
+            "value": "1.0.1o-FULL",
+            "source": "manual"
+          },
+          "gamePlatform": {
+            "status": "known",
+            "value": "pc-steam",
+            "source": "manual"
+          },
+          "deckId": {
+            "status": "known",
+            "value": "blue",
+            "source": "manual"
+          },
+          "stakeId": {
+            "status": "known",
+            "value": "white",
+            "source": "manual"
+          },
+          "modsPresent": {
+            "status": "known",
+            "value": false,
+            "source": "manual"
+          },
+          "money": {
+            "status": "known",
+            "value": 20,
+            "source": "manual"
+          },
+          "lastCleared": {
+            "status": "known",
+            "value": {
+              "ante": 2,
+              "kind": "small"
+            },
+            "source": "manual"
+          },
+          "nextBlind": {
+            "status": "known",
+            "value": {
+              "ante": 2,
+              "kind": "big",
+              "bossId": {
+                "status": "known",
+                "value": "none",
+                "source": "manual"
+              },
+              "target": {
+                "status": "known",
+                "value": 1200,
+                "source": "manual"
+              },
+              "reward": {
+                "status": "known",
+                "value": 4,
+                "source": "manual"
+              }
+            },
+            "source": "manual"
+          },
+          "visibleBoss": {
+            "status": "unknown",
+            "reason": "El jefe no afecta las operaciones de esta tienda y no se ha transcrito."
+          },
+          "resources": {
+            "handsPerRound": {
+              "status": "known",
+              "value": 5,
+              "source": "manual"
+            },
+            "discardsPerRound": {
+              "status": "known",
+              "value": 3,
+              "source": "manual"
+            },
+            "handSize": {
+              "status": "known",
+              "value": 8,
+              "source": "manual"
+            },
+            "jokerSlots": {
+              "status": "known",
+              "value": 5,
+              "source": "manual"
+            }
+          },
+          "deck": {
+            "status": "known",
+            "value": {
+              "preset": "standard52-unmodified"
+            },
+            "source": "manual"
+          },
+          "handBases": {
+            "status": "known",
+            "value": {
+              "preset": "all-standard-level1"
+            },
+            "source": "manual"
+          },
+          "jokers": {
+            "status": "known",
+            "value": [],
+            "source": "manual"
+          },
+          "shop": {
+            "status": "known",
+            "value": {
+              "shopId": "DEC02-06-shop",
+              "cardOffers": [
+                {
+                  "offerId": "joker",
+                  "catalogId": "joker",
+                  "label": "joker",
+                  "kind": "joker",
+                  "price": {
+                    "status": "known",
+                    "value": 2,
+                    "source": "manual"
+                  },
+                  "edition": {
+                    "status": "known",
+                    "value": "base",
+                    "source": "manual"
+                  },
+                  "stickers": {
+                    "status": "known",
+                    "value": [],
+                    "source": "manual"
+                  }
+                },
+                {
+                  "offerId": "manual-tarot",
+                  "catalogId": "c_fool",
+                  "label": "The Fool",
+                  "kind": "unsupported",
+                  "price": {
+                    "status": "known",
+                    "value": 3,
+                    "source": "manual"
+                  },
+                  "edition": {
+                    "status": "known",
+                    "value": "base",
+                    "source": "manual"
+                  },
+                  "stickers": {
+                    "status": "known",
+                    "value": [],
+                    "source": "manual"
+                  }
+                }
+              ],
+              "voucherOffers": [],
+              "packOffers": [],
+              "ignoredOtherOffers": []
+            },
+            "source": "manual"
+          },
+          "outOfScope": {
+            "status": "known",
+            "value": {
+              "vouchers": [],
+              "consumables": [],
+              "pendingTags": [],
+              "otherModifiers": []
+            },
+            "source": "manual"
+          }
+        },
+        "assumptions": {
+          "probes": [],
+          "roundPlans": [],
+          "horizonRounds": 1,
+          "cashflow": {
+            "assumeRoundWon": false,
+            "handsUsedByRound": [],
+            "noSpendingBetweenRounds": false,
+            "noMoneyChangesDuringRound": false
+          }
+        }
+      },
+      "snapshot": {
+        "id": "DEC02-06-shop",
+        "jokers": [
+          {
+            "offerId": "joker",
+            "catalogId": "joker",
+            "price": 2,
+            "edition": "base",
+            "stickers": []
+          }
+        ],
+        "vouchers": [],
+        "packs": [],
+        "others": [
+          {
+            "offerId": "manual-tarot",
+            "kind": "tarot",
+            "name": "The Fool",
+            "price": 3
+          }
+        ],
+        "rerollCost": 5
+      },
+      "decisionOptions": {
+        "ante": 2
+      },
+      "context": "Tienda ordinaria de dos cartas visibles: Joker base y un Tarot base de precio 3. El Tarot se conserva manual sin efecto evaluado ni uso inventado; no hay Crystal Ball, discounts, capacidad extra ni tercera carta.",
+      "mechanicalOracles": {
+        "moneyBefore": 20,
+        "moneyAfterByOption": {
+          "hold": 20,
+          "joker": 18
+        },
+        "netCostByOption": {
+          "joker": 2
+        },
+        "jokerOwnMainMult": 4,
+        "ordinaryVisibleCardOffers": 2,
+        "manualTarotObservedPrice": 3,
+        "manualTarotPurchaseAndEffectEvaluated": false,
+        "hypotheticalPaymentOnlyBalanceForManualTarot": 17
+      },
+      "recommendationOracle": {
+        "acceptedStatuses": [
+          "conditional"
+        ],
+        "requiredPreferredOfferIds": [
+          "joker"
+        ],
+        "forbiddenPreferredOfferIds": [
+          "manual-tarot"
+        ],
+        "requiredPendingOfferIds": [
+          "manual-tarot"
+        ],
+        "mustExplain": [
+          "Joker es compra legal calculable: cuesta 2, deja 18 y aporta +4 Mult propio preparado.",
+          "La preferencia es parcial entre las opciones evaluadas.",
+          "El Tarot manual cuesta 3, pero su efecto/acción no está evaluado; podría cambiar la decisión al completarse."
+        ],
+        "mustNotClaim": [
+          "La oferta pendiente borra la comparación calculable.",
+          "Joker es ganador global de toda la tienda.",
+          "El Tarot cuesta cero, no tiene efecto o fue usado/comprado en la proyección."
+        ]
+      },
+      "sourceIds": [
+        "H2-initial",
+        "H1"
+      ]
+    }
+  ]
+}

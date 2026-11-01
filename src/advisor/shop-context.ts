@@ -17,6 +17,8 @@ import {applyVoucherPurchase} from '../rules/voucher-shop.js';
 import {fixedMainMult} from '../rules/fixed-main-mult.js';
 import {QUICK_SHOP_POLICY} from './quick-shop-policy.js';
 import type {ShopFinding} from './quick-shop-policy.js';
+import {comparePreparedOffers} from './shop-comparison.js';
+import type {ShopOfferComparison} from './shop-comparison.js';
 
 /** Visible manual offers. null is an unknown price, never a free offer. */
 export interface ShopSnapshot {
@@ -38,7 +40,8 @@ export interface ShopOption {
 }
 export interface ShopContextResult {
  policy:string;
- recommendation:{status:'conditional'|'tie'|'abstain';title:string;offerIds:string[];reasons:string[]};
+ recommendation:{status:'conditional'|'tie'|'abstain';title:string;offerIds:string[];reasons:string[];scope?:'evaluated-options'|'observed-options';pendingOfferIds?:string[]};
+ comparisons?:ShopOfferComparison[];
  options:ShopOption[];limitations:string[];errors:Issue[];exhaustive:false;
 }
 const value=<T>(fact:Fact<T>|undefined):T|undefined=>fact?.status==='known'?fact.value:undefined;
@@ -75,7 +78,7 @@ const limitations=[
  'Consultar no compra, vende, abre, renueva ni guarda adquisiciones. Evidencia estática 1.0.1o-FULL, docs/evidencia/tienda-investigacion.md.'
 ];
 function result(errors:Issue[]=[]):ShopContextResult {
- return {policy:QUICK_SHOP_POLICY.id,recommendation:{status:'abstain',title:'Completa los datos de la tienda',offerIds:[],reasons:['Faltan datos para comparar las opciones.']},options:[],limitations:[...limitations],errors,exhaustive:false};
+ return {policy:QUICK_SHOP_POLICY.id,recommendation:{status:'abstain',title:'Completa los datos de la tienda',offerIds:[],reasons:['Faltan datos para comparar las opciones.']},comparisons:[],options:[],limitations:[...limitations],errors,exhaustive:false};
 }
 function finding(option:ShopOption,ruleId:string,message:string,values?:ShopFinding['values']):void {
  (option.findings??=[]).push({ruleId,message,...(values?{values}:{})});option.reasons.push(message);
@@ -152,6 +155,8 @@ function evaluateJoker(state:GameState,offer:ShopSnapshot['jokers'][number],repo
  if(developed&&!temporary)option.reasons.push('Conserva el desarrollo como alternativa: su contador no demuestra por sí solo que sea útil ni que nunca deba reemplazarse. Sin un escenario no se comparan sus puntos con los del nuevo efecto.');
  if(growthUnknown)option.limitations.push('Contador del comodín que se vendería desconocido; no se supone que no tenga desarrollo.');
  if(sold&&key(sold.catalogId)==='golden_joker')finding(option,QUICK_SHOP_POLICY.rules.replacementLoss,`Vender Golden sacrifica $${GOLDEN_ROUND_INCOME} por final de ronda compatible; no es dinero ganado ahora ni una victoria garantizada.`,{income:GOLDEN_ROUND_INCOME,unit:'dollars-per-eligible-round'});
+ if(sold&&key(sold.catalogId)==='riff_raff'&&owned&&slots!==undefined&&owned.length>=slots)finding(option,QUICK_SHOP_POLICY.rules.generationLoss,
+  `Riff-Raff tiene el inventario actual lleno (${owned.length}/${slots}). Si esa ocupación se mantiene al seleccionar la ciega, no tendrá huecos para generar comodines. Reemplazarlo puede dar refuerzo actual, pero pierdes su generación futura si después liberas espacio. No se crean comodines ni se supone que otros efectos mantengan la ocupación.`,{occupied:owned.length,slots,unit:'joker-slots'});
  // Existing readiness levels distinguish supported conditions (2) from a future
  // investment without current preparation (1). The editorial index is not a gate.
  const prepared=fit.score!==null&&(fit.readiness==='ready'||fit.readiness==='potential'&&fit.axes.some(a=>a.key==='readiness'&&a.value!==null&&a.value>=2));
@@ -219,7 +224,10 @@ function evaluateVoucher(state:GameState,offer:ShopSnapshot['vouchers'][number],
  if(entry.id==='v_seed_money'||entry.id==='v_money_tree'){
   const previous=ids.includes('v_money_tree')?20:ids.includes('v_seed_money')?10:5;
   useful=(option.resourceChanges?.interestCap??0)>previous&&option.moneyAfter!==null&&option.moneyAfter>=(previous+1)*5;
-  if(!useful)option.reasons.push('El saldo posterior no demuestra aprovechar ahora el tope mayor; conservar dinero puede convenir.');
+  if(!useful){
+   if(option.resourceChanges?.interestCap===0)finding(option,QUICK_SHOP_POLICY.rules.preparation,'Esta baraja no cobra intereses. Comprar un tope mayor no habilita ingresos por interés, aunque aumente el saldo.');
+   else finding(option,QUICK_SHOP_POLICY.rules.futureInvestment,'El saldo posterior no demuestra aprovechar ahora el tope mayor; conservar dinero puede convenir. Es una inversión futura que necesita alcanzar un saldo útil y completar una ronda; no genera ingresos al comprar.',{moneyAfter:option.moneyAfter??'unknown',interestCap:option.resourceChanges?.interestCap??'unknown',unit:'dollars'});
+  }
  }
  const copy=structuredClone(state);copy.observed.shop=known({shopId:'hypothetical:voucher',cardOffers:[],voucherOffers:[{offerId:offer.offerId,catalogId:offer.catalogId,price:offer.price===null?unknown('Precio no transcrito'):known(offer.price)}],ignoredOtherOffers:[]});
  const purchase=applyVoucherPurchase(copy,{type:'buy_voucher',offerId:offer.offerId},{expectedRevision:copy.revision,updatedAt:copy.updatedAt},{requireObserved});
@@ -261,6 +269,19 @@ export function evaluateShopContext(input:GameState,snapshotInput:ShopSnapshot,o
  const reroll:ShopOption={id:'reroll',kind:'reroll',title:'Renovar ofertas',...cost(state,shop.rerollCost),coverage:'unknown',reasons:['El coste actual solo compra información nueva: las ofertas posteriores son desconocidas y no se garantiza una mejora. Renueva el área de cartas; conserva sobres y vale.'],limitations:['No genera nuevo stock ni aplica eventos de reroll. El siguiente precio y los rerolls gratuitos necesitan observación real.']};
  costReasons(reroll,state);
  const others=(shop.others??[]).map(offer=>{const option:ShopOption={id:offer.offerId,kind:'other',title:offer.name,...cost(state,offer.price),coverage:'unknown',reasons:[`Oferta manual ${offer.kind}: ${offer.name}. Se conserva el nombre transcrito, sin inferir un efecto por su texto.`],limitations:['No se puntúa: falta identidad mecánica, objetivos y evento de compra/uso compatible. Puede cambiar la elección; no se ignora al comparar.']};costReasons(option,state);return option;});
+ // A UI snapshot may omit a saved unsupported article. Preserve that competing
+ // offer in the advice rather than silently treating the recorded shop as empty.
+ const recorded=state.observed.shop.status==='known'?state.observed.shop.value:undefined;
+ if(recorded?.shopId===shop.id){
+  const represented=new Set([...shop.jokers,...shop.vouchers,...shop.packs,...(shop.others??[])].map(o=>o.offerId)),listed=new Set(['hold','reroll',...represented]);
+  const preserve=(recordedId:string,title:string,price:number|null)=>{if(represented.has(recordedId))return;represented.add(recordedId);let id=recordedId;while(listed.has(id))id='unrepresented:'+id;listed.add(id);const option:ShopOption={id,kind:'other',title,...cost(state,price),coverage:'unknown',reasons:['Oferta registrada omitida en la vista comparada; su efecto no se está evaluando. Conserva el artículo y el precio observados.'],limitations:['Puede cambiar la elección. No se inventa una transacción ni se interpreta el nombre como un efecto compatible.']};costReasons(option,state);others.push(option);};
+  for(const offer of recorded.cardOffers)preserve(offer.offerId,offer.label,value(offer.price)??null);
+  if(state.schemaVersion==='0.2'&&state.observed.shop.status==='known'){
+   for(const offer of state.observed.shop.value.voucherOffers??[])preserve(offer.offerId,VOUCHER_CATALOG.find(v=>v.id===offer.catalogId)?.name??offer.catalogId,value(offer.price)??null);
+   for(const offer of state.observed.shop.value.packOffers??[])preserve(offer.offerId,BOOSTER_CATALOG.find(p=>p.id===offer.catalogId)?.name??offer.catalogId,value(offer.price)??null);
+  }
+  for(const [index,title]of recorded.ignoredOtherOffers.entries()){let id='unrepresented:'+index;while(listed.has(id))id+=':saved';preserve(id,title,null);}
+ }
  output.options=[hold,...assessed.map(a=>a.option),...packs,reroll,...others];
  if(shop.jokers.length+(shop.others?.length??0)>2){
   output.limitations.push('Hay más de dos ofertas de cartas transcritas. Puede corresponder a modificadores reales; no habilita en H2 una tienda ampliada.');
@@ -269,13 +290,16 @@ export function evaluateShopContext(input:GameState,snapshotInput:ShopSnapshot,o
    evaluated.option.limitations.push('H2 valida la oferta aislada; no certifica esta tienda ampliada ni sus modificadores.');
   }
  }
- const candidates=assessed.filter(a=>a.eligible).map(a=>a.option),uncertain=assessed.filter(a=>a.uncertain).map(a=>a.option);
+ const eligible=assessed.filter(a=>a.eligible).map(a=>a.option),uncertain=assessed.filter(a=>a.uncertain).map(a=>a.option);
+ const comparisons=comparePreparedOffers(state,shop,eligible);output.comparisons=comparisons;
+ const superseded=new Set(comparisons.map(c=>c.otherId)),candidates=eligible.filter(o=>!superseded.has(o.id));
+ for(const comparison of comparisons)for(const id of [comparison.preferredId,comparison.otherId]){const option=output.options.find(o=>o.id===id);if(option)finding(option,comparison.ruleId,comparison.message,{...comparison.values,unit:'additive-mult-and-dollars-separate'});}
  const unscored=others.filter(o=>o.affordability!=='unaffordable');
  const tradeoffs=assessed.filter(a=>a.eligible&&a.tradeoff).map(a=>a.option);
  const noVisibleOffers=shop.jokers.length+shop.vouchers.length+shop.packs.length+(shop.others?.length??0)===0;
  if(noVisibleOffers&&state.observed.shop.status==='unknown'){
   output.recommendation={status:'abstain',title:'Indica las ofertas visibles y sus precios',offerIds:[],reasons:['La tienda actual es desconocida; no equivale a una tienda vacía. Para compararla bastan los artículos visibles y sus precios; no hace falta transcribir las 52 cartas.']};
- }else if(unscored.length){
+ }else if(unscored.length&&!candidates.length){
   output.recommendation={status:'abstain',title:'Falta valorar las otras cartas visibles',offerIds:[...candidates,...unscored].map(o=>o.id),reasons:['Hay ofertas manuales sin efecto evaluado que pueden cambiar la elección. Registra su identidad y objetivos antes de preferir una compra.']};
  }else if(tradeoffs.length){
   output.recommendation={status:'tie',title:'Compara el beneficio con lo que conservas',offerIds:['hold',...candidates.map(o=>o.id)],reasons:['Hay un intercambio entre efecto, dinero y beneficios conservados. El índice editorial no decide si compensa: conservar y las compras indicadas quedan como alternativas condicionadas.',...tradeoffs.flatMap(o=>o.reasons)]};
@@ -288,6 +312,16 @@ export function evaluateShopContext(input:GameState,snapshotInput:ShopSnapshot,o
   output.recommendation={status:'abstain',title:'Faltan datos para decidir una compra',offerIds:uncertain.map(o=>o.id),reasons:['No se convierte dinero, capacidad, material, contador o transacción desconocidos en una mejora. Conserva los límites de cada oferta y completa esos datos.']};
  }else{
   output.recommendation={status:'conditional',title:'Ahorra mientras no haya una mejora conocida',offerIds:['hold'],reasons:['Los datos actuales no justifican preferir una compra compatible. Ahorrar conserva saldo y opciones; no prueba que las ofertas sean inútiles en otros escenarios.',...(packs.length?['El contenido de los sobres sigue desconocido; abrirlos depende de un objetivo concreto.']:[]),'Renovar tiene coste conocido o pendiente y stock futuro desconocido; no promete una oferta mejor.']};
+ }
+ const unmodeledVouchers=assessed.filter(a=>a.option.kind==='voucher'&&a.option.coverage!=='modeled'&&a.option.affordability!=='unaffordable'&&!supportsVoucher(shop.vouchers.find(v=>v.offerId===a.option.id)?.catalogId??'')).map(a=>a.option);
+ const pendingIds=[...new Set([...uncertain,...unscored,...packs.filter(o=>o.affordability!=='unaffordable'),...unmodeledVouchers].map(o=>o.id))];
+ output.recommendation.scope=pendingIds.length?'evaluated-options':'observed-options';output.recommendation.pendingOfferIds=pendingIds;
+ if(pendingIds.length&&output.recommendation.status!=='abstain'){
+  output.recommendation.title='Entre lo evaluado: '+output.recommendation.title;
+  output.recommendation.reasons.unshift('Comparación parcial: las ofertas pendientes pueden cambiar la elección. La preferencia solo abarca las opciones compatibles evaluadas.');
+ }
+ if(output.recommendation.offerIds.length===1&&output.recommendation.offerIds[0]==='hold')for(const option of assessed.map(a=>a.option)){
+  const investment=option.findings?.find(f=>f.ruleId===QUICK_SHOP_POLICY.rules.futureInvestment);if(investment)output.recommendation.reasons.unshift(option.title+': '+investment.message);
  }
  if(uncertain.length&&output.recommendation.status!=='abstain')output.recommendation.reasons.push('Otras ofertas tienen datos pendientes y podrían cambiar la elección: '+uncertain.map(o=>o.title).join(', ')+'.');
  if(state.observed.deck.status==='unknown')output.limitations.push('H1 admite el mazo íntegro observado o un dato desconocido; aún no representa un resumen parcial de cantidades e intersecciones. No se fabrican cartas para completarlo.');

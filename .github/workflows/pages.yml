@@ -38,6 +38,8 @@ jobs:
         run: node tools/quick-shop-eval-test.mjs
       - name: Comprobar resumen compacto y detalle recuperable
         run: node tools/compact-advice-test.mjs
+      - name: Comprobar comparación acotada y ofertas pendientes
+        run: node tools/dec02-test.mjs
       - name: Comprobar observaciones básicas sin Guardar
         run: node tools/basic-autosave-test.mjs
       - name: Comprobar mazo actual y valoraciones derivadas

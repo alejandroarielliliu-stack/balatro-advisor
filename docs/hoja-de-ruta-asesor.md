@@ -1,6 +1,6 @@
 # Plan vigente: un asesor útil con pocas entradas
 
-Revisión: 1 de noviembre de 2026. **Esta sección fija las prioridades actuales** y sustituye los órdenes de ejecución anteriores. El detalle histórico se conserva plegado al final; el [backlog](backlog.md) contiene las tareas activas. La [entrega UX01](consejo-compacto-ux01.md) implementa el consejo compacto y [UX01b](autoguardado-basico-ux01b.md) guarda los datos básicos al terminar la edición; [OBS01d](mazo-actual-obs01d.md) deriva el material de las cartas actuales y guarda sus ediciones; la siguiente es DEC02. El resto se mantiene como plan, sin nuevas capacidades declaradas.
+Revisión: 1 de noviembre de 2026. **Esta sección fija las prioridades actuales** y sustituye los órdenes de ejecución anteriores. El detalle histórico se conserva plegado al final; el [backlog](backlog.md) contiene las tareas activas. La [entrega UX01](consejo-compacto-ux01.md) implementa el consejo compacto y [UX01b](autoguardado-basico-ux01b.md) guarda los datos básicos al terminar la edición; [OBS01d](mazo-actual-obs01d.md) deriva el material de las cartas actuales y guarda sus ediciones; [DEC02](comparacion-dec02.md) incorpora una primera comparación acotada y consejo parcial; la siguiente es EVAL01b. La aceptación de uso sigue pendiente.
 
 ## 1. Qué queremos conseguir
 
@@ -14,17 +14,17 @@ Propuesta de esta revisión: tres entregas pequeñas, con evaluación de uso des
 
 ## 2. Qué hay y qué falta realmente
 
-Auditoría del repositorio independiente en `c93149dbe53955afcb20db5430e45dfbad1ced7a`; sin AGENTS.md aplicable encontrado. Referencia verificable: [EVAL01a](evaluacion-asesor-eval01.md).
+Estado revisado del repositorio independiente en `5bcef642208aee92fc5670108bd7709387236afc`; sin AGENTS.md aplicable encontrado. La auditoría inicial fue sobre `c93149dbe53955afcb20db5430e45dfbad1ced7a`. [Reporte de avance y ajustes](reporte-hoja-de-ruta-2026-11-01.md); [base estratégica EVAL01a](evaluacion-asesor-eval01.md).
 
 | Ya existe y se reutiliza | Brecha que sí merece trabajo |
 |---|---|
-| H1, guardado/recuperación, revisión, autoguardado de acciones y deshacer T09b | El mazo se representa íntegro o desconocido; no admite resúmenes parciales utilizables |
+| H1/T09b, revisión, recuperación, autoguardado básico y de cartas, deshacer | Mantener los cambios observados sin repetir datos. El mazo desconocido sigue sin reconstruirse; los recuentos parciales persistidos están aplazados |
 | H2, compras/ventas legales y consecuencias puras; modo estricto | No convertir una transacción desconocida en compra certificada para facilitar una recomendación |
 | 150 perfiles, 17 familias ejecutables, seis barras y puntaje contextual | Ni una nota alta ni un rol ausente demuestran utilidad; no crear otra nota ni nuevos pesos sin casos que lo justifiquen |
-| Consejo `quick-shop-2`, composición y contrato DEC00 | Varias ofertas preparadas suelen empatar sin diferenciar bien coste, condición y sacrificio |
+| Consejo `quick-shop-3`, composición y contrato DEC00; comparación acotada y alcance parcial DEC02 | Otras familias conservan condiciones/empates. Medir qué decisiones necesitan más comparación antes de ampliar la política |
 | T07b/H3 para escenarios explícitos; EFHIII como contraste puntual | El recorrido rápido no debe exigir escribir manos ni convertir esas herramientas en predictores de una partida |
-| Web pública estática y almacenamiento local | La explicación actual es demasiado extensa; pide datos de forma poco dirigida |
-| 920 pruebas de código, ocho del evaluador; aceptación de 12 casos estratégicos de desarrollo y seis reservados | Falta demostrar que alguien entiende el consejo con poco esfuerzo durante una partida |
+| Web pública estática, consejo compacto UX01 y almacenamiento local | Comprobar con uso real si la conclusión, el sacrificio y las preguntas son claros; no atribuir esa aceptación a la implementación |
+| 997 pruebas de código aprobadas, diez TODO manuales; diez grupos web nuevos DEC02; evidencia previa OBS01d y banco EVAL01a acotado | Falta demostrar utilidad durante partidas. El banco anterior es regresión; los nuevos ajustes requieren casos nuevos y evaluación de uso |
 
 Diagnóstico: el problema principal es **foco de producto y utilidad del consejo**, no falta de infraestructura. Completar más Tarot no resuelve por sí solo ninguna de estas brechas.
 
@@ -45,16 +45,23 @@ Reglas mecánicas: siguen las fuentes y la versión compatible ya documentadas e
 
 **Base que se conserva:** baraja, ante/ciega, dinero, comodines y sus datos dinámicos pertinentes, vales y ofertas visibles con precio. Perfil compatible se confirma una vez; orden y edición se reutilizan cuando importan. Con esto debe existir una primera valoración contextual sin manos de prueba ni guardado manual adicional.
 
-**Datos adicionales bajo demanda:** solo los que use un comodín poseído o una oferta concreta. Ejemplos: reyes para Barón, Acero para Steel Joker, efectos retenidos para Mimo, contador de un escalador, requisito/efecto del vale visible. No pedir inicialmente todos los palos, rangos, mejoras, niveles y consumibles.
+**Datos derivados y preguntas bajo demanda:** reyes, Acero, palos, rangos, mejoras y solapamientos se calculan de las cartas actuales conocidas. No pedirlos otra vez. Solo preguntar por un dato ausente que use una decisión: contador de un escalador, oferta/precio, modificador o composición todavía desconocida.
 
-**Lo desconocido sigue desconocido:** cero se registra solo cuando el usuario lo confirma. La baraja inicial proporciona la composición inicial únicamente cuando se inicia una partida o se confirma que sigue intacta; no reconstruye el mazo modificado. Una elección «no lo sé» permite continuar con consejo parcial. Las ediciones válidas de hechos básicos y resumen se guardarán al terminar el campo o grupo mediante las observaciones/T09b existentes: no habrá que pasar por Registro para obtener o conservar ese consejo. No crear una entrada por tecla. Un fallo de guardado conserva el último estado válido y se muestra en el mismo lugar; las compras reales mantienen su confirmación explícita.
+**Lo desconocido sigue desconocido:** cero procede de hechos conocidos, no de un campo vacío. La baraja inicial proporciona su composición al iniciar una partida o cuando se confirma que sigue intacta; no reconstruye el mazo modificado. Una respuesta «no lo sé» permite continuar con consejo parcial. UX01b/OBS01d ya guardan las ediciones válidas al terminar el campo o grupo mediante T09b, sin una entrada por tecla. Un fallo conserva la copia válida y el borrador; las compras reales mantienen confirmación explícita.
 
-Resumen inicial propuesto: tamaño, cantidades pertinentes y, si hace falta, solapamientos observados. Empezar por reyes, Acero y otros efectos retenidos relevantes (Oro/sello azul); otros campos se añaden cuando una familia existente los consume y hay un caso que exige hacerlo. No construir un formulario universal vacío.
+**Implementado:** una lista de cartas actuales con identidades y una consulta compartida de material. Tamaño, reyes, Acero, Oro, sellos y sus intersecciones salen de esa lista. El editor permite registrar cambios sin reescribir el mazo. Errática y los cambios sin transcribir conservan incertidumbre. [Contrato OBS01d](mazo-actual-obs01d.md).
+
+<details>
+<summary>Propuesta anterior de cantidades parciales: aplazada por aclaración del usuario</summary>
+
+La propuesta inicial permitía tamaño, cantidades pertinentes y solapamientos observados sin una lista completa. No se implementó ni es requisito para cerrar el próximo lote.
 
 - Cinco reyes y seis Acero no dicen cuántos reyes son de Acero. Si tamaño y cuentas son exactos, la intersección queda entre `max(0, reyes + acero − tamaño)` y `min(reyes, acero)`. Es un límite combinatorio, no probabilidad de robo ni dato observado.
 - Barón necesita reyes retenidos para activarse; **Acero no es un requisito de Barón**. Mimo puede apoyar otros efectos retenidos. El resumen no demuestra qué cartas estarán en mano.
 - No se deducen manos, orden, cartas ficticias, robos ni frecuencia de activación. El resumen no entra al puntuador exacto ni a T07b como si fuera un mazo completo.
-- Una transformación o cambio de mazo invalida únicamente las cuentas afectadas que no puedan actualizarse con certeza. Recibir información completa compatible permite calcular sus cuentas; una contradicción pide corrección, no elige silenciosamente una fuente.
+- Una transformación o cambio de mazo invalidaría las cuentas afectadas que no pudieran actualizarse con certeza. Esta representación parcial no entra en H2/T07b como si fuera un mazo completo.
+
+</details>
 
 No hace falta construir un algoritmo general de «valor de información». Un mapa pequeño de requisitos de las familias presentes basta: comprobar qué falta, a qué opciones afecta y cuál es la siguiente pregunta útil. Primero material/requisito ausente que cambia preparación; después refinamientos. Mostrar una pregunta principal por vez; no forzar respuestas irrelevantes para una compra independiente.
 
@@ -89,7 +96,7 @@ Ejemplo de forma, no recomendación preasignada: «Entre lo evaluado, considera 
 
 **Ajuste de alcance 2026-11-01 por indicación del usuario:** OBS01d utiliza el mazo inicial y las modificaciones registradas; no se crea otro formulario/esquema de cantidades parciales. Los recuentos e intersecciones se derivan del mazo conocido. La propuesta de resumen parcial de las secciones anteriores queda aplazada; los datos desconocidos siguen desconocidos. [Entrega y límites](mazo-actual-obs01d.md).
 
-**Orden:** UX01 → UX01b → OBS01d.1 → OBS01d.2 → DEC02. EVAL01b acompaña cada entrega y tiene un cierre final; las incertidumbres de una regla bloquean solo su operación. Una entrega fallida se corrige o limita antes de ampliar cobertura. No se necesita completar todos los Tarot, todos los comodines ni la simulación.
+**Orden:** UX01 → UX01b → OBS01d.1 → OBS01d.2 → DEC02 → EVAL01b. A–C tienen su primera entrega de software; la aceptación con uso sigue abierta. EVAL01b acompaña cada entrega y tiene un cierre final; las incertidumbres de una regla bloquean solo su operación. Una entrega fallida se corrige o limita antes de ampliar cobertura. No se necesita completar todos los Tarot, todos los comodines ni la simulación.
 
 ### Casos mínimos que deben orientar el siguiente lote
 
@@ -98,7 +105,7 @@ Ejemplo de forma, no recomendación preasignada: «Entre lo evaluado, considera 
 | Mazo desconocido, Joker simple en oferta | Beneficio propio contextual disponible sin exigir composición completa; supervivencia sin demostrar |
 | Barón sin reyes vs con reyes, en etapas distintas | Material ausente frente a potencial real; la etapa cambia horizonte, no crea reyes ni exige Acero |
 | Mimo con cero Acero pero Oro o sellos azules confirmados | No confundir ausencia de Acero con ausencia de todo soporte; distinguir ingreso/nivel de puntuación |
-| Reyes y Acero por separado, solapamiento desconocido | No inventar reyes de Acero; preguntar solo si cambia la comparación concreta |
+| Reyes de Acero registrados en las cartas actuales | Derivar el solapamiento real y evitar contar dos veces la misma carta; no inferir que estará retenida |
 | Oferta preparada frente a ahorro y otra oferta pendiente | Conservar consejo parcial y expresar coste de oportunidad sin prometer la tienda futura |
 | Inventario lleno y comodín desarrollado o temporal | Venta→compra legal, pérdida real y beneficios que no se heredan; no veto automático por contador |
 | Mismo inventario, un vale adquirido distinto | Cambian recursos/reglas pertinentes, sin añadir una «sinergia» por el nombre del vale |
@@ -126,7 +133,7 @@ Objetivos iniciales de aceptación, a medir y ajustar con uso, no requisitos par
 - Primera revisión con el usuario y, si están disponibles, otros jugadores: pequeña muestra cualitativa (propuesta de 3–5) para encontrar fricción, no prueba estadística ni porcentaje de eficacia. La ausencia de participantes no bloquea software independiente; mantiene abierta la aceptación de uso.
 - Las condiciones mecánicas utilizadas se contrastan por un lote mínimo. PC y móvil emulado siguen siendo pruebas de interfaz; Android físico permanece aplazado por decisión del usuario.
 
-Se publica como **asesor heurístico con cobertura declarada** al superar A–C en su alcance y dejar visibles las limitaciones. La calidad durante partidas completas conserva una comprobación propia y no se deduce de compilar o aprobar casos sintéticos.
+La web ya está publicada como **asesor heurístico con cobertura declarada**. La aceptación de este lote de producto requiere completar A–C y su evaluación: publicar no acredita utilidad estratégica. La calidad durante partidas completas conserva una comprobación propia.
 
 ## 8. Freno a la sobreingeniería
 
@@ -140,7 +147,7 @@ Antes de aceptar otra tarea: **¿qué decisión o esfuerzo del jugador mejora?, 
 - Jugar/saltar es la continuación una vez útil la tienda: reutilizar TAG01, pedir etiqueta/jefe que importe y comparar oportunidad/economía sin tienda ni robos ficticios. Se planifica su lote entonces; no bloquea A–C ni se promete cobertura completa ahora.
 - No borrar las capacidades anteriores ni reescribir módulos sanos. Mantener H2 separado de interfaz/guardado; reglas provisionales, vigencia y confirmación explícita continúan intactas.
 
-**UX01 implementada:** [resultado y pruebas](consejo-compacto-ux01.md). Compra, intercambio y dato pendiente se presentan de forma compacta con detalle recuperable, escritorio/390px y consulta sin escrituras. **UX01b implementada:** [contrato y pruebas](autoguardado-basico-ux01b.md), con corrección/recuperación T09b existente, errores recuperables y consulta sin escrituras. Ante y fase conservan el recorrido observado. **OBS01d implementada sobre el mazo actual:** [alcance y pruebas](mazo-actual-obs01d.md). El usuario aclaró que se parte del mazo inicial y se actualizan sus cartas: los recuentos se derivan, sin pedirlos dos veces. No se añade el esquema parcial propuesto anteriormente. La inicialización aleatoria o los cambios desconocidos siguen sin fabricarse. **Siguiente tarea concreta: DEC02**, comparación acotada de opciones con beneficio preparado, sacrificio y preferencia parcial.
+**UX01 implementada:** [resultado y pruebas](consejo-compacto-ux01.md). Compra, intercambio y dato pendiente se presentan de forma compacta con detalle recuperable, escritorio/390px y consulta sin escrituras. **UX01b implementada:** [contrato y pruebas](autoguardado-basico-ux01b.md), con corrección/recuperación T09b existente, errores recuperables y consulta sin escrituras. Ante y fase conservan el recorrido observado. **OBS01d implementada sobre el mazo actual:** [alcance y pruebas](mazo-actual-obs01d.md). El usuario aclaró que se parte del mazo inicial y se actualizan sus cartas: los recuentos se derivan, sin pedirlos dos veces. No se añade el esquema parcial propuesto anteriormente. La inicialización aleatoria o los cambios desconocidos siguen sin fabricarse. **DEC02, primera entrega implementada:** [comparación acotada y casos congelados](comparacion-dec02.md). **Siguiente tarea concreta: EVAL01b**, probar comprensión y esfuerzo con tiendas concretas, registrar desacuerdos y corregir únicamente los fallos observados.
 
 ---
 

@@ -1,0 +1,1196 @@
+{
+  "run": "baseline-before-dec02-adjustment",
+  "executedAt": "2026-11-01T21:43:35.170Z",
+  "fixtureSha256": "b9ad6643331c67d9caf4efc7a850cd27e4c5e6f0f31687640a0732918fdf1cd0",
+  "execution": "Existing dist built 2026-11-01T06:19:22Z; frozen fixture expectations were not changed after evaluation.",
+  "moduleSha256": {
+    "shopContext": "4b2e829642a5d773cbc6b96550111675feeaf848973882cee402bb3e19e864ba",
+    "quickShopPolicy": "5bcb283444e30af27d99694e4202d7cc020d742def10d6fdb34bd7d95c1ef6a4"
+  },
+  "sourceSha256AtExecution": {
+    "shopContext": "edc225b4d18c5419ec9eded54e679bca8f0d18dceaffcaedbd6096fbe6690496",
+    "quickShopPolicy": "7d4d13094d9db2782f38543e1f9d44d71ffeaceeb27c7aa147ddbc678e64f8c0"
+  },
+  "cases": [
+    {
+      "id": "DEC02-01",
+      "checks": {
+        "acceptedStatus": true,
+        "requiredPreferredOfferIds": true,
+        "forbiddenPreferredOfferIds": true,
+        "immutable": true
+      },
+      "minimalRecommendationPass": true,
+      "moneyChecks": [
+        {
+          "id": "hold",
+          "expected": 20,
+          "actual": 20
+        },
+        {
+          "id": "summit",
+          "expected": 15,
+          "actual": 15
+        },
+        {
+          "id": "baron",
+          "expected": 12,
+          "actual": 12
+        }
+      ],
+      "recommendation": {
+        "status": "conditional",
+        "title": "Considera Mystic Summit",
+        "offerIds": [
+          "summit"
+        ],
+        "reasons": [
+          "Efecto preparado o relación apoyada por el estado actual. Es una compra condicional, no una garantía de mejora total ni de supervivencia.",
+          "Cero descartes al iniciar la ciega: Cumbre mística tiene soporte.",
+          "Al seleccionar la ciega, Ladrón elimina descartes y concede manos. Cumbre Mística tiene favorecida su condición de cero descartes. Falta activar esa selección y usar los recursos: no se consumen manos ni se modifica un contador, y no se garantiza agotar la ronda.",
+          "Ante 2: el horizonte modifica el encaje editorial; no crea material, activaciones ni suficiencia para la siguiente ciega.",
+          "Aporta un rol sin soporte actual: mult. Contar roles no demuestra consistencia.",
+          "Añade un efecto de puntuación preparado, aunque ya tengas ese rol. No es una diferencia de puntuación total: depende de la mano, orden, ciega y efectos conservados.",
+          "Saldo hipotético: $20 − $5 = $15. Es aritmética del precio visto, no una transacción confirmada.",
+          "Comprar deja $15; ahorrar conserva $20 para otras compras. El dinero conservado mantiene opciones futuras. No se presume una oferta futura ni se garantiza supervivencia.",
+          "Interés aislado condicionado: $4 → $3 (-1). Solo si ganas y no cambia el saldo hasta el cobro; no se paga en la tienda.",
+          "Baron cuesta $8 frente a $5 de Mystic Summit y carece de preparación actual: Sin reyes que podrías conservar en el mazo.. No se presume una transformación futura del mazo.",
+          "Sin planes explícitos, la capacidad de superar la ciega permanece sin evaluar. No se predicen manos ni consistencia a partir de una carta favorable.",
+          "Sobres y renovación permanecen alternativas condicionadas con contenido desconocido; no se demuestra una elección óptima."
+        ]
+      },
+      "options": [
+        {
+          "id": "hold",
+          "kind": "hold",
+          "coverage": "modeled",
+          "moneyAfter": 20,
+          "reasons": [
+            "Conserva saldo y los comodines actuales. No supone ingresos futuros ni espera una oferta específica."
+          ],
+          "limitations": []
+        },
+        {
+          "id": "summit",
+          "kind": "joker",
+          "coverage": "modeled",
+          "moneyAfter": 15,
+          "reasons": [
+            "Cero descartes al iniciar la ciega: Cumbre mística tiene soporte.",
+            "Al seleccionar la ciega, Ladrón elimina descartes y concede manos. Cumbre Mística tiene favorecida su condición de cero descartes. Falta activar esa selección y usar los recursos: no se consumen manos ni se modifica un contador, y no se garantiza agotar la ronda.",
+            "Ante 2: el horizonte modifica el encaje editorial; no crea material, activaciones ni suficiencia para la siguiente ciega.",
+            "Aporta un rol sin soporte actual: mult. Contar roles no demuestra consistencia.",
+            "Añade un efecto de puntuación preparado, aunque ya tengas ese rol. No es una diferencia de puntuación total: depende de la mano, orden, ciega y efectos conservados.",
+            "Saldo hipotético: $20 − $5 = $15. Es aritmética del precio visto, no una transacción confirmada.",
+            "Comprar deja $15; ahorrar conserva $20 para otras compras. El dinero conservado mantiene opciones futuras. No se presume una oferta futura ni se garantiza supervivencia.",
+            "Interés aislado condicionado: $4 → $3 (-1). Solo si ganas y no cambia el saldo hasta el cobro; no se paga en la tienda."
+          ],
+          "limitations": [
+            "Índice heurístico sin validación de eficacia; no son puntos ni probabilidad de ganar. Una décima muestra resolución del modelo, no precisión predictiva.",
+            "Mecánicas respaldadas por inspección estática 1.0.1o; no observación nueva del juego.",
+            "Modelo 1.0.1o sustentado en documentación y lectura estática local; falta contrastarlo en una partida.",
+            "Lectura estática y modelo documental; no prueba ejecutada en Balatro.",
+            "Modelo 1.0.1o sustentado en documentación y lectura estática local; falta contrastarlo en una partida.",
+            "Modelo 1.0.1o sustentado en documentación y lectura estática local; falta contrastarlo en una partida.",
+            "Superar una ronda posterior y conservar estos saldos hasta su cobro.",
+            "Se aísla el interés: no incluye premios, manos sobrantes ni ingresos de otros efectos.",
+            "Modelo 1.0.1o sustentado en documentación y lectura estática local; falta contrastarlo en una partida.",
+            "Modelo 1.0.1o sustentado en documentación y lectura estática local; falta contrastarlo en una partida.",
+            "Modelo 1.0.1o sustentado en documentación y lectura estática local; falta contrastarlo en una partida.",
+            "Modelo 1.0.1o sustentado en documentación y lectura estática local; falta contrastarlo en una partida."
+          ],
+          "findings": [
+            {
+              "ruleId": "S-PREPARATION",
+              "message": "Cero descartes al iniciar la ciega: Cumbre mística tiene soporte."
+            },
+            {
+              "ruleId": "S-PREPARATION",
+              "message": "Al seleccionar la ciega, Ladrón elimina descartes y concede manos. Cumbre Mística tiene favorecida su condición de cero descartes. Falta activar esa selección y usar los recursos: no se consumen manos ni se modifica un contador, y no se garantiza agotar la ronda."
+            },
+            {
+              "ruleId": "S-ADDITIONAL-SCORING",
+              "message": "Añade un efecto de puntuación preparado, aunque ya tengas ese rol. No es una diferencia de puntuación total: depende de la mano, orden, ciega y efectos conservados."
+            },
+            {
+              "ruleId": "S-RESERVE",
+              "message": "Comprar deja $15; ahorrar conserva $20 para otras compras. El dinero conservado mantiene opciones futuras. No se presume una oferta futura ni se garantiza supervivencia.",
+              "values": {
+                "before": 20,
+                "after": 15,
+                "unit": "dollars"
+              }
+            },
+            {
+              "ruleId": "S-INTEREST",
+              "message": "Interés aislado condicionado: $4 → $3 (-1). Solo si ganas y no cambia el saldo hasta el cobro; no se paga en la tienda.",
+              "values": {
+                "before": 4,
+                "after": 3,
+                "change": -1,
+                "unit": "dollars-per-conditional-cashout"
+              }
+            }
+          ],
+          "fitPurchase": {
+            "status": "legal",
+            "errors": [],
+            "limitations": [
+              "Modelo 1.0.1o sustentado en documentación y lectura estática local; falta contrastarlo en una partida.",
+              "Lectura estática y modelo documental; no prueba ejecutada en Balatro.",
+              "Modelo 1.0.1o sustentado en documentación y lectura estática local; falta contrastarlo en una partida.",
+              "Modelo 1.0.1o sustentado en documentación y lectura estática local; falta contrastarlo en una partida."
+            ],
+            "moneyAfter": 15,
+            "netCost": 5
+          }
+        },
+        {
+          "id": "baron",
+          "kind": "joker",
+          "coverage": "modeled",
+          "moneyAfter": 12,
+          "reasons": [
+            "Sin reyes que podrías conservar en el mazo.",
+            "Ante 2: el horizonte modifica el encaje editorial; no crea material, activaciones ni suficiencia para la siguiente ciega.",
+            "Aporta un rol sin soporte actual: xmult. Contar roles no demuestra consistencia.",
+            "La preparación actual no sostiene una compra: una inversión futura o una nota editorial no demuestran una mejora activable.",
+            "Saldo hipotético: $20 − $8 = $12. Es aritmética del precio visto, no una transacción confirmada.",
+            "Comprar deja $12; ahorrar conserva $20 para otras compras. El dinero conservado mantiene opciones futuras. No se presume una oferta futura ni se garantiza supervivencia.",
+            "Interés aislado condicionado: $4 → $2 (-2). Solo si ganas y no cambia el saldo hasta el cobro; no se paga en la tienda."
+          ],
+          "limitations": [
+            "Índice heurístico sin validación de eficacia; no son puntos ni probabilidad de ganar. Una décima muestra resolución del modelo, no precisión predictiva.",
+            "Mecánicas respaldadas por inspección estática 1.0.1o; no observación nueva del juego.",
+            "Modelo 1.0.1o sustentado en documentación y lectura estática local; falta contrastarlo en una partida.",
+            "Lectura estática y modelo documental; no prueba ejecutada en Balatro.",
+            "Modelo 1.0.1o sustentado en documentación y lectura estática local; falta contrastarlo en una partida.",
+            "Modelo 1.0.1o sustentado en documentación y lectura estática local; falta contrastarlo en una partida.",
+            "Superar una ronda posterior y conservar estos saldos hasta su cobro.",
+            "Se aísla el interés: no incluye premios, manos sobrantes ni ingresos de otros efectos.",
+            "Modelo 1.0.1o sustentado en documentación y lectura estática local; falta contrastarlo en una partida.",
+            "Modelo 1.0.1o sustentado en documentación y lectura estática local; falta contrastarlo en una partida.",
+            "Modelo 1.0.1o sustentado en documentación y lectura estática local; falta contrastarlo en una partida.",
+            "Inspección estática; falta contraste en partida.",
+            "Modelo 1.0.1o sustentado en documentación y lectura estática local; falta contrastarlo en una partida."
+          ],
+          "findings": [
+            {
+              "ruleId": "S-PREPARATION",
+              "message": "Sin reyes que podrías conservar en el mazo."
+            },
+            {
+              "ruleId": "S-RESERVE",
+              "message": "Comprar deja $12; ahorrar conserva $20 para otras compras. El dinero conservado mantiene opciones futuras. No se presume una oferta futura ni se garantiza supervivencia.",
+              "values": {
+                "before": 20,
+                "after": 12,
+                "unit": "dollars"
+              }
+            },
+            {
+              "ruleId": "S-INTEREST",
+              "message": "Interés aislado condicionado: $4 → $2 (-2). Solo si ganas y no cambia el saldo hasta el cobro; no se paga en la tienda.",
+              "values": {
+                "before": 4,
+                "after": 2,
+                "change": -2,
+                "unit": "dollars-per-conditional-cashout"
+              }
+            }
+          ],
+          "fitPurchase": {
+            "status": "legal",
+            "errors": [],
+            "limitations": [
+              "Modelo 1.0.1o sustentado en documentación y lectura estática local; falta contrastarlo en una partida.",
+              "Lectura estática y modelo documental; no prueba ejecutada en Balatro.",
+              "Modelo 1.0.1o sustentado en documentación y lectura estática local; falta contrastarlo en una partida.",
+              "Modelo 1.0.1o sustentado en documentación y lectura estática local; falta contrastarlo en una partida."
+            ],
+            "moneyAfter": 12,
+            "netCost": 8
+          }
+        },
+        {
+          "id": "reroll",
+          "kind": "reroll",
+          "coverage": "unknown",
+          "moneyAfter": 15,
+          "reasons": [
+            "El coste actual solo compra información nueva: las ofertas posteriores son desconocidas y no se garantiza una mejora. Renueva el área de cartas; conserva sobres y vale.",
+            "Saldo hipotético: $20 − $5 = $15. Es aritmética del precio visto, no una transacción confirmada.",
+            "Comprar deja $15; ahorrar conserva $20 para otras compras. El dinero conservado mantiene opciones futuras. No se presume una oferta futura ni se garantiza supervivencia."
+          ],
+          "limitations": [
+            "No genera nuevo stock ni aplica eventos de reroll. El siguiente precio y los rerolls gratuitos necesitan observación real."
+          ],
+          "findings": [
+            {
+              "ruleId": "S-RESERVE",
+              "message": "Comprar deja $15; ahorrar conserva $20 para otras compras. El dinero conservado mantiene opciones futuras. No se presume una oferta futura ni se garantiza supervivencia.",
+              "values": {
+                "before": 20,
+                "after": 15,
+                "unit": "dollars"
+              }
+            }
+          ]
+        }
+      ],
+      "errors": [],
+      "limitations": [
+        "Consejo condicionado sobre la tienda transcrita; no es una búsqueda exhaustiva de compras, órdenes o reemplazos.",
+        "No compara un índice global antes/después ni convierte dólares, recursos e índice de encaje en una puntuación común.",
+        "El índice de encaje es editorial; no son puntos de mano, probabilidad de ganar ni garantía de superar una ciega.",
+        "Sobres cerrados y ofertas posteriores a renovar tienen contenido desconocido. No se generan cartas, ingresos ni crecimiento futuro.",
+        "Consultar no compra, vende, abre, renueva ni guarda adquisiciones. Evidencia estática 1.0.1o-FULL, docs/evidencia/tienda-investigacion.md."
+      ]
+    },
+    {
+      "id": "DEC02-02",
+      "checks": {
+        "acceptedStatus": true,
+        "requiredPreferredOfferIds": true,
+        "forbiddenPreferredOfferIds": true,
+        "immutable": true
+      },
+      "minimalRecommendationPass": true,
+      "moneyChecks": [
+        {
+          "id": "hold",
+          "expected": 20,
+          "actual": 20
+        },
+        {
+          "id": "seed",
+          "expected": 10,
+          "actual": 10
+        }
+      ],
+      "recommendation": {
+        "status": "conditional",
+        "title": "Ahorra mientras no haya una mejora conocida",
+        "offerIds": [
+          "hold"
+        ],
+        "reasons": [
+          "Los datos actuales no justifican preferir una compra compatible. Ahorrar conserva saldo y opciones; no prueba que las ofertas sean inútiles en otros escenarios.",
+          "Renovar tiene coste conocido o pendiente y stock futuro desconocido; no promete una oferta mejor.",
+          "Sin planes explícitos, la capacidad de superar la ciega permanece sin evaluar. No se predicen manos ni consistencia a partir de una carta favorable.",
+          "Sobres y renovación permanecen alternativas condicionadas con contenido desconocido; no se demuestra una elección óptima."
+        ]
+      },
+      "options": [
+        {
+          "id": "hold",
+          "kind": "hold",
+          "coverage": "modeled",
+          "moneyAfter": 20,
+          "reasons": [
+            "Conserva saldo y los comodines actuales. No supone ingresos futuros ni espera una oferta específica."
+          ],
+          "limitations": []
+        },
+        {
+          "id": "seed",
+          "kind": "voucher",
+          "coverage": "modeled",
+          "moneyAfter": 10,
+          "reasons": [
+            "Aumenta el tope de interés ganado en cada ronda a $10",
+            "Saldo hipotético: $20 − $10 = $10. Es aritmética del precio visto, no una transacción confirmada.",
+            "Comprar deja $10; ahorrar conserva $20 para otras compras. El dinero conservado mantiene opciones futuras. No se presume una oferta futura ni se garantiza supervivencia.",
+            "Tope de interés proyectado $10; el ingreso depende del saldo al cierre y de completar la ronda. No añade dinero ahora.",
+            "El saldo posterior no demuestra aprovechar ahora el tope mayor; conservar dinero puede convenir.",
+            "Interés aislado condicionado: $4 → $2 (-2). Solo si ganas y no cambia el saldo hasta el cobro; no se paga en la tienda."
+          ],
+          "limitations": [
+            "Oferta visible registrada; no reconstruye desbloqueos del perfil. Los recursos descriptivos y la validación de compra se distinguen.",
+            "Superar una ronda posterior y conservar estos saldos hasta su cobro.",
+            "Se aísla el interés: no incluye premios, manos sobrantes ni ingresos de otros efectos.",
+            "Modelo 1.0.1o sustentado en documentación y lectura estática local; falta contrastarlo en una partida.",
+            "Modelo 1.0.1o sustentado en documentación y lectura estática local; falta contrastarlo en una partida.",
+            "Modelo 1.0.1o sustentado en documentación y lectura estática local; falta contrastarlo en una partida.",
+            "Modelo 1.0.1o sustentado en documentación y lectura estática local; falta contrastarlo en una partida.",
+            "Inspección del ejecutable; pendiente observación en partida."
+          ],
+          "findings": [
+            {
+              "ruleId": "S-RESERVE",
+              "message": "Comprar deja $10; ahorrar conserva $20 para otras compras. El dinero conservado mantiene opciones futuras. No se presume una oferta futura ni se garantiza supervivencia.",
+              "values": {
+                "before": 20,
+                "after": 10,
+                "unit": "dollars"
+              }
+            },
+            {
+              "ruleId": "S-INTEREST",
+              "message": "Interés aislado condicionado: $4 → $2 (-2). Solo si ganas y no cambia el saldo hasta el cobro; no se paga en la tienda.",
+              "values": {
+                "before": 4,
+                "after": 2,
+                "change": -2,
+                "unit": "dollars-per-conditional-cashout"
+              }
+            }
+          ]
+        },
+        {
+          "id": "reroll",
+          "kind": "reroll",
+          "coverage": "unknown",
+          "moneyAfter": 15,
+          "reasons": [
+            "El coste actual solo compra información nueva: las ofertas posteriores son desconocidas y no se garantiza una mejora. Renueva el área de cartas; conserva sobres y vale.",
+            "Saldo hipotético: $20 − $5 = $15. Es aritmética del precio visto, no una transacción confirmada.",
+            "Comprar deja $15; ahorrar conserva $20 para otras compras. El dinero conservado mantiene opciones futuras. No se presume una oferta futura ni se garantiza supervivencia."
+          ],
+          "limitations": [
+            "No genera nuevo stock ni aplica eventos de reroll. El siguiente precio y los rerolls gratuitos necesitan observación real."
+          ],
+          "findings": [
+            {
+              "ruleId": "S-RESERVE",
+              "message": "Comprar deja $15; ahorrar conserva $20 para otras compras. El dinero conservado mantiene opciones futuras. No se presume una oferta futura ni se garantiza supervivencia.",
+              "values": {
+                "before": 20,
+                "after": 15,
+                "unit": "dollars"
+              }
+            }
+          ]
+        }
+      ],
+      "errors": [],
+      "limitations": [
+        "Consejo condicionado sobre la tienda transcrita; no es una búsqueda exhaustiva de compras, órdenes o reemplazos.",
+        "No compara un índice global antes/después ni convierte dólares, recursos e índice de encaje en una puntuación común.",
+        "El índice de encaje es editorial; no son puntos de mano, probabilidad de ganar ni garantía de superar una ciega.",
+        "Sobres cerrados y ofertas posteriores a renovar tienen contenido desconocido. No se generan cartas, ingresos ni crecimiento futuro.",
+        "Consultar no compra, vende, abre, renueva ni guarda adquisiciones. Evidencia estática 1.0.1o-FULL, docs/evidencia/tienda-investigacion.md."
+      ]
+    },
+    {
+      "id": "DEC02-03",
+      "checks": {
+        "acceptedStatus": true,
+        "requiredPreferredOfferIds": true,
+        "forbiddenPreferredOfferIds": true,
+        "immutable": true
+      },
+      "minimalRecommendationPass": true,
+      "moneyChecks": [
+        {
+          "id": "hold",
+          "expected": 20,
+          "actual": 20
+        },
+        {
+          "id": "abstract",
+          "expected": 19,
+          "actual": 19
+        }
+      ],
+      "recommendation": {
+        "status": "tie",
+        "title": "Compara el beneficio con lo que conservas",
+        "offerIds": [
+          "hold",
+          "abstract"
+        ],
+        "reasons": [
+          "Hay un intercambio entre efecto, dinero y beneficios conservados. El índice editorial no decide si compensa: conservar y las compras indicadas quedan como alternativas condicionadas.",
+          "Mult por cantidad de comodines poseídos; requiere conocer el inventario y no crece por jugar manos.",
+          "Vender Riff-Raff sacrifica su efecto y sus contadores (sin contador registrado). La compra no hereda ese desarrollo.",
+          "Ante 2: el horizonte modifica el encaje editorial; no crea material, activaciones ni suficiencia para la siguiente ciega.",
+          "Vender Riff-Raff pierde su efecto y sus contadores actuales (sin contador). No se heredan en la compra. ",
+          "Añade un efecto de puntuación preparado, aunque ya tengas ese rol. Aporte propio en la fase de comodines: +15 Mult. No es una diferencia de puntuación total: depende de la mano, orden, ciega y efectos conservados.",
+          "Saldo hipotético: $20 + $3 de venta − $4 = $19. Es aritmética del precio visto, no una transacción confirmada.",
+          "Comprar deja $19; ahorrar conserva $20 para otras compras. El dinero conservado mantiene opciones futuras. No se presume una oferta futura ni se garantiza supervivencia.",
+          "Interés aislado condicionado: $4 → $3 (-1). Solo si ganas y no cambia el saldo hasta el cobro; no se paga en la tienda.",
+          "Sin planes explícitos, la capacidad de superar la ciega permanece sin evaluar. No se predicen manos ni consistencia a partir de una carta favorable.",
+          "Sobres y renovación permanecen alternativas condicionadas con contenido desconocido; no se demuestra una elección óptima."
+        ]
+      },
+      "options": [
+        {
+          "id": "hold",
+          "kind": "hold",
+          "coverage": "modeled",
+          "moneyAfter": 20,
+          "reasons": [
+            "Conserva saldo y los comodines actuales. No supone ingresos futuros ni espera una oferta específica."
+          ],
+          "limitations": []
+        },
+        {
+          "id": "abstract",
+          "kind": "joker",
+          "coverage": "modeled",
+          "moneyAfter": 19,
+          "reasons": [
+            "Mult por cantidad de comodines poseídos; requiere conocer el inventario y no crece por jugar manos.",
+            "Vender Riff-Raff sacrifica su efecto y sus contadores (sin contador registrado). La compra no hereda ese desarrollo.",
+            "Ante 2: el horizonte modifica el encaje editorial; no crea material, activaciones ni suficiencia para la siguiente ciega.",
+            "Vender Riff-Raff pierde su efecto y sus contadores actuales (sin contador). No se heredan en la compra. ",
+            "Añade un efecto de puntuación preparado, aunque ya tengas ese rol. Aporte propio en la fase de comodines: +15 Mult. No es una diferencia de puntuación total: depende de la mano, orden, ciega y efectos conservados.",
+            "Saldo hipotético: $20 + $3 de venta − $4 = $19. Es aritmética del precio visto, no una transacción confirmada.",
+            "Comprar deja $19; ahorrar conserva $20 para otras compras. El dinero conservado mantiene opciones futuras. No se presume una oferta futura ni se garantiza supervivencia.",
+            "Interés aislado condicionado: $4 → $3 (-1). Solo si ganas y no cambia el saldo hasta el cobro; no se paga en la tienda."
+          ],
+          "limitations": [
+            "Índice heurístico sin validación de eficacia; no son puntos ni probabilidad de ganar. Una décima muestra resolución del modelo, no precisión predictiva.",
+            "Mecánicas respaldadas por inspección estática 1.0.1o; no observación nueva del juego.",
+            "Modelo 1.0.1o sustentado en documentación y lectura estática local; falta contrastarlo en una partida.",
+            "Lectura estática y modelo documental; no prueba ejecutada en Balatro.",
+            "Modelo 1.0.1o sustentado en documentación y lectura estática local; falta contrastarlo en una partida.",
+            "Modelo 1.0.1o sustentado en documentación y lectura estática local; falta contrastarlo en una partida.",
+            "Superar una ronda posterior y conservar estos saldos hasta su cobro.",
+            "Se aísla el interés: no incluye premios, manos sobrantes ni ingresos de otros efectos.",
+            "Modelo 1.0.1o sustentado en documentación y lectura estática local; falta contrastarlo en una partida.",
+            "Modelo 1.0.1o sustentado en documentación y lectura estática local; falta contrastarlo en una partida.",
+            "Modelo 1.0.1o sustentado en documentación y lectura estática local; falta contrastarlo en una partida.",
+            "Modelo 1.0.1o sustentado en documentación y lectura estática local; falta contrastarlo en una partida."
+          ],
+          "findings": [
+            {
+              "ruleId": "S-PREPARATION",
+              "message": "Mult por cantidad de comodines poseídos; requiere conocer el inventario y no crece por jugar manos."
+            },
+            {
+              "ruleId": "S-PREPARATION",
+              "message": "Vender Riff-Raff sacrifica su efecto y sus contadores (sin contador registrado). La compra no hereda ese desarrollo."
+            },
+            {
+              "ruleId": "S-REPLACEMENT-LOSS",
+              "message": "Vender Riff-Raff pierde su efecto y sus contadores actuales (sin contador). No se heredan en la compra. "
+            },
+            {
+              "ruleId": "S-ADDITIONAL-SCORING",
+              "message": "Añade un efecto de puntuación preparado, aunque ya tengas ese rol. Aporte propio en la fase de comodines: +15 Mult. No es una diferencia de puntuación total: depende de la mano, orden, ciega y efectos conservados.",
+              "values": {
+                "ownMult": 15,
+                "unit": "additive-mult"
+              }
+            },
+            {
+              "ruleId": "S-RESERVE",
+              "message": "Comprar deja $19; ahorrar conserva $20 para otras compras. El dinero conservado mantiene opciones futuras. No se presume una oferta futura ni se garantiza supervivencia.",
+              "values": {
+                "before": 20,
+                "after": 19,
+                "unit": "dollars"
+              }
+            },
+            {
+              "ruleId": "S-INTEREST",
+              "message": "Interés aislado condicionado: $4 → $3 (-1). Solo si ganas y no cambia el saldo hasta el cobro; no se paga en la tienda.",
+              "values": {
+                "before": 4,
+                "after": 3,
+                "change": -1,
+                "unit": "dollars-per-conditional-cashout"
+              }
+            }
+          ],
+          "fitPurchase": {
+            "status": "legal",
+            "errors": [],
+            "limitations": [
+              "Modelo 1.0.1o sustentado en documentación y lectura estática local; falta contrastarlo en una partida.",
+              "Lectura estática y modelo documental; no prueba ejecutada en Balatro.",
+              "Modelo 1.0.1o sustentado en documentación y lectura estática local; falta contrastarlo en una partida.",
+              "Modelo 1.0.1o sustentado en documentación y lectura estática local; falta contrastarlo en una partida."
+            ],
+            "moneyAfter": 19,
+            "netCost": 1
+          }
+        },
+        {
+          "id": "reroll",
+          "kind": "reroll",
+          "coverage": "unknown",
+          "moneyAfter": 15,
+          "reasons": [
+            "El coste actual solo compra información nueva: las ofertas posteriores son desconocidas y no se garantiza una mejora. Renueva el área de cartas; conserva sobres y vale.",
+            "Saldo hipotético: $20 − $5 = $15. Es aritmética del precio visto, no una transacción confirmada.",
+            "Comprar deja $15; ahorrar conserva $20 para otras compras. El dinero conservado mantiene opciones futuras. No se presume una oferta futura ni se garantiza supervivencia."
+          ],
+          "limitations": [
+            "No genera nuevo stock ni aplica eventos de reroll. El siguiente precio y los rerolls gratuitos necesitan observación real."
+          ],
+          "findings": [
+            {
+              "ruleId": "S-RESERVE",
+              "message": "Comprar deja $15; ahorrar conserva $20 para otras compras. El dinero conservado mantiene opciones futuras. No se presume una oferta futura ni se garantiza supervivencia.",
+              "values": {
+                "before": 20,
+                "after": 15,
+                "unit": "dollars"
+              }
+            }
+          ]
+        }
+      ],
+      "errors": [],
+      "limitations": [
+        "Consejo condicionado sobre la tienda transcrita; no es una búsqueda exhaustiva de compras, órdenes o reemplazos.",
+        "No compara un índice global antes/después ni convierte dólares, recursos e índice de encaje en una puntuación común.",
+        "El índice de encaje es editorial; no son puntos de mano, probabilidad de ganar ni garantía de superar una ciega.",
+        "Sobres cerrados y ofertas posteriores a renovar tienen contenido desconocido. No se generan cartas, ingresos ni crecimiento futuro.",
+        "Consultar no compra, vende, abre, renueva ni guarda adquisiciones. Evidencia estática 1.0.1o-FULL, docs/evidencia/tienda-investigacion.md."
+      ]
+    },
+    {
+      "id": "DEC02-04",
+      "checks": {
+        "acceptedStatus": true,
+        "requiredPreferredOfferIds": true,
+        "forbiddenPreferredOfferIds": true,
+        "immutable": true
+      },
+      "minimalRecommendationPass": true,
+      "moneyChecks": [
+        {
+          "id": "hold",
+          "expected": 20,
+          "actual": 20
+        },
+        {
+          "id": "scoring",
+          "expected": 18,
+          "actual": 18
+        },
+        {
+          "id": "income",
+          "expected": 14,
+          "actual": 14
+        }
+      ],
+      "recommendation": {
+        "status": "tie",
+        "title": "Compara el beneficio con lo que conservas",
+        "offerIds": [
+          "hold",
+          "scoring",
+          "income"
+        ],
+        "reasons": [
+          "Hay un intercambio entre efecto, dinero y beneficios conservados. El índice editorial no decide si compensa: conservar y las compras indicadas quedan como alternativas condicionadas.",
+          "Ingreso al final de ronda; ocupar un espacio tiene coste de oportunidad, no añade puntuación de mano.",
+          "Ante 2: el horizonte modifica el encaje editorial; no crea material, activaciones ni suficiencia para la siguiente ciega.",
+          "Aporta un rol sin soporte actual: economy. Contar roles no demuestra consistencia.",
+          "Saldo hipotético: $20 − $6 = $14. Es aritmética del precio visto, no una transacción confirmada.",
+          "Comprar deja $14; ahorrar conserva $20 para otras compras. El dinero conservado mantiene opciones futuras. No se presume una oferta futura ni se garantiza supervivencia.",
+          "Interés aislado condicionado: $4 → $2 (-2). Solo si ganas y no cambia el saldo hasta el cobro; no se paga en la tienda.",
+          "Sin planes explícitos, la capacidad de superar la ciega permanece sin evaluar. No se predicen manos ni consistencia a partir de una carta favorable.",
+          "Sobres y renovación permanecen alternativas condicionadas con contenido desconocido; no se demuestra una elección óptima."
+        ]
+      },
+      "options": [
+        {
+          "id": "hold",
+          "kind": "hold",
+          "coverage": "modeled",
+          "moneyAfter": 20,
+          "reasons": [
+            "Conserva saldo y los comodines actuales. No supone ingresos futuros ni espera una oferta específica."
+          ],
+          "limitations": []
+        },
+        {
+          "id": "scoring",
+          "kind": "joker",
+          "coverage": "modeled",
+          "moneyAfter": 18,
+          "reasons": [
+            "Mult inmediato sin condición de mano; aporte fijo que no crece.",
+            "Ante 2: el horizonte modifica el encaje editorial; no crea material, activaciones ni suficiencia para la siguiente ciega.",
+            "Aporta un rol sin soporte actual: mult. Contar roles no demuestra consistencia.",
+            "Añade un efecto de puntuación preparado, aunque ya tengas ese rol. Aporte propio en la fase de comodines: +4 Mult. No es una diferencia de puntuación total: depende de la mano, orden, ciega y efectos conservados.",
+            "Saldo hipotético: $20 − $2 = $18. Es aritmética del precio visto, no una transacción confirmada.",
+            "Comprar deja $18; ahorrar conserva $20 para otras compras. El dinero conservado mantiene opciones futuras. No se presume una oferta futura ni se garantiza supervivencia.",
+            "Interés aislado condicionado: $4 → $3 (-1). Solo si ganas y no cambia el saldo hasta el cobro; no se paga en la tienda."
+          ],
+          "limitations": [
+            "Índice heurístico sin validación de eficacia; no son puntos ni probabilidad de ganar. Una décima muestra resolución del modelo, no precisión predictiva.",
+            "Mecánicas respaldadas por inspección estática 1.0.1o; no observación nueva del juego.",
+            "Modelo 1.0.1o sustentado en documentación y lectura estática local; falta contrastarlo en una partida.",
+            "Lectura estática y modelo documental; no prueba ejecutada en Balatro.",
+            "Modelo 1.0.1o sustentado en documentación y lectura estática local; falta contrastarlo en una partida.",
+            "Modelo 1.0.1o sustentado en documentación y lectura estática local; falta contrastarlo en una partida.",
+            "Superar una ronda posterior y conservar estos saldos hasta su cobro.",
+            "Se aísla el interés: no incluye premios, manos sobrantes ni ingresos de otros efectos.",
+            "Modelo 1.0.1o sustentado en documentación y lectura estática local; falta contrastarlo en una partida.",
+            "Modelo 1.0.1o sustentado en documentación y lectura estática local; falta contrastarlo en una partida.",
+            "Modelo 1.0.1o sustentado en documentación y lectura estática local; falta contrastarlo en una partida.",
+            "Modelo 1.0.1o sustentado en documentación y lectura estática local; falta contrastarlo en una partida."
+          ],
+          "findings": [
+            {
+              "ruleId": "S-PREPARATION",
+              "message": "Mult inmediato sin condición de mano; aporte fijo que no crece."
+            },
+            {
+              "ruleId": "S-ADDITIONAL-SCORING",
+              "message": "Añade un efecto de puntuación preparado, aunque ya tengas ese rol. Aporte propio en la fase de comodines: +4 Mult. No es una diferencia de puntuación total: depende de la mano, orden, ciega y efectos conservados.",
+              "values": {
+                "ownMult": 4,
+                "unit": "additive-mult"
+              }
+            },
+            {
+              "ruleId": "S-RESERVE",
+              "message": "Comprar deja $18; ahorrar conserva $20 para otras compras. El dinero conservado mantiene opciones futuras. No se presume una oferta futura ni se garantiza supervivencia.",
+              "values": {
+                "before": 20,
+                "after": 18,
+                "unit": "dollars"
+              }
+            },
+            {
+              "ruleId": "S-INTEREST",
+              "message": "Interés aislado condicionado: $4 → $3 (-1). Solo si ganas y no cambia el saldo hasta el cobro; no se paga en la tienda.",
+              "values": {
+                "before": 4,
+                "after": 3,
+                "change": -1,
+                "unit": "dollars-per-conditional-cashout"
+              }
+            }
+          ],
+          "fitPurchase": {
+            "status": "legal",
+            "errors": [],
+            "limitations": [
+              "Modelo 1.0.1o sustentado en documentación y lectura estática local; falta contrastarlo en una partida.",
+              "Lectura estática y modelo documental; no prueba ejecutada en Balatro.",
+              "Modelo 1.0.1o sustentado en documentación y lectura estática local; falta contrastarlo en una partida.",
+              "Modelo 1.0.1o sustentado en documentación y lectura estática local; falta contrastarlo en una partida."
+            ],
+            "moneyAfter": 18,
+            "netCost": 2
+          }
+        },
+        {
+          "id": "income",
+          "kind": "joker",
+          "coverage": "modeled",
+          "moneyAfter": 14,
+          "reasons": [
+            "Ingreso al final de ronda; ocupar un espacio tiene coste de oportunidad, no añade puntuación de mano.",
+            "Ante 2: el horizonte modifica el encaje editorial; no crea material, activaciones ni suficiencia para la siguiente ciega.",
+            "Aporta un rol sin soporte actual: economy. Contar roles no demuestra consistencia.",
+            "Saldo hipotético: $20 − $6 = $14. Es aritmética del precio visto, no una transacción confirmada.",
+            "Comprar deja $14; ahorrar conserva $20 para otras compras. El dinero conservado mantiene opciones futuras. No se presume una oferta futura ni se garantiza supervivencia.",
+            "Interés aislado condicionado: $4 → $2 (-2). Solo si ganas y no cambia el saldo hasta el cobro; no se paga en la tienda."
+          ],
+          "limitations": [
+            "Índice heurístico sin validación de eficacia; no son puntos ni probabilidad de ganar. Una décima muestra resolución del modelo, no precisión predictiva.",
+            "Mecánicas respaldadas por inspección estática 1.0.1o; no observación nueva del juego.",
+            "Modelo 1.0.1o sustentado en documentación y lectura estática local; falta contrastarlo en una partida.",
+            "Lectura estática y modelo documental; no prueba ejecutada en Balatro.",
+            "Modelo 1.0.1o sustentado en documentación y lectura estática local; falta contrastarlo en una partida.",
+            "Modelo 1.0.1o sustentado en documentación y lectura estática local; falta contrastarlo en una partida.",
+            "Superar una ronda posterior y conservar estos saldos hasta su cobro.",
+            "Se aísla el interés: no incluye premios, manos sobrantes ni ingresos de otros efectos.",
+            "Modelo 1.0.1o sustentado en documentación y lectura estática local; falta contrastarlo en una partida.",
+            "Modelo 1.0.1o sustentado en documentación y lectura estática local; falta contrastarlo en una partida.",
+            "Modelo 1.0.1o sustentado en documentación y lectura estática local; falta contrastarlo en una partida.",
+            "Modelo 1.0.1o sustentado en documentación y lectura estática local; falta contrastarlo en una partida."
+          ],
+          "findings": [
+            {
+              "ruleId": "S-PREPARATION",
+              "message": "Ingreso al final de ronda; ocupar un espacio tiene coste de oportunidad, no añade puntuación de mano."
+            },
+            {
+              "ruleId": "S-RESERVE",
+              "message": "Comprar deja $14; ahorrar conserva $20 para otras compras. El dinero conservado mantiene opciones futuras. No se presume una oferta futura ni se garantiza supervivencia.",
+              "values": {
+                "before": 20,
+                "after": 14,
+                "unit": "dollars"
+              }
+            },
+            {
+              "ruleId": "S-INTEREST",
+              "message": "Interés aislado condicionado: $4 → $2 (-2). Solo si ganas y no cambia el saldo hasta el cobro; no se paga en la tienda.",
+              "values": {
+                "before": 4,
+                "after": 2,
+                "change": -2,
+                "unit": "dollars-per-conditional-cashout"
+              }
+            }
+          ],
+          "fitPurchase": {
+            "status": "legal",
+            "errors": [],
+            "limitations": [
+              "Modelo 1.0.1o sustentado en documentación y lectura estática local; falta contrastarlo en una partida.",
+              "Lectura estática y modelo documental; no prueba ejecutada en Balatro.",
+              "Modelo 1.0.1o sustentado en documentación y lectura estática local; falta contrastarlo en una partida.",
+              "Modelo 1.0.1o sustentado en documentación y lectura estática local; falta contrastarlo en una partida."
+            ],
+            "moneyAfter": 14,
+            "netCost": 6
+          }
+        },
+        {
+          "id": "reroll",
+          "kind": "reroll",
+          "coverage": "unknown",
+          "moneyAfter": 15,
+          "reasons": [
+            "El coste actual solo compra información nueva: las ofertas posteriores son desconocidas y no se garantiza una mejora. Renueva el área de cartas; conserva sobres y vale.",
+            "Saldo hipotético: $20 − $5 = $15. Es aritmética del precio visto, no una transacción confirmada.",
+            "Comprar deja $15; ahorrar conserva $20 para otras compras. El dinero conservado mantiene opciones futuras. No se presume una oferta futura ni se garantiza supervivencia."
+          ],
+          "limitations": [
+            "No genera nuevo stock ni aplica eventos de reroll. El siguiente precio y los rerolls gratuitos necesitan observación real."
+          ],
+          "findings": [
+            {
+              "ruleId": "S-RESERVE",
+              "message": "Comprar deja $15; ahorrar conserva $20 para otras compras. El dinero conservado mantiene opciones futuras. No se presume una oferta futura ni se garantiza supervivencia.",
+              "values": {
+                "before": 20,
+                "after": 15,
+                "unit": "dollars"
+              }
+            }
+          ]
+        }
+      ],
+      "errors": [],
+      "limitations": [
+        "Consejo condicionado sobre la tienda transcrita; no es una búsqueda exhaustiva de compras, órdenes o reemplazos.",
+        "No compara un índice global antes/después ni convierte dólares, recursos e índice de encaje en una puntuación común.",
+        "El índice de encaje es editorial; no son puntos de mano, probabilidad de ganar ni garantía de superar una ciega.",
+        "Sobres cerrados y ofertas posteriores a renovar tienen contenido desconocido. No se generan cartas, ingresos ni crecimiento futuro.",
+        "Consultar no compra, vende, abre, renueva ni guarda adquisiciones. Evidencia estática 1.0.1o-FULL, docs/evidencia/tienda-investigacion.md."
+      ]
+    },
+    {
+      "id": "DEC02-05",
+      "checks": {
+        "acceptedStatus": false,
+        "requiredPreferredOfferIds": true,
+        "forbiddenPreferredOfferIds": false,
+        "immutable": true
+      },
+      "minimalRecommendationPass": false,
+      "moneyChecks": [
+        {
+          "id": "hold",
+          "expected": 25,
+          "actual": 25
+        },
+        {
+          "id": "joker",
+          "expected": 23,
+          "actual": 23
+        },
+        {
+          "id": "abstract",
+          "expected": 21,
+          "actual": 21
+        }
+      ],
+      "recommendation": {
+        "status": "tie",
+        "title": "Hay varias compras condicionadas",
+        "offerIds": [
+          "joker",
+          "abstract"
+        ],
+        "reasons": [
+          "Estas ofertas atienden necesidades conocidas; no hay una escala común para decidir entre sus efectos y costes. Elige según la condición que puedas usar y el saldo que quieras conservar.",
+          "Sin planes explícitos, la capacidad de superar la ciega permanece sin evaluar. No se predicen manos ni consistencia a partir de una carta favorable.",
+          "Sobres y renovación permanecen alternativas condicionadas con contenido desconocido; no se demuestra una elección óptima."
+        ]
+      },
+      "options": [
+        {
+          "id": "hold",
+          "kind": "hold",
+          "coverage": "modeled",
+          "moneyAfter": 25,
+          "reasons": [
+            "Conserva saldo y los comodines actuales. No supone ingresos futuros ni espera una oferta específica."
+          ],
+          "limitations": []
+        },
+        {
+          "id": "joker",
+          "kind": "joker",
+          "coverage": "modeled",
+          "moneyAfter": 23,
+          "reasons": [
+            "Mult inmediato sin condición de mano; aporte fijo que no crece.",
+            "Ante 2: el horizonte modifica el encaje editorial; no crea material, activaciones ni suficiencia para la siguiente ciega.",
+            "Aporta un rol sin soporte actual: mult. Contar roles no demuestra consistencia.",
+            "Añade un efecto de puntuación preparado, aunque ya tengas ese rol. Aporte propio en la fase de comodines: +4 Mult. No es una diferencia de puntuación total: depende de la mano, orden, ciega y efectos conservados.",
+            "Saldo hipotético: $25 − $2 = $23. Es aritmética del precio visto, no una transacción confirmada.",
+            "Comprar deja $23; ahorrar conserva $25 para otras compras. El dinero conservado mantiene opciones futuras. No se presume una oferta futura ni se garantiza supervivencia.",
+            "Interés aislado condicionado: $5 → $4 (-1). Solo si ganas y no cambia el saldo hasta el cobro; no se paga en la tienda."
+          ],
+          "limitations": [
+            "Índice heurístico sin validación de eficacia; no son puntos ni probabilidad de ganar. Una décima muestra resolución del modelo, no precisión predictiva.",
+            "Mecánicas respaldadas por inspección estática 1.0.1o; no observación nueva del juego.",
+            "Modelo 1.0.1o sustentado en documentación y lectura estática local; falta contrastarlo en una partida.",
+            "Lectura estática y modelo documental; no prueba ejecutada en Balatro.",
+            "Modelo 1.0.1o sustentado en documentación y lectura estática local; falta contrastarlo en una partida.",
+            "Modelo 1.0.1o sustentado en documentación y lectura estática local; falta contrastarlo en una partida.",
+            "Superar una ronda posterior y conservar estos saldos hasta su cobro.",
+            "Se aísla el interés: no incluye premios, manos sobrantes ni ingresos de otros efectos.",
+            "Modelo 1.0.1o sustentado en documentación y lectura estática local; falta contrastarlo en una partida.",
+            "Modelo 1.0.1o sustentado en documentación y lectura estática local; falta contrastarlo en una partida.",
+            "Modelo 1.0.1o sustentado en documentación y lectura estática local; falta contrastarlo en una partida.",
+            "Modelo 1.0.1o sustentado en documentación y lectura estática local; falta contrastarlo en una partida."
+          ],
+          "findings": [
+            {
+              "ruleId": "S-PREPARATION",
+              "message": "Mult inmediato sin condición de mano; aporte fijo que no crece."
+            },
+            {
+              "ruleId": "S-ADDITIONAL-SCORING",
+              "message": "Añade un efecto de puntuación preparado, aunque ya tengas ese rol. Aporte propio en la fase de comodines: +4 Mult. No es una diferencia de puntuación total: depende de la mano, orden, ciega y efectos conservados.",
+              "values": {
+                "ownMult": 4,
+                "unit": "additive-mult"
+              }
+            },
+            {
+              "ruleId": "S-RESERVE",
+              "message": "Comprar deja $23; ahorrar conserva $25 para otras compras. El dinero conservado mantiene opciones futuras. No se presume una oferta futura ni se garantiza supervivencia.",
+              "values": {
+                "before": 25,
+                "after": 23,
+                "unit": "dollars"
+              }
+            },
+            {
+              "ruleId": "S-INTEREST",
+              "message": "Interés aislado condicionado: $5 → $4 (-1). Solo si ganas y no cambia el saldo hasta el cobro; no se paga en la tienda.",
+              "values": {
+                "before": 5,
+                "after": 4,
+                "change": -1,
+                "unit": "dollars-per-conditional-cashout"
+              }
+            }
+          ],
+          "fitPurchase": {
+            "status": "legal",
+            "errors": [],
+            "limitations": [
+              "Modelo 1.0.1o sustentado en documentación y lectura estática local; falta contrastarlo en una partida.",
+              "Lectura estática y modelo documental; no prueba ejecutada en Balatro.",
+              "Modelo 1.0.1o sustentado en documentación y lectura estática local; falta contrastarlo en una partida.",
+              "Modelo 1.0.1o sustentado en documentación y lectura estática local; falta contrastarlo en una partida."
+            ],
+            "moneyAfter": 23,
+            "netCost": 2
+          }
+        },
+        {
+          "id": "abstract",
+          "kind": "joker",
+          "coverage": "modeled",
+          "moneyAfter": 21,
+          "reasons": [
+            "Mult por cantidad de comodines poseídos; requiere conocer el inventario y no crece por jugar manos.",
+            "Ante 2: el horizonte modifica el encaje editorial; no crea material, activaciones ni suficiencia para la siguiente ciega.",
+            "Aporta un rol sin soporte actual: mult. Contar roles no demuestra consistencia.",
+            "Añade un efecto de puntuación preparado, aunque ya tengas ese rol. Aporte propio en la fase de comodines: +3 Mult. No es una diferencia de puntuación total: depende de la mano, orden, ciega y efectos conservados.",
+            "Saldo hipotético: $25 − $4 = $21. Es aritmética del precio visto, no una transacción confirmada.",
+            "Comprar deja $21; ahorrar conserva $25 para otras compras. El dinero conservado mantiene opciones futuras. No se presume una oferta futura ni se garantiza supervivencia.",
+            "Interés aislado condicionado: $5 → $4 (-1). Solo si ganas y no cambia el saldo hasta el cobro; no se paga en la tienda."
+          ],
+          "limitations": [
+            "Índice heurístico sin validación de eficacia; no son puntos ni probabilidad de ganar. Una décima muestra resolución del modelo, no precisión predictiva.",
+            "Mecánicas respaldadas por inspección estática 1.0.1o; no observación nueva del juego.",
+            "Modelo 1.0.1o sustentado en documentación y lectura estática local; falta contrastarlo en una partida.",
+            "Lectura estática y modelo documental; no prueba ejecutada en Balatro.",
+            "Modelo 1.0.1o sustentado en documentación y lectura estática local; falta contrastarlo en una partida.",
+            "Modelo 1.0.1o sustentado en documentación y lectura estática local; falta contrastarlo en una partida.",
+            "Superar una ronda posterior y conservar estos saldos hasta su cobro.",
+            "Se aísla el interés: no incluye premios, manos sobrantes ni ingresos de otros efectos.",
+            "Modelo 1.0.1o sustentado en documentación y lectura estática local; falta contrastarlo en una partida.",
+            "Modelo 1.0.1o sustentado en documentación y lectura estática local; falta contrastarlo en una partida.",
+            "Modelo 1.0.1o sustentado en documentación y lectura estática local; falta contrastarlo en una partida.",
+            "Modelo 1.0.1o sustentado en documentación y lectura estática local; falta contrastarlo en una partida."
+          ],
+          "findings": [
+            {
+              "ruleId": "S-PREPARATION",
+              "message": "Mult por cantidad de comodines poseídos; requiere conocer el inventario y no crece por jugar manos."
+            },
+            {
+              "ruleId": "S-ADDITIONAL-SCORING",
+              "message": "Añade un efecto de puntuación preparado, aunque ya tengas ese rol. Aporte propio en la fase de comodines: +3 Mult. No es una diferencia de puntuación total: depende de la mano, orden, ciega y efectos conservados.",
+              "values": {
+                "ownMult": 3,
+                "unit": "additive-mult"
+              }
+            },
+            {
+              "ruleId": "S-RESERVE",
+              "message": "Comprar deja $21; ahorrar conserva $25 para otras compras. El dinero conservado mantiene opciones futuras. No se presume una oferta futura ni se garantiza supervivencia.",
+              "values": {
+                "before": 25,
+                "after": 21,
+                "unit": "dollars"
+              }
+            },
+            {
+              "ruleId": "S-INTEREST",
+              "message": "Interés aislado condicionado: $5 → $4 (-1). Solo si ganas y no cambia el saldo hasta el cobro; no se paga en la tienda.",
+              "values": {
+                "before": 5,
+                "after": 4,
+                "change": -1,
+                "unit": "dollars-per-conditional-cashout"
+              }
+            }
+          ],
+          "fitPurchase": {
+            "status": "legal",
+            "errors": [],
+            "limitations": [
+              "Modelo 1.0.1o sustentado en documentación y lectura estática local; falta contrastarlo en una partida.",
+              "Lectura estática y modelo documental; no prueba ejecutada en Balatro.",
+              "Modelo 1.0.1o sustentado en documentación y lectura estática local; falta contrastarlo en una partida.",
+              "Modelo 1.0.1o sustentado en documentación y lectura estática local; falta contrastarlo en una partida."
+            ],
+            "moneyAfter": 21,
+            "netCost": 4
+          }
+        },
+        {
+          "id": "reroll",
+          "kind": "reroll",
+          "coverage": "unknown",
+          "moneyAfter": 20,
+          "reasons": [
+            "El coste actual solo compra información nueva: las ofertas posteriores son desconocidas y no se garantiza una mejora. Renueva el área de cartas; conserva sobres y vale.",
+            "Saldo hipotético: $25 − $5 = $20. Es aritmética del precio visto, no una transacción confirmada.",
+            "Comprar deja $20; ahorrar conserva $25 para otras compras. El dinero conservado mantiene opciones futuras. No se presume una oferta futura ni se garantiza supervivencia."
+          ],
+          "limitations": [
+            "No genera nuevo stock ni aplica eventos de reroll. El siguiente precio y los rerolls gratuitos necesitan observación real."
+          ],
+          "findings": [
+            {
+              "ruleId": "S-RESERVE",
+              "message": "Comprar deja $20; ahorrar conserva $25 para otras compras. El dinero conservado mantiene opciones futuras. No se presume una oferta futura ni se garantiza supervivencia.",
+              "values": {
+                "before": 25,
+                "after": 20,
+                "unit": "dollars"
+              }
+            }
+          ]
+        }
+      ],
+      "errors": [],
+      "limitations": [
+        "Consejo condicionado sobre la tienda transcrita; no es una búsqueda exhaustiva de compras, órdenes o reemplazos.",
+        "No compara un índice global antes/después ni convierte dólares, recursos e índice de encaje en una puntuación común.",
+        "El índice de encaje es editorial; no son puntos de mano, probabilidad de ganar ni garantía de superar una ciega.",
+        "Sobres cerrados y ofertas posteriores a renovar tienen contenido desconocido. No se generan cartas, ingresos ni crecimiento futuro.",
+        "Consultar no compra, vende, abre, renueva ni guarda adquisiciones. Evidencia estática 1.0.1o-FULL, docs/evidencia/tienda-investigacion.md."
+      ]
+    },
+    {
+      "id": "DEC02-06",
+      "checks": {
+        "acceptedStatus": false,
+        "requiredPreferredOfferIds": true,
+        "forbiddenPreferredOfferIds": false,
+        "immutable": true
+      },
+      "minimalRecommendationPass": false,
+      "moneyChecks": [
+        {
+          "id": "hold",
+          "expected": 20,
+          "actual": 20
+        },
+        {
+          "id": "joker",
+          "expected": 18,
+          "actual": 18
+        }
+      ],
+      "recommendation": {
+        "status": "abstain",
+        "title": "Falta valorar las otras cartas visibles",
+        "offerIds": [
+          "joker",
+          "manual-tarot"
+        ],
+        "reasons": [
+          "Hay ofertas manuales sin efecto evaluado que pueden cambiar la elección. Registra su identidad y objetivos antes de preferir una compra.",
+          "Sin planes explícitos, la capacidad de superar la ciega permanece sin evaluar. No se predicen manos ni consistencia a partir de una carta favorable.",
+          "Sobres y renovación permanecen alternativas condicionadas con contenido desconocido; no se demuestra una elección óptima."
+        ]
+      },
+      "options": [
+        {
+          "id": "hold",
+          "kind": "hold",
+          "coverage": "modeled",
+          "moneyAfter": 20,
+          "reasons": [
+            "Conserva saldo y los comodines actuales. No supone ingresos futuros ni espera una oferta específica."
+          ],
+          "limitations": []
+        },
+        {
+          "id": "joker",
+          "kind": "joker",
+          "coverage": "modeled",
+          "moneyAfter": 18,
+          "reasons": [
+            "Mult inmediato sin condición de mano; aporte fijo que no crece.",
+            "Ante 2: el horizonte modifica el encaje editorial; no crea material, activaciones ni suficiencia para la siguiente ciega.",
+            "Aporta un rol sin soporte actual: mult. Contar roles no demuestra consistencia.",
+            "Añade un efecto de puntuación preparado, aunque ya tengas ese rol. Aporte propio en la fase de comodines: +4 Mult. No es una diferencia de puntuación total: depende de la mano, orden, ciega y efectos conservados.",
+            "Saldo hipotético: $20 − $2 = $18. Es aritmética del precio visto, no una transacción confirmada.",
+            "Comprar deja $18; ahorrar conserva $20 para otras compras. El dinero conservado mantiene opciones futuras. No se presume una oferta futura ni se garantiza supervivencia.",
+            "Interés aislado condicionado: $4 → $3 (-1). Solo si ganas y no cambia el saldo hasta el cobro; no se paga en la tienda."
+          ],
+          "limitations": [
+            "Índice heurístico sin validación de eficacia; no son puntos ni probabilidad de ganar. Una décima muestra resolución del modelo, no precisión predictiva.",
+            "Mecánicas respaldadas por inspección estática 1.0.1o; no observación nueva del juego.",
+            "Modelo 1.0.1o sustentado en documentación y lectura estática local; falta contrastarlo en una partida.",
+            "Lectura estática y modelo documental; no prueba ejecutada en Balatro.",
+            "Modelo 1.0.1o sustentado en documentación y lectura estática local; falta contrastarlo en una partida.",
+            "Modelo 1.0.1o sustentado en documentación y lectura estática local; falta contrastarlo en una partida.",
+            "Superar una ronda posterior y conservar estos saldos hasta su cobro.",
+            "Se aísla el interés: no incluye premios, manos sobrantes ni ingresos de otros efectos.",
+            "Modelo 1.0.1o sustentado en documentación y lectura estática local; falta contrastarlo en una partida.",
+            "Modelo 1.0.1o sustentado en documentación y lectura estática local; falta contrastarlo en una partida.",
+            "Modelo 1.0.1o sustentado en documentación y lectura estática local; falta contrastarlo en una partida.",
+            "Modelo 1.0.1o sustentado en documentación y lectura estática local; falta contrastarlo en una partida."
+          ],
+          "findings": [
+            {
+              "ruleId": "S-PREPARATION",
+              "message": "Mult inmediato sin condición de mano; aporte fijo que no crece."
+            },
+            {
+              "ruleId": "S-ADDITIONAL-SCORING",
+              "message": "Añade un efecto de puntuación preparado, aunque ya tengas ese rol. Aporte propio en la fase de comodines: +4 Mult. No es una diferencia de puntuación total: depende de la mano, orden, ciega y efectos conservados.",
+              "values": {
+                "ownMult": 4,
+                "unit": "additive-mult"
+              }
+            },
+            {
+              "ruleId": "S-RESERVE",
+              "message": "Comprar deja $18; ahorrar conserva $20 para otras compras. El dinero conservado mantiene opciones futuras. No se presume una oferta futura ni se garantiza supervivencia.",
+              "values": {
+                "before": 20,
+                "after": 18,
+                "unit": "dollars"
+              }
+            },
+            {
+              "ruleId": "S-INTEREST",
+              "message": "Interés aislado condicionado: $4 → $3 (-1). Solo si ganas y no cambia el saldo hasta el cobro; no se paga en la tienda.",
+              "values": {
+                "before": 4,
+                "after": 3,
+                "change": -1,
+                "unit": "dollars-per-conditional-cashout"
+              }
+            }
+          ],
+          "fitPurchase": {
+            "status": "legal",
+            "errors": [],
+            "limitations": [
+              "Modelo 1.0.1o sustentado en documentación y lectura estática local; falta contrastarlo en una partida.",
+              "Lectura estática y modelo documental; no prueba ejecutada en Balatro.",
+              "Modelo 1.0.1o sustentado en documentación y lectura estática local; falta contrastarlo en una partida.",
+              "Modelo 1.0.1o sustentado en documentación y lectura estática local; falta contrastarlo en una partida."
+            ],
+            "moneyAfter": 18,
+            "netCost": 2
+          }
+        },
+        {
+          "id": "reroll",
+          "kind": "reroll",
+          "coverage": "unknown",
+          "moneyAfter": 15,
+          "reasons": [
+            "El coste actual solo compra información nueva: las ofertas posteriores son desconocidas y no se garantiza una mejora. Renueva el área de cartas; conserva sobres y vale.",
+            "Saldo hipotético: $20 − $5 = $15. Es aritmética del precio visto, no una transacción confirmada.",
+            "Comprar deja $15; ahorrar conserva $20 para otras compras. El dinero conservado mantiene opciones futuras. No se presume una oferta futura ni se garantiza supervivencia."
+          ],
+          "limitations": [
+            "No genera nuevo stock ni aplica eventos de reroll. El siguiente precio y los rerolls gratuitos necesitan observación real."
+          ],
+          "findings": [
+            {
+              "ruleId": "S-RESERVE",
+              "message": "Comprar deja $15; ahorrar conserva $20 para otras compras. El dinero conservado mantiene opciones futuras. No se presume una oferta futura ni se garantiza supervivencia.",
+              "values": {
+                "before": 20,
+                "after": 15,
+                "unit": "dollars"
+              }
+            }
+          ]
+        },
+        {
+          "id": "manual-tarot",
+          "kind": "other",
+          "coverage": "unknown",
+          "moneyAfter": 17,
+          "reasons": [
+            "Oferta manual tarot: The Fool. Se conserva el nombre transcrito, sin inferir un efecto por su texto.",
+            "Saldo hipotético: $20 − $3 = $17. Es aritmética del precio visto, no una transacción confirmada.",
+            "Comprar deja $17; ahorrar conserva $20 para otras compras. El dinero conservado mantiene opciones futuras. No se presume una oferta futura ni se garantiza supervivencia."
+          ],
+          "limitations": [
+            "No se puntúa: falta identidad mecánica, objetivos y evento de compra/uso compatible. Puede cambiar la elección; no se ignora al comparar."
+          ],
+          "findings": [
+            {
+              "ruleId": "S-RESERVE",
+              "message": "Comprar deja $17; ahorrar conserva $20 para otras compras. El dinero conservado mantiene opciones futuras. No se presume una oferta futura ni se garantiza supervivencia.",
+              "values": {
+                "before": 20,
+                "after": 17,
+                "unit": "dollars"
+              }
+            }
+          ]
+        }
+      ],
+      "errors": [],
+      "limitations": [
+        "Consejo condicionado sobre la tienda transcrita; no es una búsqueda exhaustiva de compras, órdenes o reemplazos.",
+        "No compara un índice global antes/después ni convierte dólares, recursos e índice de encaje en una puntuación común.",
+        "El índice de encaje es editorial; no son puntos de mano, probabilidad de ganar ni garantía de superar una ciega.",
+        "Sobres cerrados y ofertas posteriores a renovar tienen contenido desconocido. No se generan cartas, ingresos ni crecimiento futuro.",
+        "Consultar no compra, vende, abre, renueva ni guarda adquisiciones. Evidencia estática 1.0.1o-FULL, docs/evidencia/tienda-investigacion.md."
+      ]
+    }
+  ],
+  "buildVerification": {
+    "command": "npm run build",
+    "passed": true,
+    "verifiedAt": "2026-11-01T21:44:40.838Z",
+    "evaluatedPolicyModuleBytesUnchanged": true
+  }
+}

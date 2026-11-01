@@ -1,6 +1,6 @@
 /** Rules select conditional candidates, never a sum of dollars, points and counters. */
 export const QUICK_SHOP_POLICY={
- id:'quick-shop-2',
+ id:'quick-shop-3',
  scoringRoles:['chips','mult','xmult','retrigger'] as readonly string[],
  temporaryCounters:['popcorn','ice_cream','ramen'] as readonly string[],
  rules:{
@@ -10,7 +10,10 @@ export const QUICK_SHOP_POLICY={
   reserve:'S-RESERVE',
   interest:'S-INTEREST',
   utilityNeed:'S-UTILITY-NEED',
-  scope:'S-SCOPE'
+  scope:'S-SCOPE',
+  comparableMult:'S-COMPARABLE-MULT',
+  generationLoss:'S-GENERATION-LOSS',
+  futureInvestment:'S-FUTURE-INVESTMENT'
  }
 } as const;
 
