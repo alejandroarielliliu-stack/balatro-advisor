@@ -23,6 +23,9 @@ export function mountJokerBay(panel:HTMLElement,preview:PreviewRenderer,replacem
  filters.append(makeFilters('Rareza',Object.entries(rarityNames).map(([id,name])=>[Number(id),name]),selectedRarities,'rarity'));
  const count=el('small','Cargando…'),grid=el('div','','bay-grid');grid.id='bay-grid';count.setAttribute('role','status');host.append(toolbar,filters,count,grid);
  const dialog=el('dialog','','bay-dialog');dialog.id='bay-dialog';dialog.setAttribute('aria-labelledby','bay-title');host.append(dialog);panel.append(host);
+ // The inspector can be mounted outside the folded catalogue. Its hypothetical
+ // controls retain their own event boundary regardless of that presentation.
+ for(const type of ['click','input','change'])dialog.addEventListener(type,event=>event.stopPropagation());
  let entries:JokerReference[]=[];
  const show=(j:JokerReference,ownedId?:string)=>{
   dialog.replaceChildren();const head=el('div','','bay-detail-heading'),title=el('h2',j.names.es);title.id='bay-title';const close=el('button','Cerrar','secondary');close.type='button';close.onclick=()=>dialog.close();head.append(title);

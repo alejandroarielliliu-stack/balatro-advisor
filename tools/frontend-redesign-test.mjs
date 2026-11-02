@@ -77,7 +77,11 @@ try{
 
  const height=await p.locator('.inventory-panel').evaluate(element=>element.getBoundingClientRect().height);
  await openCatalogue(p);await p.locator('#bay-search').fill('j_joker');await p.locator('[data-bay-joker="j_joker"]').waitFor({state:'visible'});
- await p.locator('[data-bay-joker="j_joker"]').focus();await p.keyboard.press('Enter');await p.locator('#bay-dialog').waitFor({state:'visible'});await closeByEscape(p,'#bay-dialog','[data-bay-joker="j_joker"]');
+ await p.locator('[data-bay-joker="j_joker"]').focus();await p.keyboard.press('Enter');await p.locator('#bay-dialog').waitFor({state:'visible'});
+ const replacement=p.getByLabel('Comodín que reemplazarías',{exact:true}),sellId=await replacement.locator('option').nth(1).getAttribute('value');
+ assert.ok(sellId);await replacement.selectOption(sellId);assert.equal(await p.locator('#draft-status').isVisible(),false,'Hypothetical replacement must not dirty the real-state form');await unchanged(p,before,count);
+ await replacement.selectOption('');assert.equal(await p.locator('#draft-status').isVisible(),false);await unchanged(p,before,count);
+ await closeByEscape(p,'#bay-dialog','[data-bay-joker="j_joker"]');
  await p.locator('#bay-search').fill('');
  const chips=p.locator('.bay-filter-chip[data-filter-kind="rarity"]');await chips.nth(0).click();await chips.nth(1).click();assert.equal(await p.locator('.bay-filter-chip[data-filter-kind="rarity"][aria-pressed="true"]').count(),2);
  assert.equal(await chips.nth(0).getAttribute('aria-pressed'),'true');assert.equal(await chips.nth(1).getAttribute('aria-pressed'),'true');await chips.nth(0).click();await chips.nth(1).click();

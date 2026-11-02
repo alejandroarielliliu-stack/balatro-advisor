@@ -18,7 +18,7 @@ La adaptación usa el ancho disponible del contenedor, también cuando el zoom r
 
 Consultar, comparar, desplegar y cerrar no escriben el estado registrado. Las observaciones básicas guardan al terminar su edición; las acciones realizadas conservan sus confirmaciones. Se mantienen historial, revisión, recuperación, estado desconocido, cobertura parcial, reglas provisionales y segunda pestaña en lectura.
 
-El inspector de comodines queda fuera de la colección plegada y de la bandeja de inventario: puede abrirse desde una carta propia sin desplegar el catálogo y sus cifras hipotéticas no se mezclan con las cifras del inventario.
+El inspector de comodines queda fuera de la colección plegada y de la bandeja de inventario: puede abrirse desde una carta propia sin desplegar el catálogo y sus cifras hipotéticas no se mezclan con las cifras del inventario. Conserva su aislamiento de eventos: cambiar el reemplazo hipotético no marca el formulario real como editado. La prueba de regresión falló antes de corregirlo y pasa con el aislamiento del inspector.
 
 ## Verificación
 
