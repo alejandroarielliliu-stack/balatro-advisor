@@ -29,8 +29,11 @@ const number=(input:HTMLInputElement,min:number,optional=false)=>{if(optional&&!
 /** Only renders and submits explicit observations. No game hook or scoring formula lives here. */
 export function renderRunJourney(host:HTMLElement,options:JourneyOptions){
  host.replaceChildren();host.className='run-journey';const record=options.record,state=record?.state;
- const toolbar=el('div','','journey-actions');
- const action=(id:string,label:string,fn:()=>void,primary=false)=>{const b=el('button',label,primary?'':'secondary');b.id=id;b.type='button';b.dataset.write='true';b.dataset.localDisabled=String(options.dirty);b.disabled=!options.writable||options.dirty;b.onclick=fn;toolbar.append(b);return b;};
+ const toolbar=el('div','','journey-actions journey-main-actions');
+ const tools=el('details','','journey-tools'),toolsToggle=el('summary','Más','journey-tools-toggle'),toolsMenu=el('div','','journey-tools-menu');
+ tools.id='run-journey-tools';toolsToggle.setAttribute('aria-label','Más acciones de la partida');tools.append(toolsToggle,toolsMenu);
+ tools.addEventListener('keydown',event=>{if(event.key==='Escape'&&tools.open){event.preventDefault();tools.open=false;toolsToggle.focus();}});
+ const action=(id:string,label:string,fn:()=>void,primary=false,inTools=false)=>{const b=el('button',label,primary?'journey-primary':'secondary');b.id=id;b.type='button';b.dataset.write='true';b.dataset.localDisabled=String(options.dirty);b.disabled=!options.writable||options.dirty;b.onclick=()=>{if(inTools){tools.open=false;toolsToggle.focus();}fn();};(inTools?toolsMenu:toolbar).append(b);return b;};
  const open=(title:string,body:HTMLElement,accept:string,submit:()=>boolean)=>options.open(title,body,accept,()=>{try{return submit();}catch(e){options.error(e instanceof Error?e.message:'Revisa los datos.');return false;}});
  const inventory=(body:HTMLElement)=>{
   const box=check('progress-inventory-unchanged','Cartas, comodines, vales, niveles y recursos sin cambios');
@@ -67,6 +70,8 @@ export function renderRunJourney(host:HTMLElement,options:JourneyOptions){
  const title=el('div','','journey-heading');
  if(!state){title.append(el('h2','Partida nueva'),el('small','O importa una copia desde Registro.'));host.append(title,toolbar);action('run-new','Empecé una partida',newGame,true);return;}
  const blind=value(state.observed.nextBlind),name=blind?`Ante ${blind.ante} · ${kindName[blind.kind]}`:'Ciega sin registrar';
+ const phaseLabels={draft:'Sin ubicar',unknown:'Sin ubicar',blind_select:'Selección de ciega',in_round:'En la ciega',cashout:'Cobro',shop:'Tienda',open_pack:'Sobre abierto',finished:'Finalizada'};
+ const phase=el('span',phaseLabels[state.phase],'journey-phase');phase.dataset.phase=state.phase;title.append(phase);
  title.append(el('h2',state.phase==='finished'?'Partida terminada':name));
  const step=el('ol','','journey-steps');step.setAttribute('aria-label','Ciegas del ante');for(const [kind,label]of Object.entries(kindName)){const li=el('li',label.replace('Ciega ',''));if(blind?.kind===kind)li.setAttribute('aria-current','step');step.append(li);}title.append(step);host.append(title,toolbar);
  if(state.schemaVersion==='0.1'){
@@ -87,12 +92,12 @@ export function renderRunJourney(host:HTMLElement,options:JourneyOptions){
   action('run-enter-round','Entré en la ciega',()=>openCommand('Entré en la ciega','Registrar entrada',{type:'enter_round'}),true);
   if(blind&&blind.kind!=='boss'){
    toolbar.append(blindComparisonButton({open:options.open,state:options.comparisonState??(()=>structuredClone(state)),scenarios:options.scenarios??(()=>[])}));
-   const current=value(state.phaseData.skipTag);title.append(el('small',current?(tagDefinition(current)?.name??current):'Etiqueta de salto sin registrar'));
+   const current=value(state.phaseData.skipTag);title.append(el('small',current?(tagDefinition(current)?.name??current):'Etiqueta de salto sin registrar','journey-tag'));
    action('run-observe-tag','Etiqueta visible',()=>{
     const body=el('div','','journey-dialog'),knownTag=check('progress-tag-known','Conozco la etiqueta visible');knownTag.input.checked=!!current;
     const tag=select('progress-visible-tag','Etiqueta',Object.fromEntries(TAGS.map(t=>[t.id,t.name])),current??TAGS[0]!.id);body.append(knownTag.wrap,tag.wrap);
     open('Etiqueta de esta ciega',body,'Registrar etiqueta',()=>options.submit({type:'observe_skip_tag',tag:knownTag.input.checked?manual(tag.input.value):unknown()},{unchanged:true}));
-   });
+   },false,true);
    action('run-skip-blind','Salté esta ciega',()=>{
     const body=el('div','','journey-dialog'),done=check('progress-skip-resolved','Ya resolví los efectos y estoy en la siguiente selección'),money=field('progress-money','Saldo actual ($) · opcional');
     body.append(done.wrap,money.wrap,el('small','No cobras una ronda ni visitas una tienda. Indica cambios después de resolver sobres y recompensas en Balatro.'));
@@ -134,15 +139,16 @@ export function renderRunJourney(host:HTMLElement,options:JourneyOptions){
   action('run-observe-tags','Etiquetas pendientes',()=>{
    const body=el('div','','journey-dialog'),readTags=queueEditor(body,tags);
    open('Etiquetas pendientes',body,'Registrar cola',()=>options.submit({type:'observe_tag_queue',tags:readTags()},{unchanged:true}));
-  });
+  },false,true);
  }
  const last=record.history.at(-1);if(last&&last.kind!=='undo'){
-  const undo=action('run-undo','Deshacer registro',options.undo);undo.title='Corrige el registro local. No deshace acciones dentro de Balatro.';
+  const undo=action('run-undo','Deshacer registro',options.undo,false,true);undo.title='Corrige el registro local. No deshace acciones dentro de Balatro.';
  }
  if(state.phase!=='finished')action('run-stop','Dejé la partida',()=>{
   const body=el('div','','journey-dialog'),reason=field('progress-stop-reason','Motivo','Dejé de jugar','text');body.append(reason.wrap,el('small','Se conserva la última instantánea registrada. Esto no reconstruye cambios que no hayas comunicado.'));
   open('Dejé esta partida',body,'Registrar fin',()=>options.submit({type:'end_run',reason:reason.input.value},{unchanged:true}));
- });
+ },false,true);
+ if(toolsMenu.childElementCount)toolbar.append(tools);
  if(options.dirty)host.append(el('small','Hay una transcripción sin guardar. Guárdala en Registro o recarga antes de avanzar.','journey-pending'));
 }
 function makeBlind(ante:number,kind:BlindInfo['kind'],state:GameState):BlindInfo{

@@ -12,9 +12,10 @@ export function mountComposition(host:HTMLElement){
  host.id='composition-overview';host.className='composition-panel';host.setAttribute('aria-labelledby','composition-title');
  const title=el('h2','Tu composición');title.id='composition-title';
  const content=el('div','','composition-content'),global=el('button','','composition-global');global.type='button';global.id='composition-score';
- const output=el('strong','—');output.setAttribute('aria-live','polite');global.append(output);
+ const output=el('strong','—');output.setAttribute('aria-live','polite');global.append(el('small','Encaje'),output);
  const bars=el('div','','composition-bars'),dialog=el('dialog','','composition-dialog');dialog.id='composition-details';dialog.setAttribute('aria-labelledby','composition-detail-title');
- host.append(title,content,dialog);content.append(global,bars);
+ const heading=el('div','','composition-heading');heading.append(title,el('small','Índice heurístico'));
+ host.append(heading,content,dialog);content.append(global,bars);
  const renderedBars=new Map<string,{button:HTMLButtonElement;name:HTMLSpanElement;value:HTMLElement;fill:HTMLSpanElement}>();
  let report:CompositionReport|null=null,topic='global',opener:HTMLButtonElement=global;
  const explain=()=>{

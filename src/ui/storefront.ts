@@ -67,16 +67,31 @@ export function mountCandidates(host:HTMLElement,preview:PreviewRenderer,replace
  undo.onclick=()=>{const error=context?.undo?.()??null;if(error)showStatus(error,true);refreshUndo();};heading.append(undo);refreshUndo();
  // A failed observation restores the cache. Opening details and evaluating never call this.
  const observe=(mutate:()=>void,scope:'all'|'voucher'|'pack'='all'):string|null=>{if(!(scope!=='all'?extrasHydrated:hydrated)){showStatus(loadingMessage,true);return loadingMessage;}const before=candidates.map(c=>({item:c,values:{...c,stickers:[...c.stickers]}})),beforeVouchers=structuredClone(voucherOffers),beforePacks=structuredClone(packOffers);mutate();let error:string|null=null;try{error=context?.observe?.(readShopSnapshot(),scope)??null;}catch{error='No se pudieron guardar las ofertas. Se conserva la versión anterior.';}if(error){for(const previous of before)Object.assign(previous.item,previous.values);candidates.splice(0,candidates.length,...before.map(previous=>previous.item));voucherOffers.splice(0,voucherOffers.length,...beforeVouchers);packOffers.splice(0,packOffers.length,...beforePacks);showStatus(error,true);return error;}showStatus(context?.observe?'Ofertas guardadas.':null);changed();refreshUndo();return null;};
- const search=el('button','Buscar comodín','store-search');search.type='button';search.id='store-joker-add';search.onclick=()=>{const input=document.getElementById('bay-search') as HTMLInputElement;input?.scrollIntoView({block:'center',behavior:'smooth'});input?.focus({preventScroll:true});};
+ const search=el('button','＋ Comodín','store-search');search.type='button';search.id='store-joker-add';search.setAttribute('aria-label','Buscar comodín');search.onclick=()=>{const input=document.getElementById('bay-search') as HTMLInputElement|null;if(!input)return;const catalogue=input.closest('details');if(catalogue)catalogue.open=true;input.scrollIntoView({block:'center',behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth'});input.focus({preventScroll:true});};
  const suggestion=el('button','Registra las ofertas','shop-recommendation');suggestion.type='button';suggestion.id='shop-recommendation';suggestion.setAttribute('aria-haspopup','dialog');
- const layout=el('div','','store-layout'),controls=el('div','','store-controls'),cards=el('div','','store-card-well');controls.append(search,suggestion);
- const grid=el('div','','candidate-grid'),otherShelf=el('div','','store-other-shelf'),extras=el('div','','store-extras');cards.append(grid,otherShelf);layout.append(controls,cards,extras);
+ const layout=el('div','','store-layout'),controls=el('div','','store-controls'),cards=el('div','','store-card-well');controls.append(search);
+ const grid=el('div','','candidate-grid'),otherShelf=el('div','','store-other-shelf'),extras=el('div','','store-extras');cards.append(el('h3','Comodines y cartas','store-well-label'),grid,otherShelf);
+ const adviceStrip=el('section','','store-advice-strip'),adviceHeading=el('div','','store-advice-heading'),adviceLabel=el('small','Consejo de tienda','store-advice-label'),adviceCopy=el('div','','store-advice-copy'),advicePending=el('p','','store-advice-pending'),adviceScope=el('small','','store-advice-scope');
+ adviceStrip.setAttribute('aria-label','Consejo de tienda');adviceHeading.append(adviceLabel,suggestion);adviceStrip.append(adviceHeading,adviceCopy,advicePending,adviceScope);layout.append(controls,cards,extras,adviceStrip);
  const adviceDialog=el('dialog','','shop-advice-dialog');adviceDialog.id='shop-advice-dialog';adviceDialog.setAttribute('aria-label','Decisión de tienda');
  const editor=el('dialog','','store-item-editor');editor.id='store-item-editor';editor.setAttribute('aria-label','Registrar oferta');
  host.append(heading,status,layout,adviceDialog,editor);
  let report:ShopDecision['context']|null=null,decision:ShopDecision|null=null,useScenarios=false,scenarioError='';
  const confirmationRefreshers=new Set<()=>void>();let refreshExtraConfirmation=()=>{};
  const snapshot=readShopSnapshot;
+ // Read-only presentation of the same summary as the detailed dialog. This
+ // strip never computes a new preference, records an action or projects state.
+ const renderAdviceStrip=(hasOffers:boolean)=>{
+  const summary=hasOffers&&decision?buildShopAdviceSummary(decision):null;
+  adviceStrip.dataset.status=summary?.status??'empty';adviceCopy.replaceChildren();
+  adviceLabel.textContent=summary?{conditional:'Opción condicionada',tie:'Opciones a comparar',abstain:'Falta información'}[summary.status]:'Consejo de tienda';
+  if(summary)for(const [kind,label,text] of [['benefit','Aporta',summary.benefit],['sacrifice','Sacrificas',summary.sacrifice]] as const){
+   if(!text)continue;const p=el('p','','store-advice-'+kind);p.append(el('b',label+' · '),document.createTextNode(text));adviceCopy.append(p);
+  }
+  adviceCopy.hidden=!adviceCopy.childElementCount;
+  advicePending.textContent=summary?.pending??'';advicePending.hidden=!summary?.pending;
+  adviceScope.textContent=summary?.scope??'';adviceScope.hidden=!summary;
+ };
  const renderAdvice=()=>{
   const expanded=new Set(adviceDialog.open?Array.from(adviceDialog.querySelectorAll<HTMLDetailsElement>('details[id][open]'),d=>d.id):[]);
   const disclosure=(id:string,label:string)=>{const d=el('details','','shop-advice-disclosure');d.id=id;d.open=expanded.has(id);d.append(el('summary',label));return d;};
@@ -106,7 +121,7 @@ export function mountCandidates(host:HTMLElement,preview:PreviewRenderer,replace
   }));
   if(report.limitations.length){const d=el('details');d.append(el('summary','Límites de esta comparación'));for(const text of report.limitations)d.append(el('p',text));adviceDialog.append(d);}for(const error of report.errors)adviceDialog.append(el('p',error.message,'error'));
  };
- const refreshAdvice=()=>{const hasOffers=candidates.length+voucherOffers.length+packOffers.length+otherOffers.length>0;suggestion.disabled=!hasOffers;try{if(!context)throw Error();let scenarios:AdvisorScenario[]|undefined;scenarioError='';if(useScenarios)try{scenarios=context.scenarios?.();if(!scenarios?.length)throw Error('No hay escenarios. Configúralos en Análisis; la valoración rápida sigue disponible.');}catch(e){scenarios=undefined;scenarioError=e instanceof Error?e.message:'Revisa los escenarios de Análisis.';}const inspected=inspectShopDecision(context.state(),snapshot(),{ante:context.ante(),...(scenarios?{scenarios}:{})});if(!inspected.ok)throw Error();decision=inspected.value;report=decision.context;suggestion.textContent=hasOffers?report.recommendation.title:'Consejo de tienda';suggestion.dataset.status=hasOffers?report.recommendation.status:'abstain';}catch{report=null;decision=null;suggestion.textContent='Revisa los datos';suggestion.dataset.status='abstain';}if(adviceDialog.open)renderAdvice();};
+ const refreshAdvice=()=>{const hasOffers=candidates.length+voucherOffers.length+packOffers.length+otherOffers.length>0;suggestion.disabled=!hasOffers;try{if(!context)throw Error();let scenarios:AdvisorScenario[]|undefined;scenarioError='';if(useScenarios)try{scenarios=context.scenarios?.();if(!scenarios?.length)throw Error('No hay escenarios. Configúralos en Análisis; la valoración rápida sigue disponible.');}catch(e){scenarios=undefined;scenarioError=e instanceof Error?e.message:'Revisa los escenarios de Análisis.';}const inspected=inspectShopDecision(context.state(),snapshot(),{ante:context.ante(),...(scenarios?{scenarios}:{})});if(!inspected.ok)throw Error();decision=inspected.value;report=decision.context;suggestion.textContent=hasOffers?report.recommendation.title:'Añade las ofertas que ves';suggestion.dataset.status=hasOffers?report.recommendation.status:'abstain';}catch{report=null;decision=null;suggestion.textContent='Revisa los datos';suggestion.dataset.status='abstain';}renderAdviceStrip(hasOffers);if(adviceDialog.open)renderAdvice();};
  suggestion.onclick=()=>{refreshAdvice();renderAdvice();adviceDialog.showModal();};
  const numeric=(value:number|null,id:string)=>{const label=el('label','Precio que ves ($)'),input=el('input');input.type='number';input.min='0';input.step='1';input.value=String(value??'');input.id=id;label.htmlFor=id;label.append(input);return {label,input};};
 
@@ -150,7 +165,7 @@ export function mountCandidates(host:HTMLElement,preview:PreviewRenderer,replace
   editor.showModal();context?.controlsChanged?.();
  };
  const renderExtras=()=>{
-  extras.replaceChildren();otherShelf.replaceChildren();grid.querySelectorAll('.store-extra-tile[data-store-kind="other"],.candidate-placeholder').forEach(e=>e.remove());const voucherWell=el('div','','store-voucher-well'),packWell=el('div','','store-pack-well'),voucherShelf=el('div','','store-extra-shelf'),packShelf=el('div','','store-extra-shelf');voucherWell.append(voucherShelf);packWell.append(packShelf);extras.append(voucherWell,packWell,el('small','Vales y sobres guardados · otras cartas temporales.','muted'));
+  extras.replaceChildren();otherShelf.replaceChildren();grid.querySelectorAll('.store-extra-tile[data-store-kind="other"],.candidate-placeholder').forEach(e=>e.remove());const voucherWell=el('div','','store-voucher-well'),packWell=el('div','','store-pack-well'),voucherShelf=el('div','','store-extra-shelf'),packShelf=el('div','','store-extra-shelf');voucherWell.append(el('h3','Vale','store-well-label'),voucherShelf);packWell.append(el('h3','Sobres','store-well-label'),packShelf);extras.append(voucherWell,packWell);if(otherOffers.length)extras.append(el('small','Otras cartas: consulta temporal en esta sesión.','muted store-persistence-note'));
   const listed:[string,string,number|null,HTMLElement,()=>void,()=>void][]=[];
   for(const o of voucherOffers){const v=VOUCHER_CATALOG.find(v=>v.id===o.catalogId),art=el('span','','voucher-art '+o.catalogId);art.setAttribute('aria-label',v?.name??o.catalogId);listed.push([o.offerId,'voucher',o.price,art,()=>editExtra('voucher',o.offerId),()=>{observe(()=>{voucherOffers.splice(voucherOffers.indexOf(o),1);},'voucher');}]);}
   for(const o of packOffers){const p=BOOSTER_CATALOG.find(p=>p.family===o.family&&p.size===o.size),art=el('span','','booster-art pack-'+o.family+'-'+o.size);art.setAttribute('aria-label',p?.name??'Sobre');listed.push([o.offerId,'pack',o.price,art,()=>editExtra('pack',o.offerId),()=>{observe(()=>{packOffers.splice(packOffers.indexOf(o),1);},'pack');}]);}

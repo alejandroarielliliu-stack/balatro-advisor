@@ -53,6 +53,7 @@ try{
  const raw=page=>page.evaluate(storageKey=>localStorage.getItem(storageKey),key),record=async page=>JSON.parse(await raw(page)),writes=page=>page.evaluate(()=>window.__tarotWrites);
  const go=(page,screen)=>page.locator(`[data-screen="${screen}"]`).click(),panel=page=>page.locator('#tarot-panel');
  const ready=page=>page.waitForFunction(()=>document.querySelector('#ownership')?.textContent.includes('Esta pestaña tiene'));
+ const journeyAction=async(page,selector)=>{const control=page.locator(selector);if(await control.evaluate(element=>!!element.closest('#run-journey-tools'))&&!await page.locator('#run-journey-tools').evaluate(element=>element.open))await page.locator('#run-journey-tools > summary').click();await control.click();};
  const watch=page=>{lastPage=page;page.on('pageerror',error=>report.pageErrors.push(error.message));};
  const session=async(input=fixture(),viewport={width:1440,height:1000})=>{
   const context=await browser.newContext({viewport});await context.addInitScript(storageKey=>{
@@ -107,7 +108,7 @@ try{
  // 4. Reload restores exact cards/history. Undo is an explicit compensating
  // record, preserving the journal rather than claiming Balatro was undone.
  before=await raw(p);await reload(p);assert.equal(await raw(p),before);assert.equal(actual((await record(p)).state).enhancement,'steel');assert.equal(await p.locator('#tarot-consumable option[value="owned-chariot"]').count(),0);
- await p.locator('#run-undo').click();saved=await record(p);assert.deepEqual(saved.state.observed,original.observed);assert.deepEqual(saved.state.phaseData,original.phaseData);assert.equal(saved.history.length,2);assert.equal(saved.history[1].kind,'undo');assert.equal(saved.state.revision,original.revision+2);
+ await journeyAction(p,'#run-undo');saved=await record(p);assert.deepEqual(saved.state.observed,original.observed);assert.deepEqual(saved.state.phaseData,original.phaseData);assert.equal(saved.history.length,2);assert.equal(saved.history[1].kind,'undo');assert.equal(saved.state.revision,original.revision+2);
  before=await raw(p);await reload(p);assert.equal(await raw(p),before);assert.equal(actual((await record(p)).state).enhancement,'bonus');
  pass('reload-and-undo-restore-observed-card-and-inventory',{undoEnhancement:'bonus',consumables:2,tarotsUsed:0,money:16,historyKinds:['action','undo']},{undoEnhancement:'bonus',consumables:2,tarotsUsed:0,money:16,historyKinds:saved.history.map(entry=>entry.kind)});await first.context.close();
 

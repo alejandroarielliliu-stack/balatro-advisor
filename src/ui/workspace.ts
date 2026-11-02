@@ -13,6 +13,7 @@ const el=<K extends keyof HTMLElementTagNameMap>(tag:K,text='',className='')=>{c
 export function mountWorkspace(){
  const screens={collection:['150 COMODINES · 1.0.1o','Colección'],table:['ENCAJE EN VIVO','Mesa'],evaluation:['MANOS Y ESCENARIOS','Análisis'],archive:['PARTIDA REGISTRADA','Registro y copias']} as const;
  const show=()=>{const hash=location.hash.slice(1);const screen=Object.hasOwn(screens,hash)?hash as keyof typeof screens:'table';
+  document.body.dataset.view=screen;
   document.querySelectorAll<HTMLElement>('[data-page]').forEach(e=>e.hidden=e.dataset.page!==screen);
   document.querySelectorAll<HTMLElement>('[data-screen]').forEach(e=>{if(e.dataset.screen===screen)e.setAttribute('aria-current','page');else e.removeAttribute('aria-current');});
   document.getElementById('view-kicker')!.textContent=screens[screen][0];document.getElementById('view-title')!.textContent=screens[screen][1];
@@ -28,7 +29,8 @@ export function organizeRecord(host:HTMLElement,_existing=false,preview?:Preview
  const heading=el('div','','section-title');heading.append(el('h2','Partida'),el('span','White Stake','tag'));context.append(heading);
  // Main inputs first; compatibility and unknown-value help follow, not before the task.
  const base=children.slice(0,ownedIndex),grid=base.find(e=>e.classList.contains('grid')),resources=base.find(e=>e.tagName==='DETAILS');
- if(grid){context.append(grid);const deckEditor=grid.querySelector('#deck-editor'),deckConditions=grid.querySelector('#deck-conditions');if(deckEditor)context.append(deckEditor);if(deckConditions)context.append(deckConditions);}
+ const deckEditor=grid?.querySelector<HTMLDetailsElement>('#deck-editor');
+ if(grid){context.append(grid);const deckConditions=grid.querySelector('#deck-conditions');if(deckEditor)context.append(deckEditor);if(deckConditions)context.append(deckConditions);}
  if(resources)context.append(resources);
  const coverage=base.find(e=>e.querySelector('#coverage'));
  const meta=el('details','','coverage-note');meta.append(el('summary','Cobertura para cálculos exactos'));if(coverage)meta.append(coverage);base.filter(e=>e!==grid&&e!==resources&&e!==coverage).forEach(e=>meta.append(e));context.append(meta);
@@ -38,23 +40,23 @@ export function organizeRecord(host:HTMLElement,_existing=false,preview?:Preview
  remaining.slice(0,saveStart).forEach(e=>shop.append(e));remaining.slice(saveStart).forEach(e=>save.append(e));
  ownedTitle.textContent='Tus comodines';shopTitle.textContent='En la tienda';
  const ownedList=owned.querySelector('div:not(.check)');ownedList?.classList.add('joker-shelf');
+ const capacity=el('span',(ownedList as HTMLElement|null)?.dataset.capacity??'','joker-capacity');capacity.setAttribute('aria-hidden','true');owned.append(capacity);
  const shopList=shop.querySelector('div:not(.check)');shopList?.classList.add('joker-shelf','offer-shelf');
  const advanced=el('details','','registered-offers');advanced.append(el('summary','Ofertas registradas · avanzado'),shop);shopTitle.textContent='Ofertas registradas';context.append(advanced);
  const candidates=el('section');
- let catalogue:HTMLElement|undefined;
+ let catalogue:HTMLDetailsElement|undefined;
  if(preview&&addJoker){const addCandidate=mountCandidates(candidates,preview,replacements,shopContext);mountJokerBay(owned,preview,replacements,addJoker,addCandidate,ownedSale);
-  catalogue=el('section','','catalogue-dock');catalogue.id='catalogue-dock';const title=el('div','','section-title');title.append(el('h2','Buscar comodines'),el('span','150 cartas','tag'));catalogue.append(title,owned.querySelector('.joker-bay')!);
-  const tools=el('div','','inventory-tools'),jump=el('button','＋ Buscar','secondary');jump.type='button';jump.onclick=e=>{e.stopPropagation();catalogue!.scrollIntoView({block:'center',behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth'});catalogue!.querySelector<HTMLInputElement>('#bay-search')?.focus({preventScroll:true});};tools.append(jump);owned.prepend(tools);
+  catalogue=el('details','','catalogue-dock');catalogue.id='catalogue-dock';const title=el('summary','','section-title');title.append(el('span','Colección de comodines'),el('span','150 cartas','tag'));catalogue.append(title,owned.querySelector('.joker-bay')!);
+  // A possessed card can open its inspector while the collection is folded.
+  const inspector=catalogue.querySelector('#bay-dialog');if(inspector)layout.append(inspector);
+  const tools=el('div','','inventory-tools'),jump=el('button','＋ Añadir','secondary');jump.type='button';jump.setAttribute('aria-label','Buscar comodín para mi inventario');jump.onclick=e=>{e.stopPropagation();catalogue!.open=true;catalogue!.scrollIntoView({block:'center',behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth'});catalogue!.querySelector<HTMLInputElement>('#bay-search')?.focus({preventScroll:true});};tools.append(jump);owned.prepend(tools);
  }
- const settings=el('section','','run-settings'),settingsGrid=el('div','','run-settings-grid');settings.append(el('h2','Recursos y condiciones'),settingsGrid);context.querySelectorAll(':scope > details:not(#deck-editor)').forEach(d=>settingsGrid.append(d));
- // On a phone the player can fold the inputs to keep the actual table in view.
- // Values come from the existing inputs; this summary never computes or persists.
+ const settings=el('details','','run-settings'),settingsGrid=el('div','','run-settings-grid');settings.id='run-settings';settings.append(el('summary','Mazo y ajustes'),settingsGrid);context.querySelectorAll(':scope > details').forEach(d=>settingsGrid.append(d));
+ const deckJump=el('button','Cartas del mazo','secondary context-deck-link');deckJump.type='button';deckJump.setAttribute('aria-controls','deck-editor');deckJump.onclick=()=>{settings.open=true;if(deckEditor){deckEditor.open=true;deckEditor.scrollIntoView({block:'start',behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth'});deckEditor.querySelector('summary')?.focus();}};heading.append(deckJump);
+ // The compact HUD uses the original inputs and their existing form listeners.
  const hudInputs=el('div','','hud-inputs');hudInputs.id='run-inputs';Array.from(context.children).filter(e=>e!==heading).forEach(e=>hudInputs.append(e));
- const hudSummary=el('div','','hud-summary');hudSummary.hidden=true;const fold=el('button','Reducir','secondary hud-fold-toggle');fold.type='button';fold.setAttribute('aria-controls',hudInputs.id);fold.setAttribute('aria-expanded','true');fold.setAttribute('aria-label','Reducir datos de la partida');
- const sync=()=>{hudSummary.replaceChildren();for(const [id,label] of [['money','Dinero'],['ante','Ante'],['target','Objetivo']]){const value=(document.getElementById(id!) as HTMLInputElement)?.value,cell=el('div','','hud-mini '+id);cell.append(el('small',label),el('b',value?`${id==='money'?'$':''}${Number(value).toLocaleString('es')}`:'—'));hudSummary.append(cell);}};
- fold.onclick=e=>{e.stopPropagation();const compact=!hudInputs.hidden;hudInputs.hidden=compact;hudSummary.hidden=!compact;fold.textContent=compact?'Editar':'Reducir';fold.setAttribute('aria-expanded',String(!compact));fold.setAttribute('aria-label',compact?'Editar datos de la partida':'Reducir datos de la partida');sync();};heading.append(fold);context.append(hudSummary,hudInputs);context.addEventListener('input',sync);context.addEventListener('change',sync);sync();
- matchMedia('(max-width:720px)').addEventListener('change',e=>{if(!e.matches&&hudInputs.hidden)fold.click();});
- save.prepend(el('small','Dinero, comodines, cartas del mazo y vales observados se guardan al terminar la edición. Baraja inicial, ciega y otros ajustes avanzados se registran aquí.'));board.append(owned);if(composition)board.append(composition);board.append(candidates);if(vouchers)board.append(vouchers);if(catalogue)board.append(catalogue);board.append(settings);layout.append(context,board);fs.replaceChildren(layout);
+ context.append(hudInputs);
+ save.prepend(el('small','Las observaciones básicas se guardan al terminar la edición. Aquí se registran los ajustes avanzados.'));board.append(owned);if(composition)board.append(composition);board.append(candidates);if(vouchers)board.append(vouchers);if(catalogue)board.append(catalogue);board.append(settings);layout.append(context,board);fs.replaceChildren(layout);
  save.querySelectorAll('input,select,textarea,button').forEach(control=>control.setAttribute('form','run-form'));document.getElementById('record-save')?.append(save);
 }
 const faces:Record<string,[string,string,string]>={joker:['✦','Mult','coral'],half_joker:['½','Manos pequeñas','coral'],abstract_joker:['▧','Inventario','violet'],even_steven:['8','Pares','blue'],scholar:['A','Ases','blue'],banner:['⚑','Descartes','blue'],green_joker:['↗','Crecimiento','green'],golden_joker:['$','Economía','gold']};
@@ -99,4 +101,5 @@ export function fillJokerSlots(host:HTMLElement,capacity:number){
  host.querySelectorAll('.empty-slot').forEach(e=>e.remove());const rows=Array.from(host.querySelectorAll('.joker-editor')),count=rows.length;
  rows.forEach((row,i)=>{const left=row.querySelector<HTMLButtonElement>('[aria-label="Mover comodín a la izquierda"]'),right=row.querySelector<HTMLButtonElement>('[aria-label="Mover comodín a la derecha"]');if(left)left.disabled=i===0;if(right)right.disabled=i===count-1;});
  host.dataset.capacity=`${count} / ${capacity}`;host.setAttribute('aria-label',`Comodines: ${count} de ${capacity}. Orden de izquierda a derecha.`);
+ const panel=host.closest('.inventory-panel');if(panel){let badge=panel.querySelector<HTMLElement>('.joker-capacity');if(!badge){badge=el('span','','joker-capacity');badge.setAttribute('aria-hidden','true');panel.append(badge);}badge.textContent=host.dataset.capacity;}
 }

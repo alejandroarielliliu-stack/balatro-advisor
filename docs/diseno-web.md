@@ -1,5 +1,7 @@
 # Mesa de decisiones — revisión 2026-10-13 (Panamá)
 
+**Revisión actual, 02-11-2026:** [UI02 — Mesa de Balatro](redisenyo-frontend.md). La estructura y el guardado descritos más abajo son históricos; UI02 se apoya en el autoguardado UX01b y en DEC02. Fuentes, decisiones, comprobaciones y límites actuales están en ese documento.
+
 Actualización 2026-10-14: Candidatos se sustituye por la [tienda de Balatro](tienda-contextual.md#disposición-visual), con bandejas, precio encima de cada carta, vale y sobres separados. Renovar, Actualizar y Siguiente ronda no aparecen: solo controles reales del asesor y recálculo automático. La valoración contextual funciona con el estado, sin planes; las manos exactas siguen en Análisis. El texto inferior conserva la revisión histórica del 13 de octubre y sus pruebas.
 
 Aquella revisión reemplazó la distribución anterior sin modificar fórmulas, prioridades estratégicas ni cobertura del catálogo. Los resultados exactos por escenario dependen de planes explícitos, no de robos predichos.

@@ -1,5 +1,7 @@
 # Balatro Strategic Advisor
 
+**Interfaz actual (2026-11-02):** [UI02: Mesa de Balatro](docs/redisenyo-frontend.md). Contexto compacto, comodines y composición juntos, tienda con consejo legible y colección/ajustes bajo demanda. `npm run test:frontend`: nueve grupos nuevos de navegador; escritorio, móvil emulado y zoom al 200 %. Conserva cálculos y guardados. Validación de uso EVAL01b pendiente.
+
 **Web pública:** [Balatro Advisor en GitHub Pages](https://alejandroarielliliu-stack.github.io/balatro-advisor/). [Publicación automática y traslado de partidas](docs/github-pages.md). La migración solo se considera publicada cuando el despliegue termina y se comprueba el enlace sin iniciar sesión.
 
 **Plan vigente:** [asesor útil con pocas entradas](docs/hoja-de-ruta-asesor.md). Tres entregas: consejo breve, resumen del mazo y comparación práctica. Nuevas cartas/simulaciones aplazadas. UX01/UX01b y OBS01d sobre el mazo actual están implementadas. Las cantidades se derivan de las cartas registradas, sin un segundo formulario de recuentos. [DEC02](docs/comparacion-dec02.md) añade comparación acotada y consejo parcial. Siguiente: EVAL01b, comprobar utilidad durante el uso.

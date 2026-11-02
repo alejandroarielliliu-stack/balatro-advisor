@@ -82,6 +82,8 @@ jobs:
         run: node tools/consequences-test.mjs
       - name: Comprobar la web bajo una subruta
         run: node tools/static-site-test.mjs
+      - name: Comprobar mesa adaptable, teclado y consulta sin escrituras
+        run: node tools/frontend-redesign-test.mjs
       - name: Preparar el artefacto público
         uses: actions/upload-pages-artifact@v4
         with:

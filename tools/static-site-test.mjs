@@ -63,7 +63,8 @@ try{
   const go=async(page,screen)=>{const link=page.locator(`[data-screen="${screen}"]`);if(await link.getAttribute('aria-current')!=='page')await link.click();};
   const stored=page=>page.evaluate(k=>localStorage.getItem(k),key);
   const ready=page=>page.waitForFunction(()=>document.querySelector('#ownership')?.textContent.includes('Esta pestaña tiene'));
-  const add=async(page,id,button)=>{await page.locator('#bay-search').fill(id);await page.locator(`[data-bay-joker="${id}"]`).click();await page.locator(button).click();await page.locator('#bay-dialog').waitFor({state:'hidden'});};
+  const openCatalogue=async page=>{const dock=page.locator('#catalogue-dock');if(await dock.evaluate(e=>e instanceof HTMLDetailsElement&&!e.open))await dock.locator(':scope > summary').click();};
+  const add=async(page,id,button)=>{await openCatalogue(page);await page.locator('#bay-search').fill(id);await page.locator(`[data-bay-joker="${id}"]`).click();await page.locator(button).click();await page.locator('#bay-dialog').waitFor({state:'hidden'});};
   await p.goto(base);await ready(p);
   await p.waitForFunction(()=>document.querySelectorAll('.bay-mini').length===150);
   await p.evaluate(()=>document.fonts.ready);
@@ -72,7 +73,7 @@ try{
   await p.locator('#money').fill('20');await p.locator('#ante').fill('1');
   for(const id of ['j_joker','j_banner','j_greedy_joker','j_lusty_joker','j_even_steven'])await add(p,id,'#bay-add');
   assert.equal(await stored(p),null,'Transcribing the initial inventory remains a draft until it is explicitly recorded.');
-  await p.locator('.coverage-note>summary').click();await p.locator('#coverage').check();
+  await p.locator('#run-settings > summary').click();await p.locator('.coverage-note>summary').click();await p.locator('#coverage').check();
   await go(p,'archive');await p.getByRole('button',{name:'Crear y guardar mi partida'}).click();await go(p,'table');
   const initialized=JSON.parse(await stored(p));assert.equal(initialized.state.observed.money.value,20);assert.equal(initialized.state.observed.jokers.value.length,5);assert.equal(initialized.history.length,0);
   for(const id of ['j_half','j_sly','j_crafty'])await add(p,id,'#bay-candidate');
@@ -96,7 +97,7 @@ try{
   await p.locator('#composition-details').getByRole('button',{name:'Cerrar',exact:true}).click();
   assert.equal(await stored(p),observedShelfRaw);
   pass('composition-overview','Global composition and all six sections; inspecting explanations preserves exact observed record',{sections:compositionSections,globalLabel:await p.locator('#composition-score>strong').innerText(),consultationWrites:0});
-  await p.locator('#bay-search').fill('');
+  await openCatalogue(p);await p.locator('#bay-search').fill('');
   for(const width of [1440,390]){
     await p.setViewportSize({width,height:width===390?844:1000});
     await p.evaluate(()=>scrollTo(0,0));
@@ -113,7 +114,7 @@ try{
     const exampleResponse=await fetch(base+'examples/shop-purchase.json');assert.equal(exampleResponse.status,200);
     const exampleText=await exampleResponse.text();
     const template=await fetch(base+'examples/round-plan.json');assert.equal(template.status,200);assert.equal((await template.json()).schemaVersion,'scenario-1');
-    await e.locator('.coverage-note>summary').click();await e.locator('#coverage').check();
+    await e.locator('#run-settings > summary').click();await e.locator('.coverage-note>summary').click();await e.locator('#coverage').check();
     await e.locator('#money').fill('7');await e.locator('#blind-kind').selectOption('big');
     await go(e,'archive');await e.getByRole('button',{name:'Crear y guardar mi partida'}).click();await go(e,'table');
     await add(e,'j_half','#bay-candidate');

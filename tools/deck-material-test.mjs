@@ -41,7 +41,12 @@ try{
   if(input){await go(page,'archive');await page.locator('#import-file').setInputFiles({name:'synthetic-deck-material.json',mimeType:'application/json',buffer:Buffer.from(JSON.stringify(input))});await page.locator('#dialog-accept').click();await page.locator('#confirmation').waitFor({state:'hidden'});await go(page,'table');}
   await shelf(page);return {context,page};
  };
- const openDeck=async page=>{if(!await page.locator('#deck-editor').evaluate(deck=>deck.open))await page.locator('#deck-editor > summary').click();};
+ const openDeck=async page=>{
+  const deck=page.locator('#deck-editor'),jump=page.locator('.context-deck-link[aria-controls="deck-editor"]');
+  if(await jump.count()){
+   if(!await deck.locator(':scope > summary').isVisible()||!await deck.evaluate(element=>element.open))await jump.click();
+  }else if(!await deck.evaluate(element=>element.open))await deck.locator(':scope > summary').click();
+ };
  const revision=async(page,n)=>{try{await page.waitForFunction(({k,n})=>JSON.parse(localStorage.getItem(k)).state.revision===n,{k:key,n});}catch(error){console.error('REVISION_DIAGNOSTIC',JSON.stringify(await page.evaluate(({k,n})=>{const saved=JSON.parse(localStorage.getItem(k));return {expected:n,actual:saved?.state?.revision,status:document.querySelector('#basic-save-status')?.getAttribute('data-state'),message:document.querySelector('#basic-save-message')?.textContent,activeElement:document.activeElement?.outerHTML.slice(0,250),money:document.querySelector('#money')?.value,dirty:!document.querySelector('#draft-status')?.hidden,openDialogs:Array.from(document.querySelectorAll('dialog[open]'),d=>({id:d.id,label:d.getAttribute('aria-label')})),lastHistory:saved?.history?.at(-1)?.reason};},{k:key,n})));throw error;}return record(page);};
  const card=(page,id)=>page.locator(`.deck-card-editor[data-card-id="${id}"]`);
  const change=async(page,id,field,value,n)=>{await openDeck(page);await card(page,id).getByRole('combobox',{name:field+' '+id,exact:true}).selectOption(value);return revision(page,n);};

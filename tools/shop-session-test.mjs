@@ -36,6 +36,8 @@ try{
   const p=await context.newPage();p.on('pageerror',e=>pageErrors.push(e.message));await p.goto(origin);await ready(p);await load(p,state);return {context,p};
  };
  const add=async(p,id='j_joker')=>{
+  await p.locator('#store-joker-add').click();
+  assert.equal(await p.locator('#bay-search').isVisible(),true,'Shop search reveals the catalogue before selecting an observed offer');
   await p.locator('#bay-search').fill(id);await p.locator(`[data-bay-joker="${id}"]`).click();await p.locator('#bay-candidate').click();await p.locator('#bay-dialog').waitFor({state:'hidden'});
   const card=p.locator(`.candidate-card[data-candidate="${id}"]`).last();await card.waitFor();return card.getAttribute('data-offer-id');
  };

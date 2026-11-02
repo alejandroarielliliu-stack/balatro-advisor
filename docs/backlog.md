@@ -2,6 +2,8 @@
 
 ## Prioridad vigente: pocas entradas y consejo útil
 
+**02-11-2026 — UI02 implementada:** [rediseño de la Mesa](redisenyo-frontend.md) sobre DEC02, sin ampliar reglas. Contexto horizontal, construcción visible, consejo junto a ofertas, herramientas bajo demanda y nueve grupos nuevos de interfaz. Esta entrega responde a la prioridad de frontend del usuario; EVAL01b sigue siendo la siguiente validación de producto.
+
 Revisión 01-11-2026: [plan investigado y criterios de cierre](hoja-de-ruta-asesor.md). Esta tabla sustituye el orden de los siguientes históricos. **UX01 y UX01b implementadas como software:** [consejo compacto](consejo-compacto-ux01.md) y [autoguardado básico](autoguardado-basico-ux01b.md). [OBS01d](mazo-actual-obs01d.md) conecta el mazo actual y su guardado. Por aclaración del usuario, los recuentos se derivan de sus cartas, sin un formulario duplicado ni un nuevo esquema parcial. [DEC02](comparacion-dec02.md) entrega una primera comparación acotada y consejo parcial. Siguiente: EVAL01b; la utilidad real y las ampliaciones de cobertura siguen abiertas.
 
 | Orden | Tarea | Dependencia real | Aceptación breve | Estado |

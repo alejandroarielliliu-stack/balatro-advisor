@@ -30,9 +30,11 @@ try{
   await page.waitForFunction(()=>document.querySelectorAll('.bay-mini').length===150&&document.querySelectorAll('#composition-overview [data-section]').length===6);
  };
  const addOwned=async(page,id)=>{
+  const catalogue=page.locator('#catalogue-dock');if(await catalogue.evaluate(element=>element instanceof HTMLDetailsElement&&!element.open))await catalogue.locator(':scope > summary').click();
   await page.locator('#bay-search').fill(id);await page.locator(`[data-bay-joker="${id}"]`).click();
   await page.locator('#bay-add').click();await page.locator('#bay-dialog').waitFor({state:'hidden'});
  };
+ const openDeck=async page=>{const deck=page.locator('#deck-editor'),jump=page.locator('.context-deck-link[aria-controls="deck-editor"]');if(await jump.count()){if(!await deck.locator(':scope > summary').isVisible()||!await deck.evaluate(element=>element.open))await jump.click();}else if(!await deck.evaluate(element=>element.open))await deck.locator(':scope > summary').click();};
  const ownedRow=async(page,id)=>{
   const rows=page.locator('.inventory-panel .joker-editor');
   for(let i=0;i<await rows.count();i++)if(await rows.nth(i).locator('select[id^="joker-"]').inputValue()===id)return rows.nth(i);
@@ -107,7 +109,7 @@ try{
 
  await addOwned(p,'j_mime');await waitValue(p,'synergy',0);
  const mime=await ownedRow(p,'mime');assert.match(await mime.locator('.fit-badge').getAttribute('title'),/Sin|soporte|retenci/i);
- await p.locator('#deck-editor>summary').click();
+ await openDeck(p);
  await p.locator('.deck-card-editor').first().getByRole('combobox',{name:/^Mejora /}).selectOption('steel');
  assert.doesNotMatch(await p.locator('#deck-editor>summary').innerText(),/inicial/);
  await p.waitForFunction(()=>Number(document.querySelector('#composition-overview [data-section="synergy"]')?.dataset.score)>0);
@@ -148,7 +150,7 @@ try{
  const saved=await stored(q);assert.ok(saved);assert.equal(JSON.parse(saved).state.assumptions.roundPlans.length,0);
  await inspectReadOnly(q,global(q));await inspectReadOnly(q,bar(q,'synergy'));
  assert.equal(await q.locator('#draft-status').evaluate(e=>e.hidden),true);
- await q.locator('#deck-editor>summary').click();await q.getByRole('button',{name:'Añadir carta observada',exact:true}).click();
+ await openDeck(q);await q.getByRole('button',{name:'Añadir carta observada',exact:true}).click();
  await q.locator('#deck-new-card').waitFor({state:'visible'});assert.equal(await stored(q),saved,'Opening the new-card draft is not an observation.');
  await q.getByRole('combobox',{name:'Rango nueva carta',exact:true}).selectOption('Q');
  await q.getByRole('combobox',{name:'Palo nueva carta',exact:true}).selectOption('H');

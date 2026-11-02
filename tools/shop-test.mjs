@@ -100,6 +100,8 @@ try {
       assert.equal(await page.locator('#money').inputValue(), '25', 'Consultation never deducts actual money.');
     };
     const addJoker = async id => {
+      await page.locator('#store-joker-add').click();
+      assert.equal(await page.locator('#bay-search').isVisible(), true, 'Shop search opens the on-demand catalogue.');
       await page.locator('#bay-search').fill(id);
       await page.locator(`[data-bay-joker="${id}"]`).click();
       assert.equal(await page.locator('#bay-candidate').innerText(), 'Poner en tienda');
@@ -291,7 +293,9 @@ try {
   assert.equal(await shop.getByRole('button', { name: 'Buscar comodín', exact: true }).count(), 1);
   assert.equal(await p.locator('#shop-recommendation').count(), 1);
   assert.equal(await p.locator('#store-new-shop').innerText(), 'Vaciar ofertas visibles');
-  assert.equal(await shop.locator('.store-controls > button').count(), 2);
+  assert.equal(await shop.locator('.store-controls > button').count(), 1, 'Search stays compact beside the observed offers.');
+  assert.equal(await shop.locator('.store-advice-strip #shop-recommendation').count(), 1, 'Advice has its own readable strip outside the search controls.');
+  assert.equal(await shop.locator('.store-advice-strip .store-advice-scope').isVisible(), true, 'Advice scope is visible before opening details.');
   const layout = await shop.evaluate(panel => {
     const box = selector => {
       const b = panel.querySelector(selector).getBoundingClientRect();
@@ -300,12 +304,17 @@ try {
     return {
       controls: box('.store-controls'), cards: box('.store-card-well'),
       voucher: box('.store-voucher-well'), packs: box('.store-pack-well'),
+      advice: box('.store-advice-strip'),
       border: getComputedStyle(panel).borderTopColor,
     };
   });
-  assert.ok(layout.controls.right < layout.cards.left, 'Desktop advisor controls sit left of the card well.');
-  assert.ok(layout.voucher.right < layout.packs.left, 'Voucher well sits left of the two-pack well.');
-  assert.ok(layout.voucher.top >= layout.cards.bottom, 'Voucher and pack wells sit below cards.');
+  const wells = [layout.cards, layout.voucher, layout.packs];
+  for (const well of wells) assert.ok(well.right > well.left && well.bottom > well.top, 'Each observed-offer well remains visible.');
+  for (let i = 0; i < wells.length; i++) for (let j = i + 1; j < wells.length; j++) {
+    const a = wells[i], b = wells[j];
+    assert.ok(a.right <= b.left + 1 || b.right <= a.left + 1 || a.bottom <= b.top + 1 || b.bottom <= a.top + 1, 'Card, voucher and pack wells do not overlap.');
+  }
+  assert.ok(layout.advice.top >= Math.max(...wells.map(well => well.bottom)) - 1, 'The readable advice strip follows all observed offers.');
   const borderChannels = layout.border.match(/\d+/g).map(Number);
   assert.ok(borderChannels[0] > borderChannels[1] && borderChannels[0] > borderChannels[2], 'The shop frame has a red border.');
   const displayedPrices = await shop.locator('.candidate-card').evaluateAll(cards => cards.map(card => {
@@ -333,14 +342,22 @@ try {
   assert.equal(idleTheme.status, hoverTheme.status, 'Hover changes styling without changing the recommendation status.');
   await p.mouse.move(0, 0);
   await main.unchanged();
-  pass('advisor-controls', 'Balatro-style red frame, controls left, prices above cards, voucher/pack wells below; only search/advice/clear actions', { rerollInput: false, gameActionButtons: 0, realMoney: 25, offersUnchanged: true, controlsLeft: true, voucherLeft: true, pricesAbove: true, idleTheme, hoverTheme });
+  pass('advisor-controls', 'Balatro-style red frame, compact search, prices above cards, visible non-overlapping offer wells and readable advice below; only search/advice/clear actions', { rerollInput: false, gameActionButtons: 0, realMoney: 25, offersUnchanged: true, wellsDoNotOverlap: true, adviceBelowWells: true, pricesAbove: true, idleTheme, hoverTheme });
 
   // Responsive bounds concern the whole observed shop, not the former 160px
   // shortlist height. Intentional inner scrolling still stays within the page.
   for (const width of [360, 390, 1440]) {
     await p.setViewportSize({ width, height: 900 });
     await p.mouse.move(0, 0); // Capture the recommendation's idle status colour.
-    assert.equal(await p.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true, 'No document overflow at ' + width);
+    const pageBounds = await p.evaluate(() => ({
+      fits: document.documentElement.scrollWidth <= innerWidth,
+      width: innerWidth, scrollWidth: document.documentElement.scrollWidth,
+      outside: Array.from(document.querySelectorAll('body *')).filter(element => !element.closest('dialog')).map(element => {
+        const b = element.getBoundingClientRect();
+        return { element: element.tagName + (element.id ? '#' + element.id : '.' + String(element.className).split(' ').join('.')), left: b.left, right: b.right, width: b.width };
+      }).filter(b => b.width > 0 && (b.right > innerWidth + 1 || b.left < -1)).slice(0, 12),
+    }));
+    assert.equal(pageBounds.fits, true, 'No document overflow at ' + width + ': ' + JSON.stringify(pageBounds));
     const upperRows = await shop.locator('.store-card-well .candidate-grid > .candidate-card,.store-card-well .candidate-grid > .store-extra-tile').evaluateAll(cards => cards.map(card => card.getBoundingClientRect().top));
     assert.equal(upperRows.length, 3, 'Jokers and the transcribed Tarot share the upper card row.');
     assert.ok(upperRows.every(top => top === upperRows[0]), 'Other visible cards remain in the same upper row at ' + width);
