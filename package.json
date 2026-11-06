@@ -75,7 +75,8 @@
     "test:basic-autosave": "npm run build && node tools/basic-autosave-test.mjs",
     "test:deck-material": "npm run build && node tools/deck-material-test.mjs",
     "test:dec02": "npm run build && node tools/dec02-test.mjs",
-    "test:frontend": "npm run build && node tools/frontend-redesign-test.mjs"
+    "test:frontend": "npm run build && node tools/frontend-redesign-test.mjs",
+    "test:visible-decisions": "npm run build && node tools/visible-decisions-test.mjs"
   },
   "devDependencies": {
     "@types/node": "24.19.1",

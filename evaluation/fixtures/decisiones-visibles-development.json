@@ -1,0 +1,4530 @@
+{
+  "fixtureVersion": "decisiones-visibles-development-1",
+  "split": "development",
+  "authoredAt": "2026-11-05T22:24:31.368Z",
+  "baselineRevision": "b8420929105254fa36991eaa8b3ad6d6f47e3bcb",
+  "independentExpectationContract": {
+    "gameProfile": "Steam PC 1.0.1o-FULL; Blue Deck; White Stake; sin mods",
+    "kind": "synthetic_acceptance_with_separate_defensive_case",
+    "claimLimits": [
+      "Expectativas escritas a partir del plan solicitado, contratos y fuentes ya documentadas; no se ejecutó el nuevo asesor para obtenerlas.",
+      "Validar estructura de datos o aritmética no equivale a observar Balatro.",
+      "Los contratos heurísticos son criterios de conducta propuestos; no prueban optimalidad ni una probabilidad de ganar.",
+      "Eternal en White se separa expresamente como caso defensivo estructural y no como partida alcanzable bajo el perfil.",
+      "Los riesgos declarados y el modo lectura son entradas de evaluación/UI; no hechos inferidos del juego.",
+      "No se reabre el reservado EVAL01 ni se sustituye su evidencia."
+    ],
+    "sources": [
+      {
+        "id": "DEC02-05",
+        "path": "evaluation/fixtures/dec02-development.json",
+        "locator": "Caso DEC02-05: Joker2 y Abstract4; base independiente de costes."
+      },
+      {
+        "id": "DEC02-03",
+        "path": "evaluation/fixtures/dec02-development.json",
+        "locator": "Caso DEC02-03: cinco comodines conocidos y oferta Abstract4."
+      },
+      {
+        "id": "DEC02-06",
+        "path": "evaluation/fixtures/dec02-development.json",
+        "locator": "Caso DEC02-06: alcance parcial ante información relevante no evaluada."
+      },
+      {
+        "id": "H2-shop",
+        "path": "docs/motor-h2.md",
+        "locator": "Compra/venta, dinero, capacidad y rechazo de acciones ilegales."
+      },
+      {
+        "id": "T08c-sales",
+        "path": "docs/ventas-t08c.md",
+        "locator": "Ventas individuales, ingreso y beneficio sacrificado."
+      },
+      {
+        "id": "T09b",
+        "path": "docs/confirmaciones-t09b.md",
+        "locator": "Separación de consulta y confirmación real; revisión, duplicados y corrección."
+      },
+      {
+        "id": "UI02",
+        "path": "docs/redisenyo-frontend.md",
+        "locator": "Consulta sin escrituras, modos lectura y comparación visible."
+      },
+      {
+        "id": "DEC00",
+        "path": "docs/contrato-decision-dec00.md",
+        "locator": "Precios desconocidos, alternativas y acciones condicionadas."
+      },
+      {
+        "id": "Green-evidence",
+        "path": "docs/reglas-y-fuentes.md",
+        "locator": "Contador de Green manual; no se hereda al comprar otra instancia."
+      },
+      {
+        "id": "White-scope",
+        "path": "docs/evidencia/meta-estrategico-2026-10-13.md",
+        "locator": "Restricciones Eternal/Rental/Perishable no son las de White."
+      },
+      {
+        "id": "TAG01a-identities",
+        "path": "src/catalog/tags.ts",
+        "locator": "Identidad y trigger de tag_d_six; no es efecto ejecutable."
+      },
+      {
+        "id": "TAG01a-progress",
+        "path": "docs/etiquetas-tag01.md",
+        "locator": "La Jefe no ofrece salto."
+      },
+      {
+        "id": "TAG01b",
+        "path": "docs/comparacion-ciegas-tag01b.md",
+        "locator": "Consecuencias, dos efectos ejecutables, evidencia L09 y límites."
+      },
+      {
+        "id": "L09-economy",
+        "path": "docs/comparacion-ciegas-tag01b.md",
+        "locator": "Economy min(40,max(0,saldo)); sin nueva observación en juego."
+      },
+      {
+        "id": "L09-investment",
+        "path": "docs/comparacion-ciegas-tag01b.md",
+        "locator": "Investment25 al superar jefe; ingreso inmediato0."
+      },
+      {
+        "id": "L09-queue",
+        "path": "docs/comparacion-ciegas-tag01b.md",
+        "locator": "Double/cola desconocida bloquean proyección actual; no se ignoran."
+      },
+      {
+        "id": "STR02a-D6-inspection",
+        "path": "docs/evidencia/str02-etiquetas.md",
+        "locator": "Inspección read-only de ejecutable propio: game.lua244 y tag.lua382–391. Condición de D6 en tienda futura; sin ejecución de efecto H2 ni observación en partida."
+      },
+      {
+        "id": "Throwback-evidence",
+        "path": "docs/comparacion-ciegas-tag01b.md",
+        "locator": "Throwback puede mejorar al saltar; el contador no demuestra utilidad futura."
+      },
+      {
+        "id": "Popcorn-evidence",
+        "path": "src/rules/joker-counters.ts",
+        "locator": "Decaimiento de mult4 al finalizar ronda; se contrasta además con el catálogo y tests previos."
+      },
+      {
+        "id": "plan-policy",
+        "path": "docs/plan-decisiones-visibles.md",
+        "locator": "Secciones3,4 y5: expectativas de producto propuestas, no verdades mecánicas."
+      },
+      {
+        "id": "L05-cashout",
+        "path": "docs/cobro-automatico.md",
+        "locator": "Premio + dólares por manos restantes + interés sobre saldo anterior, si gana. Arreglos literales fijados antes de ejecutar el nuevo asesor."
+      }
+    ]
+  },
+  "cases": [
+    {
+      "id": "DV-SHOP-01",
+      "area": "shop",
+      "title": "Conservar y dos compras visibles sin manos de prueba",
+      "state": {
+        "schemaVersion": "0.2",
+        "rulesetId": "balatro-pc-1.0.1o-blue-white-v1",
+        "runId": "DV-SHOP-01",
+        "revision": 0,
+        "updatedAt": "2026-11-05T12:00:00Z",
+        "phase": "shop",
+        "phaseData": {
+          "origin": {
+            "status": "known",
+            "value": {
+              "ante": 2,
+              "kind": "small"
+            },
+            "source": "manual"
+          }
+        },
+        "observed": {
+          "gameVersion": {
+            "status": "known",
+            "value": "1.0.1o-FULL",
+            "source": "manual"
+          },
+          "gamePlatform": {
+            "status": "known",
+            "value": "pc-steam",
+            "source": "manual"
+          },
+          "deckId": {
+            "status": "known",
+            "value": "blue",
+            "source": "manual"
+          },
+          "stakeId": {
+            "status": "known",
+            "value": "white",
+            "source": "manual"
+          },
+          "modsPresent": {
+            "status": "known",
+            "value": false,
+            "source": "manual"
+          },
+          "money": {
+            "status": "known",
+            "source": "manual",
+            "value": 20
+          },
+          "lastCleared": {
+            "status": "known",
+            "value": {
+              "ante": 2,
+              "kind": "small"
+            },
+            "source": "manual"
+          },
+          "nextBlind": {
+            "status": "known",
+            "value": {
+              "ante": 2,
+              "kind": "big",
+              "bossId": {
+                "status": "known",
+                "value": "none",
+                "source": "manual"
+              },
+              "target": {
+                "status": "known",
+                "value": 1200,
+                "source": "manual"
+              },
+              "reward": {
+                "status": "known",
+                "value": 4,
+                "source": "manual"
+              }
+            },
+            "source": "manual"
+          },
+          "visibleBoss": {
+            "status": "unknown",
+            "reason": "El jefe no afecta las operaciones de esta tienda y no se ha transcrito."
+          },
+          "resources": {
+            "handsPerRound": {
+              "status": "known",
+              "value": 5,
+              "source": "manual"
+            },
+            "discardsPerRound": {
+              "status": "known",
+              "value": 3,
+              "source": "manual"
+            },
+            "handSize": {
+              "status": "known",
+              "value": 8,
+              "source": "manual"
+            },
+            "jokerSlots": {
+              "status": "known",
+              "value": 5,
+              "source": "manual"
+            }
+          },
+          "deck": {
+            "status": "known",
+            "source": "manual",
+            "value": {
+              "preset": "standard52-unmodified"
+            }
+          },
+          "handBases": {
+            "status": "known",
+            "value": {
+              "preset": "all-standard-level1"
+            },
+            "source": "manual"
+          },
+          "jokers": {
+            "status": "known",
+            "source": "manual",
+            "value": []
+          },
+          "shop": {
+            "status": "known",
+            "source": "manual",
+            "value": {
+              "shopId": "DV-SHOP-01-shop",
+              "cardOffers": [
+                {
+                  "offerId": "joker",
+                  "kind": "joker",
+                  "catalogId": "joker",
+                  "label": "joker",
+                  "price": {
+                    "status": "known",
+                    "source": "manual",
+                    "value": 2
+                  },
+                  "edition": {
+                    "status": "known",
+                    "source": "manual",
+                    "value": "base"
+                  },
+                  "stickers": {
+                    "status": "known",
+                    "source": "manual",
+                    "value": []
+                  }
+                },
+                {
+                  "offerId": "abstract",
+                  "kind": "joker",
+                  "catalogId": "abstract_joker",
+                  "label": "abstract_joker",
+                  "price": {
+                    "status": "known",
+                    "source": "manual",
+                    "value": 4
+                  },
+                  "edition": {
+                    "status": "known",
+                    "source": "manual",
+                    "value": "base"
+                  },
+                  "stickers": {
+                    "status": "known",
+                    "source": "manual",
+                    "value": []
+                  }
+                }
+              ],
+              "voucherOffers": [],
+              "packOffers": [],
+              "ignoredOtherOffers": []
+            }
+          },
+          "outOfScope": {
+            "status": "known",
+            "value": {
+              "vouchers": [],
+              "consumables": [],
+              "pendingTags": [],
+              "otherModifiers": []
+            },
+            "source": "manual"
+          }
+        },
+        "assumptions": {
+          "probes": [],
+          "roundPlans": [],
+          "horizonRounds": 1,
+          "cashflow": {
+            "assumeRoundWon": false,
+            "handsUsedByRound": [],
+            "noSpendingBetweenRounds": false,
+            "noMoneyChangesDuringRound": false
+          }
+        }
+      },
+      "snapshot": {
+        "id": "DV-SHOP-01-shop",
+        "jokers": [
+          {
+            "offerId": "joker",
+            "catalogId": "joker",
+            "price": 2,
+            "edition": "base",
+            "stickers": []
+          },
+          {
+            "offerId": "abstract",
+            "catalogId": "abstract_joker",
+            "price": 4,
+            "edition": "base",
+            "stickers": []
+          }
+        ],
+        "vouchers": [],
+        "packs": [],
+        "others": [],
+        "rerollCost": null
+      },
+      "options": {},
+      "interaction": {
+        "readOnly": false
+      },
+      "feasibility": {
+        "kind": "synthetic_reachable",
+        "gamePossibleUnderProfile": true,
+        "reason": "Tienda de ante2 con inventario vacío, dinero ahorrado y dos comunes base; no se presupone stock futuro."
+      },
+      "mechanicalOracles": [
+        {
+          "key": "hold",
+          "action": {
+            "type": "hold"
+          },
+          "moneyBefore": 20,
+          "moneyAfter": 20,
+          "ownedCountAfter": 0
+        },
+        {
+          "key": "buy:joker",
+          "action": {
+            "type": "buy",
+            "offerId": "joker"
+          },
+          "moneyBefore": 20,
+          "moneyAfter": 18,
+          "ownedCountAfter": 1
+        },
+        {
+          "key": "buy:abstract",
+          "action": {
+            "type": "buy",
+            "offerId": "abstract"
+          },
+          "moneyBefore": 20,
+          "moneyAfter": 16,
+          "ownedCountAfter": 1
+        }
+      ],
+      "behaviorOracle": {
+        "requiredAlternatives": [
+          {
+            "type": "hold"
+          },
+          {
+            "type": "buy",
+            "offerId": "joker"
+          },
+          {
+            "type": "buy",
+            "offerId": "abstract"
+          }
+        ],
+        "visibleComparisonWithoutAnalysis": true,
+        "holdReferenceAlwaysVisible": true,
+        "scenariosRequired": false,
+        "noWritesOnConsultation": true,
+        "noRealDraftOnHypotheticalSelection": true,
+        "notAnOptimalityClaim": true
+      },
+      "sourceIds": [
+        "DEC02-05",
+        "H2-shop",
+        "UI02"
+      ]
+    },
+    {
+      "id": "DV-SHOP-02",
+      "area": "shop",
+      "title": "Venta independiente y varios reemplazos coexisten con la compra",
+      "state": {
+        "schemaVersion": "0.2",
+        "rulesetId": "balatro-pc-1.0.1o-blue-white-v1",
+        "runId": "DV-SHOP-02",
+        "revision": 0,
+        "updatedAt": "2026-11-05T12:00:00Z",
+        "phase": "shop",
+        "phaseData": {
+          "origin": {
+            "status": "known",
+            "value": {
+              "ante": 2,
+              "kind": "small"
+            },
+            "source": "manual"
+          }
+        },
+        "observed": {
+          "gameVersion": {
+            "status": "known",
+            "value": "1.0.1o-FULL",
+            "source": "manual"
+          },
+          "gamePlatform": {
+            "status": "known",
+            "value": "pc-steam",
+            "source": "manual"
+          },
+          "deckId": {
+            "status": "known",
+            "value": "blue",
+            "source": "manual"
+          },
+          "stakeId": {
+            "status": "known",
+            "value": "white",
+            "source": "manual"
+          },
+          "modsPresent": {
+            "status": "known",
+            "value": false,
+            "source": "manual"
+          },
+          "money": {
+            "status": "known",
+            "source": "manual",
+            "value": 20
+          },
+          "lastCleared": {
+            "status": "known",
+            "value": {
+              "ante": 2,
+              "kind": "small"
+            },
+            "source": "manual"
+          },
+          "nextBlind": {
+            "status": "known",
+            "value": {
+              "ante": 2,
+              "kind": "big",
+              "bossId": {
+                "status": "known",
+                "value": "none",
+                "source": "manual"
+              },
+              "target": {
+                "status": "known",
+                "value": 1200,
+                "source": "manual"
+              },
+              "reward": {
+                "status": "known",
+                "value": 4,
+                "source": "manual"
+              }
+            },
+            "source": "manual"
+          },
+          "visibleBoss": {
+            "status": "unknown",
+            "reason": "El jefe no afecta las operaciones de esta tienda y no se ha transcrito."
+          },
+          "resources": {
+            "handsPerRound": {
+              "status": "known",
+              "value": 5,
+              "source": "manual"
+            },
+            "discardsPerRound": {
+              "status": "known",
+              "value": 3,
+              "source": "manual"
+            },
+            "handSize": {
+              "status": "known",
+              "value": 8,
+              "source": "manual"
+            },
+            "jokerSlots": {
+              "status": "known",
+              "value": 5,
+              "source": "manual"
+            }
+          },
+          "deck": {
+            "status": "known",
+            "source": "manual",
+            "value": {
+              "preset": "standard52-unmodified"
+            }
+          },
+          "handBases": {
+            "status": "known",
+            "value": {
+              "preset": "all-standard-level1"
+            },
+            "source": "manual"
+          },
+          "jokers": {
+            "status": "known",
+            "source": "manual",
+            "value": [
+              {
+                "instanceId": "owned-green",
+                "catalogId": "green_joker",
+                "edition": {
+                  "status": "known",
+                  "source": "manual",
+                  "value": "base"
+                },
+                "stickers": {
+                  "status": "known",
+                  "source": "manual",
+                  "value": []
+                },
+                "sellValue": {
+                  "status": "known",
+                  "source": "manual",
+                  "value": 2
+                },
+                "counters": {
+                  "greenMult": {
+                    "status": "known",
+                    "source": "manual",
+                    "value": 7
+                  }
+                }
+              },
+              {
+                "instanceId": "owned-joker",
+                "catalogId": "joker",
+                "edition": {
+                  "status": "known",
+                  "source": "manual",
+                  "value": "base"
+                },
+                "stickers": {
+                  "status": "known",
+                  "source": "manual",
+                  "value": []
+                },
+                "sellValue": {
+                  "status": "known",
+                  "source": "manual",
+                  "value": 1
+                },
+                "counters": {}
+              }
+            ]
+          },
+          "shop": {
+            "status": "known",
+            "source": "manual",
+            "value": {
+              "shopId": "DV-SHOP-02-shop",
+              "cardOffers": [
+                {
+                  "offerId": "abstract",
+                  "kind": "joker",
+                  "catalogId": "abstract_joker",
+                  "label": "abstract_joker",
+                  "price": {
+                    "status": "known",
+                    "source": "manual",
+                    "value": 4
+                  },
+                  "edition": {
+                    "status": "known",
+                    "source": "manual",
+                    "value": "base"
+                  },
+                  "stickers": {
+                    "status": "known",
+                    "source": "manual",
+                    "value": []
+                  }
+                },
+                {
+                  "offerId": "golden",
+                  "kind": "joker",
+                  "catalogId": "golden_joker",
+                  "label": "golden_joker",
+                  "price": {
+                    "status": "known",
+                    "source": "manual",
+                    "value": 6
+                  },
+                  "edition": {
+                    "status": "known",
+                    "source": "manual",
+                    "value": "base"
+                  },
+                  "stickers": {
+                    "status": "known",
+                    "source": "manual",
+                    "value": []
+                  }
+                }
+              ],
+              "voucherOffers": [],
+              "packOffers": [],
+              "ignoredOtherOffers": []
+            }
+          },
+          "outOfScope": {
+            "status": "known",
+            "value": {
+              "vouchers": [],
+              "consumables": [],
+              "pendingTags": [],
+              "otherModifiers": []
+            },
+            "source": "manual"
+          }
+        },
+        "assumptions": {
+          "probes": [],
+          "roundPlans": [],
+          "horizonRounds": 1,
+          "cashflow": {
+            "assumeRoundWon": false,
+            "handsUsedByRound": [],
+            "noSpendingBetweenRounds": false,
+            "noMoneyChangesDuringRound": false
+          }
+        }
+      },
+      "snapshot": {
+        "id": "DV-SHOP-02-shop",
+        "jokers": [
+          {
+            "offerId": "abstract",
+            "catalogId": "abstract_joker",
+            "price": 4,
+            "edition": "base",
+            "stickers": []
+          },
+          {
+            "offerId": "golden",
+            "catalogId": "golden_joker",
+            "price": 6,
+            "edition": "base",
+            "stickers": []
+          }
+        ],
+        "vouchers": [],
+        "packs": [],
+        "others": [],
+        "rerollCost": null
+      },
+      "options": {},
+      "interaction": {
+        "readOnly": false
+      },
+      "feasibility": {
+        "kind": "synthetic_reachable",
+        "gamePossibleUnderProfile": true,
+        "reason": "Green pudo crecer a7 durante las rondas anteriores; se transcribe el contador actual, sin reconstruir su historia."
+      },
+      "mechanicalOracles": [
+        {
+          "key": "hold",
+          "action": {
+            "type": "hold"
+          },
+          "moneyBefore": 20,
+          "moneyAfter": 20,
+          "ownedCountAfter": 2
+        },
+        {
+          "key": "buy:abstract",
+          "action": {
+            "type": "buy",
+            "offerId": "abstract"
+          },
+          "moneyBefore": 20,
+          "moneyAfter": 16,
+          "ownedCountAfter": 3
+        },
+        {
+          "key": "sell:owned-green",
+          "action": {
+            "type": "sell",
+            "instanceId": "owned-green"
+          },
+          "moneyBefore": 20,
+          "moneyAfter": 22,
+          "ownedCountAfter": 1,
+          "removedInstanceIds": [
+            "owned-green"
+          ],
+          "lostCounters": {
+            "greenMult": 7
+          }
+        },
+        {
+          "key": "replace:abstract:owned-green",
+          "action": {
+            "type": "replace",
+            "offerId": "abstract",
+            "sellInstanceId": "owned-green"
+          },
+          "moneyBefore": 20,
+          "moneyAfter": 18,
+          "ownedCountAfter": 2,
+          "removedInstanceIds": [
+            "owned-green"
+          ],
+          "lostCounters": {
+            "greenMult": 7
+          },
+          "newJokerDoesNotInheritCounters": true
+        },
+        {
+          "key": "replace:abstract:owned-joker",
+          "action": {
+            "type": "replace",
+            "offerId": "abstract",
+            "sellInstanceId": "owned-joker"
+          },
+          "moneyBefore": 20,
+          "moneyAfter": 17,
+          "ownedCountAfter": 2,
+          "removedInstanceIds": [
+            "owned-joker"
+          ]
+        }
+      ],
+      "behaviorOracle": {
+        "requiredAlternatives": [
+          {
+            "type": "hold"
+          },
+          {
+            "type": "buy",
+            "offerId": "abstract"
+          },
+          {
+            "type": "buy",
+            "offerId": "golden"
+          },
+          {
+            "type": "sell",
+            "instanceId": "owned-green"
+          },
+          {
+            "type": "sell",
+            "instanceId": "owned-joker"
+          },
+          {
+            "type": "replace",
+            "offerId": "abstract",
+            "sellInstanceId": "owned-green"
+          },
+          {
+            "type": "replace",
+            "offerId": "abstract",
+            "sellInstanceId": "owned-joker"
+          },
+          {
+            "type": "replace",
+            "offerId": "golden",
+            "sellInstanceId": "owned-green"
+          },
+          {
+            "type": "replace",
+            "offerId": "golden",
+            "sellInstanceId": "owned-joker"
+          }
+        ],
+        "distinctAlternativeIdentity": true,
+        "oneRealOfferPerOfferId": true,
+        "showSaleAndPurchaseSeparately": true,
+        "showGrowthSacrificedWithoutPricingIt": true,
+        "sequenceHasTwoSteps": [
+          "sell",
+          "buy"
+        ],
+        "singleSaleMayBeConfirmedAlone": true,
+        "noWritesOnConsultation": true,
+        "noUniversalRankingRequired": true,
+        "notAnOptimalityClaim": true
+      },
+      "sourceIds": [
+        "H2-shop",
+        "T08c-sales",
+        "T09b",
+        "Green-evidence"
+      ]
+    },
+    {
+      "id": "DV-SHOP-03",
+      "area": "shop",
+      "title": "Inventario lleno: compra bloqueada, cinco reemplazos posibles",
+      "state": {
+        "schemaVersion": "0.2",
+        "rulesetId": "balatro-pc-1.0.1o-blue-white-v1",
+        "runId": "DV-SHOP-03",
+        "revision": 0,
+        "updatedAt": "2026-11-05T12:00:00Z",
+        "phase": "shop",
+        "phaseData": {
+          "origin": {
+            "status": "known",
+            "value": {
+              "ante": 2,
+              "kind": "small"
+            },
+            "source": "manual"
+          }
+        },
+        "observed": {
+          "gameVersion": {
+            "status": "known",
+            "value": "1.0.1o-FULL",
+            "source": "manual"
+          },
+          "gamePlatform": {
+            "status": "known",
+            "value": "pc-steam",
+            "source": "manual"
+          },
+          "deckId": {
+            "status": "known",
+            "value": "blue",
+            "source": "manual"
+          },
+          "stakeId": {
+            "status": "known",
+            "value": "white",
+            "source": "manual"
+          },
+          "modsPresent": {
+            "status": "known",
+            "value": false,
+            "source": "manual"
+          },
+          "money": {
+            "status": "known",
+            "source": "manual",
+            "value": 20
+          },
+          "lastCleared": {
+            "status": "known",
+            "value": {
+              "ante": 2,
+              "kind": "small"
+            },
+            "source": "manual"
+          },
+          "nextBlind": {
+            "status": "known",
+            "value": {
+              "ante": 2,
+              "kind": "big",
+              "bossId": {
+                "status": "known",
+                "value": "none",
+                "source": "manual"
+              },
+              "target": {
+                "status": "known",
+                "value": 1200,
+                "source": "manual"
+              },
+              "reward": {
+                "status": "known",
+                "value": 4,
+                "source": "manual"
+              }
+            },
+            "source": "manual"
+          },
+          "visibleBoss": {
+            "status": "unknown",
+            "reason": "El jefe no afecta las operaciones de esta tienda y no se ha transcrito."
+          },
+          "resources": {
+            "handsPerRound": {
+              "status": "known",
+              "value": 5,
+              "source": "manual"
+            },
+            "discardsPerRound": {
+              "status": "known",
+              "value": 3,
+              "source": "manual"
+            },
+            "handSize": {
+              "status": "known",
+              "value": 8,
+              "source": "manual"
+            },
+            "jokerSlots": {
+              "status": "known",
+              "value": 5,
+              "source": "manual"
+            }
+          },
+          "deck": {
+            "status": "known",
+            "source": "manual",
+            "value": {
+              "preset": "standard52-unmodified"
+            }
+          },
+          "handBases": {
+            "status": "known",
+            "value": {
+              "preset": "all-standard-level1"
+            },
+            "source": "manual"
+          },
+          "jokers": {
+            "status": "known",
+            "source": "manual",
+            "value": [
+              {
+                "instanceId": "owned-riff",
+                "catalogId": "riff_raff",
+                "edition": {
+                  "status": "known",
+                  "source": "manual",
+                  "value": "base"
+                },
+                "stickers": {
+                  "status": "known",
+                  "source": "manual",
+                  "value": []
+                },
+                "sellValue": {
+                  "status": "known",
+                  "source": "manual",
+                  "value": 3
+                },
+                "counters": {}
+              },
+              {
+                "instanceId": "owned-joker",
+                "catalogId": "joker",
+                "edition": {
+                  "status": "known",
+                  "source": "manual",
+                  "value": "base"
+                },
+                "stickers": {
+                  "status": "known",
+                  "source": "manual",
+                  "value": []
+                },
+                "sellValue": {
+                  "status": "known",
+                  "source": "manual",
+                  "value": 1
+                },
+                "counters": {}
+              },
+              {
+                "instanceId": "owned-banner",
+                "catalogId": "banner",
+                "edition": {
+                  "status": "known",
+                  "source": "manual",
+                  "value": "base"
+                },
+                "stickers": {
+                  "status": "known",
+                  "source": "manual",
+                  "value": []
+                },
+                "sellValue": {
+                  "status": "known",
+                  "source": "manual",
+                  "value": 2
+                },
+                "counters": {}
+              },
+              {
+                "instanceId": "owned-scholar",
+                "catalogId": "scholar",
+                "edition": {
+                  "status": "known",
+                  "source": "manual",
+                  "value": "base"
+                },
+                "stickers": {
+                  "status": "known",
+                  "source": "manual",
+                  "value": []
+                },
+                "sellValue": {
+                  "status": "known",
+                  "source": "manual",
+                  "value": 2
+                },
+                "counters": {}
+              },
+              {
+                "instanceId": "owned-half",
+                "catalogId": "half_joker",
+                "edition": {
+                  "status": "known",
+                  "source": "manual",
+                  "value": "base"
+                },
+                "stickers": {
+                  "status": "known",
+                  "source": "manual",
+                  "value": []
+                },
+                "sellValue": {
+                  "status": "known",
+                  "source": "manual",
+                  "value": 2
+                },
+                "counters": {}
+              }
+            ]
+          },
+          "shop": {
+            "status": "known",
+            "source": "manual",
+            "value": {
+              "shopId": "DV-SHOP-03-shop",
+              "cardOffers": [
+                {
+                  "offerId": "abstract",
+                  "kind": "joker",
+                  "catalogId": "abstract_joker",
+                  "label": "abstract_joker",
+                  "price": {
+                    "status": "known",
+                    "source": "manual",
+                    "value": 4
+                  },
+                  "edition": {
+                    "status": "known",
+                    "source": "manual",
+                    "value": "base"
+                  },
+                  "stickers": {
+                    "status": "known",
+                    "source": "manual",
+                    "value": []
+                  }
+                }
+              ],
+              "voucherOffers": [],
+              "packOffers": [],
+              "ignoredOtherOffers": []
+            }
+          },
+          "outOfScope": {
+            "status": "known",
+            "value": {
+              "vouchers": [],
+              "consumables": [],
+              "pendingTags": [],
+              "otherModifiers": []
+            },
+            "source": "manual"
+          }
+        },
+        "assumptions": {
+          "probes": [],
+          "roundPlans": [],
+          "horizonRounds": 1,
+          "cashflow": {
+            "assumeRoundWon": false,
+            "handsUsedByRound": [],
+            "noSpendingBetweenRounds": false,
+            "noMoneyChangesDuringRound": false
+          }
+        }
+      },
+      "snapshot": {
+        "id": "DV-SHOP-03-shop",
+        "jokers": [
+          {
+            "offerId": "abstract",
+            "catalogId": "abstract_joker",
+            "price": 4,
+            "edition": "base",
+            "stickers": []
+          }
+        ],
+        "vouchers": [],
+        "packs": [],
+        "others": [],
+        "rerollCost": null
+      },
+      "options": {},
+      "interaction": {
+        "readOnly": false
+      },
+      "feasibility": {
+        "kind": "synthetic_reachable",
+        "gamePossibleUnderProfile": true,
+        "reason": "Cinco comunes y un inusual pueden haberse adquirido antes de esta tienda; todos sin stickers."
+      },
+      "mechanicalOracles": [
+        {
+          "key": "buy:abstract",
+          "action": {
+            "type": "buy",
+            "offerId": "abstract"
+          },
+          "status": "illegal",
+          "reasonCode": "no_slots"
+        },
+        {
+          "key": "replace:abstract:owned-riff",
+          "action": {
+            "type": "replace",
+            "offerId": "abstract",
+            "sellInstanceId": "owned-riff"
+          },
+          "moneyBefore": 20,
+          "moneyAfter": 19,
+          "ownedCountAfter": 5,
+          "removedInstanceIds": [
+            "owned-riff"
+          ]
+        },
+        {
+          "key": "replace:abstract:owned-joker",
+          "action": {
+            "type": "replace",
+            "offerId": "abstract",
+            "sellInstanceId": "owned-joker"
+          },
+          "moneyBefore": 20,
+          "moneyAfter": 17,
+          "ownedCountAfter": 5,
+          "removedInstanceIds": [
+            "owned-joker"
+          ]
+        }
+      ],
+      "behaviorOracle": {
+        "requiredAlternatives": [
+          {
+            "type": "hold"
+          },
+          {
+            "type": "sell",
+            "instanceId": "owned-riff"
+          },
+          {
+            "type": "sell",
+            "instanceId": "owned-joker"
+          },
+          {
+            "type": "sell",
+            "instanceId": "owned-banner"
+          },
+          {
+            "type": "sell",
+            "instanceId": "owned-scholar"
+          },
+          {
+            "type": "sell",
+            "instanceId": "owned-half"
+          },
+          {
+            "type": "replace",
+            "offerId": "abstract",
+            "sellInstanceId": "owned-riff"
+          },
+          {
+            "type": "replace",
+            "offerId": "abstract",
+            "sellInstanceId": "owned-joker"
+          },
+          {
+            "type": "replace",
+            "offerId": "abstract",
+            "sellInstanceId": "owned-banner"
+          },
+          {
+            "type": "replace",
+            "offerId": "abstract",
+            "sellInstanceId": "owned-scholar"
+          },
+          {
+            "type": "replace",
+            "offerId": "abstract",
+            "sellInstanceId": "owned-half"
+          }
+        ],
+        "blockedAlternatives": [
+          {
+            "type": "buy",
+            "offerId": "abstract"
+          }
+        ],
+        "distinctAlternativeIdentity": true,
+        "blockedBuyDoesNotHideReplacements": true,
+        "noWritesOnConsultation": true,
+        "notAnOptimalityClaim": true
+      },
+      "sourceIds": [
+        "H2-shop",
+        "DEC02-03",
+        "T08c-sales"
+      ]
+    },
+    {
+      "id": "DV-SHOP-04",
+      "area": "shop",
+      "title": "Defensa de legalidad: Eternal conserva las otras alternativas",
+      "state": {
+        "schemaVersion": "0.2",
+        "rulesetId": "balatro-pc-1.0.1o-blue-white-v1",
+        "runId": "DV-SHOP-04",
+        "revision": 0,
+        "updatedAt": "2026-11-05T12:00:00Z",
+        "phase": "shop",
+        "phaseData": {
+          "origin": {
+            "status": "known",
+            "value": {
+              "ante": 2,
+              "kind": "small"
+            },
+            "source": "manual"
+          }
+        },
+        "observed": {
+          "gameVersion": {
+            "status": "known",
+            "value": "1.0.1o-FULL",
+            "source": "manual"
+          },
+          "gamePlatform": {
+            "status": "known",
+            "value": "pc-steam",
+            "source": "manual"
+          },
+          "deckId": {
+            "status": "known",
+            "value": "blue",
+            "source": "manual"
+          },
+          "stakeId": {
+            "status": "known",
+            "value": "white",
+            "source": "manual"
+          },
+          "modsPresent": {
+            "status": "known",
+            "value": false,
+            "source": "manual"
+          },
+          "money": {
+            "status": "known",
+            "source": "manual",
+            "value": 20
+          },
+          "lastCleared": {
+            "status": "known",
+            "value": {
+              "ante": 2,
+              "kind": "small"
+            },
+            "source": "manual"
+          },
+          "nextBlind": {
+            "status": "known",
+            "value": {
+              "ante": 2,
+              "kind": "big",
+              "bossId": {
+                "status": "known",
+                "value": "none",
+                "source": "manual"
+              },
+              "target": {
+                "status": "known",
+                "value": 1200,
+                "source": "manual"
+              },
+              "reward": {
+                "status": "known",
+                "value": 4,
+                "source": "manual"
+              }
+            },
+            "source": "manual"
+          },
+          "visibleBoss": {
+            "status": "unknown",
+            "reason": "El jefe no afecta las operaciones de esta tienda y no se ha transcrito."
+          },
+          "resources": {
+            "handsPerRound": {
+              "status": "known",
+              "value": 5,
+              "source": "manual"
+            },
+            "discardsPerRound": {
+              "status": "known",
+              "value": 3,
+              "source": "manual"
+            },
+            "handSize": {
+              "status": "known",
+              "value": 8,
+              "source": "manual"
+            },
+            "jokerSlots": {
+              "status": "known",
+              "value": 5,
+              "source": "manual"
+            }
+          },
+          "deck": {
+            "status": "known",
+            "source": "manual",
+            "value": {
+              "preset": "standard52-unmodified"
+            }
+          },
+          "handBases": {
+            "status": "known",
+            "value": {
+              "preset": "all-standard-level1"
+            },
+            "source": "manual"
+          },
+          "jokers": {
+            "status": "known",
+            "source": "manual",
+            "value": [
+              {
+                "instanceId": "owned-riff",
+                "catalogId": "riff_raff",
+                "edition": {
+                  "status": "known",
+                  "source": "manual",
+                  "value": "base"
+                },
+                "stickers": {
+                  "status": "known",
+                  "source": "manual",
+                  "value": [
+                    "eternal"
+                  ]
+                },
+                "sellValue": {
+                  "status": "known",
+                  "source": "manual",
+                  "value": 3
+                },
+                "counters": {}
+              },
+              {
+                "instanceId": "owned-joker",
+                "catalogId": "joker",
+                "edition": {
+                  "status": "known",
+                  "source": "manual",
+                  "value": "base"
+                },
+                "stickers": {
+                  "status": "known",
+                  "source": "manual",
+                  "value": []
+                },
+                "sellValue": {
+                  "status": "known",
+                  "source": "manual",
+                  "value": 1
+                },
+                "counters": {}
+              },
+              {
+                "instanceId": "owned-banner",
+                "catalogId": "banner",
+                "edition": {
+                  "status": "known",
+                  "source": "manual",
+                  "value": "base"
+                },
+                "stickers": {
+                  "status": "known",
+                  "source": "manual",
+                  "value": []
+                },
+                "sellValue": {
+                  "status": "known",
+                  "source": "manual",
+                  "value": 2
+                },
+                "counters": {}
+              },
+              {
+                "instanceId": "owned-scholar",
+                "catalogId": "scholar",
+                "edition": {
+                  "status": "known",
+                  "source": "manual",
+                  "value": "base"
+                },
+                "stickers": {
+                  "status": "known",
+                  "source": "manual",
+                  "value": []
+                },
+                "sellValue": {
+                  "status": "known",
+                  "source": "manual",
+                  "value": 2
+                },
+                "counters": {}
+              },
+              {
+                "instanceId": "owned-half",
+                "catalogId": "half_joker",
+                "edition": {
+                  "status": "known",
+                  "source": "manual",
+                  "value": "base"
+                },
+                "stickers": {
+                  "status": "known",
+                  "source": "manual",
+                  "value": []
+                },
+                "sellValue": {
+                  "status": "known",
+                  "source": "manual",
+                  "value": 2
+                },
+                "counters": {}
+              }
+            ]
+          },
+          "shop": {
+            "status": "known",
+            "source": "manual",
+            "value": {
+              "shopId": "DV-SHOP-04-shop",
+              "cardOffers": [
+                {
+                  "offerId": "abstract",
+                  "kind": "joker",
+                  "catalogId": "abstract_joker",
+                  "label": "abstract_joker",
+                  "price": {
+                    "status": "known",
+                    "source": "manual",
+                    "value": 4
+                  },
+                  "edition": {
+                    "status": "known",
+                    "source": "manual",
+                    "value": "base"
+                  },
+                  "stickers": {
+                    "status": "known",
+                    "source": "manual",
+                    "value": []
+                  }
+                }
+              ],
+              "voucherOffers": [],
+              "packOffers": [],
+              "ignoredOtherOffers": []
+            }
+          },
+          "outOfScope": {
+            "status": "known",
+            "value": {
+              "vouchers": [],
+              "consumables": [],
+              "pendingTags": [],
+              "otherModifiers": []
+            },
+            "source": "manual"
+          }
+        },
+        "assumptions": {
+          "probes": [],
+          "roundPlans": [],
+          "horizonRounds": 1,
+          "cashflow": {
+            "assumeRoundWon": false,
+            "handsUsedByRound": [],
+            "noSpendingBetweenRounds": false,
+            "noMoneyChangesDuringRound": false
+          }
+        }
+      },
+      "snapshot": {
+        "id": "DV-SHOP-04-shop",
+        "jokers": [
+          {
+            "offerId": "abstract",
+            "catalogId": "abstract_joker",
+            "price": 4,
+            "edition": "base",
+            "stickers": []
+          }
+        ],
+        "vouchers": [],
+        "packs": [],
+        "others": [],
+        "rerollCost": null
+      },
+      "options": {},
+      "interaction": {
+        "readOnly": false
+      },
+      "feasibility": {
+        "kind": "defensive_structural",
+        "gamePossibleUnderProfile": false,
+        "reason": "Eternal no se obtiene naturalmente con White Stake; se conserva exclusivamente como entrada defensiva del contrato de legalidad. No cuenta como caso estratégico posible ni como partida observada."
+      },
+      "mechanicalOracles": [
+        {
+          "key": "sell:owned-riff",
+          "action": {
+            "type": "sell",
+            "instanceId": "owned-riff"
+          },
+          "status": "illegal",
+          "reasonCode": "eternal_joker"
+        },
+        {
+          "key": "replace:abstract:owned-riff",
+          "action": {
+            "type": "replace",
+            "offerId": "abstract",
+            "sellInstanceId": "owned-riff"
+          },
+          "status": "illegal",
+          "reasonCode": "eternal_joker"
+        },
+        {
+          "key": "replace:abstract:owned-joker",
+          "action": {
+            "type": "replace",
+            "offerId": "abstract",
+            "sellInstanceId": "owned-joker"
+          },
+          "moneyBefore": 20,
+          "moneyAfter": 17,
+          "ownedCountAfter": 5
+        }
+      ],
+      "behaviorOracle": {
+        "requiredAlternatives": [
+          {
+            "type": "hold"
+          },
+          {
+            "type": "sell",
+            "instanceId": "owned-joker"
+          },
+          {
+            "type": "replace",
+            "offerId": "abstract",
+            "sellInstanceId": "owned-joker"
+          }
+        ],
+        "blockedAlternatives": [
+          {
+            "type": "sell",
+            "instanceId": "owned-riff"
+          },
+          {
+            "type": "replace",
+            "offerId": "abstract",
+            "sellInstanceId": "owned-riff"
+          }
+        ],
+        "oneBlockedAlternativeDoesNotBlockOthers": true,
+        "noWritesOnConsultation": true,
+        "notAnOptimalityClaim": true
+      },
+      "sourceIds": [
+        "H2-shop",
+        "T08c-sales",
+        "White-scope"
+      ]
+    },
+    {
+      "id": "DV-SHOP-05",
+      "area": "shop",
+      "title": "Precio desconocido y consulta desde pestaña de lectura",
+      "state": {
+        "schemaVersion": "0.2",
+        "rulesetId": "balatro-pc-1.0.1o-blue-white-v1",
+        "runId": "DV-SHOP-05",
+        "revision": 0,
+        "updatedAt": "2026-11-05T12:00:00Z",
+        "phase": "shop",
+        "phaseData": {
+          "origin": {
+            "status": "known",
+            "value": {
+              "ante": 2,
+              "kind": "small"
+            },
+            "source": "manual"
+          }
+        },
+        "observed": {
+          "gameVersion": {
+            "status": "known",
+            "value": "1.0.1o-FULL",
+            "source": "manual"
+          },
+          "gamePlatform": {
+            "status": "known",
+            "value": "pc-steam",
+            "source": "manual"
+          },
+          "deckId": {
+            "status": "known",
+            "value": "blue",
+            "source": "manual"
+          },
+          "stakeId": {
+            "status": "known",
+            "value": "white",
+            "source": "manual"
+          },
+          "modsPresent": {
+            "status": "known",
+            "value": false,
+            "source": "manual"
+          },
+          "money": {
+            "status": "known",
+            "source": "manual",
+            "value": 20
+          },
+          "lastCleared": {
+            "status": "known",
+            "value": {
+              "ante": 2,
+              "kind": "small"
+            },
+            "source": "manual"
+          },
+          "nextBlind": {
+            "status": "known",
+            "value": {
+              "ante": 2,
+              "kind": "big",
+              "bossId": {
+                "status": "known",
+                "value": "none",
+                "source": "manual"
+              },
+              "target": {
+                "status": "known",
+                "value": 1200,
+                "source": "manual"
+              },
+              "reward": {
+                "status": "known",
+                "value": 4,
+                "source": "manual"
+              }
+            },
+            "source": "manual"
+          },
+          "visibleBoss": {
+            "status": "unknown",
+            "reason": "El jefe no afecta las operaciones de esta tienda y no se ha transcrito."
+          },
+          "resources": {
+            "handsPerRound": {
+              "status": "known",
+              "value": 5,
+              "source": "manual"
+            },
+            "discardsPerRound": {
+              "status": "known",
+              "value": 3,
+              "source": "manual"
+            },
+            "handSize": {
+              "status": "known",
+              "value": 8,
+              "source": "manual"
+            },
+            "jokerSlots": {
+              "status": "known",
+              "value": 5,
+              "source": "manual"
+            }
+          },
+          "deck": {
+            "status": "known",
+            "source": "manual",
+            "value": {
+              "preset": "standard52-unmodified"
+            }
+          },
+          "handBases": {
+            "status": "known",
+            "value": {
+              "preset": "all-standard-level1"
+            },
+            "source": "manual"
+          },
+          "jokers": {
+            "status": "known",
+            "source": "manual",
+            "value": []
+          },
+          "shop": {
+            "status": "known",
+            "source": "manual",
+            "value": {
+              "shopId": "DV-SHOP-05-shop",
+              "cardOffers": [
+                {
+                  "offerId": "joker",
+                  "kind": "joker",
+                  "catalogId": "joker",
+                  "label": "joker",
+                  "price": {
+                    "status": "unknown",
+                    "reason": "Precio actual no transcrito."
+                  },
+                  "edition": {
+                    "status": "known",
+                    "source": "manual",
+                    "value": "base"
+                  },
+                  "stickers": {
+                    "status": "known",
+                    "source": "manual",
+                    "value": []
+                  }
+                },
+                {
+                  "offerId": "abstract",
+                  "kind": "joker",
+                  "catalogId": "abstract_joker",
+                  "label": "abstract_joker",
+                  "price": {
+                    "status": "known",
+                    "source": "manual",
+                    "value": 4
+                  },
+                  "edition": {
+                    "status": "known",
+                    "source": "manual",
+                    "value": "base"
+                  },
+                  "stickers": {
+                    "status": "known",
+                    "source": "manual",
+                    "value": []
+                  }
+                }
+              ],
+              "voucherOffers": [],
+              "packOffers": [],
+              "ignoredOtherOffers": []
+            }
+          },
+          "outOfScope": {
+            "status": "known",
+            "value": {
+              "vouchers": [],
+              "consumables": [],
+              "pendingTags": [],
+              "otherModifiers": []
+            },
+            "source": "manual"
+          }
+        },
+        "assumptions": {
+          "probes": [],
+          "roundPlans": [],
+          "horizonRounds": 1,
+          "cashflow": {
+            "assumeRoundWon": false,
+            "handsUsedByRound": [],
+            "noSpendingBetweenRounds": false,
+            "noMoneyChangesDuringRound": false
+          }
+        }
+      },
+      "snapshot": {
+        "id": "DV-SHOP-05-shop",
+        "jokers": [
+          {
+            "offerId": "joker",
+            "catalogId": "joker",
+            "price": null,
+            "edition": "base",
+            "stickers": []
+          },
+          {
+            "offerId": "abstract",
+            "catalogId": "abstract_joker",
+            "price": 4,
+            "edition": "base",
+            "stickers": []
+          }
+        ],
+        "vouchers": [],
+        "packs": [],
+        "others": [],
+        "rerollCost": null
+      },
+      "options": {},
+      "interaction": {
+        "readOnly": true
+      },
+      "feasibility": {
+        "kind": "synthetic_reachable",
+        "gamePossibleUnderProfile": true,
+        "reason": "El precio existe en el juego pero el jugador no lo ha transcrito; lectura es contexto de aplicación, no mecánica del juego."
+      },
+      "mechanicalOracles": [
+        {
+          "key": "hold",
+          "action": {
+            "type": "hold"
+          },
+          "moneyBefore": 20,
+          "moneyAfter": 20,
+          "ownedCountAfter": 0
+        },
+        {
+          "key": "buy:joker",
+          "action": {
+            "type": "buy",
+            "offerId": "joker"
+          },
+          "status": "missing_data",
+          "moneyAfter": null,
+          "unknownPriceIsNotZero": true
+        },
+        {
+          "key": "buy:abstract",
+          "action": {
+            "type": "buy",
+            "offerId": "abstract"
+          },
+          "moneyBefore": 20,
+          "moneyAfter": 16,
+          "ownedCountAfter": 1
+        }
+      ],
+      "behaviorOracle": {
+        "requiredAlternatives": [
+          {
+            "type": "hold"
+          },
+          {
+            "type": "buy",
+            "offerId": "abstract"
+          }
+        ],
+        "pendingAlternatives": [
+          {
+            "type": "buy",
+            "offerId": "joker"
+          }
+        ],
+        "showPartialScope": true,
+        "missingPriceMayChangeRecommendation": true,
+        "comparisonAvailableReadOnly": true,
+        "noWritesOnConsultation": true,
+        "noRealDraftOnHypotheticalSelection": true,
+        "confirmationDisabledInReadOnly": true,
+        "notAnOptimalityClaim": true
+      },
+      "sourceIds": [
+        "DEC02-06",
+        "DEC00",
+        "T09b",
+        "UI02"
+      ]
+    },
+    {
+      "id": "DV-BLIND-01",
+      "area": "blind",
+      "title": "Economía con saldo bajo: orientación inicial sin planes",
+      "state": {
+        "schemaVersion": "0.2",
+        "rulesetId": "balatro-pc-1.0.1o-blue-white-v1",
+        "runId": "DV-BLIND-01",
+        "revision": 0,
+        "updatedAt": "2026-11-05T12:00:00Z",
+        "phase": "blind_select",
+        "phaseData": {
+          "skipTag": {
+            "status": "known",
+            "source": "manual",
+            "value": "tag_economy"
+          }
+        },
+        "observed": {
+          "gameVersion": {
+            "status": "known",
+            "source": "confirmedPreset",
+            "value": "1.0.1o-FULL"
+          },
+          "gamePlatform": {
+            "status": "known",
+            "source": "confirmedPreset",
+            "value": "pc-steam"
+          },
+          "deckId": {
+            "status": "known",
+            "source": "confirmedPreset",
+            "value": "blue"
+          },
+          "stakeId": {
+            "status": "known",
+            "source": "confirmedPreset",
+            "value": "white"
+          },
+          "modsPresent": {
+            "status": "known",
+            "source": "confirmedPreset",
+            "value": false
+          },
+          "money": {
+            "status": "known",
+            "source": "manual",
+            "value": 4
+          },
+          "lastCleared": {
+            "status": "unknown",
+            "reason": "Todavía no registrado."
+          },
+          "nextBlind": {
+            "status": "known",
+            "source": "confirmedPreset",
+            "value": {
+              "ante": 1,
+              "kind": "small",
+              "bossId": {
+                "status": "known",
+                "source": "confirmedPreset",
+                "value": "none"
+              },
+              "target": {
+                "status": "known",
+                "source": "confirmedPreset",
+                "value": 300
+              },
+              "reward": {
+                "status": "known",
+                "source": "confirmedPreset",
+                "value": 3
+              }
+            }
+          },
+          "visibleBoss": {
+            "status": "unknown",
+            "reason": "Todavía no registrado."
+          },
+          "resources": {
+            "handsPerRound": {
+              "status": "known",
+              "source": "confirmedPreset",
+              "value": 5
+            },
+            "discardsPerRound": {
+              "status": "known",
+              "source": "confirmedPreset",
+              "value": 3
+            },
+            "handSize": {
+              "status": "known",
+              "source": "confirmedPreset",
+              "value": 8
+            },
+            "jokerSlots": {
+              "status": "known",
+              "source": "confirmedPreset",
+              "value": 5
+            }
+          },
+          "deck": {
+            "status": "known",
+            "source": "manual",
+            "value": {
+              "preset": "standard52-unmodified"
+            }
+          },
+          "handBases": {
+            "status": "known",
+            "source": "confirmedPreset",
+            "value": {
+              "preset": "all-standard-level1"
+            }
+          },
+          "jokers": {
+            "status": "known",
+            "source": "confirmedPreset",
+            "value": []
+          },
+          "shop": {
+            "status": "unknown",
+            "reason": "Todavía no se ha observado una tienda en esta partida."
+          },
+          "outOfScope": {
+            "status": "known",
+            "source": "confirmedPreset",
+            "value": {
+              "vouchers": [],
+              "consumables": [],
+              "pendingTags": [],
+              "otherModifiers": []
+            }
+          },
+          "jokerContext": {
+            "status": "known",
+            "source": "confirmedPreset",
+            "value": {
+              "startingDeckSize": {
+                "status": "known",
+                "source": "confirmedPreset",
+                "value": 52
+              },
+              "blindsSkipped": {
+                "status": "known",
+                "source": "confirmedPreset",
+                "value": 0
+              },
+              "tags": {
+                "status": "known",
+                "source": "confirmedPreset",
+                "value": []
+              },
+              "tarotsUsed": {
+                "status": "known",
+                "source": "confirmedPreset",
+                "value": 0
+              },
+              "planetsUsed": {
+                "status": "known",
+                "source": "confirmedPreset",
+                "value": []
+              },
+              "consumables": {
+                "status": "known",
+                "source": "confirmedPreset",
+                "value": []
+              },
+              "consumableSlots": {
+                "status": "known",
+                "source": "confirmedPreset",
+                "value": 2
+              }
+            }
+          }
+        },
+        "assumptions": {
+          "probes": [],
+          "roundPlans": [],
+          "horizonRounds": 1,
+          "cashflow": {
+            "assumeRoundWon": false,
+            "handsUsedByRound": [],
+            "noSpendingBetweenRounds": false,
+            "noMoneyChangesDuringRound": false
+          }
+        }
+      },
+      "options": {
+        "risk": "unknown"
+      },
+      "interaction": {
+        "readOnly": false
+      },
+      "feasibility": {
+        "kind": "synthetic_reachable",
+        "gamePossibleUnderProfile": true,
+        "reason": "Selección de ciega y recursos transcritos de una partida compatible; no se predicen cartas robadas, cobro ni resultado de la ronda."
+      },
+      "mechanicalOracles": {
+        "moneyBefore": 4,
+        "skipImmediateIncome": 4,
+        "moneyAfterSkip": 8,
+        "moneyAfterPlay": null,
+        "blindRewardIfWon": 3,
+        "cashoutIfWon": {
+          "assumptions": [
+            "Gana la ciega actual",
+            "No cambian dólares durante la ronda",
+            "Sin ingresos adicionales no registrados"
+          ],
+          "remainingHands": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "earned": [
+            3,
+            4,
+            5,
+            6,
+            7
+          ],
+          "balanceAfter": [
+            7,
+            8,
+            9,
+            10,
+            11
+          ],
+          "minimumRemainingHandsToMatchSkipIncome": 1,
+          "excludesFutureShopValue": true
+        }
+      },
+      "behaviorOracle": {
+        "noExplicitPlans": true,
+        "noVictoryProbability": true,
+        "noGuaranteedSurvival": true,
+        "noFictitiousFutureShopPrice": true,
+        "noWritesOnConsultation": true,
+        "notAnOptimalityClaim": true,
+        "allowedPreferred": [
+          "play"
+        ],
+        "mustBeConditional": true,
+        "requiredSignals": [
+          "round-income-is-conditional",
+          "shop-opportunity",
+          "survival-not-evaluated"
+        ],
+        "tagModelMissingMustNotForceAbstention": false
+      },
+      "sourceIds": [
+        "L09-economy",
+        "TAG01b",
+        "plan-policy",
+        "L05-cashout"
+      ]
+    },
+    {
+      "id": "DV-BLIND-02",
+      "area": "blind",
+      "title": "Economía con saldo20: compensación concreta evita jugar siempre",
+      "state": {
+        "schemaVersion": "0.2",
+        "rulesetId": "balatro-pc-1.0.1o-blue-white-v1",
+        "runId": "DV-BLIND-02",
+        "revision": 0,
+        "updatedAt": "2026-11-05T12:00:00Z",
+        "phase": "blind_select",
+        "phaseData": {
+          "skipTag": {
+            "status": "known",
+            "source": "manual",
+            "value": "tag_economy"
+          }
+        },
+        "observed": {
+          "gameVersion": {
+            "status": "known",
+            "source": "confirmedPreset",
+            "value": "1.0.1o-FULL"
+          },
+          "gamePlatform": {
+            "status": "known",
+            "source": "confirmedPreset",
+            "value": "pc-steam"
+          },
+          "deckId": {
+            "status": "known",
+            "source": "confirmedPreset",
+            "value": "blue"
+          },
+          "stakeId": {
+            "status": "known",
+            "source": "confirmedPreset",
+            "value": "white"
+          },
+          "modsPresent": {
+            "status": "known",
+            "source": "confirmedPreset",
+            "value": false
+          },
+          "money": {
+            "status": "known",
+            "source": "manual",
+            "value": 20
+          },
+          "lastCleared": {
+            "status": "unknown",
+            "reason": "Todavía no registrado."
+          },
+          "nextBlind": {
+            "status": "known",
+            "source": "confirmedPreset",
+            "value": {
+              "ante": 1,
+              "kind": "small",
+              "bossId": {
+                "status": "known",
+                "source": "confirmedPreset",
+                "value": "none"
+              },
+              "target": {
+                "status": "known",
+                "source": "confirmedPreset",
+                "value": 300
+              },
+              "reward": {
+                "status": "known",
+                "source": "confirmedPreset",
+                "value": 3
+              }
+            }
+          },
+          "visibleBoss": {
+            "status": "unknown",
+            "reason": "Todavía no registrado."
+          },
+          "resources": {
+            "handsPerRound": {
+              "status": "known",
+              "source": "confirmedPreset",
+              "value": 5
+            },
+            "discardsPerRound": {
+              "status": "known",
+              "source": "confirmedPreset",
+              "value": 3
+            },
+            "handSize": {
+              "status": "known",
+              "source": "confirmedPreset",
+              "value": 8
+            },
+            "jokerSlots": {
+              "status": "known",
+              "source": "confirmedPreset",
+              "value": 5
+            }
+          },
+          "deck": {
+            "status": "known",
+            "source": "manual",
+            "value": {
+              "preset": "standard52-unmodified"
+            }
+          },
+          "handBases": {
+            "status": "known",
+            "source": "confirmedPreset",
+            "value": {
+              "preset": "all-standard-level1"
+            }
+          },
+          "jokers": {
+            "status": "known",
+            "source": "confirmedPreset",
+            "value": []
+          },
+          "shop": {
+            "status": "unknown",
+            "reason": "Todavía no se ha observado una tienda en esta partida."
+          },
+          "outOfScope": {
+            "status": "known",
+            "source": "confirmedPreset",
+            "value": {
+              "vouchers": [],
+              "consumables": [],
+              "pendingTags": [],
+              "otherModifiers": []
+            }
+          },
+          "jokerContext": {
+            "status": "known",
+            "source": "confirmedPreset",
+            "value": {
+              "startingDeckSize": {
+                "status": "known",
+                "source": "confirmedPreset",
+                "value": 52
+              },
+              "blindsSkipped": {
+                "status": "known",
+                "source": "confirmedPreset",
+                "value": 0
+              },
+              "tags": {
+                "status": "known",
+                "source": "confirmedPreset",
+                "value": []
+              },
+              "tarotsUsed": {
+                "status": "known",
+                "source": "confirmedPreset",
+                "value": 0
+              },
+              "planetsUsed": {
+                "status": "known",
+                "source": "confirmedPreset",
+                "value": []
+              },
+              "consumables": {
+                "status": "known",
+                "source": "confirmedPreset",
+                "value": []
+              },
+              "consumableSlots": {
+                "status": "known",
+                "source": "confirmedPreset",
+                "value": 2
+              }
+            }
+          }
+        },
+        "assumptions": {
+          "probes": [],
+          "roundPlans": [],
+          "horizonRounds": 1,
+          "cashflow": {
+            "assumeRoundWon": false,
+            "handsUsedByRound": [],
+            "noSpendingBetweenRounds": false,
+            "noMoneyChangesDuringRound": false
+          }
+        }
+      },
+      "options": {
+        "risk": "unknown"
+      },
+      "interaction": {
+        "readOnly": false
+      },
+      "feasibility": {
+        "kind": "synthetic_reachable",
+        "gamePossibleUnderProfile": true,
+        "reason": "Selección de ciega y recursos transcritos de una partida compatible; no se predicen cartas robadas, cobro ni resultado de la ronda."
+      },
+      "mechanicalOracles": {
+        "moneyBefore": 20,
+        "skipImmediateIncome": 20,
+        "moneyAfterSkip": 40,
+        "moneyAfterPlay": null,
+        "blindRewardIfWon": 3,
+        "cashoutIfWon": {
+          "assumptions": [
+            "Gana la ciega actual",
+            "No cambian dólares durante la ronda",
+            "Sin ingresos adicionales no registrados"
+          ],
+          "remainingHands": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "earned": [
+            7,
+            8,
+            9,
+            10,
+            11
+          ],
+          "balanceAfter": [
+            27,
+            28,
+            29,
+            30,
+            31
+          ],
+          "minimumRemainingHandsToMatchSkipIncome": null,
+          "excludesFutureShopValue": true
+        }
+      },
+      "behaviorOracle": {
+        "noExplicitPlans": true,
+        "noVictoryProbability": true,
+        "noGuaranteedSurvival": true,
+        "noFictitiousFutureShopPrice": true,
+        "noWritesOnConsultation": true,
+        "notAnOptimalityClaim": true,
+        "allowedPreferred": [
+          null,
+          "skip"
+        ],
+        "automaticPlayForbidden": true,
+        "requiredSignals": [
+          "material-skip-income",
+          "shop-opportunity",
+          "survival-not-evaluated"
+        ]
+      },
+      "sourceIds": [
+        "L09-economy",
+        "TAG01b",
+        "plan-policy",
+        "L05-cashout"
+      ]
+    },
+    {
+      "id": "DV-BLIND-03",
+      "area": "blind",
+      "title": "D6: perfil cualitativo y ejecución pendiente",
+      "state": {
+        "schemaVersion": "0.2",
+        "rulesetId": "balatro-pc-1.0.1o-blue-white-v1",
+        "runId": "DV-BLIND-03",
+        "revision": 0,
+        "updatedAt": "2026-11-05T12:00:00Z",
+        "phase": "blind_select",
+        "phaseData": {
+          "skipTag": {
+            "status": "known",
+            "source": "manual",
+            "value": "tag_d_six"
+          }
+        },
+        "observed": {
+          "gameVersion": {
+            "status": "known",
+            "source": "confirmedPreset",
+            "value": "1.0.1o-FULL"
+          },
+          "gamePlatform": {
+            "status": "known",
+            "source": "confirmedPreset",
+            "value": "pc-steam"
+          },
+          "deckId": {
+            "status": "known",
+            "source": "confirmedPreset",
+            "value": "blue"
+          },
+          "stakeId": {
+            "status": "known",
+            "source": "confirmedPreset",
+            "value": "white"
+          },
+          "modsPresent": {
+            "status": "known",
+            "source": "confirmedPreset",
+            "value": false
+          },
+          "money": {
+            "status": "known",
+            "source": "manual",
+            "value": 4
+          },
+          "lastCleared": {
+            "status": "unknown",
+            "reason": "Todavía no registrado."
+          },
+          "nextBlind": {
+            "status": "known",
+            "source": "confirmedPreset",
+            "value": {
+              "ante": 1,
+              "kind": "small",
+              "bossId": {
+                "status": "known",
+                "source": "confirmedPreset",
+                "value": "none"
+              },
+              "target": {
+                "status": "known",
+                "source": "confirmedPreset",
+                "value": 300
+              },
+              "reward": {
+                "status": "known",
+                "source": "confirmedPreset",
+                "value": 3
+              }
+            }
+          },
+          "visibleBoss": {
+            "status": "unknown",
+            "reason": "Todavía no registrado."
+          },
+          "resources": {
+            "handsPerRound": {
+              "status": "known",
+              "source": "confirmedPreset",
+              "value": 5
+            },
+            "discardsPerRound": {
+              "status": "known",
+              "source": "confirmedPreset",
+              "value": 3
+            },
+            "handSize": {
+              "status": "known",
+              "source": "confirmedPreset",
+              "value": 8
+            },
+            "jokerSlots": {
+              "status": "known",
+              "source": "confirmedPreset",
+              "value": 5
+            }
+          },
+          "deck": {
+            "status": "known",
+            "source": "manual",
+            "value": {
+              "preset": "standard52-unmodified"
+            }
+          },
+          "handBases": {
+            "status": "known",
+            "source": "confirmedPreset",
+            "value": {
+              "preset": "all-standard-level1"
+            }
+          },
+          "jokers": {
+            "status": "known",
+            "source": "confirmedPreset",
+            "value": []
+          },
+          "shop": {
+            "status": "unknown",
+            "reason": "Todavía no se ha observado una tienda en esta partida."
+          },
+          "outOfScope": {
+            "status": "known",
+            "source": "confirmedPreset",
+            "value": {
+              "vouchers": [],
+              "consumables": [],
+              "pendingTags": [],
+              "otherModifiers": []
+            }
+          },
+          "jokerContext": {
+            "status": "known",
+            "source": "confirmedPreset",
+            "value": {
+              "startingDeckSize": {
+                "status": "known",
+                "source": "confirmedPreset",
+                "value": 52
+              },
+              "blindsSkipped": {
+                "status": "known",
+                "source": "confirmedPreset",
+                "value": 0
+              },
+              "tags": {
+                "status": "known",
+                "source": "confirmedPreset",
+                "value": []
+              },
+              "tarotsUsed": {
+                "status": "known",
+                "source": "confirmedPreset",
+                "value": 0
+              },
+              "planetsUsed": {
+                "status": "known",
+                "source": "confirmedPreset",
+                "value": []
+              },
+              "consumables": {
+                "status": "known",
+                "source": "confirmedPreset",
+                "value": []
+              },
+              "consumableSlots": {
+                "status": "known",
+                "source": "confirmedPreset",
+                "value": 2
+              }
+            }
+          }
+        },
+        "assumptions": {
+          "probes": [],
+          "roundPlans": [],
+          "horizonRounds": 1,
+          "cashflow": {
+            "assumeRoundWon": false,
+            "handsUsedByRound": [],
+            "noSpendingBetweenRounds": false,
+            "noMoneyChangesDuringRound": false
+          }
+        }
+      },
+      "options": {
+        "risk": "unknown"
+      },
+      "interaction": {
+        "readOnly": false
+      },
+      "feasibility": {
+        "kind": "synthetic_reachable",
+        "gamePossibleUnderProfile": true,
+        "reason": "Selección de ciega y recursos transcritos de una partida compatible; no se predicen cartas robadas, cobro ni resultado de la ronda."
+      },
+      "mechanicalOracles": {
+        "moneyBefore": 4,
+        "moneyAfterPlay": null,
+        "skipProjectionImplemented": false,
+        "guaranteedImmediateIncome": null
+      },
+      "behaviorOracle": {
+        "noExplicitPlans": true,
+        "noVictoryProbability": true,
+        "noGuaranteedSurvival": true,
+        "noFictitiousFutureShopPrice": true,
+        "noWritesOnConsultation": true,
+        "notAnOptimalityClaim": true,
+        "allowedPreferred": [
+          "play",
+          null
+        ],
+        "mustHaveUsefulOrientation": true,
+        "mustBeConditional": true,
+        "requiredSignals": [
+          "shop-opportunity",
+          "tag-future-condition",
+          "skip-effect-not-executed"
+        ],
+        "forbiddenClaims": [
+          "tag-worth-zero",
+          "reroll-already-available",
+          "tag-is-bad-because-unimplemented"
+        ]
+      },
+      "sourceIds": [
+        "TAG01a-identities",
+        "STR02a-D6-inspection",
+        "plan-policy"
+      ]
+    },
+    {
+      "id": "DV-BLIND-04",
+      "area": "blind",
+      "title": "Inversión no se suma al saldo actual",
+      "state": {
+        "schemaVersion": "0.2",
+        "rulesetId": "balatro-pc-1.0.1o-blue-white-v1",
+        "runId": "DV-BLIND-04",
+        "revision": 0,
+        "updatedAt": "2026-11-05T12:00:00Z",
+        "phase": "blind_select",
+        "phaseData": {
+          "skipTag": {
+            "status": "known",
+            "source": "manual",
+            "value": "tag_investment"
+          }
+        },
+        "observed": {
+          "gameVersion": {
+            "status": "known",
+            "source": "confirmedPreset",
+            "value": "1.0.1o-FULL"
+          },
+          "gamePlatform": {
+            "status": "known",
+            "source": "confirmedPreset",
+            "value": "pc-steam"
+          },
+          "deckId": {
+            "status": "known",
+            "source": "confirmedPreset",
+            "value": "blue"
+          },
+          "stakeId": {
+            "status": "known",
+            "source": "confirmedPreset",
+            "value": "white"
+          },
+          "modsPresent": {
+            "status": "known",
+            "source": "confirmedPreset",
+            "value": false
+          },
+          "money": {
+            "status": "known",
+            "source": "manual",
+            "value": 4
+          },
+          "lastCleared": {
+            "status": "unknown",
+            "reason": "Todavía no registrado."
+          },
+          "nextBlind": {
+            "status": "known",
+            "source": "confirmedPreset",
+            "value": {
+              "ante": 1,
+              "kind": "small",
+              "bossId": {
+                "status": "known",
+                "source": "confirmedPreset",
+                "value": "none"
+              },
+              "target": {
+                "status": "known",
+                "source": "confirmedPreset",
+                "value": 300
+              },
+              "reward": {
+                "status": "known",
+                "source": "confirmedPreset",
+                "value": 3
+              }
+            }
+          },
+          "visibleBoss": {
+            "status": "unknown",
+            "reason": "Todavía no registrado."
+          },
+          "resources": {
+            "handsPerRound": {
+              "status": "known",
+              "source": "confirmedPreset",
+              "value": 5
+            },
+            "discardsPerRound": {
+              "status": "known",
+              "source": "confirmedPreset",
+              "value": 3
+            },
+            "handSize": {
+              "status": "known",
+              "source": "confirmedPreset",
+              "value": 8
+            },
+            "jokerSlots": {
+              "status": "known",
+              "source": "confirmedPreset",
+              "value": 5
+            }
+          },
+          "deck": {
+            "status": "known",
+            "source": "manual",
+            "value": {
+              "preset": "standard52-unmodified"
+            }
+          },
+          "handBases": {
+            "status": "known",
+            "source": "confirmedPreset",
+            "value": {
+              "preset": "all-standard-level1"
+            }
+          },
+          "jokers": {
+            "status": "known",
+            "source": "confirmedPreset",
+            "value": []
+          },
+          "shop": {
+            "status": "unknown",
+            "reason": "Todavía no se ha observado una tienda en esta partida."
+          },
+          "outOfScope": {
+            "status": "known",
+            "source": "confirmedPreset",
+            "value": {
+              "vouchers": [],
+              "consumables": [],
+              "pendingTags": [],
+              "otherModifiers": []
+            }
+          },
+          "jokerContext": {
+            "status": "known",
+            "source": "confirmedPreset",
+            "value": {
+              "startingDeckSize": {
+                "status": "known",
+                "source": "confirmedPreset",
+                "value": 52
+              },
+              "blindsSkipped": {
+                "status": "known",
+                "source": "confirmedPreset",
+                "value": 0
+              },
+              "tags": {
+                "status": "known",
+                "source": "confirmedPreset",
+                "value": []
+              },
+              "tarotsUsed": {
+                "status": "known",
+                "source": "confirmedPreset",
+                "value": 0
+              },
+              "planetsUsed": {
+                "status": "known",
+                "source": "confirmedPreset",
+                "value": []
+              },
+              "consumables": {
+                "status": "known",
+                "source": "confirmedPreset",
+                "value": []
+              },
+              "consumableSlots": {
+                "status": "known",
+                "source": "confirmedPreset",
+                "value": 2
+              }
+            }
+          }
+        },
+        "assumptions": {
+          "probes": [],
+          "roundPlans": [],
+          "horizonRounds": 1,
+          "cashflow": {
+            "assumeRoundWon": false,
+            "handsUsedByRound": [],
+            "noSpendingBetweenRounds": false,
+            "noMoneyChangesDuringRound": false
+          }
+        }
+      },
+      "options": {
+        "risk": "unknown"
+      },
+      "interaction": {
+        "readOnly": false
+      },
+      "feasibility": {
+        "kind": "synthetic_reachable",
+        "gamePossibleUnderProfile": true,
+        "reason": "Selección de ciega y recursos transcritos de una partida compatible; no se predicen cartas robadas, cobro ni resultado de la ronda."
+      },
+      "mechanicalOracles": {
+        "moneyBefore": 4,
+        "skipImmediateIncome": 0,
+        "moneyAfterSkip": 4,
+        "deferredDollars": 25,
+        "deferredCondition": "Superar una ciega jefe compatible; no cobro inmediato."
+      },
+      "behaviorOracle": {
+        "noExplicitPlans": true,
+        "noVictoryProbability": true,
+        "noGuaranteedSurvival": true,
+        "noFictitiousFutureShopPrice": true,
+        "noWritesOnConsultation": true,
+        "notAnOptimalityClaim": true,
+        "allowedPreferred": [
+          null,
+          "skip"
+        ],
+        "requiredSignals": [
+          "deferred-income",
+          "shop-opportunity"
+        ],
+        "forbiddenClaims": [
+          "money-now-29",
+          "future-boss-guaranteed"
+        ]
+      },
+      "sourceIds": [
+        "L09-investment",
+        "TAG01b",
+        "plan-policy"
+      ]
+    },
+    {
+      "id": "DV-BLIND-05",
+      "area": "blind",
+      "title": "Riesgo declarado: retirar preferencia automática por jugar",
+      "state": {
+        "schemaVersion": "0.2",
+        "rulesetId": "balatro-pc-1.0.1o-blue-white-v1",
+        "runId": "DV-BLIND-05",
+        "revision": 0,
+        "updatedAt": "2026-11-05T12:00:00Z",
+        "phase": "blind_select",
+        "phaseData": {
+          "skipTag": {
+            "status": "known",
+            "source": "manual",
+            "value": "tag_economy"
+          }
+        },
+        "observed": {
+          "gameVersion": {
+            "status": "known",
+            "source": "confirmedPreset",
+            "value": "1.0.1o-FULL"
+          },
+          "gamePlatform": {
+            "status": "known",
+            "source": "confirmedPreset",
+            "value": "pc-steam"
+          },
+          "deckId": {
+            "status": "known",
+            "source": "confirmedPreset",
+            "value": "blue"
+          },
+          "stakeId": {
+            "status": "known",
+            "source": "confirmedPreset",
+            "value": "white"
+          },
+          "modsPresent": {
+            "status": "known",
+            "source": "confirmedPreset",
+            "value": false
+          },
+          "money": {
+            "status": "known",
+            "source": "manual",
+            "value": 4
+          },
+          "lastCleared": {
+            "status": "unknown",
+            "reason": "Todavía no registrado."
+          },
+          "nextBlind": {
+            "status": "known",
+            "source": "confirmedPreset",
+            "value": {
+              "ante": 1,
+              "kind": "small",
+              "bossId": {
+                "status": "known",
+                "source": "confirmedPreset",
+                "value": "none"
+              },
+              "target": {
+                "status": "known",
+                "source": "confirmedPreset",
+                "value": 300
+              },
+              "reward": {
+                "status": "known",
+                "source": "confirmedPreset",
+                "value": 3
+              }
+            }
+          },
+          "visibleBoss": {
+            "status": "unknown",
+            "reason": "Todavía no registrado."
+          },
+          "resources": {
+            "handsPerRound": {
+              "status": "known",
+              "source": "confirmedPreset",
+              "value": 5
+            },
+            "discardsPerRound": {
+              "status": "known",
+              "source": "confirmedPreset",
+              "value": 3
+            },
+            "handSize": {
+              "status": "known",
+              "source": "confirmedPreset",
+              "value": 8
+            },
+            "jokerSlots": {
+              "status": "known",
+              "source": "confirmedPreset",
+              "value": 5
+            }
+          },
+          "deck": {
+            "status": "known",
+            "source": "manual",
+            "value": {
+              "preset": "standard52-unmodified"
+            }
+          },
+          "handBases": {
+            "status": "known",
+            "source": "confirmedPreset",
+            "value": {
+              "preset": "all-standard-level1"
+            }
+          },
+          "jokers": {
+            "status": "known",
+            "source": "confirmedPreset",
+            "value": []
+          },
+          "shop": {
+            "status": "unknown",
+            "reason": "Todavía no se ha observado una tienda en esta partida."
+          },
+          "outOfScope": {
+            "status": "known",
+            "source": "confirmedPreset",
+            "value": {
+              "vouchers": [],
+              "consumables": [],
+              "pendingTags": [],
+              "otherModifiers": []
+            }
+          },
+          "jokerContext": {
+            "status": "known",
+            "source": "confirmedPreset",
+            "value": {
+              "startingDeckSize": {
+                "status": "known",
+                "source": "confirmedPreset",
+                "value": 52
+              },
+              "blindsSkipped": {
+                "status": "known",
+                "source": "confirmedPreset",
+                "value": 0
+              },
+              "tags": {
+                "status": "known",
+                "source": "confirmedPreset",
+                "value": []
+              },
+              "tarotsUsed": {
+                "status": "known",
+                "source": "confirmedPreset",
+                "value": 0
+              },
+              "planetsUsed": {
+                "status": "known",
+                "source": "confirmedPreset",
+                "value": []
+              },
+              "consumables": {
+                "status": "known",
+                "source": "confirmedPreset",
+                "value": []
+              },
+              "consumableSlots": {
+                "status": "known",
+                "source": "confirmedPreset",
+                "value": 2
+              }
+            }
+          }
+        },
+        "assumptions": {
+          "probes": [],
+          "roundPlans": [],
+          "horizonRounds": 1,
+          "cashflow": {
+            "assumeRoundWon": false,
+            "handsUsedByRound": [],
+            "noSpendingBetweenRounds": false,
+            "noMoneyChangesDuringRound": false
+          }
+        }
+      },
+      "options": {
+        "risk": "tight"
+      },
+      "interaction": {
+        "readOnly": false
+      },
+      "feasibility": {
+        "kind": "synthetic_reachable",
+        "gamePossibleUnderProfile": true,
+        "reason": "Selección de ciega y recursos transcritos de una partida compatible; no se predicen cartas robadas, cobro ni resultado de la ronda."
+      },
+      "mechanicalOracles": {
+        "moneyBefore": 4,
+        "skipImmediateIncome": 4,
+        "moneyAfterSkip": 8,
+        "moneyAfterPlay": null
+      },
+      "behaviorOracle": {
+        "noExplicitPlans": true,
+        "noVictoryProbability": true,
+        "noGuaranteedSurvival": true,
+        "noFictitiousFutureShopPrice": true,
+        "noWritesOnConsultation": true,
+        "notAnOptimalityClaim": true,
+        "allowedPreferred": [
+          null,
+          "skip"
+        ],
+        "automaticPlayForbidden": true,
+        "requiredSignals": [
+          "player-declared-risk",
+          "next-blind-is-not-proven-safe"
+        ],
+        "forbiddenClaims": [
+          "skip-guarantees-survival",
+          "declared-risk-is-a-probability"
+        ]
+      },
+      "sourceIds": [
+        "TAG01b",
+        "plan-policy"
+      ]
+    },
+    {
+      "id": "DV-BLIND-06",
+      "area": "blind",
+      "title": "Double pendiente: no simular duplicación ni ignorarla",
+      "state": {
+        "schemaVersion": "0.2",
+        "rulesetId": "balatro-pc-1.0.1o-blue-white-v1",
+        "runId": "DV-BLIND-06",
+        "revision": 0,
+        "updatedAt": "2026-11-05T12:00:00Z",
+        "phase": "blind_select",
+        "phaseData": {
+          "skipTag": {
+            "status": "known",
+            "source": "manual",
+            "value": "tag_economy"
+          }
+        },
+        "observed": {
+          "gameVersion": {
+            "status": "known",
+            "source": "confirmedPreset",
+            "value": "1.0.1o-FULL"
+          },
+          "gamePlatform": {
+            "status": "known",
+            "source": "confirmedPreset",
+            "value": "pc-steam"
+          },
+          "deckId": {
+            "status": "known",
+            "source": "confirmedPreset",
+            "value": "blue"
+          },
+          "stakeId": {
+            "status": "known",
+            "source": "confirmedPreset",
+            "value": "white"
+          },
+          "modsPresent": {
+            "status": "known",
+            "source": "confirmedPreset",
+            "value": false
+          },
+          "money": {
+            "status": "known",
+            "source": "manual",
+            "value": 4
+          },
+          "lastCleared": {
+            "status": "unknown",
+            "reason": "Todavía no registrado."
+          },
+          "nextBlind": {
+            "status": "known",
+            "source": "confirmedPreset",
+            "value": {
+              "ante": 1,
+              "kind": "small",
+              "bossId": {
+                "status": "known",
+                "source": "confirmedPreset",
+                "value": "none"
+              },
+              "target": {
+                "status": "known",
+                "source": "confirmedPreset",
+                "value": 300
+              },
+              "reward": {
+                "status": "known",
+                "source": "confirmedPreset",
+                "value": 3
+              }
+            }
+          },
+          "visibleBoss": {
+            "status": "unknown",
+            "reason": "Todavía no registrado."
+          },
+          "resources": {
+            "handsPerRound": {
+              "status": "known",
+              "source": "confirmedPreset",
+              "value": 5
+            },
+            "discardsPerRound": {
+              "status": "known",
+              "source": "confirmedPreset",
+              "value": 3
+            },
+            "handSize": {
+              "status": "known",
+              "source": "confirmedPreset",
+              "value": 8
+            },
+            "jokerSlots": {
+              "status": "known",
+              "source": "confirmedPreset",
+              "value": 5
+            }
+          },
+          "deck": {
+            "status": "known",
+            "source": "manual",
+            "value": {
+              "preset": "standard52-unmodified"
+            }
+          },
+          "handBases": {
+            "status": "known",
+            "source": "confirmedPreset",
+            "value": {
+              "preset": "all-standard-level1"
+            }
+          },
+          "jokers": {
+            "status": "known",
+            "source": "confirmedPreset",
+            "value": []
+          },
+          "shop": {
+            "status": "unknown",
+            "reason": "Todavía no se ha observado una tienda en esta partida."
+          },
+          "outOfScope": {
+            "status": "known",
+            "source": "confirmedPreset",
+            "value": {
+              "vouchers": [],
+              "consumables": [],
+              "pendingTags": [],
+              "otherModifiers": []
+            }
+          },
+          "jokerContext": {
+            "status": "known",
+            "source": "manual",
+            "value": {
+              "tags": {
+                "status": "known",
+                "source": "manual",
+                "value": [
+                  "tag_double"
+                ]
+              },
+              "blindsSkipped": {
+                "status": "known",
+                "source": "manual",
+                "value": 0
+              }
+            }
+          }
+        },
+        "assumptions": {
+          "probes": [],
+          "roundPlans": [],
+          "horizonRounds": 1,
+          "cashflow": {
+            "assumeRoundWon": false,
+            "handsUsedByRound": [],
+            "noSpendingBetweenRounds": false,
+            "noMoneyChangesDuringRound": false
+          }
+        }
+      },
+      "options": {
+        "risk": "unknown"
+      },
+      "interaction": {
+        "readOnly": false
+      },
+      "feasibility": {
+        "kind": "synthetic_reachable",
+        "gamePossibleUnderProfile": true,
+        "reason": "Selección de ciega y recursos transcritos de una partida compatible; no se predicen cartas robadas, cobro ni resultado de la ronda."
+      },
+      "mechanicalOracles": {
+        "moneyBefore": 4,
+        "moneyAfterPlay": null,
+        "skipProjectionBlocked": true,
+        "guaranteedImmediateIncome": null
+      },
+      "behaviorOracle": {
+        "noExplicitPlans": true,
+        "noVictoryProbability": true,
+        "noGuaranteedSurvival": true,
+        "noFictitiousFutureShopPrice": true,
+        "noWritesOnConsultation": true,
+        "notAnOptimalityClaim": true,
+        "allowedPreferred": [
+          null,
+          "skip"
+        ],
+        "automaticPlayForbidden": true,
+        "requiredSignals": [
+          "pending-double",
+          "unpriced-interaction"
+        ],
+        "forbiddenClaims": [
+          "ignore-double",
+          "guaranteed-skip-cash-8"
+        ]
+      },
+      "sourceIds": [
+        "L09-queue",
+        "TAG01b",
+        "plan-policy"
+      ]
+    },
+    {
+      "id": "DV-BLIND-07",
+      "area": "blind",
+      "title": "Cola desconocida: la limitación debe estar localizada",
+      "state": {
+        "schemaVersion": "0.2",
+        "rulesetId": "balatro-pc-1.0.1o-blue-white-v1",
+        "runId": "DV-BLIND-07",
+        "revision": 0,
+        "updatedAt": "2026-11-05T12:00:00Z",
+        "phase": "blind_select",
+        "phaseData": {
+          "skipTag": {
+            "status": "known",
+            "source": "manual",
+            "value": "tag_economy"
+          }
+        },
+        "observed": {
+          "gameVersion": {
+            "status": "known",
+            "source": "confirmedPreset",
+            "value": "1.0.1o-FULL"
+          },
+          "gamePlatform": {
+            "status": "known",
+            "source": "confirmedPreset",
+            "value": "pc-steam"
+          },
+          "deckId": {
+            "status": "known",
+            "source": "confirmedPreset",
+            "value": "blue"
+          },
+          "stakeId": {
+            "status": "known",
+            "source": "confirmedPreset",
+            "value": "white"
+          },
+          "modsPresent": {
+            "status": "known",
+            "source": "confirmedPreset",
+            "value": false
+          },
+          "money": {
+            "status": "known",
+            "source": "manual",
+            "value": 4
+          },
+          "lastCleared": {
+            "status": "unknown",
+            "reason": "Todavía no registrado."
+          },
+          "nextBlind": {
+            "status": "known",
+            "source": "confirmedPreset",
+            "value": {
+              "ante": 1,
+              "kind": "small",
+              "bossId": {
+                "status": "known",
+                "source": "confirmedPreset",
+                "value": "none"
+              },
+              "target": {
+                "status": "known",
+                "source": "confirmedPreset",
+                "value": 300
+              },
+              "reward": {
+                "status": "known",
+                "source": "confirmedPreset",
+                "value": 3
+              }
+            }
+          },
+          "visibleBoss": {
+            "status": "unknown",
+            "reason": "Todavía no registrado."
+          },
+          "resources": {
+            "handsPerRound": {
+              "status": "known",
+              "source": "confirmedPreset",
+              "value": 5
+            },
+            "discardsPerRound": {
+              "status": "known",
+              "source": "confirmedPreset",
+              "value": 3
+            },
+            "handSize": {
+              "status": "known",
+              "source": "confirmedPreset",
+              "value": 8
+            },
+            "jokerSlots": {
+              "status": "known",
+              "source": "confirmedPreset",
+              "value": 5
+            }
+          },
+          "deck": {
+            "status": "known",
+            "source": "manual",
+            "value": {
+              "preset": "standard52-unmodified"
+            }
+          },
+          "handBases": {
+            "status": "known",
+            "source": "confirmedPreset",
+            "value": {
+              "preset": "all-standard-level1"
+            }
+          },
+          "jokers": {
+            "status": "known",
+            "source": "confirmedPreset",
+            "value": []
+          },
+          "shop": {
+            "status": "unknown",
+            "reason": "Todavía no se ha observado una tienda en esta partida."
+          },
+          "outOfScope": {
+            "status": "known",
+            "source": "confirmedPreset",
+            "value": {
+              "vouchers": [],
+              "consumables": [],
+              "pendingTags": [],
+              "otherModifiers": []
+            }
+          },
+          "jokerContext": {
+            "status": "known",
+            "source": "manual",
+            "value": {
+              "tags": {
+                "status": "unknown",
+                "reason": "Cola no transcrita."
+              },
+              "blindsSkipped": {
+                "status": "known",
+                "source": "manual",
+                "value": 0
+              }
+            }
+          }
+        },
+        "assumptions": {
+          "probes": [],
+          "roundPlans": [],
+          "horizonRounds": 1,
+          "cashflow": {
+            "assumeRoundWon": false,
+            "handsUsedByRound": [],
+            "noSpendingBetweenRounds": false,
+            "noMoneyChangesDuringRound": false
+          }
+        }
+      },
+      "options": {
+        "risk": "unknown"
+      },
+      "interaction": {
+        "readOnly": false
+      },
+      "feasibility": {
+        "kind": "synthetic_reachable",
+        "gamePossibleUnderProfile": true,
+        "reason": "Selección de ciega y recursos transcritos de una partida compatible; no se predicen cartas robadas, cobro ni resultado de la ronda."
+      },
+      "mechanicalOracles": {
+        "moneyBefore": 4,
+        "moneyAfterPlay": null,
+        "skipProjectionBlocked": true,
+        "guaranteedImmediateIncome": null
+      },
+      "behaviorOracle": {
+        "noExplicitPlans": true,
+        "noVictoryProbability": true,
+        "noGuaranteedSurvival": true,
+        "noFictitiousFutureShopPrice": true,
+        "noWritesOnConsultation": true,
+        "notAnOptimalityClaim": true,
+        "allowedPreferred": [
+          "play",
+          null,
+          "skip"
+        ],
+        "mustBeConditional": true,
+        "requiredSignals": [
+          "queue-unknown"
+        ],
+        "forbiddenClaims": [
+          "empty-queue-assumed",
+          "guaranteed-skip-cash-8"
+        ]
+      },
+      "sourceIds": [
+        "L09-queue",
+        "TAG01b",
+        "plan-policy"
+      ]
+    },
+    {
+      "id": "DV-BLIND-08",
+      "area": "blind",
+      "title": "Throwback: beneficio de salto sin inventar utilidad futura",
+      "state": {
+        "schemaVersion": "0.2",
+        "rulesetId": "balatro-pc-1.0.1o-blue-white-v1",
+        "runId": "DV-BLIND-08",
+        "revision": 0,
+        "updatedAt": "2026-11-05T12:00:00Z",
+        "phase": "blind_select",
+        "phaseData": {
+          "skipTag": {
+            "status": "known",
+            "source": "manual",
+            "value": "tag_economy"
+          }
+        },
+        "observed": {
+          "gameVersion": {
+            "status": "known",
+            "source": "confirmedPreset",
+            "value": "1.0.1o-FULL"
+          },
+          "gamePlatform": {
+            "status": "known",
+            "source": "confirmedPreset",
+            "value": "pc-steam"
+          },
+          "deckId": {
+            "status": "known",
+            "source": "confirmedPreset",
+            "value": "blue"
+          },
+          "stakeId": {
+            "status": "known",
+            "source": "confirmedPreset",
+            "value": "white"
+          },
+          "modsPresent": {
+            "status": "known",
+            "source": "confirmedPreset",
+            "value": false
+          },
+          "money": {
+            "status": "known",
+            "source": "manual",
+            "value": 4
+          },
+          "lastCleared": {
+            "status": "known",
+            "source": "manual",
+            "value": {
+              "ante": 1,
+              "kind": "boss"
+            }
+          },
+          "nextBlind": {
+            "status": "known",
+            "source": "manual",
+            "value": {
+              "ante": 2,
+              "kind": "small",
+              "bossId": {
+                "status": "known",
+                "source": "manual",
+                "value": "none"
+              },
+              "target": {
+                "status": "known",
+                "source": "manual",
+                "value": 800
+              },
+              "reward": {
+                "status": "known",
+                "source": "manual",
+                "value": 3
+              }
+            }
+          },
+          "visibleBoss": {
+            "status": "unknown",
+            "reason": "Todavía no registrado."
+          },
+          "resources": {
+            "handsPerRound": {
+              "status": "known",
+              "source": "confirmedPreset",
+              "value": 5
+            },
+            "discardsPerRound": {
+              "status": "known",
+              "source": "confirmedPreset",
+              "value": 3
+            },
+            "handSize": {
+              "status": "known",
+              "source": "confirmedPreset",
+              "value": 8
+            },
+            "jokerSlots": {
+              "status": "known",
+              "source": "confirmedPreset",
+              "value": 5
+            }
+          },
+          "deck": {
+            "status": "known",
+            "source": "manual",
+            "value": {
+              "preset": "standard52-unmodified"
+            }
+          },
+          "handBases": {
+            "status": "known",
+            "source": "confirmedPreset",
+            "value": {
+              "preset": "all-standard-level1"
+            }
+          },
+          "jokers": {
+            "status": "known",
+            "source": "manual",
+            "value": [
+              {
+                "instanceId": "owned-throwback",
+                "catalogId": "throwback",
+                "edition": {
+                  "status": "known",
+                  "source": "manual",
+                  "value": "base"
+                },
+                "stickers": {
+                  "status": "known",
+                  "source": "manual",
+                  "value": []
+                },
+                "sellValue": {
+                  "status": "known",
+                  "source": "manual",
+                  "value": 3
+                },
+                "counters": {}
+              }
+            ]
+          },
+          "shop": {
+            "status": "unknown",
+            "reason": "Todavía no se ha observado una tienda en esta partida."
+          },
+          "outOfScope": {
+            "status": "known",
+            "source": "confirmedPreset",
+            "value": {
+              "vouchers": [],
+              "consumables": [],
+              "pendingTags": [],
+              "otherModifiers": []
+            }
+          },
+          "jokerContext": {
+            "status": "known",
+            "source": "manual",
+            "value": {
+              "tags": {
+                "status": "known",
+                "source": "manual",
+                "value": []
+              },
+              "blindsSkipped": {
+                "status": "known",
+                "source": "manual",
+                "value": 2
+              }
+            }
+          }
+        },
+        "assumptions": {
+          "probes": [],
+          "roundPlans": [],
+          "horizonRounds": 1,
+          "cashflow": {
+            "assumeRoundWon": false,
+            "handsUsedByRound": [],
+            "noSpendingBetweenRounds": false,
+            "noMoneyChangesDuringRound": false
+          }
+        }
+      },
+      "options": {
+        "risk": "unknown"
+      },
+      "interaction": {
+        "readOnly": false
+      },
+      "feasibility": {
+        "kind": "synthetic_reachable",
+        "gamePossibleUnderProfile": true,
+        "reason": "Selección de ciega y recursos transcritos de una partida compatible; no se predicen cartas robadas, cobro ni resultado de la ronda."
+      },
+      "mechanicalOracles": {
+        "moneyBefore": 4,
+        "skipImmediateIncome": 4,
+        "moneyAfterSkip": 8,
+        "knownPreviousSkips": 2,
+        "projectedSkipCount": 3,
+        "moneyAfterPlay": null
+      },
+      "behaviorOracle": {
+        "noExplicitPlans": true,
+        "noVictoryProbability": true,
+        "noGuaranteedSurvival": true,
+        "noFictitiousFutureShopPrice": true,
+        "noWritesOnConsultation": true,
+        "notAnOptimalityClaim": true,
+        "allowedPreferred": [
+          null,
+          "skip"
+        ],
+        "automaticPlayForbidden": true,
+        "requiredSignals": [
+          "skip-synergy",
+          "future-activation-not-proven"
+        ],
+        "forbiddenClaims": [
+          "counter-growth-is-guaranteed-win",
+          "growth-priced-as-dollars"
+        ]
+      },
+      "sourceIds": [
+        "TAG01b",
+        "Throwback-evidence",
+        "plan-policy"
+      ]
+    },
+    {
+      "id": "DV-BLIND-09",
+      "area": "blind",
+      "title": "Modo estricto conserva los requisitos de evidencia",
+      "state": {
+        "schemaVersion": "0.2",
+        "rulesetId": "balatro-pc-1.0.1o-blue-white-v1",
+        "runId": "DV-BLIND-09",
+        "revision": 0,
+        "updatedAt": "2026-11-05T12:00:00Z",
+        "phase": "blind_select",
+        "phaseData": {
+          "skipTag": {
+            "status": "known",
+            "source": "manual",
+            "value": "tag_economy"
+          }
+        },
+        "observed": {
+          "gameVersion": {
+            "status": "known",
+            "source": "confirmedPreset",
+            "value": "1.0.1o-FULL"
+          },
+          "gamePlatform": {
+            "status": "known",
+            "source": "confirmedPreset",
+            "value": "pc-steam"
+          },
+          "deckId": {
+            "status": "known",
+            "source": "confirmedPreset",
+            "value": "blue"
+          },
+          "stakeId": {
+            "status": "known",
+            "source": "confirmedPreset",
+            "value": "white"
+          },
+          "modsPresent": {
+            "status": "known",
+            "source": "confirmedPreset",
+            "value": false
+          },
+          "money": {
+            "status": "known",
+            "source": "manual",
+            "value": 4
+          },
+          "lastCleared": {
+            "status": "unknown",
+            "reason": "Todavía no registrado."
+          },
+          "nextBlind": {
+            "status": "known",
+            "source": "confirmedPreset",
+            "value": {
+              "ante": 1,
+              "kind": "small",
+              "bossId": {
+                "status": "known",
+                "source": "confirmedPreset",
+                "value": "none"
+              },
+              "target": {
+                "status": "known",
+                "source": "confirmedPreset",
+                "value": 300
+              },
+              "reward": {
+                "status": "known",
+                "source": "confirmedPreset",
+                "value": 3
+              }
+            }
+          },
+          "visibleBoss": {
+            "status": "unknown",
+            "reason": "Todavía no registrado."
+          },
+          "resources": {
+            "handsPerRound": {
+              "status": "known",
+              "source": "confirmedPreset",
+              "value": 5
+            },
+            "discardsPerRound": {
+              "status": "known",
+              "source": "confirmedPreset",
+              "value": 3
+            },
+            "handSize": {
+              "status": "known",
+              "source": "confirmedPreset",
+              "value": 8
+            },
+            "jokerSlots": {
+              "status": "known",
+              "source": "confirmedPreset",
+              "value": 5
+            }
+          },
+          "deck": {
+            "status": "known",
+            "source": "manual",
+            "value": {
+              "preset": "standard52-unmodified"
+            }
+          },
+          "handBases": {
+            "status": "known",
+            "source": "confirmedPreset",
+            "value": {
+              "preset": "all-standard-level1"
+            }
+          },
+          "jokers": {
+            "status": "known",
+            "source": "confirmedPreset",
+            "value": []
+          },
+          "shop": {
+            "status": "unknown",
+            "reason": "Todavía no se ha observado una tienda en esta partida."
+          },
+          "outOfScope": {
+            "status": "known",
+            "source": "confirmedPreset",
+            "value": {
+              "vouchers": [],
+              "consumables": [],
+              "pendingTags": [],
+              "otherModifiers": []
+            }
+          },
+          "jokerContext": {
+            "status": "known",
+            "source": "confirmedPreset",
+            "value": {
+              "startingDeckSize": {
+                "status": "known",
+                "source": "confirmedPreset",
+                "value": 52
+              },
+              "blindsSkipped": {
+                "status": "known",
+                "source": "confirmedPreset",
+                "value": 0
+              },
+              "tags": {
+                "status": "known",
+                "source": "confirmedPreset",
+                "value": []
+              },
+              "tarotsUsed": {
+                "status": "known",
+                "source": "confirmedPreset",
+                "value": 0
+              },
+              "planetsUsed": {
+                "status": "known",
+                "source": "confirmedPreset",
+                "value": []
+              },
+              "consumables": {
+                "status": "known",
+                "source": "confirmedPreset",
+                "value": []
+              },
+              "consumableSlots": {
+                "status": "known",
+                "source": "confirmedPreset",
+                "value": 2
+              }
+            }
+          }
+        },
+        "assumptions": {
+          "probes": [],
+          "roundPlans": [],
+          "horizonRounds": 1,
+          "cashflow": {
+            "assumeRoundWon": false,
+            "handsUsedByRound": [],
+            "noSpendingBetweenRounds": false,
+            "noMoneyChangesDuringRound": false
+          }
+        }
+      },
+      "options": {
+        "risk": "unknown",
+        "requireObserved": true
+      },
+      "interaction": {
+        "readOnly": false
+      },
+      "feasibility": {
+        "kind": "synthetic_reachable",
+        "gamePossibleUnderProfile": true,
+        "reason": "Selección de ciega y recursos transcritos de una partida compatible; no se predicen cartas robadas, cobro ni resultado de la ronda."
+      },
+      "mechanicalOracles": {
+        "evidenceObservedInGame": false,
+        "exactSkipBlockedByPendingEvidence": true
+      },
+      "behaviorOracle": {
+        "noExplicitPlans": true,
+        "noVictoryProbability": true,
+        "noGuaranteedSurvival": true,
+        "noFictitiousFutureShopPrice": true,
+        "noWritesOnConsultation": true,
+        "notAnOptimalityClaim": true,
+        "allowedPreferred": [
+          null
+        ],
+        "mustAbstainInStrictMode": true,
+        "requiredSignals": [
+          "pending-observed-evidence"
+        ],
+        "forbiddenClaims": [
+          "static-inspection-is-gameplay-observation"
+        ]
+      },
+      "sourceIds": [
+        "L09-economy",
+        "TAG01b",
+        "plan-policy"
+      ]
+    },
+    {
+      "id": "DV-BLIND-10",
+      "area": "blind",
+      "title": "Jefe: saltar nunca aparece como acción legal",
+      "state": {
+        "schemaVersion": "0.2",
+        "rulesetId": "balatro-pc-1.0.1o-blue-white-v1",
+        "runId": "DV-BLIND-10",
+        "revision": 0,
+        "updatedAt": "2026-11-05T12:00:00Z",
+        "phase": "blind_select",
+        "phaseData": {
+          "skipTag": {
+            "status": "unknown",
+            "reason": "La ciega jefe no ofrece etiqueta de salto."
+          }
+        },
+        "observed": {
+          "gameVersion": {
+            "status": "known",
+            "source": "confirmedPreset",
+            "value": "1.0.1o-FULL"
+          },
+          "gamePlatform": {
+            "status": "known",
+            "source": "confirmedPreset",
+            "value": "pc-steam"
+          },
+          "deckId": {
+            "status": "known",
+            "source": "confirmedPreset",
+            "value": "blue"
+          },
+          "stakeId": {
+            "status": "known",
+            "source": "confirmedPreset",
+            "value": "white"
+          },
+          "modsPresent": {
+            "status": "known",
+            "source": "confirmedPreset",
+            "value": false
+          },
+          "money": {
+            "status": "known",
+            "source": "manual",
+            "value": 4
+          },
+          "lastCleared": {
+            "status": "unknown",
+            "reason": "Todavía no registrado."
+          },
+          "nextBlind": {
+            "status": "known",
+            "source": "manual",
+            "value": {
+              "ante": 1,
+              "kind": "boss",
+              "bossId": {
+                "status": "known",
+                "source": "manual",
+                "value": "the_psychic"
+              },
+              "target": {
+                "status": "known",
+                "source": "manual",
+                "value": 600
+              },
+              "reward": {
+                "status": "known",
+                "source": "manual",
+                "value": 5
+              }
+            }
+          },
+          "visibleBoss": {
+            "status": "unknown",
+            "reason": "Todavía no registrado."
+          },
+          "resources": {
+            "handsPerRound": {
+              "status": "known",
+              "source": "confirmedPreset",
+              "value": 5
+            },
+            "discardsPerRound": {
+              "status": "known",
+              "source": "confirmedPreset",
+              "value": 3
+            },
+            "handSize": {
+              "status": "known",
+              "source": "confirmedPreset",
+              "value": 8
+            },
+            "jokerSlots": {
+              "status": "known",
+              "source": "confirmedPreset",
+              "value": 5
+            }
+          },
+          "deck": {
+            "status": "known",
+            "source": "manual",
+            "value": {
+              "preset": "standard52-unmodified"
+            }
+          },
+          "handBases": {
+            "status": "known",
+            "source": "confirmedPreset",
+            "value": {
+              "preset": "all-standard-level1"
+            }
+          },
+          "jokers": {
+            "status": "known",
+            "source": "confirmedPreset",
+            "value": []
+          },
+          "shop": {
+            "status": "unknown",
+            "reason": "Todavía no se ha observado una tienda en esta partida."
+          },
+          "outOfScope": {
+            "status": "known",
+            "source": "confirmedPreset",
+            "value": {
+              "vouchers": [],
+              "consumables": [],
+              "pendingTags": [],
+              "otherModifiers": []
+            }
+          },
+          "jokerContext": {
+            "status": "known",
+            "source": "confirmedPreset",
+            "value": {
+              "startingDeckSize": {
+                "status": "known",
+                "source": "confirmedPreset",
+                "value": 52
+              },
+              "blindsSkipped": {
+                "status": "known",
+                "source": "confirmedPreset",
+                "value": 0
+              },
+              "tags": {
+                "status": "known",
+                "source": "confirmedPreset",
+                "value": []
+              },
+              "tarotsUsed": {
+                "status": "known",
+                "source": "confirmedPreset",
+                "value": 0
+              },
+              "planetsUsed": {
+                "status": "known",
+                "source": "confirmedPreset",
+                "value": []
+              },
+              "consumables": {
+                "status": "known",
+                "source": "confirmedPreset",
+                "value": []
+              },
+              "consumableSlots": {
+                "status": "known",
+                "source": "confirmedPreset",
+                "value": 2
+              }
+            }
+          }
+        },
+        "assumptions": {
+          "probes": [],
+          "roundPlans": [],
+          "horizonRounds": 1,
+          "cashflow": {
+            "assumeRoundWon": false,
+            "handsUsedByRound": [],
+            "noSpendingBetweenRounds": false,
+            "noMoneyChangesDuringRound": false
+          }
+        }
+      },
+      "options": {
+        "risk": "unknown"
+      },
+      "interaction": {
+        "readOnly": false
+      },
+      "feasibility": {
+        "kind": "synthetic_reachable",
+        "gamePossibleUnderProfile": true,
+        "reason": "Selección de ciega y recursos transcritos de una partida compatible; no se predicen cartas robadas, cobro ni resultado de la ronda."
+      },
+      "mechanicalOracles": {
+        "skipLegal": false,
+        "moneyAfterPlay": null
+      },
+      "behaviorOracle": {
+        "noExplicitPlans": true,
+        "noVictoryProbability": true,
+        "noGuaranteedSurvival": true,
+        "noFictitiousFutureShopPrice": true,
+        "noWritesOnConsultation": true,
+        "notAnOptimalityClaim": true,
+        "allowedPreferred": [
+          "play",
+          null
+        ],
+        "skipMustNotBeRecommended": true,
+        "requiredSignals": [
+          "boss-cannot-skip"
+        ],
+        "forbiddenClaims": [
+          "play-guarantees-survival"
+        ]
+      },
+      "sourceIds": [
+        "TAG01a-progress",
+        "TAG01b",
+        "plan-policy"
+      ]
+    },
+    {
+      "id": "DV-BLIND-11",
+      "area": "blind",
+      "title": "Popcorn: reconocer desgaste y evitar crecimiento universal",
+      "state": {
+        "schemaVersion": "0.2",
+        "rulesetId": "balatro-pc-1.0.1o-blue-white-v1",
+        "runId": "DV-BLIND-11",
+        "revision": 0,
+        "updatedAt": "2026-11-05T12:00:00Z",
+        "phase": "blind_select",
+        "phaseData": {
+          "skipTag": {
+            "status": "known",
+            "source": "manual",
+            "value": "tag_economy"
+          }
+        },
+        "observed": {
+          "gameVersion": {
+            "status": "known",
+            "source": "confirmedPreset",
+            "value": "1.0.1o-FULL"
+          },
+          "gamePlatform": {
+            "status": "known",
+            "source": "confirmedPreset",
+            "value": "pc-steam"
+          },
+          "deckId": {
+            "status": "known",
+            "source": "confirmedPreset",
+            "value": "blue"
+          },
+          "stakeId": {
+            "status": "known",
+            "source": "confirmedPreset",
+            "value": "white"
+          },
+          "modsPresent": {
+            "status": "known",
+            "source": "confirmedPreset",
+            "value": false
+          },
+          "money": {
+            "status": "known",
+            "source": "manual",
+            "value": 4
+          },
+          "lastCleared": {
+            "status": "known",
+            "source": "manual",
+            "value": {
+              "ante": 1,
+              "kind": "boss"
+            }
+          },
+          "nextBlind": {
+            "status": "known",
+            "source": "manual",
+            "value": {
+              "ante": 2,
+              "kind": "small",
+              "bossId": {
+                "status": "known",
+                "source": "manual",
+                "value": "none"
+              },
+              "target": {
+                "status": "known",
+                "source": "manual",
+                "value": 800
+              },
+              "reward": {
+                "status": "known",
+                "source": "manual",
+                "value": 3
+              }
+            }
+          },
+          "visibleBoss": {
+            "status": "unknown",
+            "reason": "Todavía no registrado."
+          },
+          "resources": {
+            "handsPerRound": {
+              "status": "known",
+              "source": "confirmedPreset",
+              "value": 5
+            },
+            "discardsPerRound": {
+              "status": "known",
+              "source": "confirmedPreset",
+              "value": 3
+            },
+            "handSize": {
+              "status": "known",
+              "source": "confirmedPreset",
+              "value": 8
+            },
+            "jokerSlots": {
+              "status": "known",
+              "source": "confirmedPreset",
+              "value": 5
+            }
+          },
+          "deck": {
+            "status": "known",
+            "source": "manual",
+            "value": {
+              "preset": "standard52-unmodified"
+            }
+          },
+          "handBases": {
+            "status": "known",
+            "source": "confirmedPreset",
+            "value": {
+              "preset": "all-standard-level1"
+            }
+          },
+          "jokers": {
+            "status": "known",
+            "source": "manual",
+            "value": [
+              {
+                "instanceId": "owned-popcorn",
+                "catalogId": "popcorn",
+                "edition": {
+                  "status": "known",
+                  "source": "manual",
+                  "value": "base"
+                },
+                "stickers": {
+                  "status": "known",
+                  "source": "manual",
+                  "value": []
+                },
+                "sellValue": {
+                  "status": "known",
+                  "source": "manual",
+                  "value": 2
+                },
+                "counters": {
+                  "mult": {
+                    "status": "known",
+                    "source": "manual",
+                    "value": 12
+                  }
+                }
+              }
+            ]
+          },
+          "shop": {
+            "status": "unknown",
+            "reason": "Todavía no se ha observado una tienda en esta partida."
+          },
+          "outOfScope": {
+            "status": "known",
+            "source": "confirmedPreset",
+            "value": {
+              "vouchers": [],
+              "consumables": [],
+              "pendingTags": [],
+              "otherModifiers": []
+            }
+          },
+          "jokerContext": {
+            "status": "known",
+            "source": "confirmedPreset",
+            "value": {
+              "startingDeckSize": {
+                "status": "known",
+                "source": "confirmedPreset",
+                "value": 52
+              },
+              "blindsSkipped": {
+                "status": "known",
+                "source": "confirmedPreset",
+                "value": 0
+              },
+              "tags": {
+                "status": "known",
+                "source": "confirmedPreset",
+                "value": []
+              },
+              "tarotsUsed": {
+                "status": "known",
+                "source": "confirmedPreset",
+                "value": 0
+              },
+              "planetsUsed": {
+                "status": "known",
+                "source": "confirmedPreset",
+                "value": []
+              },
+              "consumables": {
+                "status": "known",
+                "source": "confirmedPreset",
+                "value": []
+              },
+              "consumableSlots": {
+                "status": "known",
+                "source": "confirmedPreset",
+                "value": 2
+              }
+            }
+          }
+        },
+        "assumptions": {
+          "probes": [],
+          "roundPlans": [],
+          "horizonRounds": 1,
+          "cashflow": {
+            "assumeRoundWon": false,
+            "handsUsedByRound": [],
+            "noSpendingBetweenRounds": false,
+            "noMoneyChangesDuringRound": false
+          }
+        }
+      },
+      "options": {
+        "risk": "unknown"
+      },
+      "interaction": {
+        "readOnly": false
+      },
+      "feasibility": {
+        "kind": "synthetic_reachable",
+        "gamePossibleUnderProfile": true,
+        "reason": "Popcorn comprado después de la Pequeña de ante1 empieza con20; dos rondas completadas (Grande y Jefe) lo dejan en12 al seleccionar Pequeña de ante2. No se presupone el resultado de esa nueva ciega."
+      },
+      "mechanicalOracles": {
+        "moneyBefore": 4,
+        "currentPopcornMult": 12,
+        "roundDecayPerCompletedRound": 4,
+        "moneyAfterPlay": null
+      },
+      "behaviorOracle": {
+        "noExplicitPlans": true,
+        "noVictoryProbability": true,
+        "noGuaranteedSurvival": true,
+        "noFictitiousFutureShopPrice": true,
+        "noWritesOnConsultation": true,
+        "notAnOptimalityClaim": true,
+        "allowedPreferred": [
+          null,
+          "skip"
+        ],
+        "automaticPlayForbidden": true,
+        "requiredSignals": [
+          "round-wear",
+          "shop-opportunity"
+        ],
+        "forbiddenClaims": [
+          "playing-always-grows-jokers",
+          "skip-guarantees-future-win"
+        ]
+      },
+      "sourceIds": [
+        "Popcorn-evidence",
+        "TAG01b",
+        "plan-policy"
+      ]
+    }
+  ]
+}

@@ -21,22 +21,27 @@ function preparedBenefit(option:ShopOption):string|null {
  if(option.fit?.readiness==='potential')return 'Puede aportar su efecto si se cumplen las condiciones indicadas.';
  return null;
 }
-function sacrifice(option:ShopOption,capability:Capability|undefined):string|null {
+function sacrifice(option:ShopOption|undefined,capability:Capability|undefined):string|null {
  const parts:string[]=[];
  // Only H2 transaction data supplies the net cost. Manual price arithmetic is
  // retained in choices, but never promoted to a validated replacement cost.
  const net=capability?.consequences?.money.delta;
- const netCost=net===null||net===undefined?option.fit?.purchase.status==='legal'?option.fit.purchase.netCost:undefined:-net;
- if(netCost!==undefined)parts.push(`Coste neto $${netCost}${capability?.moneyAfter!==null&&capability?.moneyAfter!==undefined?`; quedan $${capability.moneyAfter}`:option.fit?.purchase.moneyAfter!==undefined?`; quedan $${option.fit.purchase.moneyAfter}`:''}`);
+ const netCost=net===null||net===undefined?option?.fit?.purchase.status==='legal'?option.fit.purchase.netCost:undefined:-net;
+ if(netCost!==undefined)parts.push(`Coste neto $${netCost}${capability?.moneyAfter!==null&&capability?.moneyAfter!==undefined?`; quedan $${capability.moneyAfter}`:option?.fit?.purchase.moneyAfter!==undefined?`; quedan $${option.fit.purchase.moneyAfter}`:''}`);
  const removed=capability?.consequences?.removed??[];
  for(const joker of removed){
   const counters=Object.entries(joker.counters).map(([key,f])=>`${key}=${f.status==='known'?f.value:'desconocido'}`);
-  const effect=option.findings?.some(f=>f.ruleId===QUICK_SHOP_POLICY.rules.generationLoss)?' y su generación futura si liberas huecos':' y su efecto';
+  const effect=option?.findings?.some(f=>f.ruleId===QUICK_SHOP_POLICY.rules.generationLoss)?' y su generación futura si liberas huecos':' y su efecto';
   parts.push(`pierdes ${name(joker.catalogId)}${counters.length?' ('+counters.join(', ')+')':''}${effect}; sus contadores no se heredan`);
  }
- const interest=option.economics?.interest;
+ const interest=option?.economics?.interest;
  if(interest&&interest.change!==0)parts.push(`interés aislado $${interest.before} → $${interest.after}, solo si ganas y mantienes esos saldos hasta cobrar`);
  return parts.length?parts.join('; ')+'.':null;
+}
+
+/** The same facts used by the compact recommendation, also for individual rows. */
+export function describeShopOption(option:ShopOption|undefined,capability:Capability|undefined):{benefit:string|null;sacrifice:string|null}{
+ return {benefit:option?preparedBenefit(option):null,sacrifice:sacrifice(option,capability)};
 }
 
 function pending(decision:ShopDecision,selected:ShopOption[],capabilities:Capability[]):string|null {

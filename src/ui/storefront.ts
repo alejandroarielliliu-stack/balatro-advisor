@@ -12,6 +12,9 @@ import {ALL_JOKER_FACTS} from '../catalog/all-joker-facts.js';
 import type {AdvisorScenario} from '../advisor/advisor.js';
 import {renderImmediateConsequences,renderScenarioConsequences} from './consequences-view.js';
 import {buildShopAdviceSummary} from './shop-advice-summary.js';
+import {inspectShopAlternatives,shopAlternativesAreCurrent} from '../advisor/shop-alternatives.js';
+import type {ShopAlternativesReport} from '../advisor/shop-alternatives.js';
+import {mountShopComparison} from './shop-comparison-view.js';
 
 const el=<K extends keyof HTMLElementTagNameMap>(tag:K,text='',cl='')=>{const e=document.createElement(tag);e.textContent=text;e.className=cl;return e;};
 const known=<T>(value:T)=>({status:'known' as const,source:'manual' as const,value});
@@ -23,6 +26,7 @@ export interface ShopContext {
  observe?:(snapshot:ShopSnapshot,scope?:'all'|'voucher'|'pack')=>string|null;
  /** Opens the explicit performed-action confirmation, separate from consultation. */
  confirm?:(offerId:string,replacementId:string)=>string|null;
+ confirmSale?:(instanceId:string)=>string|null;
  confirmVoucher?:(offerId:string)=>string|null;
  confirmPack?:(offerId:string)=>string|null;
  undo?:()=>string|null;canUndo?:()=>boolean;status?:()=>string|null;
@@ -57,14 +61,14 @@ export function mountCandidates(host:HTMLElement,preview:PreviewRenderer,replace
   if(binding&&id&&binding!==id||shelfBinding!==undefined&&shelfBinding!==nextShop){otherOffers.length=0;rerollCost=null;}
   binding=id;shelfBinding=nextShop;if(nextShop)shopId=nextShop;restoreExtras(state);
  }catch{ /* Data errors remain visible in the advice. */ }
- const heading=el('div','','section-title');heading.append(el('h2','Tienda'));
+ const heading=el('div','','section-title'),headingTools=el('div','','store-heading-tools');heading.append(el('h2','Tienda'),headingTools);
  const status=el('p','','muted');status.id='shop-session-status';status.setAttribute('role','status');status.setAttribute('aria-live','polite');
  const showStatus=(message:string|null,error=false)=>{status.textContent=message??'';status.className=error?'error':'muted';};
  const write=(button:HTMLButtonElement)=>{button.dataset.write='';return button;};
  const localDisabled=(control:HTMLButtonElement,disabled:boolean)=>{control.dataset.localDisabled=String(disabled);control.disabled=disabled;};
  const undo=write(el('button','Deshacer','secondary'));undo.type='button';undo.id='shop-undo';
  const refreshUndo=()=>{undo.hidden=!context?.undo;localDisabled(undo,!context?.canUndo?.());context?.controlsChanged?.();};
- undo.onclick=()=>{const error=context?.undo?.()??null;if(error)showStatus(error,true);refreshUndo();};heading.append(undo);refreshUndo();
+ undo.onclick=()=>{const error=context?.undo?.()??null;if(error)showStatus(error,true);refreshUndo();};headingTools.append(undo);refreshUndo();
  // A failed observation restores the cache. Opening details and evaluating never call this.
  const observe=(mutate:()=>void,scope:'all'|'voucher'|'pack'='all'):string|null=>{if(!(scope!=='all'?extrasHydrated:hydrated)){showStatus(loadingMessage,true);return loadingMessage;}const before=candidates.map(c=>({item:c,values:{...c,stickers:[...c.stickers]}})),beforeVouchers=structuredClone(voucherOffers),beforePacks=structuredClone(packOffers);mutate();let error:string|null=null;try{error=context?.observe?.(readShopSnapshot(),scope)??null;}catch{error='No se pudieron guardar las ofertas. Se conserva la versión anterior.';}if(error){for(const previous of before)Object.assign(previous.item,previous.values);candidates.splice(0,candidates.length,...before.map(previous=>previous.item));voucherOffers.splice(0,voucherOffers.length,...beforeVouchers);packOffers.splice(0,packOffers.length,...beforePacks);showStatus(error,true);return error;}showStatus(context?.observe?'Ofertas guardadas.':null);changed();refreshUndo();return null;};
  const search=el('button','＋ Comodín','store-search');search.type='button';search.id='store-joker-add';search.setAttribute('aria-label','Buscar comodín');search.onclick=()=>{const input=document.getElementById('bay-search') as HTMLInputElement|null;if(!input)return;const catalogue=input.closest('details');if(catalogue)catalogue.open=true;input.scrollIntoView({block:'center',behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth'});input.focus({preventScroll:true});};
@@ -72,11 +76,26 @@ export function mountCandidates(host:HTMLElement,preview:PreviewRenderer,replace
  const layout=el('div','','store-layout'),controls=el('div','','store-controls'),cards=el('div','','store-card-well');controls.append(search);
  const grid=el('div','','candidate-grid'),otherShelf=el('div','','store-other-shelf'),extras=el('div','','store-extras');cards.append(el('h3','Comodines y cartas','store-well-label'),grid,otherShelf);
  const adviceStrip=el('section','','store-advice-strip'),adviceHeading=el('div','','store-advice-heading'),adviceLabel=el('small','Consejo de tienda','store-advice-label'),adviceCopy=el('div','','store-advice-copy'),advicePending=el('p','','store-advice-pending'),adviceScope=el('small','','store-advice-scope');
- adviceStrip.setAttribute('aria-label','Consejo de tienda');adviceHeading.append(adviceLabel,suggestion);adviceStrip.append(adviceHeading,adviceCopy,advicePending,adviceScope);layout.append(controls,cards,extras,adviceStrip);
+ adviceStrip.setAttribute('aria-label','Consejo de tienda');adviceHeading.append(adviceLabel,suggestion);adviceStrip.append(adviceHeading,adviceCopy,advicePending,adviceScope);headingTools.append(controls);layout.append(cards,extras,adviceStrip);
+ const comparisonHost=el('section');layout.append(comparisonHost);
+ const comparison=mountShopComparison(comparisonHost,(alternative,source)=>{
+  if(!context)return 'No hay una partida disponible.';
+  try{if(!shopAlternativesAreCurrent(source,context.state(),readShopSnapshot()))return 'La partida o la tienda cambiaron. Vuelve a comparar antes de registrar.';}catch{return 'Revisa los datos de la partida.';}
+  const reason=context.status?.();if(reason)return reason;
+  switch(alternative.action.type){
+   case 'hold':return null;
+   case 'sell':return context.confirmSale?context.confirmSale(alternative.action.instanceId):'La venta no está disponible en esta vista.';
+   case 'buy':case 'replace':return context.confirm?context.confirm(alternative.action.offerId,alternative.action.type==='replace'?alternative.action.sellInstanceId:''):'La compra no está disponible en esta vista.';
+   case 'buy_voucher':return context.confirmVoucher?context.confirmVoucher(alternative.action.offerId):'La compra de vale no está disponible.';
+   case 'buy_pack':return context.confirmPack?context.confirmPack(alternative.action.offerId):'La compra del sobre no está disponible.';
+  }
+ },()=>context?.controlsChanged?.());
+ const compareJump=el('button','Comparar opciones','store-compare-jump');compareJump.type='button';compareJump.id='store-compare-options';compareJump.setAttribute('aria-controls','shop-comparison');compareJump.onclick=()=>comparison.focus();headingTools.prepend(compareJump);
  const adviceDialog=el('dialog','','shop-advice-dialog');adviceDialog.id='shop-advice-dialog';adviceDialog.setAttribute('aria-label','Decisión de tienda');
  const editor=el('dialog','','store-item-editor');editor.id='store-item-editor';editor.setAttribute('aria-label','Registrar oferta');
  host.append(heading,status,layout,adviceDialog,editor);
  let report:ShopDecision['context']|null=null,decision:ShopDecision|null=null,useScenarios=false,scenarioError='';
+ let comparisonToken='',comparisonReport:ShopAlternativesReport|null=null;
  const confirmationRefreshers=new Set<()=>void>();let refreshExtraConfirmation=()=>{};
  const snapshot=readShopSnapshot;
  // Read-only presentation of the same summary as the detailed dialog. This
@@ -121,7 +140,30 @@ export function mountCandidates(host:HTMLElement,preview:PreviewRenderer,replace
   }));
   if(report.limitations.length){const d=el('details');d.append(el('summary','Límites de esta comparación'));for(const text of report.limitations)d.append(el('p',text));adviceDialog.append(d);}for(const error of report.errors)adviceDialog.append(el('p',error.message,'error'));
  };
- const refreshAdvice=()=>{const hasOffers=candidates.length+voucherOffers.length+packOffers.length+otherOffers.length>0;suggestion.disabled=!hasOffers;try{if(!context)throw Error();let scenarios:AdvisorScenario[]|undefined;scenarioError='';if(useScenarios)try{scenarios=context.scenarios?.();if(!scenarios?.length)throw Error('No hay escenarios. Configúralos en Análisis; la valoración rápida sigue disponible.');}catch(e){scenarios=undefined;scenarioError=e instanceof Error?e.message:'Revisa los escenarios de Análisis.';}const inspected=inspectShopDecision(context.state(),snapshot(),{ante:context.ante(),...(scenarios?{scenarios}:{})});if(!inspected.ok)throw Error();decision=inspected.value;report=decision.context;suggestion.textContent=hasOffers?report.recommendation.title:'Añade las ofertas que ves';suggestion.dataset.status=hasOffers?report.recommendation.status:'abstain';}catch{report=null;decision=null;suggestion.textContent='Revisa los datos';suggestion.dataset.status='abstain';}renderAdviceStrip(hasOffers);if(adviceDialog.open)renderAdvice();};
+ const refreshAdvice=()=>{
+  const hasOffers=candidates.length+voucherOffers.length+packOffers.length+otherOffers.length>0;
+  suggestion.disabled=!hasOffers;
+  try{
+   if(!context)throw Error('Completa los datos de la partida para comparar.');
+   const state=context.state(),shelf=snapshot();let scenarios:AdvisorScenario[]|undefined;scenarioError='';
+   if(useScenarios)try{scenarios=context.scenarios?.();if(!scenarios?.length)throw Error('No hay escenarios. Configúralos en Análisis; la valoración rápida sigue disponible.');}catch(e){scenarios=undefined;scenarioError=e instanceof Error?e.message:'Revisa los escenarios de Análisis.';}
+   const inspected=inspectShopDecision(state,shelf,{ante:context.ante(),...(scenarios?{scenarios}:{})});
+   if(!inspected.ok)throw Error(inspected.errors.map(e=>e.message).join(' '));
+   decision=inspected.value;report=decision.context;
+   suggestion.textContent=hasOffers?report.recommendation.title:'Añade las ofertas que ves';suggestion.dataset.status=hasOffers?report.recommendation.status:'abstain';
+   const nextToken=JSON.stringify([decision.stateToken,decision.snapshotToken]);
+   if(nextToken!==comparisonToken){
+    const alternatives=inspectShopAlternatives(state,shelf);
+    comparisonToken=nextToken;comparisonReport=alternatives.ok?alternatives.value:null;
+    comparison.render(comparisonReport,alternatives.ok?undefined:alternatives.errors.map(e=>e.message).join(' '));
+   }
+  }catch(e){
+   report=null;decision=null;comparisonToken='';comparisonReport=null;
+   suggestion.textContent='Revisa los datos';suggestion.dataset.status='abstain';
+   comparison.render(null,e instanceof Error?e.message:'Revisa los datos de la partida.');
+  }
+  renderAdviceStrip(hasOffers);if(adviceDialog.open)renderAdvice();
+ };
  suggestion.onclick=()=>{refreshAdvice();renderAdvice();adviceDialog.showModal();};
  const numeric=(value:number|null,id:string)=>{const label=el('label','Precio que ves ($)'),input=el('input');input.type='number';input.min='0';input.step='1';input.value=String(value??'');input.id=id;label.htmlFor=id;label.append(input);return {label,input};};
 
@@ -197,7 +239,7 @@ export function mountCandidates(host:HTMLElement,preview:PreviewRenderer,replace
   }
   renderExtras();refreshAdvice();refreshUndo();context?.controlsChanged?.();
  };
- const reset=write(el('button','Vaciar ofertas visibles','secondary store-reset'));reset.type='button';reset.id='store-new-shop';reset.title='Vaciar únicamente las ofertas representadas; conserva las incompatibles del registro';reset.onclick=()=>{const error=observe(()=>{candidates.length=0;voucherOffers.length=0;packOffers.length=0;});if(!error){otherOffers.length=0;rerollCost=null;}render(true);};localDisabled(reset,true);heading.append(reset);
+ const reset=write(el('button','Vaciar ofertas visibles','secondary store-reset'));reset.type='button';reset.id='store-new-shop';reset.title='Vaciar únicamente las ofertas representadas; conserva las incompatibles del registro';reset.onclick=()=>{const error=observe(()=>{candidates.length=0;voucherOffers.length=0;packOffers.length=0;});if(!error){otherOffers.length=0;rerollCost=null;}render(true);};localDisabled(reset,true);headingTools.append(reset);
  refreshControls=()=>{refreshAdvice();for(const refresh of confirmationRefreshers)refresh();if(editor.open)refreshExtraConfirmation();refreshUndo();};
  invalidate=()=>{clearTimeout(timer);render(false);timer=setTimeout(()=>render(true),220);};render(false);invalidate();
  // The parent finishes mounting form inputs before the first live-state read.

@@ -1,5 +1,7 @@
 # Plan vigente: un asesor útil con pocas entradas
 
+**Actualización, 05-11-2026:** [entrega de decisiones visibles](decisiones-visibles.md). P01, UX03, DEC03a/b, STR02a/b y UX04 implementados dentro del [plan acotado](plan-decisiones-visibles.md): comparar conservar/comprar/vender/reemplazar desde Mesa y orientar jugar/saltar sin exigir planes. La automatización pasó; EVAL02/EVAL01b mantienen pendiente la aceptación con jugadores. El siguiente paso es esa sesión sobre ambas decisiones y ajustes justificados por casos. Simulación, ampliación masiva de catálogos e importación nativa siguen fuera.
+
 Revisión: 1 de noviembre de 2026. **Esta sección fija las prioridades actuales** y sustituye los órdenes de ejecución anteriores. El detalle histórico se conserva plegado al final; el [backlog](backlog.md) contiene las tareas activas. La [entrega UX01](consejo-compacto-ux01.md) implementa el consejo compacto y [UX01b](autoguardado-basico-ux01b.md) guarda los datos básicos al terminar la edición; [OBS01d](mazo-actual-obs01d.md) deriva el material de las cartas actuales y guarda sus ediciones; [DEC02](comparacion-dec02.md) incorpora una primera comparación acotada y consejo parcial; la siguiente es EVAL01b. La aceptación de uso sigue pendiente.
 
 ## 1. Qué queremos conseguir

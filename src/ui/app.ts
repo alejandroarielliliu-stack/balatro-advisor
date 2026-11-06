@@ -465,6 +465,7 @@ function renderRecord(){
    sell:id=>requestMesaAction({type:'sell',instanceId:id})
   },{state:()=>liveState(true),recordedState:()=>record?.state,ante:()=>Number(ante.input.value),scenarios:()=>{const previous=quietRead;quietRead=true;try{return scenarioReaders.map(read=>read()).filter(Boolean);}finally{quietRead=previous;}},changed:()=>{handRequest++;$('hand-results')?.replaceChildren();},
     observe:observeShelf,confirm:(offerId,sellId)=>requestMesaAction(sellId?{type:'replace',sellInstanceId:sellId,offerId,instanceId:uuid()}:{type:'buy',offerId,instanceId:uuid()}),
+    confirmSale:instanceId=>requestMesaAction({type:'sell',instanceId}),
     confirmVoucher:offerId=>requestMesaAction({type:'buy_voucher',offerId}),
     confirmPack:offerId=>requestMesaAction({type:'buy_pack',offerId}),
     // Ownership is applied centrally by updateOwnership; do not cache it as a

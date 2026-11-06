@@ -84,6 +84,8 @@ jobs:
         run: node tools/static-site-test.mjs
       - name: Comprobar mesa adaptable, teclado y consulta sin escrituras
         run: node tools/frontend-redesign-test.mjs
+      - name: Comprobar alternativas visibles y orientación de ciegas
+        run: node tools/visible-decisions-test.mjs
       - name: Preparar el artefacto público
         uses: actions/upload-pages-artifact@v4
         with:

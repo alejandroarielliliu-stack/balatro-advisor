@@ -210,6 +210,48 @@ dialog[open] { animation: panel-arrival .14s ease-out; }
   *::before, *::after { animation: none!important; transition: none!important; scroll-behavior: auto!important; }
 }
 
+/* A shared comparison, visible in the shop rather than hidden behind advice. */
+.store-heading-tools { display:flex; align-items:center; flex-wrap:wrap; justify-content:flex-end; gap:7px; min-width:0; }
+.store-heading-tools .store-controls { display:flex; margin:0; padding:0; pointer-events:auto; }
+.store-compare-jump { min-height:34px; padding:6px 11px; font-size:12px; }
+.shop-comparison { grid-column:1/-1; min-width:0; padding:14px; border:1px solid #718780; border-radius:8px; background:#1d3334; scroll-margin-top:76px; }
+.shop-comparison:focus-visible { outline:2px solid var(--gold); outline-offset:3px; }
+.comparison-heading { display:flex; align-items:baseline; justify-content:space-between; gap:10px; margin-bottom:9px; }
+.comparison-heading h3 { margin:0; font:26px/1.1 var(--pixel); color:var(--gold); }
+.comparison-heading small { font-size:11px; color:#c3d3c9; }
+.comparison-filters { display:flex; flex-wrap:wrap; gap:5px; margin-bottom:10px; }
+.comparison-filters button { width:auto; min-height:32px; padding:5px 9px; font-size:11px; }
+.comparison-filters button[aria-pressed=true] { color:#172e2c; background:var(--gold); border-color:var(--gold); }
+.comparison-columns,.comparison-row { display:grid; grid-template-columns:minmax(130px,1fr) 72px 65px minmax(160px,1.6fr); align-items:center; gap:12px; }
+.comparison-columns { padding:3px 9px 7px; font-size:10px; color:#afc3ba; }
+.comparison-row { padding:9px; border-top:1px solid #46605a; }
+.comparison-row[data-action-kind=hold] { border:1px solid #a89970; border-radius:5px; background:#2b4039; }
+.comparison-action { min-width:0; width:auto; min-height:40px; padding:0; color:#f4efdf; background:transparent; border:0; box-shadow:none; font:14px/1.4 'Segoe UI',sans-serif; text-align:left; overflow-wrap:anywhere; }
+.comparison-action:hover:not(:disabled) { color:var(--gold); background:transparent; text-decoration:underline; }
+.comparison-cost,.comparison-after { white-space:nowrap; font-variant-numeric:tabular-nums; color:#f5ce76; }
+.comparison-change { font-size:12px; line-height:1.45; overflow-wrap:anywhere; }
+.comparison-change small { display:block; margin-top:4px; color:#acbeb6; font-size:10px; }
+.comparison-row[data-operation-status=illegal] .comparison-change,.comparison-row[data-operation-status=invalid] .comparison-change { color:#f1ae9c; }
+.comparison-scope { display:block; margin-top:12px; color:#bdcbc1; font-size:11px; line-height:1.5; }
+.comparison-dialog { width:min(650px,calc(100% - 24px)); }
+.comparison-money { color:var(--gold); font:24px var(--pixel); }
+.blind-guidance { padding:14px; margin:12px 0; border:1px solid #ac9969; border-left:4px solid var(--gold); border-radius:7px; background:#233c37; }
+.blind-guidance>small { color:#d4c89f; font-size:10px; text-transform:uppercase; letter-spacing:.06em; }
+.blind-guidance h3 { margin:7px 0; color:var(--gold); font:27px/1.1 var(--pixel); }
+.blind-guidance p { line-height:1.5; }.blind-guidance details { margin-top:12px; }.blind-guidance details small { display:block; margin:5px 0; }
+.blind-plan-controls { padding-top:12px; border-top:1px solid #546e64; display:grid; gap:12px; }
+.journey-blind-hint { order:3; flex-basis:100%; margin:8px 0 0; color:#e6dcb9; font-size:12px; line-height:1.5; }
+@container (max-width:700px) {
+ .storefront>.section-title { align-items:flex-start; flex-direction:column; }
+ .store-heading-tools { justify-content:flex-start; }
+ .comparison-columns { display:none; }
+ .comparison-row { grid-template-columns:minmax(0,1fr) 60px 60px; gap:7px; }
+ .comparison-change { grid-column:1/-1; }.comparison-cost::before { content:'Coste '; font-size:10px; color:#b7c8be; }.comparison-after::before { content:'Saldo '; font:10px 'Segoe UI',sans-serif; color:#b7c8be; }
+ .comparison-cost,.comparison-after { font-size:13px; }.shop-comparison { padding:10px; }
+ .comparison-cost[data-flow=income]::before { content:'Ingreso '; }
+ .comparison-heading h3 { font-size:24px; }
+}
+
 /* Balatro's shop silhouette: cards above, voucher and packs below. */
 
 .store-reset { position: static; min-height: 28px; padding: 3px 8px; font-size: 10px; box-shadow: none; }

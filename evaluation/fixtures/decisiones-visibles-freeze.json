@@ -1,0 +1,50 @@
+{
+  "freezeVersion": "decisiones-visibles-freeze-1",
+  "frozenAt": "2026-11-05T22:26:06.332Z",
+  "phase": "before-first-execution-of-new-guidance-and-alternatives-on-these-cases",
+  "baselineRevision": "b8420929105254fa36991eaa8b3ad6d6f47e3bcb",
+  "fixtures": [
+    {
+      "path": "evaluation/fixtures/decisiones-visibles-development.json",
+      "sha256": "5f29f0799f160a53e080add06d0e950339f70c3d001f659c59151c746d3d0492",
+      "caseIds": [
+        "DV-SHOP-01",
+        "DV-SHOP-02",
+        "DV-SHOP-03",
+        "DV-SHOP-04",
+        "DV-SHOP-05",
+        "DV-BLIND-01",
+        "DV-BLIND-02",
+        "DV-BLIND-03",
+        "DV-BLIND-04",
+        "DV-BLIND-05",
+        "DV-BLIND-06",
+        "DV-BLIND-07",
+        "DV-BLIND-08",
+        "DV-BLIND-09",
+        "DV-BLIND-10",
+        "DV-BLIND-11"
+      ],
+      "caseCount": 16,
+      "reachableSyntheticCases": 15,
+      "defensiveStructuralCases": 1
+    }
+  ],
+  "expectationAuthoring": {
+    "readExistingPolicySource": true,
+    "readNewPolicySource": false,
+    "consultedNewEvaluatorOutputs": false,
+    "usedStateConstructorOnly": true,
+    "validatedH1Structure": true,
+    "mechanicalExpectedValues": "Independent literal shop arithmetic and documented L09; no H2 output used as oracle.",
+    "heuristicExpectations": "Plan behavior contracts and explicit counterexamples; allowed outcomes retain tradeoffs where no optimality evidence exists.",
+    "reservedEval01Touched": false,
+    "evidenceAmendmentsBeforeFirstNewEvaluatorExecution": [
+      "Ruta documental T09b corregida",
+      "Fuente D6 de STR02a ya disponible",
+      "Popcorn12 en ante2Small para historia alcanzable",
+      "Tablas literales de cobro0..4manos con ysinumbral económico"
+    ]
+  },
+  "interpretation": "Development acceptance fixture. Not a hidden/reserved evaluation, not direct gameplay evidence, not a complete strategic benchmark."
+}

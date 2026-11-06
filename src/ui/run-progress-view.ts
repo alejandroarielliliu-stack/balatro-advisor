@@ -1,4 +1,5 @@
 import {blindComparisonButton} from './blind-decision-view.js';
+import {guideBlindChoice} from '../advisor/blind-guidance.js';
 import type {AdvisorScenario} from '../advisor/advisor.js';
 import {TAGS,tagDefinition} from '../catalog/tags.js';
 import type {GameState,Fact} from '../state/model.js';
@@ -92,6 +93,8 @@ export function renderRunJourney(host:HTMLElement,options:JourneyOptions){
   action('run-enter-round','Entré en la ciega',()=>openCommand('Entré en la ciega','Registrar entrada',{type:'enter_round'}),true);
   if(blind&&blind.kind!=='boss'){
    toolbar.append(blindComparisonButton({open:options.open,state:options.comparisonState??(()=>structuredClone(state)),scenarios:options.scenarios??(()=>[])}));
+   const guidance=guideBlindChoice(state);
+   if(guidance.ok){const hint=el('p',guidance.value.recommendation.title+' · '+guidance.value.recommendation.reason,'journey-blind-hint');hint.id='run-blind-guidance';host.append(hint);}
    const current=value(state.phaseData.skipTag);title.append(el('small',current?(tagDefinition(current)?.name??current):'Etiqueta de salto sin registrar','journey-tag'));
    action('run-observe-tag','Etiqueta visible',()=>{
     const body=el('div','','journey-dialog'),knownTag=check('progress-tag-known','Conozco la etiqueta visible');knownTag.input.checked=!!current;

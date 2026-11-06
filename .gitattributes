@@ -8,3 +8,5 @@ tools/reference/** -text
 /evaluation/fixtures/eval01-reserved.json -text
 /evaluation/fixtures/dec02-development.json -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
 /evaluation/fixtures/dec02-freeze.json -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
+/evaluation/fixtures/decisiones-visibles-development.json -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
+/evaluation/fixtures/decisiones-visibles-freeze.json -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol

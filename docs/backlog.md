@@ -2,6 +2,14 @@
 
 ## Prioridad vigente: pocas entradas y consejo útil
 
+**Entrega del 05-11-2026:** [comparación visible y orientación de ciegas](decisiones-visibles.md), sobre el [plan de las dos quejas](plan-decisiones-visibles.md). P01, UX03, DEC03a/b, STR02a/b y UX04 entregados en su alcance: tabla de acciones individuales con compra/venta/reemplazos distintos y consejo condicional jugar/saltar sin planes. Las ventas nuevas muestran consecuencias y sacrificio, sin un orden estratégico global inventado. 1.028 pruebas aprobadas, cero fallos, diez TODO manuales; siete grupos nuevos de navegador. EVAL02/EVAL01b siguen parciales por aceptación con jugadores, no por falta de automatización. Importación nativa y ampliación de catálogos aplazadas.
+
+| Siguiente tarea | Dependencia real | Cierre comprobable |
+|---|---|---|
+| EVAL02: sesión acotada de tienda y selección de ciega | Entrega visible; jugador con un caso real | Encuentra Comparar opciones, distingue venta/reemplazo/conservar y entiende la condición del consejo; registrar problemas observados sin atribuirle esta prueba automática |
+| Ajuste dirigido de política o perfil | Un desacuerdo concreto de EVAL02 con datos suficientes | Nuevo caso independiente antes del ajuste; mantener incertidumbre y regresiones. No exige ejecutar todo el catálogo |
+| Contraste empírico de reglas pendientes | Acceso/evidencia de Steam1.0.1o-FULL sin mods | Capturas/datos del caso mínimo; no convertir inspección estática en observación. Bloquea solo certificación afectada |
+
 **02-11-2026 — UI02 implementada:** [rediseño de la Mesa](redisenyo-frontend.md) sobre DEC02, sin ampliar reglas. Contexto horizontal, construcción visible, consejo junto a ofertas, herramientas bajo demanda y nueve grupos nuevos de interfaz. Esta entrega responde a la prioridad de frontend del usuario; EVAL01b sigue siendo la siguiente validación de producto.
 
 Revisión 01-11-2026: [plan investigado y criterios de cierre](hoja-de-ruta-asesor.md). Esta tabla sustituye el orden de los siguientes históricos. **UX01 y UX01b implementadas como software:** [consejo compacto](consejo-compacto-ux01.md) y [autoguardado básico](autoguardado-basico-ux01b.md). [OBS01d](mazo-actual-obs01d.md) conecta el mazo actual y su guardado. Por aclaración del usuario, los recuentos se derivan de sus cartas, sin un formulario duplicado ni un nuevo esquema parcial. [DEC02](comparacion-dec02.md) entrega una primera comparación acotada y consejo parcial. Siguiente: EVAL01b; la utilidad real y las ampliaciones de cobertura siguen abiertas.
