@@ -33,7 +33,7 @@ try{
  const open=(p,id)=>p.locator(`[data-alternative="${id}"]`).click();
  const close=p=>p.locator('#shop-alternative-dialog').getByRole('button',{name:'Cerrar',exact:true}).click();
  const finish=async p=>{await p.locator('#performed').check();await p.locator('#dialog-accept').click();await p.locator('#confirmation').waitFor({state:'hidden'});await shelf(p);};
- const unchanged=async(p,before,count)=>{assert.equal(await raw(p),before);assert.equal(await writes(p),count);assert.equal(await p.locator('#dirty-warning').isVisible(),false);};
+ const unchanged=async(p,before,count)=>{assert.equal(await raw(p),before);assert.equal(await writes(p),count);assert.equal(await p.locator('#draft-status').isVisible(),false);};
  const noOverflow=async p=>assert.equal(await p.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),true);
 
  const s=await session('DV-SHOP-02'),p=s.p;await shelf(p);let before=await raw(p),count=await writes(p);
