@@ -25,7 +25,7 @@ export function mountWorkspace(){
   document.querySelectorAll<HTMLElement>('[data-screen]').forEach(e=>{if(e.dataset.screen===screen)e.setAttribute('aria-current','page');else e.removeAttribute('aria-current');});
   document.getElementById('view-kicker')!.textContent=screens[screen][0];document.getElementById('view-title')!.textContent=screens[screen][1];
   const next=document.getElementById('next-view') as HTMLAnchorElement;next.hidden=home||screen==='archive'||screen==='collection';next.href=screen==='table'?'#evaluation':'#table';next.textContent=screen==='table'?'Calcular manos →':'← Volver a la mesa';next.onclick=null;
-  const skip=document.querySelector<HTMLAnchorElement>('.skip-link')!;skip.href=home?'#menu-play':'#main';skip.onclick=home?event=>{event.preventDefault();document.getElementById('menu-play')!.focus();}:null;
+  const skip=document.querySelector<HTMLAnchorElement>('.skip-link')!;skip.href=home?'#menu-play':'#main';skip.onclick=event=>{event.preventDefault();document.getElementById(home?'menu-play':'main')!.focus();};
  };
  window.addEventListener('hashchange',()=>{show();document.getElementById(document.body.dataset.view==='menu'?'menu-play':'main')!.focus({preventScroll:true});window.scrollTo(0,0);});show();
 }

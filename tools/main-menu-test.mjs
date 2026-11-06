@@ -51,6 +51,7 @@ try{
  const screenshots=async(page,name)=>page.screenshot({path:`${dir}/${name}.png`});
  const empty=await session(),p=empty.page;
  await view(p,'menu');assert.equal(await p.locator('#menu-view').isVisible(),true);assert.equal(await p.locator('.app-header').isVisible(),false);assert.equal(await p.locator('#main').isVisible(),false);await unchanged(p,null);
+ const menuHash=await p.evaluate(()=>location.hash);await p.locator('.skip-link').focus();await p.keyboard.press('Enter');await p.waitForFunction(()=>document.activeElement?.id==='menu-play');assert.equal(await p.evaluate(()=>location.hash),menuHash,'Menu skip link preserves route');await view(p,'menu');await unchanged(p,null);
  await p.locator('#menu-play').focus();await p.keyboard.press('Enter');await view(p,'table');assert.equal(await p.locator('#main').isVisible(),true);assert.equal(await p.locator('#run-new').isVisible(),true);await unchanged(p,null);
  await p.locator('.brand-link').click();await view(p,'menu');await p.waitForFunction(()=>document.activeElement?.id==='menu-play');await p.goBack();await view(p,'table');await p.goForward();await view(p,'menu');await unchanged(p,null);
  pass('root-play-keyboard-brand-and-history-do-not-create-run');
@@ -85,7 +86,11 @@ try{
  const saved=await session({saved:fixture}),q=saved.page;await unchanged(q,fixture);
  await q.locator('#menu-play').click();await view(q,'table');assert.equal(await q.locator('#money').inputValue(),String(prepared.value.state.observed.money.value));assert.equal(JSON.parse(await raw(q)).history.length,1);await q.locator('.brand-link').click();await view(q,'menu');await setMotion(q,'off');await q.locator('#menu-collection').click();await view(q,'collection');await q.locator('.brand-link').click();await view(q,'menu');await unchanged(q,fixture);await saved.context.close();
  pass('existing-state-and-nonempty-journal-byte-for-byte-unchanged');
- for(const screen of ['table','collection','evaluation','archive']){const deep=await session({saved:fixture,path:'#'+screen});await view(deep.page,screen);assert.equal(await deep.page.locator(`[data-page="${screen}"]`).first().isVisible(),true);assert.equal(await deep.page.locator('#menu-view').isVisible(),false);await unchanged(deep.page,fixture);await deep.context.close();}
+ for(const screen of ['table','collection','evaluation','archive']){
+  const deep=await session({saved:fixture,path:'#'+screen});await view(deep.page,screen);assert.equal(await deep.page.locator(`[data-page="${screen}"]`).first().isVisible(),true);assert.equal(await deep.page.locator('#menu-view').isVisible(),false);
+  const hash=await deep.page.evaluate(()=>location.hash);await deep.page.locator('.skip-link').focus();await deep.page.keyboard.press('Enter');await deep.page.waitForFunction(()=>document.activeElement?.id==='main');assert.equal(await deep.page.evaluate(()=>location.hash),hash,'Workspace skip link preserves deep-link route');await view(deep.page,screen);
+  await unchanged(deep.page,fixture);await deep.context.close();
+ }
  pass('four-deep-links-preserve-existing-workspace-and-record');
  const fallback=await session({denyCanvas:true}),f=fallback.page;await view(f,'menu');assert.equal(await f.locator('#menu-background').getAttribute('data-renderer'),'css');assert.equal(await f.locator('#menu-view').evaluate(element=>getComputedStyle(element).backgroundImage!=='none'),true);const fallbackDraws=await draws(f);await setMotion(f,'on');await f.waitForTimeout(350);assert.equal(await draws(f),fallbackDraws);await screenshots(f,'menu-css-fallback');await f.locator('#menu-play').click();await view(f,'table');await f.locator('.brand-link').click();await view(f,'menu');await f.locator('#menu-collection').click();await view(f,'collection');await unchanged(f,null);await fallback.context.close();
  pass('denied-webgl-and-2d-use-static-css-with-working-navigation');
