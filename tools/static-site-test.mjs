@@ -66,6 +66,14 @@ try{
   const openCatalogue=async page=>{const dock=page.locator('#catalogue-dock');if(await dock.evaluate(e=>e instanceof HTMLDetailsElement&&!e.open))await dock.locator(':scope > summary').click();};
   const add=async(page,id,button)=>{await openCatalogue(page);await page.locator('#bay-search').fill(id);await page.locator(`[data-bay-joker="${id}"]`).click();await page.locator(button).click();await page.locator('#bay-dialog').waitFor({state:'hidden'});};
   await p.goto(base);await ready(p);
+  await p.waitForFunction(()=>document.body.dataset.view==='menu');
+  assert.equal(await p.locator('#menu-view').isVisible(),true);
+  assert.equal(await p.locator('.app-header').isVisible(),false);
+  assert.equal(await stored(p),null,'Opening the static menu does not create a run.');
+  await p.locator('#menu-play').click();
+  await p.waitForFunction(()=>document.body.dataset.view==='table');
+  assert.equal(await stored(p),null,'Entering the table is navigation, not a saved run.');
+  pass('entry-menu','Project root opens the menu and Play navigates to the existing table without creating a run',{initial:'menu',afterPlay:'table',writes:0});
   await p.waitForFunction(()=>document.querySelectorAll('.bay-mini').length===150);
   await p.evaluate(()=>document.fonts.ready);
   assert.equal(await p.evaluate(()=>document.fonts.check('16px "Balatro Pixel"')),true);
@@ -109,7 +117,7 @@ try{
   // A second isolated context tests the independently documented 80→572 hand oracle.
   const exactCtx=await browser.newContext({viewport:{width:1440,height:1000}});
   try{
-    const e=await exactCtx.newPage();instrument(e);await e.goto(base);await ready(e);
+    const e=await exactCtx.newPage();instrument(e);await e.goto(new URL('#table',base).href);await ready(e);
     await e.waitForFunction(()=>document.querySelectorAll('.bay-mini').length===150);
     const exampleResponse=await fetch(base+'examples/shop-purchase.json');assert.equal(exampleResponse.status,200);
     const exampleText=await exampleResponse.text();

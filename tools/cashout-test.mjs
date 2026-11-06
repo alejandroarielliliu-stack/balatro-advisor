@@ -12,7 +12,7 @@ try{
  const revealDetails=async(p,selector)=>{const d=p.locator(selector);if(await d.count()&&!await d.evaluate(e=>e.open))await d.locator(':scope > summary').click();};
  const go=async s=>{await p.locator(`[data-screen="${s}"]`).click();if(s==='table')await revealDetails(p,'.hand-calculation-data');};
  const raw=()=>p.evaluate(()=>localStorage.getItem('balatro-advisor.confirmed.v1'));
- await p.goto('http://127.0.0.1:4182/');await p.waitForFunction(()=>document.querySelector('#ownership').textContent.includes('Esta pestaña tiene'));
+ await p.goto('http://127.0.0.1:4182/#table');await p.waitForFunction(()=>document.querySelector('#ownership').textContent.includes('Esta pestaña tiene'));
  await go('archive');await p.locator('#import-file').setInputFiles({name:'state.json',mimeType:'application/json',buffer:await readFile('examples/shop-purchase.json')});await p.locator('#dialog-accept').click();await go('table');
  await p.locator('#blind-kind').selectOption('small');assert.equal(await p.locator('#reward').inputValue(),'3');await p.locator('#blind-kind').selectOption('big');assert.equal(await p.locator('#reward').inputValue(),'4');
  await p.locator('#money').fill('101');await go('evaluation');await p.getByRole('button',{name:'Añadir plantilla hipotética: dos parejas'}).click();await p.locator('.scenario').waitFor();await go('table');

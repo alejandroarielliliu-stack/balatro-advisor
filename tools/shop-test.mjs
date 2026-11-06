@@ -73,7 +73,7 @@ try {
     const stored = () => page.evaluate(key => localStorage.getItem(key), storageKey);
     const writes = () => page.evaluate(() => window.__shopConfirmedWrites);
     const submits = () => page.evaluate(() => window.__shopStateSubmits);
-    await page.goto('http://127.0.0.1:' + port + '/');
+    await page.goto('http://127.0.0.1:' + port + '/#table');
     await page.waitForFunction(() => document.querySelector('#ownership')?.textContent.includes('Esta pestaña tiene'));
     await go('archive');
     await page.locator('#import-file').setInputFiles({

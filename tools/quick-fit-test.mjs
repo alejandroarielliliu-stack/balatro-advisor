@@ -52,7 +52,7 @@ try{
   });
   });
  };
- await p.goto('http://127.0.0.1:4192/');
+ await p.goto('http://127.0.0.1:4192/#table');
  await p.waitForFunction(()=>document.querySelector('#ownership').textContent.includes('Esta pestaña tiene'));
  await p.waitForFunction(()=>document.querySelectorAll('.bay-mini').length===150);
  assert.equal(await stored(),null);

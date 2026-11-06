@@ -17,7 +17,7 @@ try{
   const cards=[...document.querySelectorAll('.candidate-card')];
   return cards.length>0&&cards.every(card=>card.dataset.previewStatus&&card.dataset.previewStatus!=='updating'&&card.querySelector('.candidate-info>.fit-score')?.textContent.trim())&&(!content||cards.some(card=>card.querySelector('.quick-fit-result')?.textContent.includes(content)));
  },content);
- await p.goto('http://127.0.0.1:4181/');await p.waitForFunction(()=>document.querySelector('#ownership').textContent.includes('Esta pestaña tiene'));
+ await p.goto('http://127.0.0.1:4181/#table');await p.waitForFunction(()=>document.querySelector('#ownership').textContent.includes('Esta pestaña tiene'));
  await p.locator('.coverage-note>summary').click();await p.locator('#coverage').check();await p.locator('#money').fill('7');await p.locator('#blind-kind').selectOption('big');assert.equal(await p.locator('#reward').inputValue(),'4');
  // Starting the recorded run remains explicit; later field edits do not require Register.
  await go('archive');await p.getByRole('button',{name:'Crear y guardar mi partida'}).click();await go('table');assert.equal((await record()).state.observed.money.value,7);assert.equal((await record()).history.length,0);

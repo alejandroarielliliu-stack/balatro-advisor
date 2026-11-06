@@ -96,7 +96,7 @@ try{
    };
   },key);
   const page=await context.newPage();watch(page);
-  await page.goto(origin.href);await ready(page);
+  await page.goto(new URL('#table',origin.href).href);await ready(page);
   await load(page,input,withoutJokerCatalog?async p=>{
    await p.locator('#store-voucher-add').waitFor({state:'visible'});
    await p.waitForFunction(()=>document.querySelector('#shop-session-status')?.textContent.includes('catálogo de comodines'));
@@ -311,7 +311,7 @@ try{
  // 7. A reader tab can inspect, but cannot confirm against the writer's record.
  const writer=await session(),writerId=await add(writer.page);
  before=await raw(writer.page);
- const reader=await writer.context.newPage();watch(reader);await reader.goto(origin.href);
+ const reader=await writer.context.newPage();watch(reader);await reader.goto(new URL('#table',origin.href).href);
  await reader.waitForFunction(()=>document.querySelector('#ownership')?.textContent.includes('Modo lectura'));
  await go(reader,'table');await hydrated(reader);await tile(reader,writerId).waitFor();
  count=await writes(reader);await openVoucher(reader,writerId);

@@ -14,7 +14,7 @@ try{
  const record=async()=>JSON.parse(await raw());
  const revision=async expected=>{await p.waitForFunction(expected=>JSON.parse(localStorage.getItem('balatro-advisor.confirmed.v1')).state.revision===expected,expected);return record();};
  const manualSave=async reason=>{const previous=(await record()).state.revision;await go('archive');await p.locator('#edit-reason').fill(reason);await p.getByRole('button',{name:'Guardar actualización que transcribí'}).click();await revision(previous+1);await go('table');};
- await p.goto('http://127.0.0.1:4183/');await p.waitForFunction(()=>document.querySelector('#ownership').textContent.includes('Esta pestaña tiene'));
+ await p.goto('http://127.0.0.1:4183/#table');await p.waitForFunction(()=>document.querySelector('#ownership').textContent.includes('Esta pestaña tiene'));
  await go('archive');await p.locator('#import-file').setInputFiles({name:'state.json',mimeType:'application/json',buffer:await readFile('examples/shop-purchase.json')});await p.locator('#dialog-accept').click();await go('table');
  const original=(await record()).state;
  const choose=async id=>{const before=await record();if(!await p.locator(`[data-voucher="${id}"]`).count())await p.getByRole('button',{name:'Ver los 32',exact:true}).click();await p.locator(`[data-voucher="${id}"]`).click();await p.locator('#voucher-apply').click();await p.locator('.voucher-dialog').waitFor({state:'hidden'});const saved=await revision(before.state.revision+1);assert.equal(saved.history.at(-1).kind,'correction');assert.equal(saved.history.at(-1).action,null);assert.deepEqual(saved.state.observed.money,before.state.observed.money);};

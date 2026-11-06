@@ -37,7 +37,7 @@ try{
  const shelf=page=>page.waitForFunction(()=>document.querySelectorAll('.bay-mini').length===150&&!document.querySelector('.candidate-pending'));
  const session=async(input=fixture(),viewport={width:1440,height:1000})=>{
   const context=await browser.newContext({viewport});await context.addInitScript(storageKey=>{window.__deckWrites=0;window.__deckFailWrite=false;window.__deckNativeSet=Storage.prototype.setItem;Storage.prototype.setItem=function(k,v){if(k===storageKey){if(window.__deckFailWrite)throw new DOMException('Synthetic deck quota','QuotaExceededError');window.__deckWrites++;}return window.__deckNativeSet.call(this,k,v);};},key);
-  const page=await context.newPage();lastPage=page;page.on('pageerror',e=>report.pageErrors.push(e.message));await page.goto(origin.href);await ready(page);await go(page,'table');
+  const page=await context.newPage();lastPage=page;page.on('pageerror',e=>report.pageErrors.push(e.message));await page.goto(new URL('#table',origin.href).href);await ready(page);await go(page,'table');
   if(input){await go(page,'archive');await page.locator('#import-file').setInputFiles({name:'synthetic-deck-material.json',mimeType:'application/json',buffer:Buffer.from(JSON.stringify(input))});await page.locator('#dialog-accept').click();await page.locator('#confirmation').waitFor({state:'hidden'});await go(page,'table');}
   await shelf(page);return {context,page};
  };

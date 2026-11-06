@@ -60,7 +60,7 @@ try{
    window.__tarotWrites=0;window.__tarotFailWrite=false;const original=Storage.prototype.setItem;
    Storage.prototype.setItem=function(name,value){if(name===storageKey){if(window.__tarotFailWrite)throw new DOMException('Synthetic Tarot quota failure','QuotaExceededError');window.__tarotWrites++;}return original.call(this,name,value);};
   },key);
-  const page=await context.newPage();watch(page);await page.goto(origin.href);await ready(page);await go(page,'archive');
+  const page=await context.newPage();watch(page);await page.goto(new URL('#table',origin.href).href);await ready(page);await go(page,'archive');
   await page.locator('#import-file').setInputFiles({name:'synthetic-directed-tarot.json',mimeType:'application/json',buffer:Buffer.from(JSON.stringify(input))});
   await page.locator('#dialog-accept').click();await page.locator('#confirmation').waitFor({state:'hidden'});await go(page,'table');await panel(page).waitFor({state:'visible'});return {context,page};
  };
@@ -140,7 +140,7 @@ try{
  // explicitly not a test on a physical Android device or a played game.
  const mobile=await session(fixture(),{width:390,height:844}),v=mobile.page;before=await raw(v);await target(v,'8S').click();assert.equal(await v.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
  await panel(v).screenshot({path:dir+'/mobile-preview.png'});await v.screenshot({path:dir+'/mobile-page.png',fullPage:false});await v.locator('#tarot-use').click();assert.equal(await v.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);await v.screenshot({path:dir+'/mobile-confirmation.png',fullPage:false});await v.locator('#dialog-cancel').click();assert.equal(await raw(v),before);
- const reader=await mobile.context.newPage();watch(reader);await reader.goto(origin.href);await reader.waitForFunction(()=>document.querySelector('#ownership')?.textContent.includes('Modo lectura'));await go(reader,'table');await panel(reader).waitFor({state:'visible'});
+ const reader=await mobile.context.newPage();watch(reader);await reader.goto(new URL('#table',origin.href).href);await reader.waitForFunction(()=>document.querySelector('#ownership')?.textContent.includes('Modo lectura'));await go(reader,'table');await panel(reader).waitFor({state:'visible'});
  await target(reader,'8S').click();assert.match(await reader.locator('.tarot-preview').innerText(),/Acero/);assert.equal(await reader.locator('#tarot-use').isDisabled(),true);assert.equal(await reader.locator('#tarot-observe-hand').isDisabled(),true);assert.equal(await reader.locator('#tarot-inventory').isDisabled(),true);assert.equal(await raw(reader),before);
  pass('mobile390-and-readonly-preview-without-save',{mobileOverflow:false,readerPreview:true,readerWritesAllowed:false,physicalAndroid:false},{mobileOverflow:false,readerPreview:true,readerWritesAllowed:false,physicalAndroid:false});await mobile.context.close();
 

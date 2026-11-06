@@ -11,7 +11,7 @@ try{
  const p=await browser.newPage({viewport:{width:1440,height:1000}}),errors=[];p.on('pageerror',e=>errors.push(e.message));
  const go=async s=>{await p.locator(`[data-screen="${s}"]`).click();};
  const raw=()=>p.evaluate(()=>localStorage.getItem('balatro-advisor.confirmed.v1'));
- await p.goto('http://127.0.0.1:4178/');await p.waitForFunction(()=>document.querySelector('#ownership').textContent.includes('Esta pestaña tiene'));
+ await p.goto('http://127.0.0.1:4178/#table');await p.waitForFunction(()=>document.querySelector('#ownership').textContent.includes('Esta pestaña tiene'));
  await go('archive');await p.locator('#import-file').setInputFiles({name:'state.json',mimeType:'application/json',buffer:await readFile('examples/shop-purchase.json')});await p.locator('#dialog-accept').click();await go('table');
  await p.waitForFunction(()=>document.querySelectorAll('.bay-mini').length===150);const original=await raw();
  const height=()=>p.locator('.inventory-panel').evaluate(e=>e.getBoundingClientRect().height);

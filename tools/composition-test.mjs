@@ -25,7 +25,7 @@ try{
  const stored=page=>page.evaluate(()=>localStorage.getItem('balatro-advisor.confirmed.v1'));
  const go=async(page,screen)=>page.locator(`[data-screen="${screen}"]`).click();
  const load=async page=>{
-  await page.goto(origin+'/');
+  await page.goto(origin+'/#table');
   await page.waitForFunction(()=>document.querySelector('#ownership').textContent.includes('Esta pestaña tiene'));
   await page.waitForFunction(()=>document.querySelectorAll('.bay-mini').length===150&&document.querySelectorAll('#composition-overview [data-section]').length===6);
  };

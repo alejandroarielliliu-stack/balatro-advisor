@@ -12,7 +12,7 @@ try{
  const ctx=await browser.newContext({viewport:{width:1440,height:1000}});const p=await ctx.newPage();const errors=[];p.on('pageerror',e=>errors.push(e.message));
  const go=async screen=>{await p.locator(`[data-screen="${screen}"]`).click();await p.locator(`[data-page="${screen}"]`).waitFor({state:'visible'});};
  const raw=()=>p.evaluate(()=>localStorage.getItem('balatro-advisor.confirmed.v1'));
- await p.goto('http://127.0.0.1:4176/');await p.waitForFunction(()=>document.querySelector('#ownership').textContent.includes('Esta pestaña tiene'));
+ await p.goto('http://127.0.0.1:4176/#table');await p.waitForFunction(()=>document.querySelector('#ownership').textContent.includes('Esta pestaña tiene'));
  assert.equal(await p.locator('#live-plans').isVisible(),false);
  assert.equal(await p.getByRole('button',{name:'Crear y guardar mi partida'}).count(),0);
  assert.equal(await p.locator('#next-view').getAttribute('href'),'#evaluation');

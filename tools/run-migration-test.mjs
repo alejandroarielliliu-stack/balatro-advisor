@@ -40,7 +40,7 @@ try{
     original.call(this,name,value);window.__migrationWrites.push({key:name,value});
    };
   },key);
-  const p=await context.newPage();lastPage=p;p.on('pageerror',e=>pageErrors.push(e.message));p.on('requestfailed',r=>failedRequests.push({url:r.url(),failure:r.failure()?.errorText}));await p.goto(origin);await ready(p);return {context,p};
+  const p=await context.newPage();lastPage=p;p.on('pageerror',e=>pageErrors.push(e.message));p.on('requestfailed',r=>failedRequests.push({url:r.url(),failure:r.failure()?.errorText}));await p.goto(new URL('#table',origin).href);await ready(p);return {context,p};
  };
  const load=async(p,data)=>{await go(p,'archive');await p.locator('#import-file').setInputFiles({name:'legacy-confirmed.json',mimeType:'application/json',buffer:Buffer.from(JSON.stringify(data))});await p.locator('#confirmation').waitFor({state:'visible'});await p.locator('#dialog-accept').click();await p.locator('#confirmation').waitFor({state:'hidden'});};
  const preview=async p=>{await go(p,'archive');await p.locator('#run-migrate').click();await p.locator('#confirmation').waitFor({state:'visible'});await p.locator('#run-migration-preview').waitFor();};
@@ -93,7 +93,7 @@ try{
   pass('migration-'+failure+'-quota-failure','Failure '+failure+' leaves exact active confirmed-1 recoverable; explicit retry succeeds',{originalActiveBytesPreserved:true,retrySchema:'confirmed-2'});
  }
 
- const locking=await session();await load(locking.p,fixture());const writerBefore=await raw(locking.p);const second=await locking.context.newPage();second.on('pageerror',e=>pageErrors.push(e.message));await second.goto(origin);await second.waitForFunction(()=>document.querySelector('#ownership')?.textContent.includes('Modo lectura'));await go(second,'archive');assert.equal(await second.locator('#run-migrate').isDisabled(),true);assert.equal(await raw(second),writerBefore);const locks=await second.evaluate(()=>navigator.locks.query());assert.ok(locks.held.some(x=>x.name==='balatro-advisor-confirmed-writer-v1'));
+ const locking=await session();await load(locking.p,fixture());const writerBefore=await raw(locking.p);const second=await locking.context.newPage();second.on('pageerror',e=>pageErrors.push(e.message));await second.goto(new URL('#table',origin).href);await second.waitForFunction(()=>document.querySelector('#ownership')?.textContent.includes('Modo lectura'));await go(second,'archive');assert.equal(await second.locator('#run-migrate').isDisabled(),true);assert.equal(await raw(second),writerBefore);const locks=await second.evaluate(()=>navigator.locks.query());assert.ok(locks.held.some(x=>x.name==='balatro-advisor-confirmed-writer-v1'));
  await migrate(locking.p);await second.waitForFunction(k=>JSON.parse(localStorage.getItem(k)).schemaVersion==='confirmed-2',key);assert.equal((await record(second)).schemaVersion,'confirmed-2');assert.match(await second.locator('#ownership').textContent(),/Modo lectura/);await locking.context.close();
  pass('same-key-same-writer-lock','Read-only tab cannot migrate; existing writer lock name and active key remain stable and V2 change is received',{activeKey:key,lock:'balatro-advisor-confirmed-writer-v1',readonlyMigrationDisabled:true});
 

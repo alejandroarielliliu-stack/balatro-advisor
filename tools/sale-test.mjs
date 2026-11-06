@@ -30,7 +30,7 @@ try{
  const go=(p,screen)=>p.locator(`[data-screen="${screen}"]`).click();
  const start=async state=>{
   const context=await browser.newContext({viewport:{width:1440,height:1000}}),p=await context.newPage();p.on('pageerror',e=>errors.push(e.message));
-  await p.goto(origin+'/');await p.waitForFunction(()=>document.querySelector('#ownership').textContent.includes('Esta pestaña tiene'));
+  await p.goto(origin+'/#table');await p.waitForFunction(()=>document.querySelector('#ownership').textContent.includes('Esta pestaña tiene'));
   if(state){await go(p,'archive');await p.locator('#import-file').setInputFiles({name:'observed-sale.json',mimeType:'application/json',buffer:Buffer.from(JSON.stringify(state))});await p.locator('#dialog-accept').click();await go(p,'table');}
   await p.waitForFunction(()=>document.querySelectorAll('.bay-mini').length===150);return {context,p};
  };

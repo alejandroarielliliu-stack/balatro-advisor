@@ -14,7 +14,7 @@ let browser;
 try{
  await new Promise((resolve,reject)=>{const timer=setTimeout(()=>reject(new Error('Timeout iniciando servidor de benchmark.')),10000);server.stdout.on('data',d=>{if(String(d).includes('Balatro Advisor local')){clearTimeout(timer);resolve();}});server.on('error',e=>{clearTimeout(timer);reject(e);});server.on('exit',c=>{clearTimeout(timer);reject(new Error(`Servidor terminó: ${c}`));});});
  browser=await (engine==='firefox'?firefox:chromium).launch({headless:true,...(engine==='chromium'?{channel:process.env.BROWSER_CHANNEL??'chrome'}:{})});
- const context=await browser.newContext({viewport,hasTouch:mobile,...(mobile&&engine==='chromium'?{isMobile:true}:{})}),page=await context.newPage();const errors=[];page.on('pageerror',e=>errors.push(e.message));await page.goto(base);
+ const context=await browser.newContext({viewport,hasTouch:mobile,...(mobile&&engine==='chromium'?{isMobile:true}:{})}),page=await context.newPage();const errors=[];page.on('pageerror',e=>errors.push(e.message));await page.goto(new URL('#table',base).href);
  const core=await page.evaluate(async({samples,warmup})=>{
   const {adviseShop}=await import('/dist/src/advisor/advisor.js');const {adviseHorizon}=await import('/dist/src/advisor/horizon-advisor.js');
   const load=async file=>{const r=await fetch('/examples/'+file+'.json');if(!r.ok)throw new Error(file);return r.json();};

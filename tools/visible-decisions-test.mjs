@@ -26,7 +26,7 @@ try{
  const session=async(id,viewport={width:1440,height:1000})=>{
   const context=await browser.newContext({viewport,reducedMotion:'reduce'});
   await context.addInitScript(k=>{window.__visibleWrites=0;window.__failVisibleSave=false;const original=Storage.prototype.setItem;Storage.prototype.setItem=function(name,value){if(name===k){if(window.__failVisibleSave)throw new DOMException('Synthetic save failure','QuotaExceededError');window.__visibleWrites++;}return original.call(this,name,value);};},key);
-  const p=await context.newPage();lastPage=p;p.on('pageerror',e=>report.pageErrors.push(e.message));await p.goto(origin);await ready(p);await load(p,id);return {context,p};
+  const p=await context.newPage();lastPage=p;p.on('pageerror',e=>report.pageErrors.push(e.message));await p.goto(new URL('#table',origin).href);await ready(p);await load(p,id);return {context,p};
  };
  const shelf=p=>p.waitForFunction(()=>document.querySelector('#shop-comparison [data-alternative="hold"]')&&!document.querySelector('.candidate-pending'));
  const row=(p,id)=>p.locator('.comparison-row').filter({has:p.locator(`[data-alternative="${id}"]`)});
@@ -56,7 +56,7 @@ try{
 
  const full=await session('DV-SHOP-03');await shelf(full.p);assert.equal(await row(full.p,'buy:abstract').getAttribute('data-operation-status'),'illegal');assert.match(await row(full.p,'buy:abstract').innerText(),/espacio|hueco/i);assert.equal(await row(full.p,'replace:abstract:owned-joker').getAttribute('data-operation-status'),'provisional');await full.context.close();
  const partial=await session('DV-SHOP-05');await shelf(partial.p);before=await raw(partial.p);count=await writes(partial.p);assert.equal(await row(partial.p,'buy:joker').locator('.comparison-after').innerText(),'—');assert.equal(await row(partial.p,'buy:abstract').locator('.comparison-after').innerText(),'$16');
- const reader=await partial.context.newPage();await reader.goto(origin);await reader.waitForFunction(()=>document.querySelector('#ownership')?.textContent.includes('Modo lectura'));await shelf(reader);await open(reader,'buy:abstract');assert.equal(await reader.locator('#shop-alternative-confirm').isDisabled(),true);await unchanged(partial.p,before,count);await reader.close();await partial.context.close();
+ const reader=await partial.context.newPage();await reader.goto(new URL('#table',origin).href);await reader.waitForFunction(()=>document.querySelector('#ownership')?.textContent.includes('Modo lectura'));await shelf(reader);await open(reader,'buy:abstract');assert.equal(await reader.locator('#shop-alternative-confirm').isDisabled(),true);await unchanged(partial.p,before,count);await reader.close();await partial.context.close();
  pass('full-slots-and-unknown-price-limit-only-affected-branches-reader-can-consult');
 
  const failed=await session('DV-SHOP-02');await shelf(failed.p);before=await raw(failed.p);await open(failed.p,'sell:owned-green');await failed.p.locator('#shop-alternative-confirm').click();await failed.p.locator('#performed').check();await failed.p.evaluate(()=>window.__failVisibleSave=true);await failed.p.locator('#dialog-accept').click();assert.equal(await raw(failed.p),before);assert.equal(await failed.p.locator('#confirmation').isVisible(),true);await failed.p.locator('#dialog-cancel').click();await failed.p.evaluate(()=>window.__failVisibleSave=false);
