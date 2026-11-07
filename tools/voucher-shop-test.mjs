@@ -322,16 +322,19 @@ try{
  pass('second-tab-readonly-voucher',{disabled:true,recordUnchanged:true,consultationWrites:0},{disabled:true,recordUnchanged:true,consultationWrites:0});
  await writer.context.close();
 
- // 8. Emulated mobile exercises the real form and confirmation at 390px.
+ // 8. A physical portrait viewport displays the same landscape form, rotated.
+ // Controls below the logical 390px fold must remain reachable by scrolling.
  const mobile=await session(fixture(),{width:390,height:844}),m=mobile.page,mobileId=await add(m);
  await openVoucher(m,mobileId);
  assert.equal(await m.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
- let box=await m.locator(`[data-voucher-confirm="${mobileId}"]`).boundingBox();
- assert.ok(box&&box.x>=0&&box.x+box.width<=390,'Purchase control fits the viewport');
+ const purchase=m.locator(`[data-voucher-confirm="${mobileId}"]`);
+ await purchase.scrollIntoViewIfNeeded();
+ let box=await purchase.boundingBox();
+ assert.ok(box&&box.x>=0&&box.x+box.width<=390&&box.y>=0&&box.y+box.height<=844,'Scrolled purchase control fits the physical viewport');
  await closeEditor(m);await begin(m,mobileId);
  assert.equal(await m.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
  box=await m.locator('#confirmation').boundingBox();
- assert.ok(box&&box.x>=0&&box.x+box.width<=390,'Confirmation fits the viewport');
+ assert.ok(box&&box.x>=0&&box.x+box.width<=390&&box.y>=0&&box.y+box.height<=844,'Confirmation fits the physical viewport');
  await m.screenshot({path:dir+'/mobile-confirmation.png',fullPage:false});
  await finish(m);saved=await record(m);assertBasePurchase(saved,mobileId);
  assert.equal(await m.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);

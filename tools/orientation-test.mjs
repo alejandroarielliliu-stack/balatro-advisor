@@ -83,6 +83,35 @@ try{
  }
  await unchanged(p,base.saved);pass('all-screens-modal-focus-route-and-hypothetical-draft-survive-rotation');await base.context.close();
 
+ // Sample the actual opening animation, not just the settled/reduced-motion UI.
+ const animated=await session({viewport:{width:390,height:844},path:'#table'}),ap=animated.page;
+ await ap.emulateMedia({reducedMotion:'no-preference'});
+ await ap.evaluate(()=>{
+  window.__dialogAnimation={samples:[],ended:false};
+  document.addEventListener('animationstart',event=>{
+   if(event.target.id!=='confirmation'||event.animationName!=='panel-arrival')return;
+   const dialog=event.target;
+   const sample=()=>{
+    if(window.__dialogAnimation.ended)return;
+    const matrix=new DOMMatrixReadOnly(getComputedStyle(dialog).transform),r=dialog.getBoundingClientRect();
+    window.__dialogAnimation.samples.push({a:matrix.a,b:matrix.b,c:matrix.c,d:matrix.d,left:r.left,right:r.right,top:r.top,bottom:r.bottom});
+    requestAnimationFrame(sample);
+   };
+   sample();
+  });
+  document.addEventListener('animationend',event=>{if(event.target.id==='confirmation'&&event.animationName==='panel-arrival')window.__dialogAnimation.ended=true;});
+ });
+ await ap.locator('.candidate-card[data-offer-id="o1"] .candidate-hero').click();await ap.locator('[data-shop-confirm="o1"]').click();
+ await ap.waitForFunction(()=>window.__dialogAnimation.ended);
+ const animationSamples=await ap.evaluate(()=>window.__dialogAnimation.samples);
+ assert.ok(animationSamples.length>0,'Opening animation was sampled while active');
+ for(const s of animationSamples){
+  assert.ok(Math.abs(s.a)<0.001&&Math.abs(s.b-1)<0.001&&Math.abs(s.c+1)<0.001&&Math.abs(s.d)<0.001,'The full clockwise quarter-turn survives every sampled animation frame');
+  assert.ok(s.left>=-1&&s.right<=391&&s.top>=-1&&s.bottom<=845,'Animated confirmation stays within the physical viewport');
+ }
+ await ap.keyboard.press('Escape');await unchanged(ap,animated.saved);await animated.context.close();
+ pass('opening-animation-preserves-landscape-transform',{sampledFrames:animationSamples.length});
+
  const trading=await session({viewport:{width:390,height:844},path:'#table'}),q=trading.page;
  let before=await raw(q),count=(await writes(q)).length;
  await q.locator('#shop-recommendation').click();await q.locator('#shop-advice-dialog').waitFor({state:'visible'});await fit(q,'#shop-advice-dialog');await q.keyboard.press('Escape');await unchanged(q,before,count);

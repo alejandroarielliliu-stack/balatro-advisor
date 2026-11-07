@@ -157,7 +157,8 @@ dialog::backdrop, .bay-dialog::backdrop { background: #071f26bf; backdrop-filter
 .candidate-detail-art>.joker-art { position: absolute; top: 0; left: 0; transform: scale(.5); transform-origin: top left; }
 .candidate-detail-hero strong { color: var(--gold); font-size: 13px; }
 @keyframes card-arrival { from { opacity: .4; transform: translateY(7px) rotate(-3deg); } to { opacity: 1; transform: none; } }
-@keyframes panel-arrival { from { opacity: .7; transform: translateY(5px); } to { opacity: 1; transform: none; } }
+/* Individual translation preserves the landscape transform of top-layer dialogs. */
+@keyframes panel-arrival { from { opacity: .7; translate: 0 5px; } to { opacity: 1; translate: 0 0; } }
 
 dialog[open] { animation: panel-arrival .14s ease-out; }
 .candidate-card, .voucher-tile { transition: border-color .12s, background .12s, transform .12s; }

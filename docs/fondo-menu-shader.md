@@ -50,7 +50,7 @@ Estos son límites de trabajo y comportamiento, no una garantía de 30 fps en cu
 
 ## Comprobaciones realizadas
 
-El primer `npm.cmd run typecheck` del renderer pasó; el cierre global se repite cuando termine la integración de orientación. Una página aislada con el renderer se abrió en Chrome con WebGL real, sin errores: 1440×900 produjo 1131×707 (799.617 píxeles); 844×390 produjo 844×390 (329.160 píxeles). Con DPR 2 solicitado en ese tamaño, el límite de DPR produjo 1055×487 (513.785 píxeles). También compiló y dibujó con `OES_standard_derivatives` denegado, sin errores. Se inspeccionaron las capturas y se corrigió el artefacto de iluminación mencionado. La evidencia de esta inspección está en `.browser-runtime/menu/shader-v2/`, excluida de Git.
+El renderer pasó `typecheck` y la integración pasó `npm.cmd run check`: 1.028 pruebas aprobadas y diez TODO manuales anteriores. Una página aislada con el renderer se abrió en Chrome con WebGL real, sin errores: 1440×900 produjo 1131×707 (799.617 píxeles); 844×390 produjo 844×390 (329.160 píxeles). Con DPR 2 solicitado en ese tamaño, el límite de DPR produjo 1055×487 (513.785 píxeles). También compiló y dibujó con `OES_standard_derivatives` denegado, sin errores. Se inspeccionaron las capturas y se corrigió el artefacto de iluminación mencionado. La evidencia de esta inspección está en `.browser-runtime/menu/shader-v2/`, excluida de Git.
 
 La integración con la rotación de toda la web y la regresión de navegación/guardado se verifican aparte. La emulación de viewport no acredita rendimiento en Android físico.
 
