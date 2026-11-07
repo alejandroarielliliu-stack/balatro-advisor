@@ -90,7 +90,7 @@ export function mountBlindScreen(options:BlindScreenOptions){
   }
   if(snapshot.dirty)error.textContent='Termina la edición pendiente para registrar etiquetas o avanzar.';
  }
- const resize=()=>{const frame=document.getElementById('app-viewport')!;stage.style.setProperty('--blind-scale',String(Math.min(frame.clientWidth/1280,frame.clientHeight/600)));};
+ const resize=()=>{const frame=document.getElementById('app-viewport')!;if(!frame.clientWidth||!frame.clientHeight)return;const scale=Math.min(frame.clientWidth/1280,frame.clientHeight/600);stage.style.setProperty('--blind-scale',String(scale));stage.style.setProperty('--blind-stage-height',`${Math.max(600,frame.clientHeight/scale)}px`);};
  const observer=new ResizeObserver(resize);observer.observe(document.getElementById('app-viewport')!);window.addEventListener('hashchange',()=>{const active=location.hash==='#blind';background.setActive(active);if(!active&&picker.open)picker.close();if(active){refresh();resize();}});resize();
  return {refresh};
 }

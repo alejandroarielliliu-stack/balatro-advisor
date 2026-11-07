@@ -6,6 +6,8 @@
 
 La mesa reproduce la composición de la referencia: panel lateral con recursos, tres ciegas, inventario arriba y dorso del mazo a la derecha. La zona superior izquierda de título/puntuación se sustituye por un comodín y un bocadillo con la orientación existente de `guideBlindChoice`. No es un chatbot ni un asesor nuevo: muestra su recomendación heurística, condición y limitación de supervivencia sin evaluar. No calcula porcentajes ni implica que se pueda superar una ciega.
 
+El escenario ocupa toda la altura disponible: el panel izquierdo llega a ambos bordes y las tres columnas de ciegas se prolongan hasta el inferior, sin agrandar sus controles. La altura lógica se adapta a la relación de aspecto, incluida la orientación girada; las bandejas de comodines y consumibles tienen un fondo hundido más oscuro. Las pruebas comprueban los bordes en escritorio16:9/4:3 y móviles horizontales/girados.
+
 El fondo verde reutiliza el renderer del menú con tratamiento de color; solo anima la pantalla activa, respeta movimiento reducido/Opciones y se pausa al ocultar el documento. Las fichas y etiquetas son atlas originales locales, con [procedencia](../web/assets/blinds/README.md). Primer fotograma estático en iconos, sin bibliotecas ni bucles adicionales para cada ficha.
 
 Baraja, manos, descartes, dinero y cartas proceden del registro ya creado. Roja muestra 4/4; Azul 5/3; no se copian cifras de la captura. El número de rondas en selección deriva de las posiciones anteriores del ciclo menos el total observado de saltos; si faltan los datos, muestra «—». No se infiere composición para Errática ni se usa la semilla para generar resultados.
