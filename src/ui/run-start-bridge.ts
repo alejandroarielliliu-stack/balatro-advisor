@@ -8,6 +8,8 @@ import type {ConfirmedRecord} from '../storage/confirmed-store.js';
 export interface RunStartRequest {
   deckId:string;
   profileConfirmed:boolean;
+  /** Explicit inline consent in the New Run panel; avoids a second modal. */
+  replaceConfirmed?:boolean;
   /** A manual label. The adviser never generates or inspects a seeded game. */
   seed?:string;
 }
@@ -64,7 +66,7 @@ export function createRunStartBridge(dependencies:RunStartDependencies):RunStart
         if(!dependencies.save(valid.value,context.raw,context.record!==null))return false;
         saved=true;onStarted();return true;
       };
-      if(context.record||!request.profileConfirmed){dependencies.confirmStart({replacing:context.record!==null,profileRequired:!request.profileConfirmed},save);return null;}
+      if(context.record&&!request.replaceConfirmed||!request.profileConfirmed){dependencies.confirmStart({replacing:context.record!==null,profileRequired:!request.profileConfirmed},save);return null;}
       return save(true)?null:dependencies.error()||'No se pudo guardar la nueva partida. La copia anterior se conserva.';
     },
     exportCurrent:()=>dependencies.exportCurrent()

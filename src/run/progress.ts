@@ -39,7 +39,7 @@ const cycleCommandSchema=union(
     union(object({type:enumeration('collect_cashout'),money:integer()},{nextBlind:progressBlindSchema}),
       union(object({type:enumeration('leave_shop')},{nextBlind:progressBlindSchema}),object({type:enumeration('end_run'),reason:text(2000)})))));
 export const runProgressCommandSchema=union(cycleCommandSchema,union(
- object({type:enumeration('observe_skip_tag'),tag:fact(text())}),
+ object({type:enumeration('observe_skip_tag'),tag:fact(text())},{blind:object({ante:integer(1,8),kind:enumeration('small','big')})}),
  union(object({type:enumeration('observe_tag_queue'),tags:fact(array(text(),100))}),
  object({type:enumeration('skip_blind'),atNextSelection:{check:(v,p,e)=>v===true||(e.push({path:p,code:'confirmation_required',message:'Confirma que resolviste los efectos del salto y estás en la siguiente selección.'}),false)} as Schema<true>},{money:integer(),nextBlind:progressBlindSchema,tags:fact(array(text(),100))}))));
 export type RunProgressCommand=Infer<typeof runProgressCommandSchema>;
@@ -141,7 +141,12 @@ export function applyRunProgress(input:unknown,commandInput:unknown,options:Prog
     if(state.phase!=='blind_select')return issue('wrong_phase','La etiqueta visible se registra en la selección de ciega.');
     const blind=requireBlind();if(!blind.ok)return blind;
     if(blind.value.kind==='boss')return issue('illegal_skip','La ciega jefe no se puede saltar.');
-    state.phaseData.skipTag=command.tag;
+    const ref=command.blind??{ante:blind.value.ante,kind:blind.value.kind};
+    if(ref.ante!==blind.value.ante||blind.value.kind==='big'&&ref.kind==='small')
+      return issue('wrong_blind','Registra la etiqueta de la ciega actual o de la siguiente ciega visible del mismo ante.');
+    const retained=(state.blindTags??[]).filter(entry=>!sameRef(entry,ref));
+    state.blindTags=[...retained,{...ref,tag:structuredClone(command.tag)}];
+    if(sameRef(ref,blind.value))state.phaseData.skipTag=command.tag;
   }else if(command.type==='observe_tag_queue'){
     if(state.phase==='finished'||state.phase==='unknown')return issue('wrong_phase','Ubica una partida en curso antes de registrar sus etiquetas.');
     const ctx=state.observed.jokerContext?.status==='known'?state.observed.jokerContext.value:{};
@@ -231,6 +236,13 @@ export function applyRunProgress(input:unknown,commandInput:unknown,options:Prog
   // A patch is an explicit final observation; an "unchanged" declaration cannot undo an Orbital invalidation.
   // The final balance is an observation, not an increment or projected payout.
   if(command.type==='collect_cashout'||(command.type==='locate'||command.type==='skip_blind')&&command.money!==undefined)next.observed.money=known(command.money!);
+  // A saved reward belongs to its own selection, never to the preceding blind.
+  // This restores observations only; it does not acquire or execute a tag.
+  if((command.type==='skip_blind'||command.type==='leave_shop')&&next.phase==='blind_select'&&next.observed.nextBlind.status==='known'){
+    const ref=next.observed.nextBlind.value;
+    const observed=next.blindTags?.find(entry=>sameRef(entry,ref));
+    if(observed)next.phaseData.skipTag=structuredClone(observed.tag);
+  }
   next.revision=state.revision+1;next.updatedAt=options.updatedAt;
   const validated=validateCurrentState(next);if(!validated.ok)return validated;
   trace.push({ruleId:'run.observed',label:'Avance confirmado por el usuario',values:{command:command.type,from:loaded.value.phase,to:next.phase,revision:next.revision}});

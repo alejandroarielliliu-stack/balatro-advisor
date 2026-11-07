@@ -6,6 +6,8 @@ import {mountComposition} from './composition-view.js';
 import {renderRunJourney} from './run-progress-view.js';
 import {createNewRun} from '../run/start.js';
 import {createRunStartBridge} from './run-start-bridge.js';
+import {mountBlindScreen} from './blind-screen.js';
+import type {BlindInfo} from '../run/progress.js';
 import {observationPatch} from '../state/observations.js';
 import {prepareBasicObservation} from '../state/basic-observations.js';
 import type {BasicObservationRequest} from '../state/basic-observations.js';
@@ -84,6 +86,7 @@ let flushBasicEdits=()=>true;
 let preserveBasicDraft=(_text:string)=>{};
 function liveState(quick=false){quietRead=true;try{if(!readLiveState)throw new Error('Completa los datos de la partida.');return readLiveState(quick);}finally{quietRead=false;}}
 let dialogAction:(()=>boolean)|null=null;
+let refreshBlindScreen=()=>{};
 const lock=new WriterLock(()=>updateOwnership());
 const store=createConfirmedStore(()=>({getItem:k=>localStorage.getItem(k),setItem:(k,v)=>{lock.assert();localStorage.setItem(k,v);}}));
 const shopSession=createShopSessionStore(()=>({getItem:k=>localStorage.getItem(k),setItem:(k,v)=>{lock.assert();localStorage.setItem(k,v);}}));
@@ -121,6 +124,7 @@ function updateOwnership(){
   area.append(button(lock.owned?'Liberar control':lock.waiting?'Cancelar solicitud':'Solicitar control',()=>lock.owned||lock.waiting?lock.release():lock.acquire(true)));
   if(!lock.owned && $('confirmation')?.hasAttribute('open')){$<HTMLDialogElement>('confirmation').close();dialogAction=null;}
   document.querySelectorAll<HTMLButtonElement>('[data-write]').forEach(b=>b.disabled=!lock.owned||loadFailed||b.dataset.localDisabled==='true');
+  refreshBlindScreen();
   // Import can explicitly replace a corrupt document, with validation and confirmation.
   $<HTMLInputElement>('import-file').disabled=!lock.owned;
 }
@@ -155,6 +159,7 @@ function unsupportedForEditor(s:GameState){
   return !!value(o.jokers)?.some(j=>!names[j.catalogId]||j.edition.status==='known'&&!['base','foil','holographic','polychrome','negative'].includes(j.edition.value)||(value(j.stickers)?.some(s=>s!=='eternal')??false));
 }
 function renderJourney(){
+  refreshBlindScreen();
   const base=record,expected=base?analysisBinding(base.state):null,raw=seenRaw,id=uuid();
   renderInventoryChanges($('inventory-changes'),{record:base,dirty,writable:lock.owned&&!loadFailed,open:openDialog,error:text=>message(text,true),submit:request=>{
     if(!base||!expected)return false;
@@ -177,6 +182,7 @@ function renderJourney(){
       if(commit(()=>store.undoLatest({confirmationId:uuid(),confirmed:true,expected,updatedAt:now(),targetEntryId:last.id,reason:'El usuario corrigió el último registro desde el recorrido.'})))message('Registro corregido. Esto no deshace acciones dentro de Balatro.');
     }
   });
+  if(base?.state.phase==='blind_select'){const link=node('a','Ver ciegas','button-link');link.href='#blind';$('run-journey').querySelector('.journey-actions')?.append(link);}
   let packHost=document.getElementById('pack-panel');if(!packHost){packHost=node('section');packHost.id='pack-panel';$('run-journey').after(packHost);}
   renderPackView(packHost,{state:base?.state??null,writable:lock.owned&&!loadFailed,dirty,confirm:action=>base?confirmAction(action,base.state):'Primero registra una partida.',controlsChanged:updateOwnership});
   let tarotHost=document.getElementById('tarot-panel');if(!tarotHost){tarotHost=node('section');tarotHost.id='tarot-panel';packHost.after(tarotHost);}
@@ -749,6 +755,27 @@ const runStartBridge=createRunStartBridge({
   },
   exportCurrent:()=>$('export').click(),reportError:text=>message(text,true),error:()=>$('message').textContent??'',runId:uuid,now
 });
+const blindScreen=mountBlindScreen({
+ snapshot:()=>({state:record?structuredClone(record.state):null,writable:lock.owned&&!loadFailed,dirty}),
+ observeTag:(kind,tag,binding)=>{
+  if(!record||record.state.revision!==binding.revision||record.state.runId!==binding.runId)return 'La partida cambió. Abre de nuevo la etiqueta.';
+  if(dirty||!lock.owned||loadFailed)return 'Termina la edición o recupera el control de escritura antes de registrar la etiqueta.';
+  const current=value(record.state.observed.nextBlind);if(!current)return 'Falta registrar la ciega actual.';
+  return commit(()=>store.progress({confirmationId:uuid(),confirmed:true,expected:analysisBinding(record!.state),updatedAt:now(),command:{type:'observe_skip_tag',blind:{ante:current.ante,kind},tag:tag===null?unknown():known(tag)},inventory:{unchanged:true}}))?null:$('message').textContent||'No se pudo guardar la etiqueta.';
+ },
+ observeBoss:(id,binding)=>{
+  if(!record||record.state.revision!==binding.revision||record.state.runId!==binding.runId)return 'La partida cambió. Abre de nuevo el jefe.';
+  if(dirty||!lock.owned||loadFailed)return 'Termina la edición o recupera el control de escritura antes de registrar el jefe.';
+  const state=record.state,current=value(state.observed.nextBlind);if(!current)return 'Falta registrar la ciega actual.';
+  const requirement=blindRequirement(current.ante,'boss',id,value(state.observed.deckId)??'');
+  if(!requirement.ok&&requirement.error.code==='invalid_blind')return requirement.error.message;
+  const old=value(state.observed.visibleBoss),same=old?.ante===current.ante&&value(old.bossId)===id;
+  const boss:BlindInfo={ante:current.ante,kind:'boss',bossId:known(id),target:requirement.ok?known(requirement.target):same?old.target:unknown(),reward:requirement.ok?known(requirement.reward):same?old.reward:unknown()};
+  return commit(()=>store.correct({confirmationId:uuid(),confirmed:true,expected:analysisBinding(state),updatedAt:now(),patch:{visibleBoss:known(boss),...(current.kind==='boss'?{nextBlind:known(boss)}:{})},reason:'Jefe visible transcrito desde la selección de ciegas; no se generan efectos ni recompensas.'}))?null:$('message').textContent||'No se pudo guardar el jefe.';
+ },
+ select:()=>$('run-enter-round')?.click(),skip:()=>$('run-skip-blind')?.click(),options:()=>{const dialog=$<HTMLDialogElement>('menu-settings');dialog.addEventListener('close',()=>$('blind-screen').focus(),{once:true});$('menu-options').click();}
+});
+refreshBlindScreen=blindScreen.refresh;
 mountWorkspace(runStartBridge);mountCollection();renderScenarios();reload();lock.acquire();
 
 

@@ -5,7 +5,7 @@
 ## Comportamiento
 
 - Cada entrada o recarga abre `#menu`, incluso si la URL contenía otra pantalla. Esta decisión del usuario sustituye la conservación anterior de enlaces directos al arrancar; no borra la partida ni su historial. El logotipo interior permite volver y la navegación interna posterior conserva el historial del navegador.
-- **Jugar** abre `#setup`, el [selector de partida](selector-partida-diseno.md), con Nueva partida, Continuar y Retos. Abrirlo o explorar barajas no crea/reinicia una partida. Continuar abre Mesa sin guardar; Nueva partida solo se registra al confirmar el perfil y, si existe una copia, su reemplazo.
+- **Jugar** abre `#setup`, el [selector de partida](selector-partida-diseno.md), con Nueva partida, Continuar y Retos. Abrirlo o explorar barajas no crea/reinicia una partida. Jugar en Nueva partida guarda e inicia directamente la [selección de ciegas](seleccion-ciegas.md), sin repetir el modal de perfil; sustituir una partida exige marcar la casilla en el propio selector. Continuar abre Ciegas si el registro está en selección, o Mesa para las demás fases, sin guardar ni descartar borradores.
 - **Colección** abre la colección existente de 150 comodines.
 - **Opciones** permite seguir la preferencia del sistema, activar o desactivar el fondo animado. Escape y Volver cierran el diálogo y devuelven el foco. No contiene ajustes sin función ni controles que alteren el juego.
 - Las rutas interiores siguen funcionando después del arranque. Navegar conserva formularios y partidas; la consulta no registra compras ni ventas.

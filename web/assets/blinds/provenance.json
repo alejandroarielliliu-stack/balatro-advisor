@@ -1,0 +1,275 @@
+{
+  "schemaVersion": 1,
+  "artId": "balatro-blind-tag-atlas-1.0.1o",
+  "importedAt": "2026-11-07",
+  "gameVersion": "1.0.1o-FULL",
+  "sourceCommit": "f081d0e41508d9dcc7a01cba5bffcccfbb115af1",
+  "referenceRepository": "https://github.com/Jofr3/balatro-source",
+  "method": "Byte-for-byte public 2x PNG atlases. Cell positions read statically from pinned game.lua; first animation frame only. No game execution or rule claims.",
+  "officialGameArtwork": true,
+  "officialDistributionSource": false,
+  "observedInGame": false,
+  "atlases": [
+    {
+      "file": "blind-chips.png",
+      "url": "https://raw.githubusercontent.com/Jofr3/balatro-source/f081d0e41508d9dcc7a01cba5bffcccfbb115af1/resources/textures/2x/BlindChips.png",
+      "sha256": "9a792674c98501c4fdfe8292f911c5e04f4972f39ef4a73161b577ae3a6be74c",
+      "bytes": 134506,
+      "width": 1428,
+      "height": 2108,
+      "logicalCell": [
+        34,
+        34
+      ],
+      "physicalCell": [
+        68,
+        68
+      ]
+    },
+    {
+      "file": "tags.png",
+      "url": "https://raw.githubusercontent.com/Jofr3/balatro-source/f081d0e41508d9dcc7a01cba5bffcccfbb115af1/resources/textures/2x/tags.png",
+      "sha256": "9f770f09a147ad103931a24ba83ff227f05a470e837782cbf594da855345a87e",
+      "bytes": 10851,
+      "width": 408,
+      "height": 340,
+      "logicalCell": [
+        34,
+        34
+      ],
+      "physicalCell": [
+        68,
+        68
+      ]
+    }
+  ],
+  "mappingSource": {
+    "url": "https://raw.githubusercontent.com/Jofr3/balatro-source/f081d0e41508d9dcc7a01cba5bffcccfbb115af1/game.lua",
+    "sha256": "bbc67bd3fbadd1ea3f3f0aba07ef8596118d89ff1e9758718f9e17c07a96e912"
+  },
+  "blindCells": {
+    "bl_small": [
+      0,
+      0
+    ],
+    "bl_big": [
+      0,
+      1
+    ],
+    "bl_ox": [
+      0,
+      2
+    ],
+    "bl_hook": [
+      0,
+      7
+    ],
+    "bl_mouth": [
+      0,
+      18
+    ],
+    "bl_fish": [
+      0,
+      5
+    ],
+    "bl_club": [
+      0,
+      4
+    ],
+    "bl_manacle": [
+      0,
+      8
+    ],
+    "bl_tooth": [
+      0,
+      22
+    ],
+    "bl_wall": [
+      0,
+      9
+    ],
+    "bl_house": [
+      0,
+      3
+    ],
+    "bl_mark": [
+      0,
+      23
+    ],
+    "bl_final_bell": [
+      0,
+      26
+    ],
+    "bl_wheel": [
+      0,
+      10
+    ],
+    "bl_arm": [
+      0,
+      11
+    ],
+    "bl_psychic": [
+      0,
+      12
+    ],
+    "bl_goad": [
+      0,
+      13
+    ],
+    "bl_water": [
+      0,
+      14
+    ],
+    "bl_eye": [
+      0,
+      17
+    ],
+    "bl_plant": [
+      0,
+      19
+    ],
+    "bl_needle": [
+      0,
+      20
+    ],
+    "bl_head": [
+      0,
+      21
+    ],
+    "bl_final_leaf": [
+      0,
+      28
+    ],
+    "bl_final_vessel": [
+      0,
+      29
+    ],
+    "bl_window": [
+      0,
+      6
+    ],
+    "bl_serpent": [
+      0,
+      15
+    ],
+    "bl_pillar": [
+      0,
+      16
+    ],
+    "bl_flint": [
+      0,
+      24
+    ],
+    "bl_final_acorn": [
+      0,
+      27
+    ],
+    "bl_final_heart": [
+      0,
+      25
+    ]
+  },
+  "tagCells": {
+    "tag_uncommon": [
+      0,
+      0
+    ],
+    "tag_rare": [
+      1,
+      0
+    ],
+    "tag_negative": [
+      2,
+      0
+    ],
+    "tag_foil": [
+      3,
+      0
+    ],
+    "tag_holo": [
+      0,
+      1
+    ],
+    "tag_polychrome": [
+      1,
+      1
+    ],
+    "tag_investment": [
+      2,
+      1
+    ],
+    "tag_voucher": [
+      3,
+      1
+    ],
+    "tag_boss": [
+      0,
+      2
+    ],
+    "tag_standard": [
+      1,
+      2
+    ],
+    "tag_charm": [
+      2,
+      2
+    ],
+    "tag_meteor": [
+      3,
+      2
+    ],
+    "tag_buffoon": [
+      4,
+      2
+    ],
+    "tag_handy": [
+      1,
+      3
+    ],
+    "tag_garbage": [
+      2,
+      3
+    ],
+    "tag_ethereal": [
+      3,
+      3
+    ],
+    "tag_coupon": [
+      4,
+      0
+    ],
+    "tag_double": [
+      5,
+      0
+    ],
+    "tag_juggle": [
+      5,
+      1
+    ],
+    "tag_d_six": [
+      5,
+      3
+    ],
+    "tag_top_up": [
+      4,
+      1
+    ],
+    "tag_skip": [
+      0,
+      3
+    ],
+    "tag_orbital": [
+      5,
+      2
+    ],
+    "tag_economy": [
+      4,
+      3
+    ],
+    "tag_undiscovered": [
+      3,
+      4
+    ]
+  },
+  "copyright": "Balatro artwork: LocalThunk / Playstack. Third-party mirror; availability is not a license grant."
+}

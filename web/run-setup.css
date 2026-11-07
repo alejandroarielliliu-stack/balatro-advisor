@@ -63,3 +63,5 @@
 .setup-summary h2 {margin:0;font:30px/1 'Balatro Pixel',monospace;}
 .setup-summary p,.setup-import {margin:0;font:24px/1.1 'Balatro Pixel',monospace;overflow-wrap:anywhere;}
 .setup-import {padding:10px;color:#ffe7a8;}
+
+.setup-replace {position:absolute;top:347px;left:94px;right:94px;display:flex;align-items:center;justify-content:center;gap:8px;font-size:17px;color:#fff1c9}.setup-replace input {accent-color:#ff4a43;width:18px;height:18px;margin:0}.setup-replace[hidden] {display:none}

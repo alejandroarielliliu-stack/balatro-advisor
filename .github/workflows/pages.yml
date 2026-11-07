@@ -36,6 +36,8 @@ jobs:
         run: npx --no-install playwright install --with-deps chrome
       - name: Comprobar entrada, selector de partida y semilla registrada
         run: node tools/run-setup-test.mjs
+      - name: Comprobar selección de ciegas y etiquetas observadas independientes
+        run: node tools/blind-screen-test.mjs
       - name: Comprobar consejo rápido y separación del registro
         run: node tools/quick-shop-eval-test.mjs
       - name: Comprobar resumen compacto y detalle recuperable

@@ -15,6 +15,9 @@ export type GameStateLegacy = GameStateV01;
 
 const count = integer(0);
 const blindRef = object({ ante: integer(1), kind: enumeration('small', 'big', 'boss') });
+/** Visible skip rewards, keyed by their actual blind; observing one grants nothing. */
+export const blindTagObservationSchema=object({ante:integer(1,8),kind:enumeration('small','big'),tag:fact(text())});
+export type BlindTagObservation=Infer<typeof blindTagObservationSchema>;
 
 /** These are recorded facts, not a rule engine, prediction or automatic transition. */
 export const phaseDataSchemas = {
@@ -41,6 +44,8 @@ export type GameStateV02 = Omit<GameStateV01, 'schemaVersion' | 'phase' | 'obser
   schemaVersion: '0.2';
   /** Manually supplied reference only; never an RNG input or inferred game data. */
   seed?: string;
+  /** Optional for existing saves. Separate from the current phase's skipTag. */
+  blindTags?: BlindTagObservation[];
   observed:Omit<GameStateV01['observed'],'shop'> & {shop:Fact<CurrentShop>};
 } & PhaseState;
 export type GameState = GameStateV01 | GameStateV02;
@@ -52,6 +57,7 @@ export function legacyShape(value:Record<string,unknown>):Record<string,unknown>
  const base={...value,schemaVersion:'0.1',phase:value.phase==='shop'?'shop':'draft'};
  delete (base as Record<string,unknown>).phaseData;
   delete (base as Record<string,unknown>).seed;
+  delete (base as Record<string,unknown>).blindTags;
  if(isObject(value.observed)&&isObject(value.observed.shop)&&value.observed.shop.status==='known'&&isObject(value.observed.shop.value)){
   const shop={...value.observed.shop.value};delete shop.voucherOffers;delete shop.packOffers;
   Object.assign(base,{observed:{...value.observed,shop:{...value.observed.shop,value:shop}}});
@@ -64,6 +70,17 @@ export const currentGameStateSchema: Schema<GameStateV02> = {
     if (!isObject(value)) return issue(errors, path, 'object', 'Se requiere un objeto.');
     let valid = enumeration('0.2').check(value.schemaVersion, `${path}.schemaVersion`, errors);
     if (Object.hasOwn(value,'seed') && !text(64).check(value.seed, `${path}.seed`, errors)) valid = false;
+    if(Object.hasOwn(value,'blindTags')){
+      if(!array(blindTagObservationSchema,48).check(value.blindTags,`${path}.blindTags`,errors))valid=false;
+      else{
+        const seen=new Set<string>();
+        for(const [index,entry]of (value.blindTags as BlindTagObservation[]).entries()){
+          const key=`${entry.ante}:${entry.kind}`;
+          if(seen.has(key)){issue(errors,`${path}.blindTags[${index}]`,'duplicate_blind','No repitas la etiqueta observada de una misma ciega.');valid=false;}
+          seen.add(key);
+        }
+      }
+    }
     if (!phase.check(value.phase, `${path}.phase`, errors)) valid = false;
     else {
       const phaseName = value.phase as RunPhase;

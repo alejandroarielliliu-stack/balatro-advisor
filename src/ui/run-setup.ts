@@ -40,7 +40,8 @@ export function mountRunSetup(menu:HTMLElement,bridge:RunStartBridge){
  const play=el('button','JUGAR','setup-play');play.id='setup-play';play.type='button';
  const back=el('a','Volver','setup-back');back.id='setup-back';back.href='#menu';
  const error=el('p','','setup-error');error.id='setup-error';error.setAttribute('role','alert');
- const actions=el('div','','setup-start-row');actions.append(seedToggle,play);panel.append(tabs,content,actions,back,error);
+ const replaceRow=el('label','','setup-replace'),replace=el('input');replace.type='checkbox';replace.id='setup-replace';replaceRow.append(replace,el('span','Sustituir la partida guardada'));replace.onchange=()=>render();
+ const actions=el('div','','setup-start-row');actions.append(seedToggle,play);panel.append(tabs,content,replaceRow,actions,back,error);
  let open=false,tab:Tab='new',deck=0,stake=0,initialized=false;
  const dotInputs={deck:[] as HTMLInputElement[],stake:[] as HTMLInputElement[]};
  const choose=(kind:'deck'|'stake',index:number)=>{if(kind==='deck')deck=(index+decks.length)%decks.length;else stake=(index+stakes.length)%stakes.length;render();};
@@ -55,6 +56,7 @@ export function mountRunSetup(menu:HTMLElement,bridge:RunStartBridge){
   const snapshot=bridge.snapshot();error.textContent='';
   for(const [id,b] of buttons){const active=id===tab;b.setAttribute('aria-selected',String(active));b.tabIndex=active?0:-1;}content.setAttribute('aria-labelledby','setup-tab-'+tab);
   fresh.hidden=tab!=='new';summary.hidden=tab==='new';seedToggle.hidden=tab!=='new';
+  replaceRow.hidden=tab!=='new'||!snapshot.record;
   seedRow.hidden=!seeded.checked;seed.disabled=!seeded.checked;
   play.textContent='JUGAR';play.disabled=false;
   if(tab==='new'){
@@ -62,7 +64,7 @@ export function mountRunSetup(menu:HTMLElement,bridge:RunStartBridge){
    const [stakeId,name]=stakes[stake]!;chip.replaceChildren(stakeArt(stakeId,name));stakeName.textContent='Dificultad '+name.toLowerCase();stakeEffect.textContent=stake===0?'Dificultad base':'Aún no compatible';
    dotInputs.deck.forEach((input,index)=>input.checked=index===deck);dotInputs.stake.forEach((input,index)=>input.checked=index===stake);
    const limitation=!deckDefinition(id)?'Esta baraja todavía no permite iniciar una partida.':stake!==0?'Esta dificultad todavía no permite iniciar una partida.':snapshot.loadFailed?'Recupera la copia de la partida desde Continuar.':snapshot.dirty?'Hay cambios pendientes en la partida actual.':!snapshot.writable?'Esta pestaña está en modo de lectura.':'';
-   play.disabled=!!limitation;error.textContent=limitation;play.setAttribute('aria-describedby','setup-error');
+   play.disabled=!!limitation||!!snapshot.record&&!replace.checked;error.textContent=limitation;play.setAttribute('aria-describedby','setup-error');
   }else{
    summary.replaceChildren();
    if(tab==='challenges'){summary.append(el('h2','Retos'),el('p','Aún no disponibles en el asesor.'));play.disabled=true;}
@@ -71,9 +73,9 @@ export function mountRunSetup(menu:HTMLElement,bridge:RunStartBridge){
   }
  }
  play.onclick=()=>{
-  error.textContent='';if(tab==='continue'){if(bridge.snapshot().record)location.hash='table';else render();return;}if(tab!=='new'||play.disabled)return;
+  error.textContent='';if(tab==='continue'){const state=bridge.snapshot().record?.state;if(state)location.hash=state.phase==='blind_select'?'blind':'table';else render();return;}if(tab!=='new'||play.disabled)return;
   if(seeded.checked&&!seed.value.trim()){error.textContent='Introduce la semilla o desmarca «Con semilla».';seed.focus();return;}
-  const [deckId]=decks[deck]!;const problem=bridge.requestStart({deckId,profileConfirmed:false,...(seeded.checked?{seed:seed.value.trim()}: {})},()=>{location.hash='table';});if(problem)error.textContent=problem;
+  const [deckId]=decks[deck]!;const problem=bridge.requestStart({deckId,profileConfirmed:true,replaceConfirmed:replace.checked,...(seeded.checked?{seed:seed.value.trim()}: {})},()=>{location.hash='blind';});if(problem)error.textContent=problem;
  };
  let drag:{id:number;x:number;y:number;moved:boolean}|null=null,suppressClick=false;
  function gestures(stage:HTMLElement,kind:'deck'|'stake'){

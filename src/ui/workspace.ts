@@ -19,22 +19,22 @@ export function mountWorkspace(bridge:RunStartBridge){
  history.replaceState(null,'',location.pathname+location.search+'#menu');
  mountLandscape();
  const menu=mountMainMenu(bridge);
- const screens={menu:['','Balatro Advisor'],collection:['150 COMODINES · 1.0.1o','Colección'],table:['ENCAJE EN VIVO','Mesa'],evaluation:['MANOS Y ESCENARIOS','Análisis'],archive:['PARTIDA REGISTRADA','Registro y copias']} as const;
+ const screens={menu:['','Balatro Advisor'],blind:['','Selección de ciega'],collection:['150 COMODINES · 1.0.1o','Colección'],table:['ENCAJE EN VIVO','Mesa'],evaluation:['MANOS Y ESCENARIOS','Análisis'],archive:['PARTIDA REGISTRADA','Registro y copias']} as const;
  const show=()=>{const hash=location.hash.slice(1);const screen=Object.hasOwn(screens,hash)?hash as keyof typeof screens:'menu';
   document.body.dataset.view=screen;
-  const home=screen==='menu';
+  const home=screen==='menu',game=screen==='blind';
   menu.setSetupOpen(home&&hash==='setup');
-  document.getElementById('main')!.hidden=home;
-  document.querySelector<HTMLElement>('.app-header')!.hidden=home;
+  document.getElementById('main')!.hidden=home||game;
+  document.querySelector<HTMLElement>('.app-header')!.hidden=home||game;
   document.title=home?'Balatro Advisor':`${screens[screen][1]} · Balatro Advisor`;
   menu.setActive(home);
   document.querySelectorAll<HTMLElement>('[data-page]').forEach(e=>e.hidden=e.dataset.page!==screen);
   document.querySelectorAll<HTMLElement>('[data-screen]').forEach(e=>{if(e.dataset.screen===screen)e.setAttribute('aria-current','page');else e.removeAttribute('aria-current');});
   document.getElementById('view-kicker')!.textContent=screens[screen][0];document.getElementById('view-title')!.textContent=screens[screen][1];
   const next=document.getElementById('next-view') as HTMLAnchorElement;next.hidden=home||screen==='archive'||screen==='collection';next.href=screen==='table'?'#evaluation':'#table';next.textContent=screen==='table'?'Calcular manos →':'← Volver a la mesa';next.onclick=null;
-  const skip=document.querySelector<HTMLAnchorElement>('.skip-link')!;skip.href=home?'#menu-play':'#main';skip.onclick=event=>{event.preventDefault();if(home&&hash==='setup')menu.focusSetup();else document.getElementById(home?'menu-play':'main')!.focus();};
+  const skip=document.querySelector<HTMLAnchorElement>('.skip-link')!;skip.href=home?'#menu-play':game?'#blind-screen':'#main';skip.onclick=event=>{event.preventDefault();if(home&&hash==='setup')menu.focusSetup();else document.getElementById(home?'menu-play':game?'blind-screen':'main')!.focus();};
  };
- window.addEventListener('hashchange',()=>{show();if(location.hash==='#setup')menu.focusSetup();else document.getElementById(document.body.dataset.view==='menu'?'menu-play':'main')!.focus({preventScroll:true});document.getElementById('app-shell')!.scrollTo(0,0);});show();
+ window.addEventListener('hashchange',()=>{show();if(location.hash==='#setup')menu.focusSetup();else document.getElementById(document.body.dataset.view==='menu'?'menu-play':document.body.dataset.view==='blind'?'blind-screen':'main')!.focus({preventScroll:true});document.getElementById('app-shell')!.scrollTo(0,0);});show();
 }
 export function organizeRecord(host:HTMLElement,_existing=false,preview?:PreviewRenderer,replacements:()=>{id:string;name:string}[]=()=>[],addJoker?:AddJoker,vouchers?:HTMLElement,composition?:HTMLElement,ownedSale?:OwnedSale,shopContext?:ShopContext){
  const fs=host.querySelector('fieldset');if(!fs)return;

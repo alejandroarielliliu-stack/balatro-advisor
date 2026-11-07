@@ -1,0 +1,9 @@
+/* Original Balatro first-frame atlas cells. See assets/blinds/provenance.json. */
+.blind-art,.tag-art {position:relative;display:inline-block;flex:none;aspect-ratio:1;line-height:0;overflow:hidden;vertical-align:middle;}
+.blind-art {width:var(--blind-art-size,64px);}
+.tag-art {width:var(--tag-art-size,34px);}
+.blind-art>img,.tag-art>img {position:absolute;display:block;max-width:none;left:calc(var(--sprite-x)*-100%);top:calc(var(--sprite-y)*-100%);image-rendering:pixelated;pointer-events:none;user-select:none;}
+.blind-art>img {width:2100%;height:3100%;}
+.tag-art>img {width:600%;height:500%;}
+.blind-art[data-art-status="unavailable"],.tag-art[data-art-status="unavailable"] {background:#213e46;color:#dce8db;border:2px solid #8ba6a3;}
+.blind-art-unavailable {position:absolute;inset:0;display:grid;place-items:center;font:22px/1 monospace;}

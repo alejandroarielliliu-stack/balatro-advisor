@@ -106,6 +106,34 @@ test('replacement combines profile confirmation and expected saved record; cance
   if(saved.state.schemaVersion!=='0.2')assert.fail('Current schema');assert.equal(saved.state.seed,'new-reference');assert.deepEqual(saved.history,[]);
 });
 
+test('explicit inline replacement starts directly without a second confirmation callback',()=>{
+  const state=initial();state.seed='previous-reference';
+  const h=harness(state),writes=h.storage.writes;let started=0;
+  assert.equal(h.bridge.requestStart({...request,replaceConfirmed:true,seed:'new-reference'},()=>{started++;}),null);
+  assert.throws(()=>h.pending,/Confirmation not opened/,'Inline consent must bypass confirmStart');
+  assert.equal(started,1);assert.equal(h.storage.writes,writes+1);
+  const saved=success(h.store.load())!;
+  assert.equal(saved.state.runId,'new-manual-run-1');assert.deepEqual(saved.history,[]);
+  if(saved.state.schemaVersion!=='0.2')assert.fail('Current schema');
+  assert.equal(saved.state.seed,'new-reference');
+});
+
+test('direct inline replacement keeps previous bytes on save failure and permits an explicit retry',()=>{
+  const state=initial();state.seed='keep-this-reference';
+  const h=harness(state),before=h.storage.values.get(CONFIRMED_STORAGE_KEY),writes=h.storage.writes;let started=0;
+  h.storage.failWrite=true;
+  assert.ok(h.bridge.requestStart({...request,replaceConfirmed:true,seed:'replacement'},()=>{started++;}));
+  assert.throws(()=>h.pending,/Confirmation not opened/);
+  assert.equal(started,0);assert.equal(h.storage.writes,writes);assert.equal(h.storage.values.get(CONFIRMED_STORAGE_KEY),before);assert.ok(h.error);
+  h.storage.failWrite=false;
+  assert.equal(h.bridge.requestStart({...request,replaceConfirmed:true,seed:'replacement'},()=>{started++;}),null);
+  assert.throws(()=>h.pending,/Confirmation not opened/);
+  assert.equal(started,1);assert.equal(h.storage.writes,writes+1);
+  const saved=success(h.store.load())!;
+  if(saved.state.schemaVersion!=='0.2')assert.fail('Current schema');
+  assert.equal(saved.state.seed,'replacement');
+});
+
 test('stale replacement cannot overwrite a changed run',()=>{
   const state=initial(),h=harness(state);let started=0;
   h.bridge.requestStart({...request,seed:'replacement'},()=>{started++;});
