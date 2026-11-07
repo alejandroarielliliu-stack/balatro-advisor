@@ -76,7 +76,7 @@ export function mountBlindScreen(options:BlindScreenOptions){
    if(id)portrait.append(blindArt(id,name));else portrait.append(el('span','+','blind-pixel-plus'));
    const amounts=el('div','','blind-amounts');let target:number|undefined,reward:number|undefined;
    if(active){target=value(current.target);reward=value(current.reward);}else if(kind==='boss'){target=value(visibleBoss?.target);reward=value(visibleBoss?.reward);}else if(anteValue!==undefined){const requirement=blindRequirement(anteValue,kind,'none',deckId);if(requirement.ok){target=requirement.target;reward=requirement.reward;}}
-   if(kind==='boss'&&id)amounts.append(el('p',bossEffects[id]??'Efecto registrado en el juego. Cálculo exacto aún no compatible.','blind-boss-effect'));
+   if(kind==='boss'&&id)amounts.append(el('p',bossEffects[id]??'Efecto no compatible.','blind-boss-effect'));
    const amount=el('strong',target===undefined?'—':target.toLocaleString('es'),'blind-score-target');amount.dataset.target=target===undefined?'unknown':String(target);amounts.append(el('span','Puntúa al menos'),amount,el('span','Premio: '+(reward===undefined?'—':reward<=8?'$'.repeat(reward):'$'+reward.toLocaleString('es')),'blind-reward'));
    card.append(select,band,portrait,amounts);
    if(kind!=='boss'){
@@ -85,7 +85,7 @@ export function mountBlindScreen(options:BlindScreenOptions){
     const tag=active&&state.schemaVersion==='0.2'&&state.phase==='blind_select'?value(state.phaseData.skipTag):value(saved);
     slot.dataset.empty=String(!tag);slot.setAttribute('aria-label',tag?'Cambiar '+(tagDefinition(tag)?.name??tag):'Introducir etiqueta: '+labels[kind]);slot.title=tag?tagDefinition(tag)?.name??tag:'Introducir etiqueta';slot.disabled=!writable||past||!current;slot.append(tag?tagArt(tag,tagDefinition(tag)?.name??tag):el('span','+','blind-pixel-plus'));slot.onclick=()=>openPicker(kind,slot,state);
     const skip=el('button','Saltar ciega','blind-skip');skip.type='button';skip.id='blind-skip-'+kind;skip.disabled=!active||!writable;skip.title='Registrar un salto que ya realizaste en Balatro';skip.onclick=options.skip;row.append(slot,skip);card.append(el('div','o','blind-or'),row);
-   }else {const next=el('div','','blind-up-ante');next.append(el('strong','Sube el ante'),el('span','Aumentan las ciegas'),el('span','Se renuevan las ciegas'));card.append(next);}
+   }else {const next=el('div','','blind-up-ante');next.append(el('strong','Sube el ante'),el('span','Aumentan las ciegas'),el('span','Renueva las ciegas'));card.append(next);}
    cards.append(card);
   }
   if(snapshot.dirty)error.textContent='Termina la edición pendiente para registrar etiquetas o avanzar.';

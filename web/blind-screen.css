@@ -31,3 +31,7 @@ body[data-view="blind"] #app-shell{overflow:hidden;background:#246d50}body[data-
 #blind-background{position:absolute;inset:0;width:100%;height:100%;filter:grayscale(1) sepia(1) hue-rotate(88deg) saturate(.8) brightness(.65);opacity:.55;pointer-events:none}.blind-screen{background:#247455}.blind-stage{z-index:1}.blind-advisor-avatar{width:58px;height:82px;flex-shrink:0}.blind-advisor-avatar .joker-art{width:142px;height:190px;transform:scale(.408);transform-origin:top left}.blind-owned-card{width:55px;height:74px;flex-shrink:0;display:block}.blind-owned-card .joker-art{width:142px;height:190px;transform:scale(.3873);transform-origin:top left}.blind-score-target{background:none;border:0;box-shadow:none}.blind-select:disabled{font-size:26px}.blind-speech{padding:11px 10px}.blind-speech small{display:block;font-size:14px}.blind-speech p{font-size:19px}.blind-speech strong{font-size:25px}
 
 .blind-stage{scale:none;transform:translate(-50%,-50%) scale(var(--blind-scale,1))}
+
+.blind-card-boss{gap:6px;padding-top:12px;padding-bottom:8px}.blind-card-boss .blind-boss-portrait{height:60px;flex-shrink:0;--blind-art-size:54px}.blind-card-boss .blind-amounts{flex-shrink:0;padding:6px 2px;gap:2px}.blind-boss-effect{flex-shrink:0;min-height:34px}
+
+.blind-card-boss .blind-up-ante{font-size:16px;line-height:1;gap:3px;padding-top:0}.blind-card-boss .blind-up-ante strong{font-size:26px}

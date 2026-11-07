@@ -35,7 +35,9 @@ try{
  pass('current-and-upcoming-tags-stay-independent-atomic-save-failure-and-retry');
 
  await p.locator('#blind-boss-picker').click();await p.locator('[data-boss-choice=the_window]').click();await p.locator('#blind-picker').waitFor({state:'hidden'});saved=await record(p);assert.equal(saved.state.observed.visibleBoss.value.bossId.value,'the_window');assert.equal(saved.state.observed.visibleBoss.value.target.status,'unknown');assert.equal(saved.state.observed.nextBlind.value.kind,'small');assert.equal(saved.state.observed.money.value,4);assert.match(await p.locator('[data-kind=boss] .blind-boss-effect').innerText(),/no compatible/);
- await p.locator('[data-kind=boss] .blind-art[data-art-status=loaded]').waitFor();await p.screenshot({path:dir+'/desktop.png'});
+ await p.locator('[data-kind=boss] .blind-art[data-art-status=loaded]').waitFor();
+ const effectBox=await p.locator('.blind-boss-effect').boundingBox(),labelBox=await p.locator('[data-kind=boss] .blind-amounts>span').first().boundingBox();assert.ok(effectBox.y+effectBox.height<=labelBox.y,'Boss effect and score label must not overlap');assert.equal(await p.locator('.blind-boss-effect').evaluate(e=>e.scrollHeight<=e.clientHeight),true,'Boss text fits its own box');
+ const upBox=await p.locator('.blind-up-ante').boundingBox(),cardBox=await p.locator('[data-kind=boss]').boundingBox();assert.ok(upBox.y+upBox.height<=cardBox.y+cardBox.height,'Boss footer remains inside its card');await p.screenshot({path:dir+'/desktop.png'});
  const savedRaw=await raw(p);await p.reload();await p.waitForFunction(()=>location.hash==='#menu');assert.equal(await raw(p),savedRaw);await p.locator('#menu-play').click();await p.locator('#setup-tab-continue').click();await p.locator('#setup-play').click();await p.waitForFunction(()=>document.body.dataset.view==='blind');assert.equal(await raw(p),savedRaw);assert.equal(await p.locator('[data-tag-slot=big] .tag-art').getAttribute('data-tag'),'tag_rare');
  pass('observed-boss-keeps-unsupported-target-unknown-reload-menu-and-continue-preserve-data');
 
