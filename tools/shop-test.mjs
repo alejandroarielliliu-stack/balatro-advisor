@@ -1,3 +1,4 @@
+import {logicalBounds} from './ui-logical-bounds.mjs';
 import assert from 'node:assert/strict';
 import { chromium } from 'playwright';
 import { spawn } from 'node:child_process';
@@ -358,13 +359,15 @@ try {
       }).filter(b => b.width > 0 && (b.right > innerWidth + 1 || b.left < -1)).slice(0, 12),
     }));
     assert.equal(pageBounds.fits, true, 'No document overflow at ' + width + ': ' + JSON.stringify(pageBounds));
-    const upperRows = await shop.locator('.store-card-well .candidate-grid > .candidate-card,.store-card-well .candidate-grid > .store-extra-tile').evaluateAll(cards => cards.map(card => card.getBoundingClientRect().top));
+    const upperRows = await shop.locator('.store-card-well .candidate-grid > .candidate-card,.store-card-well .candidate-grid > .store-extra-tile').evaluateAll(logicalBounds).then(boxes => boxes.map(box => box.top));
     assert.equal(upperRows.length, 3, 'Jokers and the transcribed Tarot share the upper card row.');
     assert.ok(upperRows.every(top => top === upperRows[0]), 'Other visible cards remain in the same upper row at ' + width);
     const completeCards = await shop.locator('.candidate-card').evaluateAll(cards => cards.map(card => {
-      const row = card.closest('.candidate-grid').getBoundingClientRect(), hero = card.querySelector('.candidate-hero').getBoundingClientRect();
+      const rotated=document.documentElement.dataset.uiRotated==='true';
+      const rect=element=>{const r=element.getBoundingClientRect();return rotated?{top:-r.right,bottom:-r.left,height:r.width}:r;};
+      const row = rect(card.closest('.candidate-grid')), hero = rect(card.querySelector('.candidate-hero'));
       const complete = selector => {
-        const element = card.querySelector(selector), b = element.getBoundingClientRect();
+        const element = card.querySelector(selector), b = rect(element);
         return b.height > 0 && b.top >= row.top - 1 && b.bottom <= row.bottom + 1 && b.top >= hero.top - 1 && b.bottom <= hero.bottom + 1;
       };
       return { art: complete('.candidate-hero > .joker-art'), name: complete('.candidate-info h4'), index: complete('.candidate-info > .fit-score') };
@@ -374,7 +377,7 @@ try {
       assert.equal(card.name, true, 'The joker name fits vertically within the card row at ' + width);
       assert.equal(card.index, true, 'The contextual index fits vertically within the card row at ' + width);
     }
-    const packTops = await p.locator('.store-pack-well .store-extra-tile[data-store-kind="pack"]').evaluateAll(packs => packs.map(pack => pack.getBoundingClientRect().top));
+    const packTops = await p.locator('.store-pack-well .store-extra-tile[data-store-kind="pack"]').evaluateAll(logicalBounds).then(boxes => boxes.map(box => box.top));
     assert.equal(packTops.length, 2);
     assert.equal(packTops[0], packTops[1], 'Both observed packs share their lower tray row at ' + width);
     await p.locator('#joker-candidates').screenshot({ path: `${dir}/shop-${width}.png` });

@@ -28,6 +28,7 @@ try{
  const noOverflow=async(page,context)=>{
   const geometry=await page.evaluate(()=>({width:innerWidth,scroll:document.documentElement.scrollWidth,items:[...document.querySelectorAll('body *')].filter(element=>{const r=element.getBoundingClientRect();return r.width>0&&(r.right>innerWidth+1||r.left< -1);}).slice(0,12).map(element=>({tag:element.tagName,id:element.id,className:typeof element.className==='string'?element.className:'',right:element.getBoundingClientRect().right,width:element.getBoundingClientRect().width}))}));
   assert.equal(geometry.scroll<=geometry.width+1,true,context+' has horizontal page overflow: '+JSON.stringify(geometry));
+  assert.equal(await page.locator('#app-shell').evaluate(shell=>shell.scrollWidth<=shell.clientWidth+1),true,context+' has horizontal overflow inside the app scroller');
  };
  const session=async(input,viewport={width:1440,height:1000})=>{
   const context=await browser.newContext({viewport,reducedMotion:'reduce'});
@@ -52,7 +53,7 @@ try{
  const catalogue=p.locator('#catalogue-dock');
  if(label!=='before'){assert.equal(await catalogue.evaluate(element=>element instanceof HTMLDetailsElement),true,'Catalogue uses explicit disclosure');assert.equal(await catalogue.evaluate(element=>element.open),false,'Catalogue does not dominate the initial table');}
  for(const width of [1440,390,360]){
-  await p.setViewportSize({width,height:width===1440?1000:844});await p.evaluate(()=>window.scrollTo(0,0));await noOverflow(p,`table/${width}`);
+  await p.setViewportSize({width,height:width===1440?1000:844});await p.evaluate(()=>document.getElementById('app-shell').scrollTo(0,0));await noOverflow(p,`table/${width}`);
   assert.equal(await p.locator('#composition-score').isVisible(),true);assert.equal(await p.locator('#shop-recommendation').isVisible(),true);
   await screenshot(p,String(width));await screenshot(p,`full-${width}`,true);
  }

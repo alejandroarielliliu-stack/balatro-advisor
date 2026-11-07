@@ -1,12 +1,12 @@
 /* Title screen. The workspace keeps its own layout and palette. */
 body[data-view="menu"] { background: #0e2530; overflow: hidden; }
-body[data-view="menu"]>.app-header, body[data-view="menu"]>#main { display: none; }
+body[data-view="menu"] .app-header, body[data-view="menu"] #main { display: none; }
 #menu-view {
   --menu-cream: #fff8e4;
   position: fixed; inset: 0; z-index: 1; isolation: isolate;
   display: flex; flex-direction: column; align-items: center; justify-content: space-between;
-  max-width: none; width: 100%; height: 100svh; min-height: 280px; margin: 0;
-  padding: max(20px, env(safe-area-inset-top)) max(20px, env(safe-area-inset-right)) max(42px, env(safe-area-inset-bottom));
+  max-width: none; width: 100%; height: calc(100 * var(--app-svh)); min-height: 280px; margin: 0;
+  padding: max(20px, var(--app-safe-top)) max(20px, var(--app-safe-right)) max(42px, var(--app-safe-bottom)) max(20px, var(--app-safe-left));
   overflow: hidden; color: var(--menu-cream); font-family: 'Balatro Pixel', monospace;
   background: radial-gradient(ellipse at 65% 65%, #0ea4d1, transparent 57%), radial-gradient(ellipse at 10% 12%, #f35047, transparent 57%), radial-gradient(ellipse at 92% 15%, #c13d3c, transparent 61%), #102b34;
 }
@@ -14,10 +14,10 @@ body[data-view="menu"]>.app-header, body[data-view="menu"]>#main { display: none
 #menu-background[data-renderer="css"] { visibility: hidden; }
 .menu-vignette { position: absolute; inset: 0; z-index: -2; pointer-events: none; background: radial-gradient(ellipse at 50% 43%, transparent 18%, #03101c42 77%, #030c15b8 115%); }
 .menu-scanlines { position: absolute; inset: 0; z-index: 4; pointer-events: none; opacity: .09; background: repeating-linear-gradient(0deg, #020b19 0, #020b19 1px, transparent 1px, transparent 3px); }
-.menu-version { position: absolute; right: max(24px, env(safe-area-inset-right)); top: max(18px, env(safe-area-inset-top)); color: #fff5ddce; font: 17px/1 'Balatro Pixel', monospace; text-shadow: 1px 2px #08222f; }
+.menu-version { position: absolute; right: max(24px, var(--app-safe-right)); top: max(18px, var(--app-safe-top)); color: #fff5ddce; font: 17px/1 'Balatro Pixel', monospace; text-shadow: 1px 2px #08222f; }
 .menu-title-stage { position: relative; display: grid; place-items: center; flex: 1; min-height: 0; width: 100%; padding: 30px 0 26px; }
 .menu-title-wrap { position: relative; text-align: center; transform: rotate(-3deg); padding: 24px 0 16px; }
-#menu-title { position: relative; margin: 0; font: 400 clamp(78px, 18vw, 246px)/.83 'Balatro Pixel', monospace; letter-spacing: -.055em; white-space: nowrap; filter: drop-shadow(0 5px 0 #142c36) drop-shadow(0 3px 0 #769ca5) drop-shadow(0 11px 0 #09222e) drop-shadow(0 16px 16px #0013209c); }
+#menu-title { position: relative; margin: 0; font: 400 clamp(78px, calc(18 * var(--app-vw)), 246px)/.83 'Balatro Pixel', monospace; letter-spacing: -.055em; white-space: nowrap; filter: drop-shadow(0 5px 0 #142c36) drop-shadow(0 3px 0 #769ca5) drop-shadow(0 11px 0 #09222e) drop-shadow(0 16px 16px #0013209c); }
 .menu-wordmark { display: inline-flex; align-items: baseline; }
 .menu-wordmark>span { display: inline-block; color: #fff9e4; -webkit-text-stroke: 1px #fffbe9; text-shadow: -3px -3px 0 #c2e4e2, 3px 4px 0 #6b9fae, 0 8px 0 #edf4dd; }
 .menu-wordmark>span:nth-child(1) { transform: rotate(-5deg) translateY(2px); }
@@ -27,13 +27,13 @@ body[data-view="menu"]>.app-header, body[data-view="menu"]>#main { display: none
 .menu-wordmark>span:nth-child(5) { transform: rotate(4deg) translateY(3px); }
 .menu-wordmark>span:nth-child(6) { transform: rotate(-5deg) translateY(-3px); }
 .menu-wordmark>span:nth-child(7) { transform: rotate(6deg) translateY(3px); }
-.menu-subtitle { position: relative; margin: 26px 0 0; padding-left: .4em; color: #ffda71; font: 400 clamp(24px, 3.2vw, 42px)/1 'Balatro Pixel', monospace; letter-spacing: .4em; text-shadow: 0 3px #2c3638, 2px 0 #2c3638, -2px 0 #2c3638; }
+.menu-subtitle { position: relative; margin: 26px 0 0; padding-left: .4em; color: #ffda71; font: 400 clamp(24px, calc(3.2 * var(--app-vw)), 42px)/1 'Balatro Pixel', monospace; letter-spacing: .4em; text-shadow: 0 3px #2c3638, 2px 0 #2c3638, -2px 0 #2c3638; }
 .menu-emblem { position: absolute; left: 50%; top: -46px; transform: translateX(-50%) rotate(12deg); width: 62px; height: 84px; border: 4px solid #f2eddf; border-radius: 5px; background: #f7f0db; color: #d94b4d; box-shadow: 0 4px #6e848d, 0 9px #15313d, 0 12px 24px #061e2b80; font: 36px/72px Georgia, serif; }
 .menu-emblem::before, .menu-emblem::after { position: absolute; content: 'A'; font: 17px/1 'Balatro Pixel', monospace; }
 .menu-emblem::before { left: 4px; top: 3px; }
 .menu-emblem::after { right: 4px; bottom: 3px; transform: rotate(180deg); }
 .menu-actions { display: grid; align-self: center; grid-template-columns: 1.1fr .86fr 1.12fr; gap: 10px; flex: 0 0 auto; width: min(750px, 92%); margin: 0; padding: 12px 12px 17px; border: 3px solid #667d7f; border-bottom-color: #233c43; border-right-color: #344d53; border-radius: 13px; background: #344f57; box-shadow: 0 7px #10272e, 0 10px 0 #172d34, 0 18px 32px #03131f70; }
-.menu-actions .menu-button { display: grid; place-items: center; position: relative; min-height: 86px; min-width: 0; padding: 10px 12px; border: 3px solid #ffffff1a; border-radius: 9px; color: #fff9e7; text-decoration: none; font: 400 clamp(25px, 3.2vw, 43px)/1 'Balatro Pixel', monospace; text-shadow: 0 3px #00000024; box-shadow: 0 6px var(--button-shadow), inset 0 2px #ffffff20; background: var(--button-color); cursor: pointer; transition: transform 130ms ease, filter 130ms ease, box-shadow 130ms ease; }
+.menu-actions .menu-button { display: grid; place-items: center; position: relative; min-height: 86px; min-width: 0; padding: 10px 12px; border: 3px solid #ffffff1a; border-radius: 9px; color: #fff9e7; text-decoration: none; font: 400 clamp(25px, calc(3.2 * var(--app-vw)), 43px)/1 'Balatro Pixel', monospace; text-shadow: 0 3px #00000024; box-shadow: 0 6px var(--button-shadow), inset 0 2px #ffffff20; background: var(--button-color); cursor: pointer; transition: transform 130ms ease, filter 130ms ease, box-shadow 130ms ease; }
 .menu-play { --button-color: #009de9; --button-shadow: #065b91; }
 .menu-options { --button-color: #eca51b; --button-shadow: #9e6414; }
 .menu-collection { --button-color: #389c72; --button-shadow: #1b6149; }
@@ -52,26 +52,27 @@ body[data-view="menu"]>.app-header, body[data-view="menu"]>#main { display: none
 #menu-settings-close { width: 100%; min-height: 50px; font: 27px/1 'Balatro Pixel', monospace; color: #fff9e7; background: #d9584e; border: 2px solid #f08371; box-shadow: 0 4px #8f383c; }
 #menu-settings-status:empty { display: none; }
 #menu-settings-status { font-size: 12px; color: #ffe1a2; margin: 0 0 16px; }
-@media (max-width: 600px) {
-  #menu-view { padding: max(18px, env(safe-area-inset-top)) 14px max(38px, env(safe-area-inset-bottom)); }
+@container app-landscape (max-width: 600px) {
+  #menu-view { padding: max(18px, var(--app-safe-top)) max(14px, var(--app-safe-right)) max(38px, var(--app-safe-bottom)) max(14px, var(--app-safe-left)); }
   .menu-title-stage { padding-bottom: 32px; }
-  #menu-title { font-size: clamp(84px, 25vw, 150px); }
+  #menu-title { font-size: clamp(84px, calc(25 * var(--app-vw)), 150px); }
   .menu-title-wrap { transform: rotate(-4deg); }
   .menu-emblem { width: 48px; height: 66px; line-height: 55px; font-size: 28px; top: -52px; }
   .menu-subtitle { margin-top: 22px; font-size: 26px; }
   .menu-actions { width: 100%; padding: 8px 8px 13px; gap: 7px; grid-template-columns: 1fr 1fr; }
   .menu-actions .menu-button { min-height: 56px; padding: 10px 7px; font-size: 26px; }
   .menu-actions .menu-play { grid-column: 1 / -1; min-height: 68px; font-size: 37px; }
-  .menu-version { right: 18px; top: max(18px, env(safe-area-inset-top)); font-size: 15px; }
+  .menu-version { right: 18px; top: max(18px, var(--app-safe-top)); font-size: 15px; }
 }
-@media (max-height: 480px) and (min-width: 601px) {
-  #menu-view { padding-top: 8px; padding-bottom: max(22px, env(safe-area-inset-bottom)); }
+@container app-landscape (max-height: 480px) {
+  #menu-view { padding-top: 8px; padding-bottom: max(22px, var(--app-safe-bottom)); }
   .menu-title-stage { padding: 18px 0 8px; }
-  #menu-title { font-size: clamp(75px, 15vw, 150px); }
+  #menu-title { font-size: clamp(75px, calc(15 * var(--app-vw)), 150px); }
   .menu-emblem { width: 40px; height: 54px; top: -21px; font-size: 24px; line-height: 45px; border-width: 3px; }
   .menu-emblem::before,.menu-emblem::after { font-size: 12px; }
   .menu-subtitle { font-size: 23px; margin-top: 14px; }
-  .menu-actions { width: min(620px, 90%); padding: 7px 8px 12px; }
-  .menu-actions .menu-button { min-height: 54px; font-size: 30px; }
+  .menu-actions { width: min(620px, 90%); padding: 7px 8px 12px; grid-template-columns: 1.1fr .86fr 1.12fr; }
+  .menu-actions .menu-play { grid-column: auto; }
+  .menu-actions .menu-button { min-height: 54px; font-size: clamp(22px, calc(4.5 * var(--app-vw)), 30px); }
 }
 @media (prefers-reduced-motion: reduce) { .menu-actions .menu-button { transition: none; } }

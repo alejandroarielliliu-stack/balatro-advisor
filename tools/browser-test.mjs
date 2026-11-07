@@ -95,9 +95,9 @@ try{
   await check('demostración independiente sin escritura y revisión visual escritorio/móvil emulado',async()=>{
     const before=await raw(page);await go(page,'evaluation');await page.locator('#demo').click();await page.locator('.demo-banner').waitFor();assert.equal(await raw(page),before);assert.equal(await page.locator('#advice button[data-write]').count(),0);
     await mkdir(evidenceDir,{recursive:true});await page.screenshot({path:`${evidenceDir}/escritorio.png`,fullPage:true});
-    await go(page,'table');await page.evaluate(()=>scrollTo(0,0));await page.screenshot({path:`${evidenceDir}/escritorio-viewport.png`});
+    await go(page,'table');await page.evaluate(()=>document.getElementById('app-shell').scrollTo(0,0));await page.screenshot({path:`${evidenceDir}/escritorio-viewport.png`});
     await page.setViewportSize({width:390,height:844});await page.screenshot({path:`${evidenceDir}/movil-emulado.png`,fullPage:true});
-    await page.evaluate(()=>scrollTo(0,0));await page.screenshot({path:`${evidenceDir}/movil-viewport.png`});
+    await page.evaluate(()=>document.getElementById('app-shell').scrollTo(0,0));await page.screenshot({path:`${evidenceDir}/movil-viewport.png`});
     assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
     await page.setViewportSize({width:360,height:800});assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
   });

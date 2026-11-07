@@ -5,6 +5,7 @@ import {mountJokerBay} from './joker-bay.js';
 import type {PreviewRenderer,AddJoker,OwnedSale} from './joker-bay.js';
 import {attachJokerSearch} from './joker-search.js';
 import {mountMainMenu} from './main-menu.js';
+import {mountLandscape} from './orientation.js';
 import type {Card} from '../catalog/initial.js';
 import {contextRatings} from '../advisor/ratings.js';
 /** Presentation only. Moving existing nodes preserves their listeners and form ownership. */
@@ -12,6 +13,7 @@ import {jokerArt,engineArt} from './collection.js';
 import type {Advice} from '../advisor/advisor.js';
 const el=<K extends keyof HTMLElementTagNameMap>(tag:K,text='',className='')=>{const e=document.createElement(tag);e.textContent=text;e.className=className;return e;};
 export function mountWorkspace(){
+ mountLandscape();
  const menu=mountMainMenu();
  const screens={menu:['','Balatro Advisor'],collection:['150 COMODINES · 1.0.1o','Colección'],table:['ENCAJE EN VIVO','Mesa'],evaluation:['MANOS Y ESCENARIOS','Análisis'],archive:['PARTIDA REGISTRADA','Registro y copias']} as const;
  const show=()=>{const hash=location.hash.slice(1);const screen=Object.hasOwn(screens,hash)?hash as keyof typeof screens:'menu';
@@ -27,7 +29,7 @@ export function mountWorkspace(){
   const next=document.getElementById('next-view') as HTMLAnchorElement;next.hidden=home||screen==='archive'||screen==='collection';next.href=screen==='table'?'#evaluation':'#table';next.textContent=screen==='table'?'Calcular manos →':'← Volver a la mesa';next.onclick=null;
   const skip=document.querySelector<HTMLAnchorElement>('.skip-link')!;skip.href=home?'#menu-play':'#main';skip.onclick=event=>{event.preventDefault();document.getElementById(home?'menu-play':'main')!.focus();};
  };
- window.addEventListener('hashchange',()=>{show();document.getElementById(document.body.dataset.view==='menu'?'menu-play':'main')!.focus({preventScroll:true});window.scrollTo(0,0);});show();
+ window.addEventListener('hashchange',()=>{show();document.getElementById(document.body.dataset.view==='menu'?'menu-play':'main')!.focus({preventScroll:true});document.getElementById('app-shell')!.scrollTo(0,0);});show();
 }
 export function organizeRecord(host:HTMLElement,_existing=false,preview?:PreviewRenderer,replacements:()=>{id:string;name:string}[]=()=>[],addJoker?:AddJoker,vouchers?:HTMLElement,composition?:HTMLElement,ownedSale?:OwnedSale,shopContext?:ShopContext){
  const fs=host.querySelector('fieldset');if(!fs)return;

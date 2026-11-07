@@ -108,7 +108,7 @@ try{
   await openCatalogue(p);await p.locator('#bay-search').fill('');
   for(const width of [1440,390]){
     await p.setViewportSize({width,height:width===390?844:1000});
-    await p.evaluate(()=>scrollTo(0,0));
+    await p.evaluate(()=>document.getElementById('app-shell').scrollTo(0,0));
     assert.equal(await p.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
     await p.screenshot({path:`${evidence}/static-${width===390?'mobile':'desktop'}.png`,fullPage:true});
   }

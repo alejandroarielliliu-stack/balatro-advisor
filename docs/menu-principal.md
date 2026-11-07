@@ -1,6 +1,6 @@
 # Menú principal — UI03
 
-6 de noviembre de 2026. Primera pantalla al abrir la raíz de Balatro Advisor, inspirada en la captura de Balatro aportada por el usuario. Esta entrega cambia la entrada y la navegación; conserva Mesa, Colección, Análisis, Registro y los guardados existentes.
+6 de noviembre de 2026. Primera pantalla al abrir la raíz de Balatro Advisor, inspirada en la captura de Balatro aportada por el usuario. Conserva Mesa, Colección, Análisis, Registro y los guardados existentes. UI04 refina exclusivamente el [fondo](fondo-menu-shader.md) y la [presentación horizontal](orientacion-horizontal.md), sin cambiar sus destinos.
 
 ## Comportamiento
 
@@ -14,11 +14,11 @@
 
 Fondo procedural WebGL rojo y azul, con remolinos y reflejos, sin vídeo ni librerías nuevas. Logotipo tipográfico propio de Balatro Advisor, carta decorativa, fuente pixel existente y botones con relieve. La imagen de referencia no se incorpora como captura estática del fondo.
 
-El render se limita a 30 fotogramas por segundo, 1,3 millones de píxeles y DPR 1,25. Se detiene al salir del menú o al ocultarse el documento. Por defecto respeta `prefers-reduced-motion`; la selección explícita de Opciones prevalece. Sin WebGL se conserva un fondo estático Canvas2D/CSS y todos los controles.
+El render se limita a 30 fotogramas por segundo, 800.000 píxeles y DPR 1,25. Se detiene al salir del menú o al ocultarse el documento. Por defecto respeta `prefers-reduced-motion`; la selección explícita de Opciones prevalece. Sin WebGL se conserva un fondo estático Canvas2D/CSS y todos los controles.
 
 La preferencia visual utiliza `balatro-advisor.menu-motion.v1`; no escribe el registro de partida ni la tienda. Si falla ese guardado, el cambio se aplica en memoria y se informa en Opciones. No requiere migrar los formatos anteriores.
 
-En escritorio los tres botones están en una fila centrada. En móvil vertical Jugar ocupa la fila superior y los otros dos comparten la siguiente, con controles táctiles. Se contempla también móvil horizontal y áreas seguras.
+Los botones conservan su orden y el formato horizontal. En pantallas de poca altura se compactan sus proporciones. Si el teléfono está en vertical, la interfaz completa gira 90 grados; no aparece un aviso ni un modo adicional. Se contemplan las áreas seguras.
 
 ## Verificación
 

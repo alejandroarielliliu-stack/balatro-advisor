@@ -11,53 +11,75 @@ void main() { gl_Position = vec4(a_position, 0.0, 1.0); }
 `;
 
 const fragmentSource = `
+#ifdef GL_FRAGMENT_PRECISION_HIGH
 precision highp float;
+#else
+precision mediump float;
+#endif
 uniform vec2 u_resolution;
 uniform float u_time;
-mat2 rotate(float angle) {
-  float s = sin(angle), c = cos(angle);
-  return mat2(c, -s, s, c);
+mat2 turn(float angle) {
+  return mat2(cos(angle), -sin(angle), sin(angle), cos(angle));
 }
-vec2 vortex(vec2 p, vec2 center, float strength) {
+vec2 curl(vec2 p, vec2 center, float strength) {
   vec2 d = p - center;
-  return center + rotate(strength / (0.38 + dot(d, d))) * d;
+  return center + turn(strength / (0.045 + dot(d, d))) * d;
 }
 void main() {
-  vec2 pixel = floor(gl_FragCoord.xy / 1.6) * 1.6;
-  vec2 p = (2.0 * pixel - u_resolution) / min(u_resolution.x, u_resolution.y);
-  float time = u_time * 0.11;
-  p *= 1.36;
-  p = rotate(-0.24 + 0.07 * sin(time * 0.36)) * p;
-  p = vortex(p, vec2(-0.78, 0.32), 1.65 + 0.18 * sin(time));
-  p = vortex(p, vec2(0.85, -0.24), -1.32 + 0.18 * cos(time * 0.7));
-  vec2 q = p;
+  // Work in logical landscape coordinates. The capped render surface supplies
+  // the pixel rhythm; quantizing before derivatives would create a light grid.
+  float diagonal = length(u_resolution);
+  vec2 p = (gl_FragCoord.xy - 0.5 * u_resolution) / diagonal;
+  float t = u_time + 12.0;
+
+  // A broad twist and two local curls feed one another, rather than sliding
+  // a coloured sine band across the screen. Their clocks have different phases.
+  p = turn(8.8 * length(p) - t * 0.065) * p;
+  p = curl(p, vec2(-0.22 + 0.025 * sin(t * 0.14), 0.12), 0.047);
+  p = curl(p, vec2(0.23, -0.10 + 0.03 * cos(t * 0.11)), -0.041);
+  p *= 27.0;
+  vec2 memory = vec2(p.x + p.y, p.y - p.x) * 0.72;
   for (int i = 0; i < 5; i++) {
     float layer = float(i);
-    q += 0.38 * sin(q.yx * (1.2 + layer * 0.17) + vec2(time * 0.36, -time * 0.29) + layer * 1.72);
-    q = rotate(0.31) * q;
+    memory = memory * 0.72 + p.yx * 0.67
+      + sin(p.x + p.y + layer * 1.31 + t * 0.09);
+    vec2 drift = vec2(sin(memory.y * 0.43 + t * 0.31 + layer),
+                      cos(memory.x * 0.51 - t * 0.27 - layer));
+    float fold = sin(p.x * 0.72 - p.y) - cos(p.x + p.y * 0.55);
+    p += drift * 0.9 + vec2(fold, -fold * 0.69);
+    p = mat2(0.984, -0.178, 0.178, 0.984) * p;
   }
-  float flow = q.x * 1.55 + q.y * 0.49 + 0.56 * sin(q.y * 1.47 - time * 0.55);
-  float field = sin(flow + time * 0.46);
-  vec3 dark = vec3(0.020, 0.080, 0.105);
-  vec3 red = vec3(0.91, 0.19, 0.16);
-  vec3 blue = vec3(0.015, 0.47, 0.73);
-  float redArea = smoothstep(0.02, 0.48, field);
-  float blueArea = (1.0 - smoothstep(-0.52, -0.02, field));
-  vec3 color = mix(dark, red, redArea);
-  color = mix(color, blue, blueArea);
-  // Parallel, narrow reflections make the warped surface read as liquid.
-  float ribbons = 0.5 + 0.5 * sin(flow * 12.0 + 1.7 * sin(q.y * 2.5));
-  float fine = pow(ribbons, 15.0);
-  float shoulder = pow(1.0 - abs(field), 11.0);
-  float lit = 0.5 + 0.5 * sin(flow * 3.0 - 0.7);
-  color *= 0.69 + 0.34 * lit;
-  color += vec3(0.23, 0.18, 0.14) * fine * (redArea + blueArea) * 0.62;
-  color += vec3(0.57, 0.72, 0.74) * shoulder * (0.30 + fine * 0.56);
-  float vein = pow(0.5 + 0.5 * sin(flow * 25.0 + q.y * 0.8), 30.0);
-  color += vec3(0.25, 0.32, 0.35) * vein * shoulder;
+
+  // Paint follows the two-dimensional deformed field. Highlights follow a
+  // separate surface height, so shadow, colour and relief need not move as one.
+  float density = length(p) * 0.074 + 0.045 * sin(memory.x * 0.23);
+  float redPaint = 1.0 - smoothstep(0.16, 0.43, abs(density - 0.99));
+  float bluePaint = 1.0 - smoothstep(0.15, 0.47, density);
+  float darkPaint = max(0.0, 1.0 - redPaint - bluePaint);
+  vec3 color = vec3(0.871, 0.267, 0.231) * redPaint
+    + vec3(0.0, 0.420, 0.706) * bluePaint
+    + vec3(0.065, 0.105, 0.126) * darkPaint;
+
+  float height = 0.32 * sin(density * 7.0)
+    + 0.15 * sin(memory.x * 0.19 + memory.y * 0.17);
+  vec2 slope;
+#ifdef SURFACE_DERIVATIVES
+  slope = vec2(dFdx(height), dFdy(height)) * diagonal * 0.038;
+#else
+  slope = vec2(sin(memory.x * 0.19), cos(memory.y * 0.17)) * 0.42;
+#endif
+  vec3 normal = normalize(vec3(-slope, 1.0));
+  vec3 light = normalize(vec3(-0.45, 0.60, 0.72));
+  float diffuse = max(0.0, dot(normal, light));
+  float sheen = pow(max(0.0, dot(normal, normalize(light + vec3(0.0, 0.0, 1.0)))), 23.0);
+  float rim = pow(1.0 - max(0.0, normal.z), 2.0);
+  float crest = pow(max(redPaint, bluePaint), 12.0);
+  color *= 0.57 + 0.47 * diffuse;
+  color += vec3(0.66, 0.80, 0.88) * (0.34 * sheen + 0.08 * rim) * (1.0 - darkPaint * 0.65);
+  color += vec3(0.10, 0.08, 0.06) * crest * diffuse;
   vec2 screen = gl_FragCoord.xy / u_resolution;
-  float vignette = 1.0 - 0.28 * dot(screen - 0.5, screen - 0.5);
-  gl_FragColor = vec4(color * vignette, 1.0);
+  float vignette = 1.0 - 0.22 * dot(screen - 0.5, screen - 0.5);
+  gl_FragColor = vec4(clamp(color * vignette, 0.0, 1.0), 1.0);
 }
 `;
 
@@ -95,9 +117,11 @@ export function mountMenuBackground(canvas: HTMLCanvasElement): MenuBackground {
         canvas.dataset.renderer = fallback ? 'canvas2d' : 'css';
         return;
       }
+      const derivatives = gl.getExtension('OES_standard_derivatives');
+      const surfaceSource = (derivatives ? '#extension GL_OES_standard_derivatives : enable\n#define SURFACE_DERIVATIVES\n' : '') + fragmentSource;
       const shaders: WebGLShader[] = [];
       try {
-        for (const [type, source] of [[gl.VERTEX_SHADER, vertexSource], [gl.FRAGMENT_SHADER, fragmentSource]] as const) {
+        for (const [type, source] of [[gl.VERTEX_SHADER, vertexSource], [gl.FRAGMENT_SHADER, surfaceSource]] as const) {
           const shader = gl.createShader(type);
           if (!shader) throw new Error('Shader unavailable');
           shaders.push(shader);
@@ -152,13 +176,14 @@ export function mountMenuBackground(canvas: HTMLCanvasElement): MenuBackground {
 
   function resize() {
     if (destroyed) return;
-    const rect = canvas.getBoundingClientRect();
-    const cssWidth = rect.width || window.innerWidth;
-    const cssHeight = rect.height || window.innerHeight;
+    // CSS transforms can rotate the surrounding landscape stage. Bounding-box
+    // dimensions would then be swapped, distorting the shader's logical aspect.
+    const cssWidth = canvas.clientWidth || canvas.offsetWidth || window.innerWidth;
+    const cssHeight = canvas.clientHeight || canvas.offsetHeight || window.innerHeight;
     const dpr = Math.min(window.devicePixelRatio || 1, 1.25);
-    const scale = dpr * Math.min(1, Math.sqrt(1_300_000 / (cssWidth * cssHeight * dpr * dpr)));
-    const width = Math.max(1, Math.round(cssWidth * scale));
-    const height = Math.max(1, Math.round(cssHeight * scale));
+    const scale = dpr * Math.min(1, Math.sqrt(800_000 / (cssWidth * cssHeight * dpr * dpr)));
+    const width = Math.max(1, Math.floor(cssWidth * scale));
+    const height = Math.max(1, Math.floor(cssHeight * scale));
     if (canvas.width !== width || canvas.height !== height) {
       canvas.width = width; canvas.height = height;
     }

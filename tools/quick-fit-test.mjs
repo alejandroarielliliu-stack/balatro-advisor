@@ -1,3 +1,4 @@
+import {logicalBounds} from './ui-logical-bounds.mjs';
 import assert from 'node:assert/strict';
 import {chromium} from 'playwright';
 import {spawn} from 'node:child_process';
@@ -46,9 +47,11 @@ try{
  const ownedLabelsFit=async()=>{
   await p.waitForFunction(()=>document.querySelector('.inventory-panel').getAnimations({subtree:true}).every(a=>a.playState!=='running'));
   return p.locator('.inventory-panel').evaluate(panel=>{
-  const box=panel.getBoundingClientRect(),shelf=panel.querySelector('.joker-shelf').getBoundingClientRect();
+  const rotated=document.documentElement.dataset.uiRotated==='true';
+  const rect=element=>{const r=element.getBoundingClientRect();return rotated?{top:-r.right,bottom:-r.left}:r;};
+  const box=rect(panel),shelf=rect(panel.querySelector('.joker-shelf'));
   return [...panel.querySelectorAll('.fit-score')].every(label=>{
-   const b=label.getBoundingClientRect();return b.top>=box.top&&b.bottom<=box.bottom&&b.top>=shelf.top&&b.bottom<=shelf.bottom;
+   const b=rect(label);return b.top>=box.top&&b.bottom<=box.bottom&&b.top>=shelf.top&&b.bottom<=shelf.bottom;
   });
   });
  };
@@ -82,7 +85,7 @@ try{
  assert.equal(await p.locator('#money').inputValue(),'20');
  assert.equal(await stored(),null);
  for(const id of ['j_half','j_banner','j_photograph','j_steel_joker'])await exactFit(candidate(id));
- const tops=await p.locator('.candidate-card').evaluateAll(cards=>cards.map(card=>card.getBoundingClientRect().top));
+ const tops=await p.locator('.candidate-card').evaluateAll(logicalBounds).then(boxes=>boxes.map(box=>box.top));
  assert.ok(tops.every(top=>top===tops[0]));
  pass('shortlist','Four separate contextual indices in one row; no hand deltas, purchase or money mutation',{count:4,handDeltas:0,money:'20'});
  await p.locator('#ante').fill('8');
@@ -142,7 +145,7 @@ try{
  pass('separate-workflows','Hands only in Analysis, save controls only in Register, form ownership preserved',{handsInAnalysis:true,saveInRegister:true,storedRun:null});
  for(const width of [390,768,1440]){
   await p.setViewportSize({width,height:900});
-  const rowTops=await p.locator('.candidate-card').evaluateAll(cards=>cards.map(card=>card.getBoundingClientRect().top));
+  const rowTops=await p.locator('.candidate-card').evaluateAll(logicalBounds).then(boxes=>boxes.map(box=>box.top));
   assert.ok(rowTops.every(top=>top===rowTops[0]));
   assert.equal(await p.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
   assert.equal(await ownedLabelsFit(),true);

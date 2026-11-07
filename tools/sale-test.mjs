@@ -1,3 +1,4 @@
+import {logicalBounds} from './ui-logical-bounds.mjs';
 import assert from 'node:assert/strict';
 import {chromium} from 'playwright';
 import {spawn} from 'node:child_process';
@@ -60,7 +61,7 @@ try{
  await openOwned(p,'joker');await p.locator('#bay-dialog').screenshot({path:dir+'/desktop.png'});
  for(const width of [360,390]){
   await p.setViewportSize({width,height:844});assert.equal(await p.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
-  assert.equal(await p.locator('#bay-preview .fit-summary').evaluate(e=>{const label=e.querySelector('small').getBoundingClientRect(),score=e.querySelector('.fit-score').getBoundingClientRect();return label.right+8<=score.left;}),true,'Stage label and index must not overlap');
+  const [label]=await p.locator('#bay-preview .fit-summary small').first().evaluateAll(logicalBounds),[score]=await p.locator('#bay-preview .fit-summary .fit-score').first().evaluateAll(logicalBounds);assert.ok(label.right+8<=score.left,'Stage label and index must not overlap in the horizontal layout');
   assert.equal(await p.locator('#bay-sell').isVisible(),true);const box=await p.locator('#bay-sell').boundingBox();assert.ok(box&&box.x>=0&&box.x+box.width<=width);
  }
  await p.locator('#bay-dialog').screenshot({path:dir+'/mobile.png'});await p.setViewportSize({width:1440,height:1000});

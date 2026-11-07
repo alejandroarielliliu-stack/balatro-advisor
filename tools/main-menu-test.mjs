@@ -1,3 +1,4 @@
+import {logicalBounds} from './ui-logical-bounds.mjs';
 import assert from 'node:assert/strict';
 import {chromium} from 'playwright';
 import {spawn} from 'node:child_process';
@@ -77,7 +78,7 @@ try{
  for(const size of sizes){
   await p.setViewportSize(size);await p.mouse.move(0,0);await p.waitForTimeout(180);
   const geometry=await p.evaluate(()=>{const rect=element=>{const r=element.getBoundingClientRect();return {left:r.left,top:r.top,right:r.right,bottom:r.bottom,width:r.width,height:r.height};};return {width:innerWidth,height:innerHeight,scrollWidth:document.documentElement.scrollWidth,nav:rect(document.querySelector('.menu-actions')),controls:[...document.querySelectorAll('.menu-actions>a,.menu-actions>button')].map(element=>({id:element.id,...rect(element),hit:element.contains(document.elementFromPoint(element.getBoundingClientRect().x+element.getBoundingClientRect().width/2,element.getBoundingClientRect().y+element.getBoundingClientRect().height/2))}))};});
-  assert.ok(geometry.scrollWidth<=geometry.width+1,`No horizontal overflow at ${size.width}`);assert.ok(Math.abs((geometry.nav.left+geometry.nav.right)/2-geometry.width/2)<=1,'Navigation is centered');
+  assert.ok(geometry.scrollWidth<=geometry.width+1,`No horizontal overflow at ${size.width}`);const [logicalNav]=await p.locator('.menu-actions').evaluateAll(logicalBounds);const logicalWidth=await p.locator('#app-viewport').evaluate(frame=>frame.clientWidth);assert.ok(Math.abs((logicalNav.left+logicalNav.right)/2-logicalWidth/2)<=1,'Navigation is centered in the horizontal layout');
   for(const control of geometry.controls){assert.ok(control.left>=0&&control.top>=0&&control.right<=geometry.width+1&&control.bottom<=geometry.height+1,'Visible unclipped control: '+JSON.stringify({size,control}));assert.ok(control.width>=44&&control.height>=44,'Touch target is at least 44px');assert.equal(control.hit,true,'Control center remains clickable');}
   await screenshots(p,`menu-${size.width}x${size.height}`);
  }

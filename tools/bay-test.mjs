@@ -57,7 +57,7 @@ try{
  // Touch events use the same pointer path.
  await p.setViewportSize({width:390,height:844});await portraits.first().scrollIntoViewIfNeeded();const touchA=await portraits.nth(0).boundingBox(),touchB=await portraits.nth(1).boundingBox(),cdp=await p.context().newCDPSession(p);
  await cdp.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x:touchA.x+touchA.width/2,y:touchA.y+touchA.height/2}]});
- await cdp.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{x:touchB.x+touchB.width,y:touchB.y+touchB.height/2}]});await cdp.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
+ const rotated=await p.evaluate(()=>document.documentElement.dataset.uiRotated==='true');const touchEnd=rotated?{x:touchB.x+touchB.width/2,y:touchB.y+touchB.height}:{x:touchB.x+touchB.width,y:touchB.y+touchB.height/2};await cdp.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[touchEnd]});await cdp.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
  assert.equal(await p.locator('.inventory-panel select[id^="joker-"]').first().inputValue(),'banner');assert.equal(await raw(),ownedRaw);assert.equal(await p.locator('#bay-dialog').isVisible(),false);
  await p.locator('.inventory-panel').screenshot({path:`${dir}/owned-touch-mobile.png`});await cdp.detach();
  await p.reload();await go('table');await p.waitForFunction(()=>document.querySelectorAll('.bay-mini').length===150);await p.setViewportSize({width:1440,height:1000});

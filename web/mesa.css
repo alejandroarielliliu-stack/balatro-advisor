@@ -134,7 +134,7 @@ button.secondary:hover, .file:hover { background: #526d74; }
 
 dialog, .bay-dialog, .candidate-dialog, .joker-detail {
   background: #2b3d45; border: 3px solid #7c9195; border-radius: 12px;
-  box-shadow: 0 7px #10252e, 0 20px 80px #03171bb3; max-height: 90dvh;
+  box-shadow: 0 7px #10252e, 0 20px 80px #03171bb3; max-height: calc(90 * var(--app-dvh));
 }
 dialog::backdrop, .bay-dialog::backdrop { background: #071f26bf; backdrop-filter: blur(3px); }
 .bay-detail-heading { margin-bottom: 14px; }
@@ -162,14 +162,14 @@ dialog::backdrop, .bay-dialog::backdrop { background: #071f26bf; backdrop-filter
 dialog[open] { animation: panel-arrival .14s ease-out; }
 .candidate-card, .voucher-tile { transition: border-color .12s, background .12s, transform .12s; }
 
-@media (max-width:1100px) {
+@container app-landscape (max-width:1100px) {
 
   .voucher-grid { grid-template-columns: repeat(5,minmax(0,1fr)); }
   .voucher-tile { display: flex; flex-direction: column; text-align: center; gap: 5px; }
   .voucher-label small { display: none; }
   .voucher-label b { font-size: 10px; }
 }
-@media (max-width:720px) {
+@container app-landscape (max-width:720px) {
 
   .target-control .check { font-size: 10px; align-items: start; }
 
@@ -286,10 +286,10 @@ dialog[open] { animation: panel-arrival .14s ease-out; }
 .store-add-offer { flex: 0 0 95px; min-height: 108px; padding: 8px; border: 2px dashed #8a9e9966; border-radius: 7px; background: transparent; color: #d5e1dc; box-shadow: none; font: 20px/1.15 var(--pixel); font-weight: 400; }
 .store-add-offer:hover:not(:disabled) { background: #52696a66; border-color: #c0cfc9; }
 .store-other-shelf>.store-add-offer { min-height: 26px; flex: none; font: 15px/1 var(--pixel); border: 0; padding: 4px 8px; color: #c3d3cc; }
-.store-item-editor { width: min(500px,calc(100vw - 24px)); }
+.store-item-editor { width: min(500px,calc(calc(100 * var(--app-vw)) - 24px)); }
 .store-item-editor select, .store-item-editor input, .candidate-dialog>label, .candidate-dialog>select { margin-bottom: 14px; }
 .store-item-editor .section-title, .shop-advice-dialog .section-title { align-items: start; }
-.shop-advice-dialog { width: min(680px,calc(100vw - 24px)); }
+.shop-advice-dialog { width: min(680px,calc(calc(100 * var(--app-vw)) - 24px)); }
 .basic-save-status { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin: 0 0 12px; color: #c8d8ce; font-size: 12px; }
 .basic-save-status[hidden] { display: none; }
 .basic-save-status[data-state=saved] { color: #badb9c; }
@@ -325,7 +325,7 @@ dialog[open] { animation: panel-arrival .14s ease-out; }
 
 .observation-panel { margin:0 0 16px; padding:0 16px; border:2px solid #8d8159; border-radius:8px; background:#293d3c; }.observation-panel summary { color:#efcb7e; }.observation-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:12px; }.observation-panel small { display:block; color:#c4d0c7; margin:6px 0 12px; font-size:11px; }.observation-panel button { margin-bottom:14px; }#progress-changes .check { padding:6px 0; }
 
-@media (max-width:720px) {
+@container app-landscape (max-width:720px) {
 
  .storefront .candidate-grid { justify-content: safe center; gap: 8px; }
  .storefront .candidate-card, .storefront .candidate-placeholder { flex-basis: 108px; }
@@ -362,7 +362,7 @@ dialog[open] { animation: panel-arrival .14s ease-out; }
 .inventory-change-queue { margin:0; padding-left:22px; max-height:150px; overflow:auto; overflow-wrap:anywhere; }
 .inventory-change-queue li { padding:5px 0; }
 .inventory-change-queue button { padding:5px 8px; font-size:12px; }
-@media(max-width:480px) { .inventory-change-dialog button { min-height:42px; } }
+@container app-landscape (max-width:480px) { .inventory-change-dialog button { min-height:42px; } }
 
 /* TAG01b: compact read-only choice report, separate from confirmed progress. */
 .blind-comparison {display:grid;gap:12px;min-width:0;}
@@ -373,7 +373,7 @@ dialog[open] { animation: panel-arrival .14s ease-out; }
 .blind-balance {font:28px var(--pixel);color:#f3ce73;display:block;}
 .blind-plan {display:grid;gap:5px;padding:10px 0;border-bottom:1px solid #526d68;}
 .blind-comparison small {overflow-wrap:anywhere;}
-@media(max-width:520px) {.blind-choice-grid {grid-template-columns:1fr;}}
+@container app-landscape (max-width:520px) {.blind-choice-grid {grid-template-columns:1fr;}}
 
 #confirmation:has(.blind-choice-dialog) #dialog-cancel {display:none;}
 .blind-comparison[data-recommendation="abstain"]>.notice {background:#263d46;border-color:#617b84;}
@@ -420,8 +420,8 @@ dialog[open] { animation: panel-arrival .14s ease-out; }
 .pack-choice-reasons small {margin-top:6px;}
 .pack-choice-bars {display:grid;gap:5px;margin:8px 0;}
 .pack-choice-bars>div {display:flex;justify-content:space-between;gap:8px;}
-@media(max-width:520px) {.pack-comparison-heading {align-items:flex-start;flex-direction:column;gap:8px;}.pack-comparison-heading label {width:100%;}.pack-comparison-heading select {flex:1;min-width:0;}}
-@media(max-width:520px) {.pack-panel {padding:12px;}.pack-choice-grid, .pack-observation-grid {grid-template-columns:1fr;}.pack-panel .section-title h2 {font-size:23px;}.pack-choice>.joker-art {zoom:.38;}}
+@container app-landscape (max-width:520px) {.pack-comparison-heading {align-items:flex-start;flex-direction:column;gap:8px;}.pack-comparison-heading label {width:100%;}.pack-comparison-heading select {flex:1;min-width:0;}}
+@container app-landscape (max-width:520px) {.pack-panel {padding:12px;}.pack-choice-grid, .pack-observation-grid {grid-template-columns:1fr;}.pack-panel .section-title h2 {font-size:23px;}.pack-choice>.joker-art {zoom:.38;}}
 .tarot-panel {margin:16px 0;padding:16px;border:3px solid #758283;border-radius:12px;background:#253e43;box-shadow:0 4px #142e31;}
 .tarot-panel[hidden] {display:none;}
 .tarot-panel>.section-title {display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:10px;}
@@ -449,7 +449,7 @@ dialog[open] { animation: panel-arrival .14s ease-out; }
 .pack-choice-info .tarot-card {width:42px;min-height:60px;height:60px;}
 .pack-choice-info .tarot-outcome {font-size:12px;}
 .tarot-panel #tarot-use {margin-bottom:10px;}
-@media(max-width:520px) {.tarot-panel {padding:12px;}.tarot-panel>.section-title h2 {font-size:24px;}.tarot-card-picker {gap:8px;}.tarot-panel #tarot-use {width:100%;}}
+@container app-landscape (max-width:520px) {.tarot-panel {padding:12px;}.tarot-panel>.section-title h2 {font-size:24px;}.tarot-card-picker {gap:8px;}.tarot-panel #tarot-use {width:100%;}}
 
 /* Arcana target suggestions are previews; confirmation remains separate. */
 .arcana-comparison {border-color:#8c85a1;background:#2e424a;}
@@ -461,7 +461,7 @@ dialog[open] { animation: panel-arrival .14s ease-out; }
 .arcana-target-option button {margin:2px 0 0;padding:7px 9px;min-height:36px;}
 .arcana-target-option small {margin:0;font-size:11px;}
 .arcana-comparison .pack-choice-status {line-height:1.5;}
-@media(max-width:520px) {.arcana-target-option button {min-height:44px;}.arcana-target-list {max-height:350px;}}
+@container app-landscape (max-width:520px) {.arcana-target-option button {min-height:44px;}.arcana-target-list {max-height:350px;}}
 
 /* Current-deck facts stay within the compact Partida panel. */
 #deck-material-summary { display:block; color:var(--gold); margin:.5rem 0; line-height:1.5; }
@@ -506,7 +506,7 @@ small, .muted { color: var(--muted); }
 summary { cursor: pointer; }
 .app-header {
   display: flex; align-items: center; min-height: 68px; height: auto;
-  padding: 0 max(24px, calc((100vw - 1340px)/2)); gap: 24px;
+  padding: 0 max(24px, calc((calc(100 * var(--app-vw)) - 1340px)/2)); gap: 24px;
   background: #182e33; border-bottom: 3px solid #102b2e;
 }
 .brand-link { gap: 10px; flex: none; }
@@ -605,7 +605,7 @@ body[data-view=table] #run-progress { display: none; }
 .inventory-panel .joker-editor>.fit-badge { display: flex; justify-content: center; margin: 0; font-size: 10px; }
 .inventory-panel .joker-editor>.fit-badge .fit-score { font: 21px/1 var(--pixel); }
 .inventory-panel .joker-editor>.fit-reason { display: none; }
-.inventory-panel .joker-edit-drawer { position: fixed; width: min(460px,calc(100vw - 24px)); max-width: 460px; max-height: 86dvh; padding: 20px; margin: auto; overflow: auto; background: var(--panel); border: 2px solid #90a39a; border-radius: 10px; box-shadow: 0 12px 70px #061c1dc9; }
+.inventory-panel .joker-edit-drawer { position: fixed; width: min(460px,calc(calc(100 * var(--app-vw)) - 24px)); max-width: 460px; max-height: calc(86 * var(--app-dvh)); padding: 20px; margin: auto; overflow: auto; background: var(--panel); border: 2px solid #90a39a; border-radius: 10px; box-shadow: 0 12px 70px #061c1dc9; }
 .inventory-panel .joker-edit-drawer input, .inventory-panel .joker-edit-drawer select { font-size: 14px; }
 .inventory-panel .joker-edit-drawer button { font-size: 13px; min-height: 40px; color: var(--paper); background: #3d5960; }
 
@@ -634,7 +634,7 @@ body[data-view=table] #run-progress { display: none; }
 .composition-bar.negative .composition-fill { background: #e99a8b; }
 .composition-bar.unknown .composition-fill { background: repeating-linear-gradient(135deg,#88a09b 0 4px,#546f69 4px 8px); }
 .composition-bar[data-status=not-applicable] .composition-track { opacity: .3; }
-.composition-dialog { width: min(520px,calc(100vw - 24px)); }
+.composition-dialog { width: min(520px,calc(calc(100 * var(--app-vw)) - 24px)); }
 .composition-detail-value { font: 36px/1 var(--pixel); color: var(--gold); }
 
 /* Shop: objects first, one readable decision below the offers. */
