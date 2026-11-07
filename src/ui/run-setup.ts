@@ -3,7 +3,8 @@ import {deckArt,stakeArt} from './deck-art.js';
 import {layoutPoint} from './orientation.js';
 import type {RunStartBridge} from './run-start-bridge.js';
 
-const decks=Object.entries(DECK_PROFILES);
+const deckOrder=['red','blue','yellow','green','black','magic','nebula','ghost','abandoned','checkered','zodiac','painted','anaglyph','plasma','erratic'] as const;
+const decks=deckOrder.map(id=>[id,DECK_PROFILES[id]] as const);
 const stakes=[['white','Blanca'],['red','Roja'],['green','Verde'],['black','Negra'],['blue','Azul'],['purple','Morada'],['orange','Naranja'],['gold','Dorada']] as const;
 type Tab='new'|'continue'|'challenges';
 const el=<K extends keyof HTMLElementTagNameMap>(tag:K,text='',className='')=>{const e=document.createElement(tag);e.textContent=text;e.className=className;return e;};
@@ -35,21 +36,20 @@ export function mountRunSetup(menu:HTMLElement,bridge:RunStartBridge){
  const seedHelp=el('small','Solo referencia');seedHelp.id='setup-seed-help';seedRow.append(seedLabel,seed,seedHelp);fresh.append(deckStage,deckDots,stakeStage,stakeDots,seedRow);
  const summary=el('div','','setup-summary');summary.id='setup-summary';summary.setAttribute('aria-live','polite');content.append(fresh,summary);
  const seedToggle=el('label','','setup-seed-toggle');seedToggle.htmlFor='setup-seeded';const seedText=el('span','Con semilla');const seeded=el('input');seeded.id='setup-seeded';seeded.type='checkbox';seeded.setAttribute('aria-controls',seedRow.id='setup-seed-row');const mark=el('span','','setup-check');mark.setAttribute('aria-hidden','true');seedToggle.append(seedText,seeded,mark);
- seeded.onchange=()=>{seedRow.hidden=!seeded.checked;seed.disabled=!seeded.checked;error.textContent='';if(seeded.checked)seed.focus();};
+ seeded.onchange=()=>{render();if(seeded.checked)seed.focus();};
  const play=el('button','JUGAR','setup-play');play.id='setup-play';play.type='button';
  const back=el('a','Volver','setup-back');back.id='setup-back';back.href='#menu';
  const error=el('p','','setup-error');error.id='setup-error';error.setAttribute('role','alert');
  const actions=el('div','','setup-start-row');actions.append(seedToggle,play);panel.append(tabs,content,actions,back,error);
- let open=false,tab:Tab='new',deck=1,stake=0,initialized=false;
+ let open=false,tab:Tab='new',deck=0,stake=0,initialized=false;
  const dotInputs={deck:[] as HTMLInputElement[],stake:[] as HTMLInputElement[]};
- const choose=(kind:'deck'|'stake',index:number)=>{if(kind==='deck')deck=(index+decks.length)%decks.length;else stake=Math.max(0,Math.min(stakes.length-1,index));render();};
+ const choose=(kind:'deck'|'stake',index:number)=>{if(kind==='deck')deck=(index+decks.length)%decks.length;else stake=(index+stakes.length)%stakes.length;render();};
  for(const [kind,items,container] of [['deck',decks.map(([id,p])=>[id,p.name]),deckDots],['stake',stakes,stakeDots]] as const){
   items.forEach((item,index)=>{const label=el('label','','setup-dot'),input=el('input'),dot=el('span');input.type='radio';input.name='setup-'+kind;input.value=item[0];input.setAttribute('aria-label',item[1]);input.onchange=()=>choose(kind,index);dot.setAttribute('aria-hidden','true');label.append(input,dot);container.append(label);dotInputs[kind].push(input);});
   container.onkeydown=event=>{if(!['ArrowLeft','ArrowRight','Home','End'].includes(event.key))return;event.preventDefault();const current=kind==='deck'?deck:stake,index=event.key==='Home'?0:event.key==='End'?items.length-1:current+(event.key==='ArrowRight'?1:-1);choose(kind,index);dotInputs[kind][kind==='deck'?deck:stake]!.focus();};
  }
- function neighbors(){
-  neighborDecks.replaceChildren();for(const offset of [-2,-1,1,2]){const index=(deck+offset+decks.length)%decks.length,[id,p]=decks[index]!;const b=el('button','','setup-neighbor-deck');b.type='button';b.dataset.offset=String(offset);b.setAttribute('aria-label','Elegir '+p.name);b.append(deckArt(id,p.name));b.onclick=()=>choose('deck',index);neighborDecks.append(b);}
-  neighborStakes.replaceChildren();for(const offset of [-2,-1,1,2]){const index=stake+offset;if(index<0||index>=stakes.length)continue;const [id,name]=stakes[index]!;const b=el('button','','setup-neighbor-stake');b.type='button';b.dataset.offset=String(offset);b.setAttribute('aria-label','Elegir dificultad '+name);b.append(stakeArt(id,name));b.onclick=()=>choose('stake',index);neighborStakes.append(b);}
+ for(const [kind,container] of [['deck',neighborDecks],['stake',neighborStakes]] as const){
+  for(const direction of [-1,1]){const b=el('button',direction<0?'‹':'›','setup-arrow');b.type='button';b.id=`setup-${kind}-${direction<0?'prev':'next'}`;b.dataset.direction=String(direction);b.setAttribute('aria-label',`${kind==='deck'?'Baraja':'Dificultad'} ${direction<0?'anterior':'siguiente'}`);b.setAttribute('aria-controls',kind==='deck'?'setup-deck-name':'setup-stake-name');b.onclick=()=>choose(kind,(kind==='deck'?deck:stake)+direction);container.append(b);}
  }
  function render(){
   const snapshot=bridge.snapshot();error.textContent='';
@@ -58,9 +58,9 @@ export function mountRunSetup(menu:HTMLElement,bridge:RunStartBridge){
   seedRow.hidden=!seeded.checked;seed.disabled=!seeded.checked;
   play.textContent='JUGAR';play.disabled=false;
   if(tab==='new'){
-   const [id,p]=decks[deck]!;portrait.replaceChildren(deckArt(id,p.name));deckName.textContent=p.name;deckEffect.textContent=p.effect;
+   const [id,p]=decks[deck]!;portrait.replaceChildren(deckArt(id,p.name));deckName.textContent=p.name;deckEffect.textContent=p.effect.replace(' (peso 2)','');
    const [stakeId,name]=stakes[stake]!;chip.replaceChildren(stakeArt(stakeId,name));stakeName.textContent='Dificultad '+name.toLowerCase();stakeEffect.textContent=stake===0?'Dificultad base':'Aún no compatible';
-   dotInputs.deck.forEach((input,index)=>input.checked=index===deck);dotInputs.stake.forEach((input,index)=>input.checked=index===stake);neighbors();
+   dotInputs.deck.forEach((input,index)=>input.checked=index===deck);dotInputs.stake.forEach((input,index)=>input.checked=index===stake);
    const limitation=!deckDefinition(id)?'Esta baraja todavía no permite iniciar una partida.':stake!==0?'Esta dificultad todavía no permite iniciar una partida.':snapshot.loadFailed?'Recupera la copia de la partida desde Continuar.':snapshot.dirty?'Hay cambios pendientes en la partida actual.':!snapshot.writable?'Esta pestaña está en modo de lectura.':'';
    play.disabled=!!limitation;error.textContent=limitation;play.setAttribute('aria-describedby','setup-error');
   }else{

@@ -36,12 +36,15 @@ try{
 
  const browse=await session(),p=browse.page;await setup(p);
  assert.equal(await p.locator('.run-setup-tabs [role=tab]').count(),3);
+ assert.equal(await p.locator('.setup-arrow').count(),4);assert.equal(await p.locator('.setup-neighbor-deck,.setup-neighbor-stake').count(),0);
+ assert.equal(await p.locator('#setup-decks .deck-art').count(),1);assert.equal(await p.locator('#setup-stakes .stake-art').count(),1);
+ await deck(p,'blue');await p.locator('#setup-deck-next').focus();await p.keyboard.press('Enter');assert.equal(await p.locator('#setup-deck-dots input:checked').inputValue(),'yellow');assert.equal(await p.evaluate(()=>document.activeElement.id),'setup-deck-next');await p.keyboard.press('Escape');await p.locator('#run-setup').waitFor({state:'hidden'});await setup(p);
  const heights=[];
- for(const id of ['blue','red','yellow','green','black','magic','nebula','ghost','abandoned','checkered','zodiac','painted','anaglyph','plasma','erratic']){await deck(p,id);heights.push((await p.locator('.run-setup-panel').boundingBox()).height);}
+ for(const id of ['blue','red','yellow','green','black','magic','nebula','ghost','abandoned','checkered','zodiac','painted','anaglyph','plasma','erratic']){await deck(p,id);await p.locator('#setup-decks .deck-art[data-art-status=loaded]').waitFor();assert.equal(await p.locator('#setup-decks .deck-art').getAttribute('data-art-source'),'balatro-game-atlas-1.0.1o');heights.push((await p.locator('.run-setup-panel').boundingBox()).height);}
  assert.ok(Math.max(...heights)-Math.min(...heights)<=1,'All 15 descriptions preserve panel size');
- await deck(p,'ghost');assert.equal(await p.locator('#setup-play').isDisabled(),true);await deck(p,'blue');
+ await deck(p,'ghost');assert.equal(await p.locator('#setup-play').isDisabled(),true);await p.locator('#setup-seeded').check();assert.match(await p.locator('#setup-error').innerText(),/baraja/i);await p.locator('#setup-seeded').uncheck();await deck(p,'blue');
  await stake(p,'red');assert.equal(await p.locator('#setup-play').isDisabled(),true);await deck(p,'yellow');assert.equal(await p.locator('#setup-stake-dots input[value=red]').isChecked(),true);await stake(p,'white');assert.equal(await p.locator('#setup-play').isEnabled(),true);
- await p.locator('#setup-stake-dots input[value=white]').focus();await p.keyboard.press('ArrowLeft');assert.equal(await p.locator('#setup-stake-dots input[value=white]').isChecked(),true);
+ await p.locator('#setup-stake-dots input[value=white]').focus();await p.keyboard.press('ArrowLeft');assert.equal(await p.locator('#setup-stake-dots input[value=gold]').isChecked(),true);await p.keyboard.press('Home');assert.equal(await p.locator('#setup-stake-dots input[value=white]').isChecked(),true);
  await p.locator('#setup-tab-challenges').click();assert.match(await p.locator('#setup-summary').innerText(),/Aún no disponibles/);assert.equal(await p.locator('#setup-play').isDisabled(),true);
  await p.locator('#setup-tab-continue').click();assert.match(await p.locator('#setup-summary').innerText(),/Sin partida/);assert.equal(await p.locator('#setup-play').isDisabled(),true);
  await p.locator('#setup-tab-new').click();await p.locator('#setup-seeded').check();assert.equal(await p.locator('#setup-seed').isVisible(),true);assert.match(await p.locator('.setup-check').evaluate(e=>getComputedStyle(e,'::after').content),/✓/);await p.locator('#setup-seed').fill('REFERENCE42');
@@ -74,7 +77,7 @@ try{
   await m.mouse.up();assert.notEqual(await m.locator('#setup-deck-dots input:checked').inputValue(),before,'Drag uses logical horizontal direction even when rotated');assert.equal(await raw(m),null);assert.equal(await writes(m),0);await m.screenshot({path:`${dir}/setup-${viewport.width}x${viewport.height}.png`});await mobile.context.close();
  }
  pass('landscape-and-rotated-mobile-fit-controls-and-normalize-drag',{physicalAndroid:false});
- const shot=await session(),s=shot.page;await setup(s);await deck(s,'blue');await s.locator('#setup-seeded').check();await s.locator('#setup-seed').fill('BALATRO');await s.screenshot({path:dir+'/desktop.png'});await shot.context.close();
+ const shot=await session(),s=shot.page;await setup(s);await deck(s,'blue');await s.locator('#setup-decks .deck-art[data-art-status=loaded]').waitFor();await s.locator('#setup-stakes .stake-art[data-art-status=loaded]').waitFor();await s.screenshot({path:dir+'/desktop.png'});await s.locator('#setup-seeded').check();await s.locator('#setup-seed').fill('BALATRO');await s.screenshot({path:dir+'/desktop-seeded.png'});await shot.context.close();
  assert.deepEqual(report.pageErrors,[]);report.status='passed';await writeFile(dir+'/report.json',JSON.stringify(report,null,2));console.log(`PASS run setup: ${report.cases.length} groups`);
 }catch(error){report.status='failed';report.error=error.stack||String(error);await writeFile(dir+'/report.json',JSON.stringify(report,null,2));if(lastPage&&!lastPage.isClosed())await lastPage.screenshot({path:dir+'/failed.png'}).catch(()=>{});throw error;}
 finally{await browser?.close();server.kill();}

@@ -1,20 +1,157 @@
 {
-  "schemaVersion": 1,
-  "artId": "advisor-original-vector-v1",
-  "createdAt": "2026-11-07",
-  "method": "Original SVG geometry authored for Balatro Advisor; constructed by src/ui/deck-art.ts, without downloaded image files, tracing, game extraction, fonts or logos.",
-  "officialGameArt": false,
-  "deckIds": ["red", "blue", "yellow", "green", "black", "magic", "nebula", "ghost", "abandoned", "checkered", "zodiac", "painted", "anaglyph", "plasma", "erratic"],
-  "stakeIds": ["white", "red", "green", "black", "blue", "purple", "orange", "gold"],
-  "visualReferences": [
-    {"kind": "user_supplied_screenshot", "description": "Balatro new-run menu screenshot, supplied in the request; composition and pixel-art direction only, no image tracing or redistribution."},
-    {"kind": "project_catalog", "path": "src/catalog/decks.ts", "description": "Existing identifiers and deck themes; not a verification of gameplay or rules."}
+  "schemaVersion": 2,
+  "artId": "balatro-game-atlas-1.0.1o",
+  "importedAt": "2026-11-07",
+  "gameVersion": "1.0.1o-FULL",
+  "sourceCommit": "f081d0e41508d9dcc7a01cba5bffcccfbb115af1",
+  "referenceRepository": "https://github.com/Jofr3/balatro-source",
+  "method": "Byte-for-byte download of public 2x PNG atlases from the same pinned mirror used by the existing Joker catalogue. Cell mapping read statically from game.lua at that commit. No private executable, game source redistribution, creative edits or upscaling.",
+  "officialGameArtwork": true,
+  "officialDistributionSource": false,
+  "observedInGame": false,
+  "atlases": [
+    {
+      "file": "enhancers.png",
+      "url": "https://raw.githubusercontent.com/Jofr3/balatro-source/f081d0e41508d9dcc7a01cba5bffcccfbb115af1/resources/textures/2x/Enhancers.png",
+      "sha256": "24934b84e0f9c8aaf206c56885e8f4b254cab3248654deb250e6975bc51a26b6",
+      "bytes": 93885,
+      "width": 994,
+      "height": 950,
+      "logicalCell": [
+        71,
+        95
+      ],
+      "physicalCell": [
+        142,
+        190
+      ],
+      "grid": [
+        7,
+        5
+      ]
+    },
+    {
+      "file": "chips.png",
+      "url": "https://raw.githubusercontent.com/Jofr3/balatro-source/f081d0e41508d9dcc7a01cba5bffcccfbb115af1/resources/textures/2x/chips.png",
+      "sha256": "f9f5e3d3c66aec4285c9b65eac5a9ec5be2e1a49c5b8141c0f69267b15137d0e",
+      "bytes": 9882,
+      "width": 290,
+      "height": 116,
+      "logicalCell": [
+        29,
+        29
+      ],
+      "physicalCell": [
+        58,
+        58
+      ],
+      "grid": [
+        5,
+        2
+      ]
+    }
   ],
-  "consultedSourcesNotIncorporated": [
-    {"url": "https://www.playbalatro.com/press-kit", "finding": "Official page labels its assets for media use; no broad reuse license for individual game sprites was identified. No files downloaded or incorporated."},
-    {"path": "docs/catalogo-completo.md", "finding": "Existing Joker atlas provenance explicitly says a third-party mirror does not grant redistribution rights. That source was not expanded for deck artwork."}
-  ],
-  "rightsNote": "New project-original illustrations, not official Balatro assets. Balatro names and original visual identity belong to LocalThunk / Playstack. No third-party asset license is assigned to these illustrations.",
-  "dependencies": [],
-  "networkAtRuntime": false
+  "mappingSource": {
+    "url": "https://github.com/Jofr3/balatro-source/blob/f081d0e41508d9dcc7a01cba5bffcccfbb115af1/game.lua",
+    "sha256": "bbc67bd3fbadd1ea3f3f0aba07ef8596118d89ff1e9758718f9e17c07a96e912",
+    "method": "Read public text in memory; retain only sprite positions and atlas dimensions. This SHA matches the previously documented target-version source."
+  },
+  "deckCells": {
+    "red": [
+      0,
+      0
+    ],
+    "blue": [
+      0,
+      2
+    ],
+    "yellow": [
+      1,
+      2
+    ],
+    "green": [
+      2,
+      2
+    ],
+    "black": [
+      3,
+      2
+    ],
+    "magic": [
+      0,
+      3
+    ],
+    "nebula": [
+      3,
+      0
+    ],
+    "ghost": [
+      6,
+      2
+    ],
+    "abandoned": [
+      3,
+      3
+    ],
+    "checkered": [
+      1,
+      3
+    ],
+    "zodiac": [
+      3,
+      4
+    ],
+    "painted": [
+      4,
+      3
+    ],
+    "anaglyph": [
+      2,
+      4
+    ],
+    "plasma": [
+      4,
+      2
+    ],
+    "erratic": [
+      2,
+      3
+    ]
+  },
+  "stakeCells": {
+    "white": [
+      0,
+      0
+    ],
+    "red": [
+      1,
+      0
+    ],
+    "green": [
+      2,
+      0
+    ],
+    "black": [
+      4,
+      0
+    ],
+    "blue": [
+      3,
+      0
+    ],
+    "purple": [
+      0,
+      1
+    ],
+    "orange": [
+      1,
+      1
+    ],
+    "gold": [
+      2,
+      1
+    ]
+  },
+  "copyright": "Balatro artwork: LocalThunk / Playstack. This third-party mirror is not an official source and its availability is not represented as a license grant.",
+  "fallback": "Only an explicit image-load error or unknown art ID produces a neutral question-mark placeholder, labelled as illustration unavailable. It never substitutes an invented official-looking illustration."
 }
