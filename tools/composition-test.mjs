@@ -1,3 +1,4 @@
+import {openWorkspace,reloadWorkspace} from './workspace-navigation.mjs';
 import assert from 'node:assert/strict';
 import {chromium} from 'playwright';
 import {spawn} from 'node:child_process';
@@ -25,7 +26,7 @@ try{
  const stored=page=>page.evaluate(()=>localStorage.getItem('balatro-advisor.confirmed.v1'));
  const go=async(page,screen)=>page.locator(`[data-screen="${screen}"]`).click();
  const load=async page=>{
-  await page.goto(origin+'/#table');
+  await openWorkspace(page,origin+'/#table');
   await page.waitForFunction(()=>document.querySelector('#ownership').textContent.includes('Esta pestaña tiene'));
   await page.waitForFunction(()=>document.querySelectorAll('.bay-mini').length===150&&document.querySelectorAll('#composition-overview [data-section]').length===6);
  };
@@ -165,7 +166,7 @@ try{
  assert.equal(observed.history.at(-1).kind,'correction');assert.equal(observed.history.at(-1).action,null);assert.equal(observed.history.filter(entry=>entry.kind==='action').length,0);
  await q.waitForFunction(()=>Number(document.querySelector('#composition-overview [data-section="synergy"]')?.dataset.score)>0);
  assert.ok(await value(bar(q,'deck'))>0);await inspectReadOnly(q,bar(q,'synergy'));assert.equal(await stored(q),corrected);
- await q.reload();await q.waitForFunction(()=>document.querySelector('#ownership').textContent.includes('Esta pestaña tiene'));
+ await reloadWorkspace(q);await q.waitForFunction(()=>document.querySelector('#ownership').textContent.includes('Esta pestaña tiene'));
  await go(q,'table');await q.waitForFunction(()=>Number(document.querySelector('#composition-overview [data-section="synergy"]')?.dataset.score)>0);
  assert.ok(await value(bar(q,'deck'))>0);assert.equal(await stored(q),corrected);assert.equal(await q.locator('.scenario').count(),0);
  const recovered=JSON.parse(await stored(q));assert.equal(recovered.state.observed.deck.value.cards.length,41);assert.equal(recovered.state.observed.deck.value.cards.filter(card=>card.rank==='Q').length,1);

@@ -1,0 +1,5 @@
+/* Project-original vector art; see assets/decks/provenance.json. */
+.deck-art {display:inline-block;flex:none;width:var(--deck-art-width,71px);aspect-ratio:71/95;line-height:0;filter:drop-shadow(2px 3px 0 #10252b);}
+.deck-art>svg {display:block;width:100%;height:100%;overflow:visible;}
+.stake-art {display:inline-block;flex:none;width:var(--stake-art-size,38px);aspect-ratio:32/34;line-height:0;}
+.stake-art>svg {display:block;width:100%;height:100%;overflow:visible;}

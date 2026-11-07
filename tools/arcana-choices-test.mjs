@@ -1,3 +1,4 @@
+import {openWorkspace,reloadWorkspace} from './workspace-navigation.mjs';
 import assert from 'node:assert/strict';
 import {chromium} from 'playwright';
 import {spawn} from 'node:child_process';
@@ -52,8 +53,8 @@ try{
  const go=(page,screen)=>page.locator(`[data-screen="${screen}"]`).click(),panel=page=>page.locator('#arcana-comparison'),status=page=>page.locator('#arcana-choice-status');
  const ready=page=>page.waitForFunction(()=>document.querySelector('#ownership')?.textContent.includes('Esta pestaña tiene'));
  const watch=page=>{lastPage=page;page.on('pageerror',error=>report.pageErrors.push(error.message));};
- const session=async(input=fixture(),viewport={width:1440,height:1000})=>{const context=await browser.newContext({viewport});await context.addInitScript(storageKey=>{window.__arcanaChoiceWrites=0;const original=Storage.prototype.setItem;Storage.prototype.setItem=function(name,value){if(name===storageKey)window.__arcanaChoiceWrites++;return original.call(this,name,value);};},key);const page=await context.newPage();watch(page);await page.goto(new URL('#table',origin.href).href);await ready(page);await go(page,'archive');await page.locator('#import-file').setInputFiles({name:'synthetic-arcana-choices.json',mimeType:'application/json',buffer:Buffer.from(JSON.stringify(input))});await page.locator('#dialog-accept').click();await page.locator('#confirmation').waitFor({state:'hidden'});await go(page,'table');await panel(page).waitFor({state:'visible'});return {context,page};};
- const reload=async page=>{await page.reload();await ready(page);await go(page,'table');await panel(page).waitFor({state:'visible'});};
+ const session=async(input=fixture(),viewport={width:1440,height:1000})=>{const context=await browser.newContext({viewport});await context.addInitScript(storageKey=>{window.__arcanaChoiceWrites=0;const original=Storage.prototype.setItem;Storage.prototype.setItem=function(name,value){if(name===storageKey)window.__arcanaChoiceWrites++;return original.call(this,name,value);};},key);const page=await context.newPage();watch(page);await openWorkspace(page,new URL('#table',origin.href).href);await ready(page);await go(page,'archive');await page.locator('#import-file').setInputFiles({name:'synthetic-arcana-choices.json',mimeType:'application/json',buffer:Buffer.from(JSON.stringify(input))});await page.locator('#dialog-accept').click();await page.locator('#confirmation').waitFor({state:'hidden'});await go(page,'table');await panel(page).waitFor({state:'visible'});return {context,page};};
+ const reload=async page=>{await reloadWorkspace(page);await ready(page);await go(page,'table');await panel(page).waitFor({state:'visible'});};
  const finish=async page=>{await page.locator('#performed').check();await page.locator('#dialog-accept').click();await page.locator('#confirmation').waitFor({state:'hidden'});};
  const entry=(page,id)=>page.locator(`[data-pack-entry="${id}"]`),choice=(page,id)=>page.locator(`[data-pack-choose="${id}"]`);
  const detail=(page,id)=>page.locator(`[data-arcana-entry-comparison="${id}"]`);
@@ -100,7 +101,7 @@ try{
  pass('unknown-hand-abstains-without-inventing-targets',{recommendation:'abstain',suggestedTargets:0,realHand:'unknown',writes:0},{recommendation:'abstain',suggestedTargets:0,realHand:(await record(n)).state.phaseData.context.heldCardIds.status,writes:0});await unknownSession.context.close();
 
  // 7. A read-only second tab may inspect/select projections but not confirm.
- const owner=await session(),o=owner.page;before=await raw(o);const reader=await owner.context.newPage();watch(reader);await reader.goto(new URL('#table',origin.href).href);await reader.waitForFunction(()=>document.querySelector('#ownership')?.textContent.includes('Modo lectura'));await go(reader,'table');await panel(reader).waitFor({state:'visible'});await suggest(reader,'chariot');assert.equal(await choice(reader,'chariot').isDisabled(),true);assert.equal(await reader.locator('#pack-skip').isDisabled(),true);assert.equal(await raw(reader),before);assert.equal(await writes(reader),0);
+ const owner=await session(),o=owner.page;before=await raw(o);const reader=await owner.context.newPage();watch(reader);await openWorkspace(reader,new URL('#table',origin.href).href);await reader.waitForFunction(()=>document.querySelector('#ownership')?.textContent.includes('Modo lectura'));await go(reader,'table');await panel(reader).waitFor({state:'visible'});await suggest(reader,'chariot');assert.equal(await choice(reader,'chariot').isDisabled(),true);assert.equal(await reader.locator('#pack-skip').isDisabled(),true);assert.equal(await raw(reader),before);assert.equal(await writes(reader),0);
  pass('readonly-tab-can-compare-without-real-action',{suggestionSelectable:true,confirmationAllowed:false,writes:0},{suggestionSelectable:true,confirmationAllowed:false,writes:0});await owner.context.close();
 
  // 8. 390px is desktop mobile emulation, not a physical Android assertion.

@@ -1,3 +1,4 @@
+import {openWorkspace,reloadWorkspace} from './workspace-navigation.mjs';
 import assert from 'node:assert/strict';
 import {chromium} from 'playwright';
 import {spawn} from 'node:child_process';
@@ -26,8 +27,8 @@ try{
  const journeyAction=async selector=>{const control=page.locator(selector);if(await control.evaluate(element=>!!element.closest('#run-journey-tools'))&&!await page.locator('#run-journey-tools').evaluate(element=>element.open))await page.locator('#run-journey-tools > summary').click();await control.click();};
  const open=async selector=>{await journeyAction(selector);await page.locator('#confirmation').waitFor({state:'visible'});};
  const accept=async()=>{await page.locator('#dialog-accept').click();await page.locator('#confirmation').waitFor({state:'hidden'});};
- const reload=async()=>{await page.reload();await ready();await page.locator('[data-screen=table]').click();};
- await page.goto(new URL('#table',origin).href);await ready();await load(fixture());let before=await raw();
+ const reload=async()=>{await reloadWorkspace(page);await ready();await page.locator('[data-screen=table]').click();};
+ await openWorkspace(page,new URL('#table',origin).href);await ready();await load(fixture());let before=await raw();
  await open('#run-observe-tag');assert.equal(await page.locator('#progress-visible-tag option').count(),24);await page.locator('#progress-visible-tag').selectOption('tag_double');await page.locator('#progress-tag-known').check();assert.equal(await raw(),before);await page.locator('#dialog-cancel').click();assert.equal(await raw(),before);
  await open('#run-observe-tag');await page.locator('#progress-visible-tag').selectOption('tag_double');await page.locator('#progress-tag-known').check();await accept();let r=await record();assert.equal(r.state.revision,5);assert.deepEqual(r.state.phaseData.skipTag,known('tag_double'));await reload();assert.match(await page.locator('#run-journey').innerText(),/Etiqueta doble/);pass('24-tags-observed-only-after-confirmation-and-reload');
  before=await raw();await open('#run-skip-blind');await page.locator('#progress-inventory-unchanged').check();await page.locator('#dialog-accept').click();assert.equal(await raw(),before);assert.match(await page.locator('#dialog-error').innerText(),/efectos|selección/);await page.locator('#dialog-cancel').click();assert.equal(await raw(),before);pass('unfinished-tag-effects-and-cancel-never-write');

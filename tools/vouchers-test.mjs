@@ -1,3 +1,4 @@
+import {openWorkspace,reloadWorkspace} from './workspace-navigation.mjs';
 import assert from 'node:assert/strict';
 import {chromium} from 'playwright';
 import {spawn} from 'node:child_process';
@@ -14,7 +15,7 @@ try{
  const record=async()=>JSON.parse(await raw());
  const revision=async expected=>{await p.waitForFunction(expected=>JSON.parse(localStorage.getItem('balatro-advisor.confirmed.v1')).state.revision===expected,expected);return record();};
  const manualSave=async reason=>{const previous=(await record()).state.revision;await go('archive');await p.locator('#edit-reason').fill(reason);await p.getByRole('button',{name:'Guardar actualización que transcribí'}).click();await revision(previous+1);await go('table');};
- await p.goto('http://127.0.0.1:4183/#table');await p.waitForFunction(()=>document.querySelector('#ownership').textContent.includes('Esta pestaña tiene'));
+ await openWorkspace(p,'http://127.0.0.1:4183/#table');await p.waitForFunction(()=>document.querySelector('#ownership').textContent.includes('Esta pestaña tiene'));
  await go('archive');await p.locator('#import-file').setInputFiles({name:'state.json',mimeType:'application/json',buffer:await readFile('examples/shop-purchase.json')});await p.locator('#dialog-accept').click();await go('table');
  const original=(await record()).state;
  const choose=async id=>{const before=await record();if(!await p.locator(`[data-voucher="${id}"]`).count())await p.getByRole('button',{name:'Ver los 32',exact:true}).click();await p.locator(`[data-voucher="${id}"]`).click();await p.locator('#voucher-apply').click();await p.locator('.voucher-dialog').waitFor({state:'hidden'});const saved=await revision(before.state.revision+1);assert.equal(saved.history.at(-1).kind,'correction');assert.equal(saved.history.at(-1).action,null);assert.deepEqual(saved.state.observed.money,before.state.observed.money);};
@@ -35,7 +36,7 @@ try{
  await p.setViewportSize({width:390,height:844});await p.locator('#vouchers').screenshot({path:dir+'/mobile.png'});assert.equal(await p.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
  await p.setViewportSize({width:1440,height:1000});await manualSave('Confirmar el cambio avanzado de baraja y sus recursos; los vales ya estaban registrados.');
  const saved=JSON.parse(await raw());assert.equal(saved.state.observed.resources.handsPerRound.value,7);assert.equal(saved.state.observed.resources.handSize.value,9);assert.equal(saved.state.observed.outOfScope.value.vouchers.length,5);
- await p.reload();await go('table');assert.equal(await p.locator('[data-voucher="v_grabber"]').getAttribute('data-owned'),'true');assert.equal(await p.locator('#hands').inputValue(),'7');
+ await reloadWorkspace(p);await go('table');assert.equal(await p.locator('[data-voucher="v_grabber"]').getAttribute('data-owned'),'true');assert.equal(await p.locator('#hands').inputValue(),'7');
  await choose('v_nacho_tong');assert.equal(await p.locator('#hands').inputValue(),'6');await choose('v_grabber');assert.equal(await p.locator('#hands').inputValue(),'5');
  const recordedRevision=(await record()).state.revision;
  await p.getByRole('button',{name:'Ver los 32'}).click();
@@ -51,7 +52,7 @@ try{
  const resourceDetails=p.locator('details').filter({has:p.locator('#discards')});if(!await resourceDetails.evaluate(e=>e.open))await resourceDetails.locator(':scope > summary').click();await p.locator('#discards').fill('3');await manualSave('Transcribir los descartes actuales tras Petroglifo.');
  await choose('v_seed_money');assert.equal(await p.locator('#hands').inputValue(),'4');assert.equal(await p.locator('#discards').inputValue(),'3');
  const observedDocumentary=await record();assert.ok(observedDocumentary.state.revision>recordedRevision);assert.equal(observedDocumentary.state.observed.money.value,8);assert.ok(observedDocumentary.history.every(entry=>entry.kind==='correction'&&entry.action===null)); // Owned vouchers are observations, never purchases or projected income.
- await p.reload();await go('table');
+ await reloadWorkspace(p);await go('table');
  assert.equal(await p.locator('[data-voucher="v_tarot_merchant"]').getAttribute('data-owned'),'true');
  assert.equal(await p.locator('[data-voucher="v_hieroglyph"]').getAttribute('data-owned'),'true');
  assert.equal(await p.locator('#hands').inputValue(),'4');assert.equal(await p.locator('#discards').inputValue(),'3');

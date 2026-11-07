@@ -1,3 +1,4 @@
+import {openWorkspace} from './workspace-navigation.mjs';
 import assert from 'node:assert/strict';
 import {chromium} from 'playwright';
 import {spawn} from 'node:child_process';
@@ -33,7 +34,7 @@ try{
  const session=async(input,viewport={width:1440,height:1000})=>{
   const context=await browser.newContext({viewport,reducedMotion:'reduce'});
   await context.addInitScript(storageKey=>{window.__frontendWrites=0;const original=Storage.prototype.setItem;Storage.prototype.setItem=function(name,value){if(name===storageKey)window.__frontendWrites++;return original.call(this,name,value);};},key);
-  const page=await context.newPage();observe(page);await page.goto(new URL('#table',origin).href);await ready(page);
+  const page=await context.newPage();observe(page);await openWorkspace(page,new URL('#table',origin).href);await ready(page);
   if(input){await go(page,'archive');await page.locator('#import-file').setInputFiles({name:'synthetic-frontend.json',mimeType:'application/json',buffer:Buffer.from(JSON.stringify(input))});await page.locator('#dialog-accept').click();await page.locator('#confirmation').waitFor({state:'hidden'});await go(page,'table');}
   await shelf(page);return {context,page};
  };
@@ -97,7 +98,7 @@ try{
  for(const screen of ['table','evaluation','archive','collection']){await go(p,screen);await noOverflow(p,`zoom200/${screen}`);}
  await go(p,'table');await screenshot(p,'zoom200');await p.evaluate(()=>document.documentElement.style.zoom='');await unchanged(p,before,count);pass('all-four-screens-reflow-at-200-percent');
 
- const reader=await main.context.newPage();observe(reader);await reader.goto(new URL('#table',origin).href);await reader.waitForFunction(()=>document.querySelector('#ownership')?.textContent.includes('Modo lectura'));await go(reader,'table');await shelf(reader);const readerBefore=await raw(reader),readerCount=await writes(reader);
+ const reader=await main.context.newPage();observe(reader);await openWorkspace(reader,new URL('#table',origin).href);await reader.waitForFunction(()=>document.querySelector('#ownership')?.textContent.includes('Modo lectura'));await go(reader,'table');await shelf(reader);const readerBefore=await raw(reader),readerCount=await writes(reader);
  await reader.locator('#shop-recommendation').click();await reader.locator('#shop-advice-dialog').waitFor({state:'visible'});await reader.locator('#shop-advice-alternatives > summary').click();await reader.keyboard.press('Escape');await unchanged(reader,readerBefore,readerCount);assert.equal(readerCount,0);await unchanged(p,before,count);pass('read-only-tab-can-consult-without-saving');await reader.close();await main.context.close();
 
  const partial=await session(fixture('DEC02-06'),{width:390,height:844}),u=partial.page;const partialBefore=await raw(u),partialCount=await writes(u);await u.locator('#shop-recommendation').click();await u.locator('#shop-advice-dialog').waitFor({state:'visible'});

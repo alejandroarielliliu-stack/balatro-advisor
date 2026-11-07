@@ -1,3 +1,4 @@
+import {openWorkspace,reloadWorkspace} from './workspace-navigation.mjs';
 import assert from 'node:assert/strict';
 import {chromium} from 'playwright';
 import {spawn} from 'node:child_process';
@@ -96,14 +97,14 @@ try{
    };
   },key);
   const page=await context.newPage();watch(page);
-  await page.goto(new URL('#table',origin.href).href);await ready(page);
+  await openWorkspace(page,new URL('#table',origin.href).href);await ready(page);
   await load(page,input,withoutJokerCatalog?async p=>{
    await p.locator('#store-voucher-add').waitFor({state:'visible'});
    await p.waitForFunction(()=>document.querySelector('#shop-session-status')?.textContent.includes('catálogo de comodines'));
   }:hydrated);
   return {context,page,blockedJokerCatalogRequests:()=>blockedJokerCatalogRequests};
  };
- const reload=async page=>{await page.reload();await ready(page);await go(page,'table');await hydrated(page);};
+ const reload=async page=>{await reloadWorkspace(page);await ready(page);await go(page,'table');await hydrated(page);};
  const tile=(page,id)=>page.locator(`.store-extra-tile[data-store-kind="voucher"][data-offer-id="${id}"]`);
  const editor=page=>page.locator('#store-item-editor');
  const closeEditor=async page=>{if(await page.locator('#store-item-editor[open]').count())await editor(page).getByRole('button',{name:'Cerrar',exact:true}).click();};
@@ -311,7 +312,7 @@ try{
  // 7. A reader tab can inspect, but cannot confirm against the writer's record.
  const writer=await session(),writerId=await add(writer.page);
  before=await raw(writer.page);
- const reader=await writer.context.newPage();watch(reader);await reader.goto(new URL('#table',origin.href).href);
+ const reader=await writer.context.newPage();watch(reader);await openWorkspace(reader,new URL('#table',origin.href).href);
  await reader.waitForFunction(()=>document.querySelector('#ownership')?.textContent.includes('Modo lectura'));
  await go(reader,'table');await hydrated(reader);await tile(reader,writerId).waitFor();
  count=await writes(reader);await openVoucher(reader,writerId);

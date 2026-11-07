@@ -1,3 +1,4 @@
+import {openWorkspace,reloadWorkspace} from './workspace-navigation.mjs';
 import assert from 'node:assert/strict';
 import {chromium} from 'playwright';
 import {spawn} from 'node:child_process';
@@ -80,9 +81,9 @@ try{
     return original.call(this,name,value);
    };
   },key);
-  const page=await context.newPage();watch(page);await page.goto(new URL('#table',origin.href).href);await ready(page);await load(page,input);return {context,page};
+  const page=await context.newPage();watch(page);await openWorkspace(page,new URL('#table',origin.href).href);await ready(page);await load(page,input);return {context,page};
  };
- const reload=async(page,inPack=false)=>{await page.reload();await ready(page);await go(page,'table');if(inPack)await opened(page);else await shelf(page);};
+ const reload=async(page,inPack=false)=>{await reloadWorkspace(page);await ready(page);await go(page,'table');if(inPack)await opened(page);else await shelf(page);};
  const closeEditor=async page=>{if(await page.locator('#store-item-editor[open]').count())await editor(page).getByRole('button',{name:'Cerrar',exact:true}).click();};
  const closeAdvice=page=>page.locator('#shop-advice-dialog').getByRole('button',{name:'Cerrar',exact:true}).click();
  const messages=async page=>(await page.locator('#shop-session-status,#message,#dialog-error,#store-item-error,#voucher-confirm-note,#pack-panel').allTextContents()).join(' ');
@@ -250,7 +251,7 @@ try{
  pass('undo-recovers-persistent-open-context',{contextRestored:true,moneyAfterUndoSkip:16,historyRetained:true},{contextRestored:true,moneyAfterUndoSkip:16,historyRetained:true});await undo.context.close();
 
  // 14. Readonly/mobile, free Celestial and unresolved Hallucination stay explicit.
- const writer=await session(),w=writer.page,writerId=await add(w,'buffoon-normal');before=await raw(w);const reader=await writer.context.newPage();watch(reader);await reader.goto(new URL('#table',origin.href).href);await reader.waitForFunction(()=>document.querySelector('#ownership')?.textContent.includes('Modo lectura'));await go(reader,'table');await shelf(reader);await tile(reader,writerId).locator('.store-extra-inspect').click();assert.equal(await reader.locator(`[data-pack-confirm="${writerId}"]`).isDisabled(),true);assert.equal(await raw(reader),before);await writer.context.close();
+ const writer=await session(),w=writer.page,writerId=await add(w,'buffoon-normal');before=await raw(w);const reader=await writer.context.newPage();watch(reader);await openWorkspace(reader,new URL('#table',origin.href).href);await reader.waitForFunction(()=>document.querySelector('#ownership')?.textContent.includes('Modo lectura'));await go(reader,'table');await shelf(reader);await tile(reader,writerId).locator('.store-extra-inspect').click();assert.equal(await reader.locator(`[data-pack-confirm="${writerId}"]`).isDisabled(),true);assert.equal(await raw(reader),before);await writer.context.close();
  const mobile=await session(fixture(),{width:390,height:844}),m=mobile.page,mobileId=await add(m,'celestial-normal');await buy(m,mobileId);await fillPlanets(m);assert.equal(await m.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);await m.locator('#pack-panel').screenshot({path:dir+'/mobile-content.png'});await observe(m);content=(await record(m)).state.phaseData.context.contents.value;await m.locator(`[data-pack-choose="${content[0].entryId}"]`).click();assert.equal(await m.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);await m.screenshot({path:dir+'/mobile-confirmation.png',fullPage:false});await finish(m);assert.equal((await record(m)).state.observed.money.value,16);await mobile.context.close();
  const free=await session(fixture({jokers:[owned('astronomer','astronomer')]})),a=free.page,freeId=await add(a,'celestial-normal',0);await buy(a,freeId);assert.equal((await record(a)).state.observed.money.value,20);await skip(a);await free.context.close();
  const hallucination=await session(fixture({jokers:[owned('hallucination','hallucination')]})),h=hallucination.page,hId=await add(h,'buffoon-normal');before=await raw(h);await tile(h,hId).locator('.store-extra-inspect').click();const hb=h.locator(`[data-pack-confirm="${hId}"]`);if(await hb.isEnabled()){await hb.click();if(await h.locator('#confirmation[open]').count()){await h.locator('#performed').check();await h.locator('#dialog-accept').click();}}

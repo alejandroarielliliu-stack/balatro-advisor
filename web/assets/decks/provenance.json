@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "artId": "advisor-original-vector-v1",
+  "createdAt": "2026-11-07",
+  "method": "Original SVG geometry authored for Balatro Advisor; constructed by src/ui/deck-art.ts, without downloaded image files, tracing, game extraction, fonts or logos.",
+  "officialGameArt": false,
+  "deckIds": ["red", "blue", "yellow", "green", "black", "magic", "nebula", "ghost", "abandoned", "checkered", "zodiac", "painted", "anaglyph", "plasma", "erratic"],
+  "stakeIds": ["white", "red", "green", "black", "blue", "purple", "orange", "gold"],
+  "visualReferences": [
+    {"kind": "user_supplied_screenshot", "description": "Balatro new-run menu screenshot, supplied in the request; composition and pixel-art direction only, no image tracing or redistribution."},
+    {"kind": "project_catalog", "path": "src/catalog/decks.ts", "description": "Existing identifiers and deck themes; not a verification of gameplay or rules."}
+  ],
+  "consultedSourcesNotIncorporated": [
+    {"url": "https://www.playbalatro.com/press-kit", "finding": "Official page labels its assets for media use; no broad reuse license for individual game sprites was identified. No files downloaded or incorporated."},
+    {"path": "docs/catalogo-completo.md", "finding": "Existing Joker atlas provenance explicitly says a third-party mirror does not grant redistribution rights. That source was not expanded for deck artwork."}
+  ],
+  "rightsNote": "New project-original illustrations, not official Balatro assets. Balatro names and original visual identity belong to LocalThunk / Playstack. No third-party asset license is assigned to these illustrations.",
+  "dependencies": [],
+  "networkAtRuntime": false
+}

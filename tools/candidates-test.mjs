@@ -1,3 +1,4 @@
+import {openWorkspace} from './workspace-navigation.mjs';
 import {logicalBounds} from './ui-logical-bounds.mjs';
 import assert from 'node:assert/strict';
 import {chromium} from 'playwright';
@@ -16,7 +17,7 @@ try{
   const cards=[...document.querySelectorAll('.candidate-card')];
   return cards.length>0&&cards.every(card=>card.dataset.previewStatus&&card.dataset.previewStatus!=='updating'&&card.querySelector('.candidate-info>.fit-score')?.textContent.trim())&&(!content||cards.some(card=>card.querySelector('.quick-fit-result')?.textContent.includes(content)));
  },content);
- await p.goto('http://127.0.0.1:4180/#table');await p.waitForFunction(()=>document.querySelector('#ownership').textContent.includes('Esta pestaña tiene'));
+ await openWorkspace(p,'http://127.0.0.1:4180/#table');await p.waitForFunction(()=>document.querySelector('#ownership').textContent.includes('Esta pestaña tiene'));
  await go('archive');await p.locator('#import-file').setInputFiles({name:'state.json',mimeType:'application/json',buffer:await readFile('examples/shop-purchase.json')});await p.locator('#dialog-accept').click();await go('table');
  await p.waitForFunction(()=>document.querySelectorAll('.bay-mini').length===150);const original=await raw();
  assert.equal(await p.locator('.board > .shop-panel').count(),0);assert.equal(await p.locator('#joker-candidates').count(),1);

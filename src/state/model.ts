@@ -39,6 +39,8 @@ type LegacyShop=Extract<GameStateV01['observed']['shop'],{status:'known'}>['valu
 export type CurrentShop=LegacyShop & {voucherOffers?:VoucherOffer[];packOffers?:PackOffer[]};
 export type GameStateV02 = Omit<GameStateV01, 'schemaVersion' | 'phase' | 'observed'> & {
   schemaVersion: '0.2';
+  /** Manually supplied reference only; never an RNG input or inferred game data. */
+  seed?: string;
   observed:Omit<GameStateV01['observed'],'shop'> & {shop:Fact<CurrentShop>};
 } & PhaseState;
 export type GameState = GameStateV01 | GameStateV02;
@@ -49,6 +51,7 @@ const phase = enumeration('unknown', 'blind_select', 'in_round', 'cashout', 'sho
 export function legacyShape(value:Record<string,unknown>):Record<string,unknown>{
  const base={...value,schemaVersion:'0.1',phase:value.phase==='shop'?'shop':'draft'};
  delete (base as Record<string,unknown>).phaseData;
+  delete (base as Record<string,unknown>).seed;
  if(isObject(value.observed)&&isObject(value.observed.shop)&&value.observed.shop.status==='known'&&isObject(value.observed.shop.value)){
   const shop={...value.observed.shop.value};delete shop.voucherOffers;delete shop.packOffers;
   Object.assign(base,{observed:{...value.observed,shop:{...value.observed.shop,value:shop}}});
@@ -60,6 +63,7 @@ export const currentGameStateSchema: Schema<GameStateV02> = {
   check(value, path, errors) {
     if (!isObject(value)) return issue(errors, path, 'object', 'Se requiere un objeto.');
     let valid = enumeration('0.2').check(value.schemaVersion, `${path}.schemaVersion`, errors);
+    if (Object.hasOwn(value,'seed') && !text(64).check(value.seed, `${path}.seed`, errors)) valid = false;
     if (!phase.check(value.phase, `${path}.phase`, errors)) valid = false;
     else {
       const phaseName = value.phase as RunPhase;

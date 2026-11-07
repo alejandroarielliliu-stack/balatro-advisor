@@ -1,3 +1,4 @@
+import {openWorkspace,reloadWorkspace} from './workspace-navigation.mjs';
 import assert from 'node:assert/strict';
 import {chromium} from 'playwright';
 import {spawn} from 'node:child_process';
@@ -65,11 +66,11 @@ try{
  const session=async(input=fixture(),viewport={width:1440,height:1000})=>{
   const context=await browser.newContext({viewport});
   await context.addInitScript(storageKey=>{window.__packChoiceWrites=0;const original=Storage.prototype.setItem;Storage.prototype.setItem=function(name,value){if(name===storageKey)window.__packChoiceWrites++;return original.call(this,name,value);};},key);
-  const page=await context.newPage();watch(page);await page.goto(new URL('#table',origin.href).href);await ready(page);await go(page,'archive');
+  const page=await context.newPage();watch(page);await openWorkspace(page,new URL('#table',origin.href).href);await ready(page);await go(page,'archive');
   await page.locator('#import-file').setInputFiles({name:'synthetic-pack-choice.json',mimeType:'application/json',buffer:Buffer.from(JSON.stringify(input))});
   await page.locator('#dialog-accept').click();await page.locator('#confirmation').waitFor({state:'hidden'});await go(page,'table');await panel(page).waitFor({state:'visible'});return {context,page};
  };
- const reload=async page=>{await page.reload();await ready(page);await go(page,'table');await panel(page).waitFor({state:'visible'});};
+ const reload=async page=>{await reloadWorkspace(page);await ready(page);await go(page,'table');await panel(page).waitFor({state:'visible'});};
  const finish=async page=>{await page.locator('#performed').check();await page.locator('#dialog-accept').click();await page.locator('#confirmation').waitFor({state:'hidden'});};
 
  // 1. Opening advice, expanding reasons and refreshing never record a choice.

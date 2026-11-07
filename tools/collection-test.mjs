@@ -1,3 +1,4 @@
+import {openWorkspace} from './workspace-navigation.mjs';
 import assert from 'node:assert/strict';
 import {chromium,firefox} from 'playwright';
 import {spawn} from 'node:child_process';
@@ -11,7 +12,7 @@ try{
  browser=await(engine==='firefox'?firefox:chromium).launch({headless:true,...(engine==='chromium'?{channel:'chrome'}:{})});
  const ctx=await browser.newContext({viewport:{width:1440,height:1000}}),p=await ctx.newPage(),errors=[];
  p.on('pageerror',e=>errors.push(e.message));p.on('console',m=>{if(m.type()==='error')errors.push(m.text());});
- await p.goto('http://127.0.0.1:4177/#collection');await p.waitForSelector('.collection-card');
+ await openWorkspace(p,'http://127.0.0.1:4177/#collection');await p.waitForSelector('.collection-card');
  const raw=()=>p.evaluate(()=>JSON.stringify(localStorage));const original=await raw();
  assert.equal(await p.locator('.collection-card').count(),150);assert.match(await p.locator('#collection-view > p.muted').innerText(),/82 compatibles con cálculo de jugadas.*Encaje contextual en la Mesa/);assert.equal(await p.locator('.collection-support').filter({hasText:'Cálculo con jugadas'}).count(),82);assert.equal(await p.locator('.collection-card .bay-score-value').count(),0);assert.doesNotMatch(await p.locator('#collection-view').innerText(),/Con cálculo|Encaje.*\/10|meta: pendiente/);
  const atlas=await p.request.get('http://127.0.0.1:4177/web/assets/jokers/atlas.png');assert.equal(atlas.headers()['content-type'],'image/png');

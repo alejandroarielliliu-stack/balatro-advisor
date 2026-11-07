@@ -1,3 +1,4 @@
+import {openWorkspace,reloadWorkspace} from './workspace-navigation.mjs';
 import assert from 'node:assert/strict';
 import {chromium} from 'playwright';
 import {spawn} from 'node:child_process';
@@ -63,7 +64,7 @@ try{
  },{storageKey:key,options});
  const session=async(input=fixture(),viewport={width:1440,height:1000})=>{
   const context=await browser.newContext({viewport});await context.addInitScript(storageKey=>{window.__eval01ConfirmedWrites=0;const original=Storage.prototype.setItem;Storage.prototype.setItem=function(name,value){if(name===storageKey)window.__eval01ConfirmedWrites++;return original.call(this,name,value);};},key);
-  const page=await context.newPage();watch(page);await page.goto(new URL('#table',origin.href).href);await ready(page);await go(page,'archive');
+  const page=await context.newPage();watch(page);await openWorkspace(page,new URL('#table',origin.href).href);await ready(page);await go(page,'archive');
   await page.locator('#import-file').setInputFiles({name:'synthetic-eval01-browser.json',mimeType:'application/json',buffer:Buffer.from(JSON.stringify(input))});
   await page.locator('#dialog-accept').click();await page.locator('#confirmation').waitFor({state:'hidden'});await go(page,'table');
   await page.locator('.candidate-card[data-offer-id="visible-joker"]').waitFor({state:'visible'});
@@ -90,7 +91,7 @@ try{
  await option(p).locator('details > summary').click();await unchanged(p,before,count);
  const strict=await inspect(p,{requireObserved:true});assert.equal(strict.context.recommendation.status,'abstain');
  assert.ok(strict.actions.every(action=>action.status==='pending_evidence'));assert.ok(strict.actions.every(action=>!action.evidence?.verifiedAgainstGame));
- await unchanged(p,before,count);await close(p);await p.reload();await ready(p);await go(p,'table');await p.locator('.candidate-card[data-offer-id="visible-joker"]').waitFor({state:'visible'});await open(p);
+ await unchanged(p,before,count);await close(p);await reloadWorkspace(p);await ready(p);await go(p,'table');await p.locator('.candidate-card[data-offer-id="visible-joker"]').waitFor({state:'visible'});await open(p);
  await unchanged(p,before,0);await close(p);pass('consultation-strict-evidence-reload-readonly',{confirmedRecordWrites:0,revision:0,historyEntries:0,strict:'abstain',gameVerified:false},{confirmedRecordWrites:0,revision:(await record(p)).state.revision,historyEntries:(await record(p)).history.length,strict:strict.context.recommendation.status,gameVerified:false});await initial.context.close();
 
  // 3. Seed Money raises the cap, but does not alter the $5 interest unit:

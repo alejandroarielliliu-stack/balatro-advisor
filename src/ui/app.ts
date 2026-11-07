@@ -5,6 +5,7 @@ import {evaluateComposition} from '../advisor/composition.js';
 import {mountComposition} from './composition-view.js';
 import {renderRunJourney} from './run-progress-view.js';
 import {createNewRun} from '../run/start.js';
+import {createRunStartBridge} from './run-start-bridge.js';
 import {observationPatch} from '../state/observations.js';
 import {prepareBasicObservation} from '../state/basic-observations.js';
 import type {BasicObservationRequest} from '../state/basic-observations.js';
@@ -734,6 +735,20 @@ const handButton=button('Calcular manos del mazo y candidatos',()=>{
  const selected=readShopSnapshot().jokers;
  if(selected.length)void fetch('./web/assets/jokers/catalog.json').then(r=>r.json()).then((catalog:{jokers:JokerReference[]})=>{if(request!==handRequest)return;for(const candidate of selected){const j=catalog.jokers.find(j=>j.id===candidate.catalogId||j.engineId===candidate.catalogId);if(j){const offer={price:candidate.price===null?unknown():known(candidate.price),edition:known(candidate.edition),stickers:known(candidate.stickers)};const section=node('section');section.append(node('h3',j.names.es),renderHandPreview(j,candidate.replacementId??'',state,scenarios,offer));handResults.append(section);}}}).catch(()=>{if(request===handRequest)handResults.append(node('p','No se pudo cargar el catálogo para comparar las ofertas.','error'));});
 });handButton.id='calculate-hands';$('live-plans').append(handButton);
-mountWorkspace();mountCollection();renderScenarios();reload();lock.acquire();
+const runStartBridge=createRunStartBridge({
+  context:()=>({record,raw:seenRaw,writable:lock.owned,dirty,loadFailed}),
+  save:(state,expectedRaw,replacing)=>commit(()=>replacing?store.restoreJson(JSON.stringify(state),{confirmed:true,expectedRaw}):store.initialize(state)),
+  confirmStart:({replacing,profileRequired},confirm)=>{
+    const body=node('div');let profile:HTMLInputElement|undefined;
+    if(replacing){
+      body.append(node('p','La nueva partida sustituirá esta copia y su historial. Exporta la actual si quieres conservarla.','notice'));
+      const backup=button('Exportar partida actual',()=>$('export').click());backup.id='setup-export-current';body.append(backup);
+    }
+    if(profileRequired){const declaration=checkbox('setup-profile','Steam 1.0.1o-FULL · sin mods · White Stake');profile=declaration.input;body.append(declaration.wrap);}
+    openDialog(replacing?'Iniciar otra partida':'Registrar nueva partida',body,replacing?'Sí, iniciar otra partida':'Iniciar partida',()=>confirm(profile?.checked??true));
+  },
+  exportCurrent:()=>$('export').click(),reportError:text=>message(text,true),error:()=>$('message').textContent??'',runId:uuid,now
+});
+mountWorkspace(runStartBridge);mountCollection();renderScenarios();reload();lock.acquire();
 
 

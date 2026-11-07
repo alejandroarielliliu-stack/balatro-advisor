@@ -1,3 +1,4 @@
+import {openWorkspace,reloadWorkspace} from './workspace-navigation.mjs';
 import {logicalBounds} from './ui-logical-bounds.mjs';
 import assert from 'node:assert/strict';
 import { chromium } from 'playwright';
@@ -74,7 +75,7 @@ try {
     const stored = () => page.evaluate(key => localStorage.getItem(key), storageKey);
     const writes = () => page.evaluate(() => window.__shopConfirmedWrites);
     const submits = () => page.evaluate(() => window.__shopStateSubmits);
-    await page.goto('http://127.0.0.1:' + port + '/#table');
+    await openWorkspace(page,'http://127.0.0.1:' + port + '/#table');
     await page.waitForFunction(() => document.querySelector('#ownership')?.textContent.includes('Esta pestaña tiene'));
     await go('archive');
     await page.locator('#import-file').setInputFiles({
@@ -179,7 +180,7 @@ try {
 
   // Recalculation above used an explicitly unsaved base-field edit. Discard it
   // before recording another observation; SHOP03a must not merge a dirty draft.
-  await p.reload();
+  await reloadWorkspace(p);
   await p.waitForFunction(() => document.querySelector('#ownership')?.textContent.includes('Esta pestaña tiene'));
   await p.waitForFunction(() => document.querySelectorAll('.bay-mini').length === 150);
   await main.checkpoint();
@@ -418,7 +419,7 @@ try {
   assert.equal(await p.locator('.candidate-card,.store-extra-tile').count(), 4);
   await main.unchanged();
   const beforeReload = await main.stored();
-  await p.reload();
+  await reloadWorkspace(p);
   await p.waitForFunction(() => document.querySelectorAll('.bay-mini').length === 150 && document.querySelector('#store-new-shop')?.dataset.localDisabled === 'false');
   await main.go('table');
   assert.equal(await main.stored(), beforeReload, 'Reload itself must not rewrite the record.');

@@ -1,3 +1,4 @@
+import {openWorkspace,reloadWorkspace} from './workspace-navigation.mjs';
 import {logicalBounds} from './ui-logical-bounds.mjs';
 import assert from 'node:assert/strict';
 import {chromium} from 'playwright';
@@ -31,7 +32,7 @@ try{
  const go=(p,screen)=>p.locator(`[data-screen="${screen}"]`).click();
  const start=async state=>{
   const context=await browser.newContext({viewport:{width:1440,height:1000}}),p=await context.newPage();p.on('pageerror',e=>errors.push(e.message));
-  await p.goto(origin+'/#table');await p.waitForFunction(()=>document.querySelector('#ownership').textContent.includes('Esta pestaña tiene'));
+  await openWorkspace(p,origin+'/#table');await p.waitForFunction(()=>document.querySelector('#ownership').textContent.includes('Esta pestaña tiene'));
   if(state){await go(p,'archive');await p.locator('#import-file').setInputFiles({name:'observed-sale.json',mimeType:'application/json',buffer:Buffer.from(JSON.stringify(state))});await p.locator('#dialog-accept').click();await go(p,'table');}
   await p.waitForFunction(()=>document.querySelectorAll('.bay-mini').length===150);return {context,p};
  };
@@ -50,7 +51,7 @@ try{
   await p.locator('#confirmation').waitFor({state:'hidden'});
  };
  const waitCash=(p,cash)=>p.waitForFunction(expected=>document.querySelector('#money')?.value===String(expected),cash);
- const reload=async p=>{await p.reload();await p.waitForFunction(()=>document.querySelector('#ownership').textContent.includes('Esta pestaña tiene'));await go(p,'table');};
+ const reload=async p=>{await reloadWorkspace(p);await p.waitForFunction(()=>document.querySelector('#ownership').textContent.includes('Esta pestaña tiene'));await go(p,'table');};
 
  const first=fixture();first.observed.nextBlind={status:'unknown',reason:'No transcrita; no necesaria para vender.'};
  const {context,p}=await start(first);

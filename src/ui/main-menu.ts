@@ -1,11 +1,13 @@
 import {mountMenuBackground} from './menu-background.js';
+import {mountRunSetup} from './run-setup.js';
+import type {RunStartBridge} from './run-start-bridge.js';
 
 const MOTION_KEY='balatro-advisor.menu-motion.v1';
 type Motion='system'|'on'|'off';
 const motionValue=(value:unknown):Motion=>value==='on'||value==='off'?value:'system';
 
 /** Entry screen only: these preferences never touch the run or its journal. */
-export function mountMainMenu(){
+export function mountMainMenu(bridge:RunStartBridge){
  const host=document.getElementById('menu-view')!;
  const canvas=document.getElementById('menu-background') as HTMLCanvasElement;
  const dialog=document.getElementById('menu-settings') as HTMLDialogElement;
@@ -15,6 +17,7 @@ export function mountMainMenu(){
  let motion:Motion='system';
  try{motion=motionValue(localStorage.getItem(MOTION_KEY));}catch{/* The menu remains usable with storage denied. */}
  const background=mountMenuBackground(canvas);
+ const setup=mountRunSetup(host,bridge);
  const apply=()=>{
   const enabled=motion==='on'||motion==='system'&&!media.matches;
   host.dataset.motion=enabled?'on':'off';
@@ -36,7 +39,7 @@ export function mountMainMenu(){
  dialog.addEventListener('click',event=>{if(event.target===dialog){const r=dialog.getBoundingClientRect();if(event.clientX<r.left||event.clientX>r.right||event.clientY<r.top||event.clientY>r.bottom)dialog.close();}});
  dialog.addEventListener('close',()=>options.focus({preventScroll:true}));
  apply();
- return {setActive(active:boolean){
+ return {setSetupOpen(value:boolean){if(value&&dialog.open)dialog.close();setup.setOpen(value);},focusSetup:()=>setup.focus(),setActive(active:boolean){
   if(!active&&dialog.open)dialog.close();
   background.setActive(active);
  }};

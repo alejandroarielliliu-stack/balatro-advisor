@@ -1,3 +1,4 @@
+import {openWorkspace,reloadWorkspace} from './workspace-navigation.mjs';
 import assert from 'node:assert/strict';
 import {chromium} from 'playwright';
 import {spawn} from 'node:child_process';
@@ -33,7 +34,7 @@ try{
    window.__sessionWrites=0;window.__failConfirmedWrite=false;
    const original=Storage.prototype.setItem;Storage.prototype.setItem=function(name,value){if(name===k){if(window.__failConfirmedWrite)throw new DOMException('Synthetic quota failure','QuotaExceededError');window.__sessionWrites++;}return original.call(this,name,value);};
   },key);
-  const p=await context.newPage();p.on('pageerror',e=>pageErrors.push(e.message));await p.goto(new URL('#table',origin).href);await ready(p);await load(p,state);return {context,p};
+  const p=await context.newPage();p.on('pageerror',e=>pageErrors.push(e.message));await openWorkspace(p,new URL('#table',origin).href);await ready(p);await load(p,state);return {context,p};
  };
  const add=async(p,id='j_joker')=>{
   await p.locator('#store-joker-add').click();
@@ -45,7 +46,7 @@ try{
  const begin=async(p,id)=>{await openOffer(p,id);await p.locator(`[data-shop-confirm="${id}"]`).click();await p.locator('#confirmation').waitFor({state:'visible'});};
  const finish=async(p,{twice=false}={})=>{await p.locator('#performed').check();if(twice)await p.locator('#dialog-accept').evaluate(b=>{b.click();b.click();});else await p.locator('#dialog-accept').click();await p.locator('#confirmation').waitFor({state:'hidden'});};
  const messages=async p=>(await p.locator('#shop-session-status,#message,#dialog-error,#bay-add-note').allTextContents()).join(' ');
- const reload=async p=>{await p.reload();await ready(p);await go(p,'table');};
+ const reload=async p=>{await reloadWorkspace(p);await ready(p);await go(p,'table');};
 
  const main=await session(),{p}=main,original=await record(p),id=await add(p);
  let r=await record(p);assert.equal(r.state.observed.money.value,25);assert.equal(r.state.observed.jokers.value.length,0);assert.equal(r.state.observed.shop.value.cardOffers[0].catalogId,'joker');assert.equal(r.state.revision,original.state.revision+1);assert.equal(r.history.at(-1).kind,'correction');
@@ -90,7 +91,7 @@ try{
  const external=await stale.p.evaluate(async({binding,k})=>{const {createConfirmedStore}=await import('/dist/src/storage/confirmed-store.js');return createConfirmedStore(()=>localStorage).correct({confirmationId:'external-observed-money',confirmed:true,expected:binding,updatedAt:'2026-10-15T12:00:00Z',patch:{money:{status:'known',value:24,source:'manual'}},reason:'Synthetic external change'});},{binding:{runId:beforeExternal.state.runId,revision:beforeExternal.state.revision,rulesetId:beforeExternal.state.rulesetId},k:key});assert.equal(external.ok,true);const externalRaw=await raw(stale.p);await stale.p.locator('#dialog-accept').click();assert.equal(await raw(stale.p),externalRaw);r=await record(stale.p);assert.equal(r.state.observed.money.value,24);assert.equal(r.state.observed.jokers.value.length,0);assert.match(await messages(stale.p),/cambi|revisi|recarga|recalcula/i);await stale.context.close();
  pass('stale-confirmation','Change since opening confirmation rejects the old purchase; external $24 state/history remain intact',{money:24,owned:0,stalePurchaseApplied:false});
 
- const writer=await session(),writerId=await add(writer.p);before=await raw(writer.p);const second=await writer.context.newPage();second.on('pageerror',e=>pageErrors.push(e.message));await second.goto(new URL('#table',origin).href);await second.waitForFunction(()=>document.querySelector('#ownership')?.textContent.includes('Modo lectura'));await second.locator(`.candidate-card[data-offer-id="${writerId}"]`).waitFor();d=await openOffer(second,writerId);const readonly=second.locator(`[data-shop-confirm="${writerId}"]`);assert.equal(await readonly.isDisabled(),true,'The actual purchase control must be disabled in the non-writer tab');assert.match(await second.locator('#ownership').textContent(),/Modo lectura/);assert.equal(await raw(second),before);assert.equal(await second.locator('#confirmation[open]').count(),0);
+ const writer=await session(),writerId=await add(writer.p);before=await raw(writer.p);const second=await writer.context.newPage();second.on('pageerror',e=>pageErrors.push(e.message));await openWorkspace(second,new URL('#table',origin).href);await second.waitForFunction(()=>document.querySelector('#ownership')?.textContent.includes('Modo lectura'));await second.locator(`.candidate-card[data-offer-id="${writerId}"]`).waitFor();d=await openOffer(second,writerId);const readonly=second.locator(`[data-shop-confirm="${writerId}"]`);assert.equal(await readonly.isDisabled(),true,'The actual purchase control must be disabled in the non-writer tab');assert.match(await second.locator('#ownership').textContent(),/Modo lectura/);assert.equal(await raw(second),before);assert.equal(await second.locator('#confirmation[open]').count(),0);
  pass('second-tab-readonly','A second tab can inspect the persisted shop but cannot confirm a purchase while the first owns the write lock',{recordUnchanged:true});
 
  await second.keyboard.press('Escape');await second.locator('.storage-status > summary').click();await second.getByRole('button',{name:'Solicitar control',exact:true}).click();await second.waitForFunction(()=>document.querySelector('#ownership')?.textContent.includes('Esperando control'));await writer.p.locator('.storage-status > summary').click();await writer.p.getByRole('button',{name:'Liberar control',exact:true}).click();await ready(second);d=await openOffer(second,writerId);assert.equal(await second.locator(`[data-shop-confirm="${writerId}"]`).isEnabled(),true,'Ownership gain must re-enable a legal purchase, without stale local-disabled state');await second.locator(`[data-shop-confirm="${writerId}"]`).click();await finish(second);r=await record(second);assert.equal(r.state.observed.money.value,23);assert.equal(r.state.observed.jokers.value.length,1);assert.equal(r.state.observed.shop.value.cardOffers.length,0);await writer.context.close();

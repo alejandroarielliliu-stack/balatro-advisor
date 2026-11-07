@@ -1,3 +1,4 @@
+import {openWorkspace,reloadWorkspace} from './workspace-navigation.mjs';
 import assert from 'node:assert/strict';
 import {chromium,firefox} from 'playwright';
 import {mkdir,writeFile,readFile} from 'node:fs/promises';
@@ -25,7 +26,7 @@ let observationCount=0;
 try{
   context=await browser.newContext({viewport:{width:1280,height:900},acceptDownloads:true});
   const page=await context.newPage();page.on('pageerror',e=>errors.push(e.message));
-  await page.goto(new URL('#table',base).href);await page.waitForFunction(()=>document.querySelector('#ownership').textContent.includes('Esta pestaña tiene'));
+  await openWorkspace(page,new URL('#table',base).href);await page.waitForFunction(()=>document.querySelector('#ownership').textContent.includes('Esta pestaña tiene'));
   await check('crear partida mediante formularios, errores junto al campo y valores desconocidos',async()=>{
     assert.equal(await page.locator('#edit-reason').count(),0);assert.equal(await page.locator('#revision').innerText(),'Sin copia guardada');
     await go(page,'table');await revealDetails(page,'.coverage-note');await page.locator('#coverage').check();await go(page,'table');await page.locator('#money').fill('-20.5'); // Observed balances may be negative; fractions are structurally invalid.
@@ -59,7 +60,7 @@ try{
     },{oldState,firstId});assert.equal(result[0].errors[0].code,'stale_revision');assert.equal(result[1].errors[0].code,'duplicate_confirmation');assert.equal((await state(page)).history.length,observationCount+1);
   });
   await check('recarga recupera partida y permite corregir/deshacer sin borrar historial',async()=>{
-    await page.reload();await page.waitForFunction(()=>document.querySelector('#ownership').textContent.includes('Esta pestaña tiene'));
+    await reloadWorkspace(page);await page.waitForFunction(()=>document.querySelector('#ownership').textContent.includes('Esta pestaña tiene'));
     assert.equal(await page.locator('#money').inputValue(),'2');await go(page,'table');const before=await raw(page);await page.locator('#money').fill('3');assert.equal(await raw(page),before);await page.locator('#money').press('Tab');const corrected=await revision(page,observationCount+2);assert.equal(corrected.history.at(-1).kind,'correction');assert.equal(corrected.history.at(-1).action,null);
     await go(page,'archive');await page.getByRole('button',{name:'Deshacer la última entrada'}).click();await page.locator('#undo-reason').fill('La corrección fue un error');await page.locator('#dialog-accept').click();
     assert.equal((await state(page)).state.revision,observationCount+3);assert.equal((await state(page)).state.observed.money.value,2);assert.equal((await state(page)).history.length,observationCount+3);
@@ -75,11 +76,11 @@ try{
     const before=await raw(page);await page.evaluate(()=>{window.originalSetItem=Storage.prototype.setItem;Storage.prototype.setItem=function(){throw new DOMException('test quota','QuotaExceededError');};});
     await go(page,'table');await page.locator('#money').fill('4');assert.equal(await raw(page),before);await page.locator('#money').press('Tab');await page.locator('#basic-save-status[data-state=error]').waitFor();
     assert.equal(await raw(page),before);assert.equal(await page.locator('#money').inputValue(),'4');assert.match(await page.locator('#basic-save-message').innerText(),/No se pudo guardar/);
-    await page.evaluate(()=>Storage.prototype.setItem=window.originalSetItem);await page.reload();await page.waitForFunction(()=>document.querySelector('#ownership').textContent.includes('Esta pestaña tiene'));
+    await page.evaluate(()=>Storage.prototype.setItem=window.originalSetItem);await reloadWorkspace(page);await page.waitForFunction(()=>document.querySelector('#ownership').textContent.includes('Esta pestaña tiene'));
   });
   const second=await context.newPage();second.on('pageerror',e=>errors.push(e.message));
   await check('dos pestañas: exclusión real, solicitud en espera, liberación y nuevo propietario',async()=>{
-    await second.goto(new URL('#table',base).href);await second.waitForFunction(()=>document.querySelector('#ownership').textContent.includes('Modo lectura'));
+    await openWorkspace(second,new URL('#table',base).href);await second.waitForFunction(()=>document.querySelector('#ownership').textContent.includes('Modo lectura'));
     await go(second,'archive');assert.equal(await second.getByRole('button',{name:'Guardar actualización que transcribí'}).isDisabled(),true);
     await storage(second);await second.getByRole('button',{name:'Solicitar control'}).click();await second.waitForFunction(()=>document.querySelector('#ownership').textContent.includes('Esperando control'));
     const locks=await second.evaluate(()=>navigator.locks.query());assert.equal(locks.held.length,1);assert.equal(locks.pending.length,1);
@@ -104,14 +105,14 @@ try{
   await check('sin Web Locks el navegador permanece en lectura, sin persistencia insegura',async()=>{
     const isolated=await browser.newContext();try{
       await isolated.addInitScript(()=>Object.defineProperty(navigator,'locks',{value:undefined}));
-      const readonly=await isolated.newPage();await readonly.goto(new URL('#table',base).href);
+      const readonly=await isolated.newPage();await openWorkspace(readonly,new URL('#table',base).href);
       await go(readonly,'archive');assert.equal(await readonly.getByRole('button',{name:'Crear y guardar mi partida'}).isDisabled(),true);
       assert.equal(await raw(readonly),null);
     }finally{await isolated.close();}
   });
   await check('teclado: recorrer controles, crear con desconocidos y cerrar diálogo con Escape',async()=>{
     const ctx=await browser.newContext();try{
-      const p=await ctx.newPage();p.on('pageerror',e=>errors.push(e.message));await p.goto(new URL('#table',base).href);
+      const p=await ctx.newPage();p.on('pageerror',e=>errors.push(e.message));await openWorkspace(p,new URL('#table',base).href);
       await p.waitForFunction(()=>document.querySelector('#ownership').textContent.includes('Esta pestaña tiene'));
       await revealDetails(p,'.coverage-note');for(let i=0;i<80 && !await p.locator('#coverage').evaluate(e=>e===document.activeElement);i++)await p.keyboard.press('Tab');
       assert.equal(await p.locator('#coverage').evaluate(e=>e===document.activeElement),true);await p.keyboard.press('Space');
@@ -124,7 +125,7 @@ try{
   });
   await check('tacto emulado 360px: crear, consultar, confirmar compra y recuperar',async()=>{
     const ctx=await browser.newContext({viewport:{width:360,height:800},hasTouch:true,...(engine==='chromium'?{isMobile:true}:{})});try{
-      const p=await ctx.newPage();p.on('pageerror',e=>errors.push(e.message));await p.goto(new URL('#table',base).href);
+      const p=await ctx.newPage();p.on('pageerror',e=>errors.push(e.message));await openWorkspace(p,new URL('#table',base).href);
       await p.waitForFunction(()=>document.querySelector('#ownership').textContent.includes('Esta pestaña tiene'));
       await go(p,'table');await revealDetails(p,'.coverage-note');await p.locator('#coverage').tap();await go(p,'table');await p.locator('#money').fill('7');await p.locator('#blind-kind').selectOption('big');assert.equal(await p.locator('#target').inputValue(),'450');assert.equal(await p.locator('#reward').inputValue(),'4');
       await go(p,'archive');await p.getByRole('button',{name:'Crear y guardar mi partida'}).tap();await go(p,'table');
@@ -132,14 +133,14 @@ try{
       await go(p,'evaluation');await p.getByRole('button',{name:'Añadir plantilla hipotética: dos parejas'}).tap();await p.locator('.scenario').waitFor();
       const before=await raw(p);await p.locator('#analyze').tap();assert.equal(await raw(p),before);assert.match(await p.locator('#advice').innerText(),/572 puntos/);
       await p.locator('#advice .preferred').getByRole('button',{name:'Registrar que hice esta acción'}).tap();await p.locator('#performed').tap();await p.locator('#dialog-accept').tap();
-      assert.equal((await state(p)).state.observed.money.value,2);await p.reload();assert.equal((await state(p)).history.length,2);
+      assert.equal((await state(p)).state.observed.money.value,2);await reloadWorkspace(p);assert.equal((await state(p)).history.length,2);
       assert.equal(await p.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
     }finally{await ctx.close();}
   });
   assert.deepEqual(errors,[]);
   await check('T07c cota S09 sin escenario, sin escritura e invalidación al editar',async()=>{
     const ctx=await browser.newContext();try{
-      const p=await ctx.newPage();p.on('pageerror',e=>errors.push(e.message));await p.goto(new URL('#table',base).href);
+      const p=await ctx.newPage();p.on('pageerror',e=>errors.push(e.message));await openWorkspace(p,new URL('#table',base).href);
       await p.waitForFunction(()=>document.querySelector('#ownership').textContent.includes('Esta pestaña tiene'));
       await go(p,'archive');await p.locator('#import-file').setInputFiles({name:'s09.json',mimeType:'application/json',buffer:await readFile('examples/s09-bound.json')});
       await p.locator('#confirmation').waitFor({state:'visible'});await p.locator('#dialog-accept').click();
@@ -156,7 +157,7 @@ try{
   assert.deepEqual(errors,[]);
   await check('T08c consejo de venta individual, sacrificio y confirmación sin copiar cobro hipotético',async()=>{
     const ctx=await browser.newContext({viewport:{width:390,height:844},hasTouch:true});try{
-      const p=await ctx.newPage();p.on('pageerror',e=>errors.push(e.message));await p.goto(new URL('#table',base).href);
+      const p=await ctx.newPage();p.on('pageerror',e=>errors.push(e.message));await openWorkspace(p,new URL('#table',base).href);
       await p.waitForFunction(()=>document.querySelector('#ownership').textContent.includes('Esta pestaña tiene'));
       await go(p,'archive');await p.locator('#import-file').setInputFiles({name:'sale.json',mimeType:'application/json',buffer:await readFile('examples/sale-psychic.json')});
       await p.locator('#confirmation').waitFor({state:'visible'});await p.locator('#dialog-accept').tap();
@@ -178,13 +179,13 @@ try{
       const after=await state(p);assert.equal(after.state.observed.money.value,12);assert.equal(after.state.revision,1);assert.equal(after.history.length,1);
       assert.deepEqual(after.history[0].action,{type:'sell',instanceId:'half_joker'});
       assert.deepEqual(after.state.observed.shop,beforeState.state.observed.shop);assert.equal(after.state.observed.jokers.value.length,2);
-      await p.reload();assert.equal((await state(p)).state.observed.money.value,12);
+      await reloadWorkspace(p);assert.equal((await state(p)).state.observed.money.value,12);
     }finally{await ctx.close();}
   });
   assert.deepEqual(errors,[]);
   await check('T08c horizonte explícito S03, cobros por rama, cero escrituras e invalidación',async()=>{
     const ctx=await browser.newContext({viewport:{width:390,height:844},hasTouch:true});try{
-      const p=await ctx.newPage();p.on('pageerror',e=>errors.push(e.message));await p.goto(new URL('#table',base).href);
+      const p=await ctx.newPage();p.on('pageerror',e=>errors.push(e.message));await openWorkspace(p,new URL('#table',base).href);
       await p.waitForFunction(()=>document.querySelector('#ownership').textContent.includes('Esta pestaña tiene'));
       await go(p,'archive');await p.locator('#import-file').setInputFiles({name:'s03.json',mimeType:'application/json',buffer:await readFile('examples/horizon-golden-state.json')});
       await p.locator('#confirmation').waitFor({state:'visible'});await p.locator('#dialog-accept').tap();const before=await raw(p);
@@ -227,7 +228,7 @@ try{
         s.observed.visibleBoss=known({ante:2,kind:'boss',bossId:known(id==='S04'?'the_wall':'the_water'),target:known(id==='S04'?3200:1600),reward:known(5)});
         s.observed.jokers=known((id==='S04'?['half_joker']:['half_joker','banner']).map(catalogId=>({instanceId:catalogId,catalogId,edition:known('base'),stickers:known([]),sellValue:known(2),counters:{}})));
         s.observed.shop.value.cardOffers=(id==='S04'?['scholar','even_steven']:['scholar']).map(catalogId=>({offerId:catalogId,catalogId,label:catalogId,kind:'joker',price:known(4),edition:known('base'),stickers:known([])}));
-        const p=await ctx.newPage();p.on('pageerror',e=>errors.push(e.message));await p.goto(new URL('#table',base).href);
+        const p=await ctx.newPage();p.on('pageerror',e=>errors.push(e.message));await openWorkspace(p,new URL('#table',base).href);
         await p.waitForFunction(()=>document.querySelector('#ownership').textContent.includes('Esta pestaña tiene'));
         await go(p,'archive');await p.locator('#import-file').setInputFiles({name:id+'.json',mimeType:'application/json',buffer:Buffer.from(JSON.stringify(s))});
         await p.locator('#confirmation').waitFor({state:'visible'});await p.locator('#dialog-accept').tap();const before=await raw(p);

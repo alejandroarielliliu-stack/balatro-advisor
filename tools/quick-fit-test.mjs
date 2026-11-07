@@ -1,3 +1,4 @@
+import {openWorkspace} from './workspace-navigation.mjs';
 import {logicalBounds} from './ui-logical-bounds.mjs';
 import assert from 'node:assert/strict';
 import {chromium} from 'playwright';
@@ -55,7 +56,7 @@ try{
   });
   });
  };
- await p.goto('http://127.0.0.1:4192/#table');
+ await openWorkspace(p,'http://127.0.0.1:4192/#table');
  await p.waitForFunction(()=>document.querySelector('#ownership').textContent.includes('Esta pestaña tiene'));
  await p.waitForFunction(()=>document.querySelectorAll('.bay-mini').length===150);
  assert.equal(await stored(),null);

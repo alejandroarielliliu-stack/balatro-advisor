@@ -3,6 +3,7 @@ import {createServer} from 'node:http';
 import {readFile, readdir, mkdir, writeFile} from 'node:fs/promises';
 import {resolve, relative, extname, sep} from 'node:path';
 import {chromium} from 'playwright';
+import {openWorkspace,reloadWorkspace} from './workspace-navigation.mjs';
 
 // Test the deployable artifact, never the development server/source tree.
 // GitHub project Pages mounts the same site beneath a repository-name prefix.
@@ -71,9 +72,14 @@ try{
   assert.equal(await p.locator('.app-header').isVisible(),false);
   assert.equal(await stored(p),null,'Opening the static menu does not create a run.');
   await p.locator('#menu-play').click();
+  await p.locator('#run-setup').waitFor({state:'visible'});
+  assert.equal(await p.locator('.run-setup-tabs [role=tab]').count(),3);
+  assert.equal(await stored(p),null,'Opening the run selector never creates a run.');
+  await p.locator('#setup-back').click();
+  await p.locator('#menu-collection').click();await go(p,'table');
   await p.waitForFunction(()=>document.body.dataset.view==='table');
   assert.equal(await stored(p),null,'Entering the table is navigation, not a saved run.');
-  pass('entry-menu','Project root opens the menu and Play navigates to the existing table without creating a run',{initial:'menu',afterPlay:'table',writes:0});
+  pass('entry-menu','Project root opens the menu; Play opens the three-tab selector; Back and internal navigation preserve the empty run',{initial:'menu',afterPlay:'setup',writes:0});
   await p.waitForFunction(()=>document.querySelectorAll('.bay-mini').length===150);
   await p.evaluate(()=>document.fonts.ready);
   assert.equal(await p.evaluate(()=>document.fonts.check('16px "Balatro Pixel"')),true);
@@ -117,7 +123,7 @@ try{
   // A second isolated context tests the independently documented 80→572 hand oracle.
   const exactCtx=await browser.newContext({viewport:{width:1440,height:1000}});
   try{
-    const e=await exactCtx.newPage();instrument(e);await e.goto(new URL('#table',base).href);await ready(e);
+    const e=await exactCtx.newPage();instrument(e);await openWorkspace(e,new URL('#table',base).href);await ready(e);
     await e.waitForFunction(()=>document.querySelectorAll('.bay-mini').length===150);
     const exampleResponse=await fetch(base+'examples/shop-purchase.json');assert.equal(exampleResponse.status,200);
     const exampleText=await exampleResponse.text();
@@ -145,7 +151,7 @@ try{
     await e.locator('#dialog-accept').click();
     const before=await stored(e);assert.ok(before);
     const record=JSON.parse(before);assert.equal(record.state.runId,'synthetic-h2-s01');assert.equal(record.state.observed.money.value,7);assert.deepEqual(record.history,[]);
-    await e.reload();await ready(e);assert.equal(await stored(e),before);assert.equal(await e.locator('#money').inputValue(),'7');await go(e,'table');
+    await reloadWorkspace(e);await ready(e);assert.equal(await stored(e),before);assert.equal(await e.locator('#money').inputValue(),'7');await go(e,'table');
     assert.equal(await e.locator('.scenario').count(),0,'Transient hand plans are not copied into the saved actual state.');
     await e.waitForFunction(()=>document.querySelector('.candidate-card[data-candidate="j_half"]'));
     await e.locator('.candidate-card[data-candidate="j_half"] .candidate-hero').click();await e.keyboard.press('Escape');

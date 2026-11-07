@@ -78,7 +78,8 @@
     "test:frontend": "npm run build && node tools/frontend-redesign-test.mjs",
     "test:visible-decisions": "npm run build && node tools/visible-decisions-test.mjs",
     "test:menu": "npm run build && node tools/main-menu-test.mjs",
-    "test:orientation": "npm run build && node tools/orientation-test.mjs"
+    "test:orientation": "npm run build && node tools/orientation-test.mjs",
+    "test:run-setup": "npm run build && node tools/run-setup-test.mjs"
   },
   "devDependencies": {
     "@types/node": "24.19.1",

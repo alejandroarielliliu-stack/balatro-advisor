@@ -1,0 +1,70 @@
+/* Run selection: fixed game-like composition scaled to the logical landscape. */
+#run-setup[hidden] {display:none;}
+#run-setup {position:absolute;inset:0;z-index:6;background:#25333a99;backdrop-filter:blur(1px);font-family:'Balatro Pixel',monospace;}
+#menu-view[data-setup-open="true"]>.menu-title-stage,#menu-view[data-setup-open="true"]>.menu-actions {filter:brightness(.65);}
+.run-setup-panel {--setup-scale:1;position:absolute;left:50%;top:50%;width:540px;height:540px;translate:-50% -50%;scale:var(--setup-scale);transform-origin:center;overflow:visible;border:3px solid #a2b6b5;border-radius:12px;background:#334d55;box-shadow:inset 0 -8px #243c44,0 7px #172d35,0 14px 25px #071c2866;color:#f6f2e6;outline:none;}
+.run-setup-panel button,.run-setup-panel input,.run-setup-panel a {font-family:'Balatro Pixel',monospace;}
+.run-setup-tabs {position:absolute;left:55px;right:55px;top:22px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;}
+.run-setup-tabs>button {position:relative;min-width:0;min-height:44px;padding:4px 7px;border:0;border-radius:8px;background:#f34d44;color:#fff8ec;font-size:24px;line-height:1;box-shadow:inset 0 3px #ff7a645c,0 4px #b33536;}
+.run-setup-tabs>button:hover {background:#ff6050;}
+.run-setup-tabs>button:first-child {font-size:20px;white-space:nowrap;letter-spacing:-.3px;}
+.run-setup-tabs>button[aria-selected="true"]::before {content:'';position:absolute;top:-19px;left:calc(50% - 9px);border-left:9px solid transparent;border-right:9px solid transparent;border-top:14px solid #ff594d;filter:drop-shadow(0 2px #96383c);}
+.run-setup-tabs>button:focus-visible,.setup-neighbor-deck:focus-visible,.setup-neighbor-stake:focus-visible,.setup-play:focus-visible,.setup-back:focus-visible {outline:3px solid #fff1b0;outline-offset:4px;}
+.setup-deck-stage {position:absolute;top:83px;left:0;width:100%;height:172px;touch-action:none;}
+.setup-deck-focus {position:absolute;top:4px;left:91px;width:354px;height:166px;display:grid;grid-template-columns:94px minmax(0,1fr);align-items:center;gap:10px;padding:8px;border:6px solid #1a3038;border-radius:10px;background:#263c43;z-index:2;pointer-events:none;}
+.setup-deck-portrait {--deck-art-width:88px;display:grid;place-items:center;}
+.setup-deck-info {display:grid;grid-template-rows:30px 1fr;align-self:stretch;gap:4px;min-width:0;}
+.setup-deck-info h2,.setup-stake-info h2 {margin:0;text-align:center;font:24px/1.1 'Balatro Pixel',monospace;color:#f9f7e9;text-shadow:0 2px #122c34;display:grid;align-items:center;}
+.setup-deck-info p,.setup-stake-info p {margin:0;padding:6px 8px;display:grid;place-items:center;background:#eff2ed;border-bottom:5px solid #c6d0cb;border-radius:6px;text-align:center;color:#243a44;font:22px/1 'Balatro Pixel',monospace;overflow-wrap:anywhere;}
+.setup-neighbor-deck,.setup-neighbor-stake {position:absolute;min-height:0;min-width:0;margin:0;padding:0;border:0;background:transparent;box-shadow:none;opacity:.75;transition:opacity .12s,transform .15s;}
+.setup-neighbor-deck {--deck-art-width:86px;top:13px;}
+.setup-neighbor-deck[data-offset="-1"] {left:-4px;transform:rotate(-8deg) scale(.88);}
+.setup-neighbor-deck[data-offset="1"] {right:-4px;transform:rotate(8deg) scale(.88);}
+.setup-neighbor-deck[data-offset="-2"] {left:-95px;transform:rotate(-13deg) scale(.72);opacity:.4;}
+.setup-neighbor-deck[data-offset="2"] {right:-95px;transform:rotate(13deg) scale(.72);opacity:.4;}
+.setup-neighbor-deck:hover,.setup-neighbor-stake:hover {opacity:1;background:transparent;}
+.setup-dots {position:absolute;display:flex;align-items:center;justify-content:center;left:70px;right:70px;height:20px;}
+#setup-deck-dots {top:257px;}
+.setup-dot {position:relative;display:grid;place-items:center;width:24px;height:24px;min-height:0;margin:0;}
+.setup-dot input {position:absolute;inset:0;margin:0;width:100%;height:100%;min-height:0;padding:0;opacity:0;cursor:pointer;}
+.setup-dot>span {width:5px;height:5px;border-radius:50%;background:#172f36;pointer-events:none;}
+.setup-dot input:checked+span {background:#f6f6e6;box-shadow:0 0 5px #e2f7e48f;}
+.setup-dot input:focus-visible+span {outline:2px solid #f6dc7b;outline-offset:4px;}
+.setup-stake-stage {position:absolute;top:273px;left:0;width:100%;height:88px;touch-action:none;}
+.setup-stake-focus {position:absolute;top:0;left:98px;right:98px;height:86px;display:grid;grid-template-columns:62px minmax(0,1fr);gap:8px;align-items:center;padding:4px 7px;border:6px solid #1b3038;border-radius:10px;background:#263c43;pointer-events:none;}
+.setup-stake-portrait {--stake-art-size:51px;display:grid;place-items:center;}
+.setup-stake-info {display:grid;grid-template-rows:20px 1fr;height:100%;gap:3px;min-width:0;}
+.setup-stake-info h2 {font-size:22px;}
+.setup-stake-info p {font-size:24px;padding:2px 4px;}
+.setup-neighbor-stake {--stake-art-size:52px;top:15px;}
+.setup-neighbor-stake[data-offset="-1"] {left:22px;transform:scale(.88);}
+.setup-neighbor-stake[data-offset="1"] {right:22px;transform:scale(.88);}
+.setup-neighbor-stake[data-offset="-2"] {left:-52px;transform:scale(.72);opacity:.4;}
+.setup-neighbor-stake[data-offset="2"] {right:-52px;transform:scale(.72);opacity:.4;}
+#setup-stake-dots {top:364px;}
+.setup-seed-input {position:absolute;top:386px;left:151px;width:236px;height:32px;display:block;margin:0;}
+.setup-seed-input[hidden] {display:none;}
+.setup-seed-input>.sr-only {position:absolute;width:1px;height:1px;padding:0;overflow:hidden;clip-path:inset(50%);white-space:nowrap;}
+#setup-seed {height:32px;min-height:32px;width:100%;padding:2px 8px;border:2px solid #8fa8a6;border-radius:5px;background:#20373f;color:#fff6df;text-align:center;font-size:23px;line-height:1;}
+#setup-seed::placeholder {color:#c2d3c9;}
+#setup-seed-help {position:absolute;left:244px;top:5px;width:97px;color:#d1dcd3;font:15px/1 'Balatro Pixel',monospace;}
+.setup-start-row {position:absolute;top:424px;left:0;right:0;height:52px;}
+.setup-seed-toggle {position:absolute;left:30px;top:0;display:flex;align-items:center;gap:8px;height:52px;margin:0;color:#f7f3e5;font:16px/1 'Balatro Pixel',monospace;cursor:pointer;}
+.setup-seed-toggle input {position:absolute;width:100%;height:100%;inset:0;opacity:0;margin:0;cursor:pointer;}
+.setup-check {width:21px;height:21px;border:3px solid #e3eddf;border-radius:50%;background:#1a333b;box-shadow:0 2px #182b33;}
+.setup-seed-toggle input:checked+.setup-check::after {content:'✓';position:relative;top:-4px;left:0;color:#fbf9e5;font:27px/1 'Balatro Pixel',monospace;}
+.setup-seed-toggle input:focus-visible+.setup-check {outline:3px solid #ffdc6b;outline-offset:3px;}
+.setup-play {position:absolute;left:151px;top:0;width:236px;min-height:52px;padding:5px 10px;border:2px solid #17aeeb;border-radius:9px;background:#009ee8;color:#f9f5e8;box-shadow:inset 0 3px #37bdeb44,0 5px #006aa7;font:38px/1 'Balatro Pixel',monospace;}
+.setup-play:hover {background:#10aff2;}
+.setup-play:disabled {color:#d0d8cf;background:#526a6d;border-color:#678487;box-shadow:0 5px #29414a;opacity:.75;cursor:not-allowed;}
+.setup-back {position:absolute;bottom:7px;left:9px;right:9px;display:grid;place-items:center;min-height:39px;padding:3px 10px;border:2px solid #ffb338;border-radius:7px;background:#f3a410;color:#fff8ed;box-shadow:0 4px #b36c14;text-decoration:none;font:28px/1 'Balatro Pixel',monospace;}
+.setup-back:hover {background:#ffb62b;}
+.setup-error {position:absolute;left:14px;right:14px;top:70px;margin:0;min-height:16px;text-align:center;font:16px/1 'Balatro Pixel',monospace;color:#ffe1a1;pointer-events:none;}
+.setup-error:empty {display:none;}
+.setup-summary {position:absolute;left:70px;right:70px;top:105px;height:270px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;text-align:center;}
+.setup-summary[hidden],.setup-new[hidden],.setup-seed-toggle[hidden] {display:none;}
+.setup-summary .deck-art {--deck-art-width:72px;}
+.setup-summary h2 {margin:0;font:30px/1 'Balatro Pixel',monospace;}
+.setup-summary p,.setup-import {margin:0;font:24px/1.1 'Balatro Pixel',monospace;overflow-wrap:anywhere;}
+.setup-import {padding:10px;color:#ffe7a8;}
+@media(prefers-reduced-motion:reduce){.setup-neighbor-deck,.setup-neighbor-stake {transition:none;}}

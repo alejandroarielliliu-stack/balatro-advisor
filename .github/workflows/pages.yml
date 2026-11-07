@@ -34,6 +34,8 @@ jobs:
         run: npm run build:site
       - name: Instalar Chrome para la prueba estática
         run: npx --no-install playwright install --with-deps chrome
+      - name: Comprobar entrada, selector de partida y semilla registrada
+        run: node tools/run-setup-test.mjs
       - name: Comprobar consejo rápido y separación del registro
         run: node tools/quick-shop-eval-test.mjs
       - name: Comprobar resumen compacto y detalle recuperable

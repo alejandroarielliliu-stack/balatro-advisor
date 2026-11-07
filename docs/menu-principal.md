@@ -4,11 +4,11 @@
 
 ## Comportamiento
 
-- La raíz y `#menu` muestran el menú. El logotipo de las pantallas interiores permite volver; también funciona el historial del navegador.
-- **Jugar** abre `#table`, la Mesa existente como destino provisional. El usuario definirá la siguiente pantalla; no se inventa todavía otro asistente de configuración ni se crea/reinicia una partida al pulsarlo.
+- Cada entrada o recarga abre `#menu`, incluso si la URL contenía otra pantalla. Esta decisión del usuario sustituye la conservación anterior de enlaces directos al arrancar; no borra la partida ni su historial. El logotipo interior permite volver y la navegación interna posterior conserva el historial del navegador.
+- **Jugar** abre `#setup`, el [selector de partida](selector-partida-diseno.md), con Nueva partida, Continuar y Retos. Abrirlo o explorar barajas no crea/reinicia una partida. Continuar abre Mesa sin guardar; Nueva partida solo se registra al confirmar el perfil y, si existe una copia, su reemplazo.
 - **Colección** abre la colección existente de 150 comodines.
 - **Opciones** permite seguir la preferencia del sistema, activar o desactivar el fondo animado. Escape y Volver cierran el diálogo y devuelven el foco. No contiene ajustes sin función ni controles que alteren el juego.
-- Los enlaces directos anteriores siguen funcionando. Navegar conserva formularios y partidas; la consulta no registra compras ni ventas.
+- Las rutas interiores siguen funcionando después del arranque. Navegar conserva formularios y partidas; la consulta no registra compras ni ventas.
 
 ## Presentación y movimiento
 
@@ -24,7 +24,7 @@ Los botones conservan su orden y el formato horizontal. En pantallas de poca alt
 
 `npm.cmd run test:menu` comprueba la entrada, enlaces, teclado/foco, preferencias, movimiento y pausas, alternativas sin GPU y conservación de datos en contextos aislados. Guarda capturas e informe en `docs/evidencia/menu/`, excluidos de Git.
 
-Los runners anteriores que prueban Mesa entran ahora explícitamente por `#table`; conservan sus aserciones. La prueba estática abre la raíz, comprueba el menú y pulsa Jugar antes de continuar sus contratos originales bajo `/balatro-advisor/`.
+Los runners de funciones interiores comprueban primero el arranque real en `#menu`; `tools/workspace-navigation.mjs` selecciona después la ruta interna del fixture y verifica que no escriba el registro. No se presenta como prueba de un enlace directo. La prueba dedicada `test:run-setup` comprueba el recorrido real por Jugar, pestañas, semilla, confirmación, guardado, recarga y Continuar. La prueba estática conserva sus oráculos bajo `/balatro-advisor/`.
 
 Verificación ejecutada: `npm.cmd run check` pasó con 1.028 pruebas aprobadas, cero fallos y diez TODO manuales anteriores. El runner del menú pasó sus nueve grupos, incluido movimiento real WebGL comprobado por píxeles y llamadas de render, cinco tamaños y conservación exacta de un historial no vacío. También pasaron Mesa/frontend (nueve grupos), autoguardado (14), decisiones visibles (siete), avance (18), Colección y la prueba del artefacto estático bajo subruta.
 

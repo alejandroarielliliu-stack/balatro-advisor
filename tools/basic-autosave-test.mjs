@@ -1,3 +1,4 @@
+import {openWorkspace,reloadWorkspace} from './workspace-navigation.mjs';
 import assert from 'node:assert/strict';
 import {chromium} from 'playwright';
 import {spawn} from 'node:child_process';
@@ -48,7 +49,7 @@ try{
  const openCatalogue=async page=>{const dock=page.locator('#catalogue-dock');if(await dock.evaluate(element=>element instanceof HTMLDetailsElement&&!element.open))await dock.locator(':scope > summary').click();};
  const session=async(input=fixture(),viewport={width:1440,height:1000})=>{
   const context=await browser.newContext({viewport});await context.addInitScript(storageKey=>{window.__basicWrites=0;window.__basicFailWrite=false;window.__basicNativeSet=Storage.prototype.setItem;Storage.prototype.setItem=function(name,value){if(name===storageKey){if(window.__basicFailWrite)throw new DOMException('Synthetic autosave quota failure','QuotaExceededError');window.__basicWrites++;}return window.__basicNativeSet.call(this,name,value);};},key);
-  const page=await context.newPage();watch(page);await page.goto(new URL('#table',origin.href).href);await ready(page);await go(page,'archive');await page.locator('#import-file').setInputFiles({name:'synthetic-autosave.json',mimeType:'application/json',buffer:Buffer.from(JSON.stringify(input))});await page.locator('#dialog-accept').click();await page.locator('#confirmation').waitFor({state:'hidden'});await go(page,'table');await shelf(page);return {context,page};
+  const page=await context.newPage();watch(page);await openWorkspace(page,new URL('#table',origin.href).href);await ready(page);await go(page,'archive');await page.locator('#import-file').setInputFiles({name:'synthetic-autosave.json',mimeType:'application/json',buffer:Buffer.from(JSON.stringify(input))});await page.locator('#dialog-accept').click();await page.locator('#confirmation').waitFor({state:'hidden'});await go(page,'table');await shelf(page);return {context,page};
  };
  const revision=async(page,expected)=>{await page.waitForFunction(({k,expected})=>JSON.parse(localStorage.getItem(k)).state.revision===expected,{k:key,expected});return record(page);};
  const editMoney=async(page,value)=>{await page.locator('#money').fill(String(value));await page.locator('#money').press('Tab');};
@@ -72,7 +73,7 @@ try{
  // 2. Counter and a newly observed offer persist without opening Registro.
  await openJoker(p,'owned-green');await p.locator('#green-owned-green').fill('9');await p.locator('#green-owned-green').press('Tab');saved=await revision(p,2);await closeJoker(p,'owned-green');assert.equal(saved.state.observed.jokers.value.find(j=>j.instanceId==='owned-green').counters.greenMult.value,9);
  await openCatalogue(p);await p.locator('#bay-search').fill('j_jolly');await p.locator('[data-bay-joker="j_jolly"]').click();await p.locator('#bay-candidate').click();await p.locator('#bay-dialog').waitFor({state:'hidden'});saved=await revision(p,3);assert.equal(saved.state.observed.shop.value.cardOffers.length,2);assert.equal(saved.state.observed.money.value,31);assert.ok(saved.history.every(entry=>entry.kind==='correction'));
- before=await raw(p);await p.reload();await ready(p);await go(p,'table');await shelf(p);assert.equal(await raw(p),before);assert.equal((await record(p)).state.observed.jokers.value[0].counters.greenMult.value,9);assert.equal(await p.locator('#money').inputValue(),'31');
+ before=await raw(p);await reloadWorkspace(p);await ready(p);await go(p,'table');await shelf(p);assert.equal(await raw(p),before);assert.equal((await record(p)).state.observed.jokers.value[0].counters.greenMult.value,9);assert.equal(await p.locator('#money').inputValue(),'31');
  pass('counter-offer-and-reload-without-record-screen',{money:31,greenMult:9,offers:2,revision:3},{money:31,greenMult:9,offers:(await record(p)).state.observed.shop.value.cardOffers.length,revision:3});
 
  // Turtle Bean's transient empty edit is not a new observation. Re-entering4
@@ -98,7 +99,7 @@ try{
  // 5. Observing a voucher changes its resource, never spends a shop price or
  // replaces independent context/assumptions with the editor's empty defaults.
  const vouchers=await session(),v=vouchers.page;prior=(await record(v)).state;await v.locator('#vouchers [data-voucher="v_grabber"]').click();await v.locator('#voucher-apply').click();saved=await revision(v,1);assert.deepEqual(saved.state.observed.outOfScope.value.vouchers,['v_grabber']);assert.equal(saved.state.observed.resources.handsPerRound.value,6);assert.equal(saved.state.observed.money.value,25);assert.deepEqual(saved.state.observed.jokerContext,prior.observed.jokerContext);assert.deepEqual(saved.state.assumptions,prior.assumptions);assert.deepEqual(saved.state.observed.shop,prior.observed.shop);assert.equal(saved.history[0].kind,'correction');
- await v.reload();await ready(v);await go(v,'table');await shelf(v);assert.equal(await v.locator('#vouchers [data-voucher="v_grabber"]').getAttribute('data-owned'),'true');
+ await reloadWorkspace(v);await ready(v);await go(v,'table');await shelf(v);assert.equal(await v.locator('#vouchers [data-voucher="v_grabber"]').getAttribute('data-owned'),'true');
  pass('voucher-observation-preserves-context-without-buying',{money:25,hands:6,owned:['v_grabber'],kind:'correction'},{money:25,hands:6,owned:saved.state.observed.outOfScope.value.vouchers,kind:saved.history[0].kind});await vouchers.context.close();
 
  // 6. Unknown edition and an unrendered extraSell value remain exact while a
@@ -137,8 +138,8 @@ try{
 
  // 10. A genuine second tab is read-only, and an unrelated empty profile does
  // not infer that typing money meant starting or continuing a real run.
- const owner=await session(),reader=await owner.context.newPage();watch(reader);await reader.goto(new URL('#table',origin.href).href);await reader.waitForFunction(()=>document.querySelector('#ownership')?.textContent.includes('Modo lectura'));await go(reader,'table');await shelf(reader);before=await raw(owner.page);count=await writes(reader);if(!await reader.locator('#money').isDisabled()){await editMoney(reader,33);await reader.locator('#basic-save-status').waitFor({state:'visible'});}assert.equal(await raw(owner.page),before);assert.equal(await writes(reader),count);await reader.close();await owner.context.close();
- const emptyContext=await browser.newContext(),empty=await emptyContext.newPage();watch(empty);await empty.goto(new URL('#table',origin.href).href);await ready(empty);await go(empty,'table');await editMoney(empty,19);assert.equal(await raw(empty),null);await emptyContext.close();
+ const owner=await session(),reader=await owner.context.newPage();watch(reader);await openWorkspace(reader,new URL('#table',origin.href).href);await reader.waitForFunction(()=>document.querySelector('#ownership')?.textContent.includes('Modo lectura'));await go(reader,'table');await shelf(reader);before=await raw(owner.page);count=await writes(reader);if(!await reader.locator('#money').isDisabled()){await editMoney(reader,33);await reader.locator('#basic-save-status').waitFor({state:'visible'});}assert.equal(await raw(owner.page),before);assert.equal(await writes(reader),count);await reader.close();await owner.context.close();
+ const emptyContext=await browser.newContext(),empty=await emptyContext.newPage();watch(empty);await openWorkspace(empty,new URL('#table',origin.href).href);await ready(empty);await go(empty,'table');await editMoney(empty,19);assert.equal(await raw(empty),null);await emptyContext.close();
  pass('reader-and-uninitialized-run-cannot-autosave',{readerWrites:0,initializesOnTyping:false},{readerWrites:0,initializesOnTyping:false});
 
  // An advanced ante draft is independent of observed money and this counter.
