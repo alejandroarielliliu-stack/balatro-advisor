@@ -89,6 +89,7 @@ let preserveBasicDraft=(_text:string)=>{};
 function liveState(quick=false){quietRead=true;try{if(!readLiveState)throw new Error('Completa los datos de la partida.');return readLiveState(quick);}finally{quietRead=false;}}
 let dialogAction:(()=>boolean)|null=null;
 let refreshBlindScreen=()=>{};
+let observeGameShop:(snapshot:ShopSnapshot)=>string|null=()=>'La tienda se está recuperando. Inténtalo de nuevo.';
 const lock=new WriterLock(()=>updateOwnership());
 const store=createConfirmedStore(()=>({getItem:k=>localStorage.getItem(k),setItem:(k,v)=>{lock.assert();localStorage.setItem(k,v);}}));
 const shopSession=createShopSessionStore(()=>({getItem:k=>localStorage.getItem(k),setItem:(k,v)=>{lock.assert();localStorage.setItem(k,v);}}));
@@ -184,7 +185,7 @@ function renderJourney(){
       if(commit(()=>store.undoLatest({confirmationId:uuid(),confirmed:true,expected,updatedAt:now(),targetEntryId:last.id,reason:'El usuario corrigió el último registro desde el recorrido.'})))message('Registro corregido. Esto no deshace acciones dentro de Balatro.');
     }
   });
-  if(base&&['blind_select','in_round','cashout'].includes(base.state.phase)){const link=node('a',base.state.phase==='blind_select'?'Ver ciegas':'Ver cobro','button-link');link.href='#blind';$('run-journey').querySelector('.journey-actions')?.append(link);}
+  if(base&&['blind_select','in_round','cashout','shop'].includes(base.state.phase)){const link=node('a',base.state.phase==='shop'?'Ver tienda':base.state.phase==='blind_select'?'Ver ciegas':'Ver cobro','button-link');link.href='#blind';$('run-journey').querySelector('.journey-actions')?.append(link);}
   let packHost=document.getElementById('pack-panel');if(!packHost){packHost=node('section');packHost.id='pack-panel';$('run-journey').after(packHost);}
   renderPackView(packHost,{state:base?.state??null,writable:lock.owned&&!loadFailed,dirty,confirm:action=>base?confirmAction(action,base.state):'Primero registra una partida.',controlsChanged:updateOwnership});
   let tarotHost=document.getElementById('tarot-panel');if(!tarotHost){tarotHost=node('section');tarotHost.id='tarot-panel';packHost.after(tarotHost);}
@@ -444,7 +445,7 @@ function renderRecord(){
         return {offerId:offer.offerId,catalogId,label:names[catalogId]??old?.label??catalogId,kind:'joker',
           price:offer.price===null?(old?.price.status==='unknown'?structuredClone(old.price):unknown()):known(offer.price),
           edition:offer.edition==='unknown'?(old?.edition.status==='unknown'?structuredClone(old.edition):unknown()):known(offer.edition??'base'),
-          stickers:old?structuredClone(old.stickers):known(offer.stickers??[])};
+          stickers:offer.stickers.includes('unknown')?(old?.stickers.status==='unknown'?structuredClone(old.stickers):unknown()):old?.stickers.status==='known'&&JSON.stringify(old.stickers.value)===JSON.stringify(offer.stickers)?structuredClone(old.stickers):known(offer.stickers??[])};
       });
       // Unsupported/unrenderable observations are never silently discarded by
       // an editor that can only display the known catalogue.
@@ -467,6 +468,7 @@ function renderRecord(){
       return null;
     }catch(error){return error instanceof Error?error.message:'No se pudo registrar la oferta. La copia anterior se conserva.';}
   };
+  observeGameShop=observeShelf;
   const compositionHost=node('section');
   organizeRecord(host,!!s,renderJokerPreview,()=>{try{return (value(liveState(true).observed.jokers)??[]).map(j=>({id:j.instanceId,name:names[j.catalogId]??j.catalogId}));}catch{return [];}},addFromGallery,vouchers.host,compositionHost,{
    edit:id=>{const row=Array.from(ownedHost.querySelectorAll<HTMLElement>(':scope > .joker-editor')).find(row=>row.dataset.instanceId===id);const settings=row?.querySelector<HTMLDetailsElement>('.card-settings');if(settings)settings.open=true;},
@@ -757,6 +759,12 @@ const runStartBridge=createRunStartBridge({
   },
   exportCurrent:()=>$('export').click(),reportError:text=>message(text,true),error:()=>$('message').textContent??'',runId:uuid,now
 });
+function gameShopBinding(binding:Pick<GameState,'runId'|'revision'>):string|null{
+ if(!record||record.state.runId!==binding.runId||record.state.revision!==binding.revision)return 'La partida cambió. Abre de nuevo la oferta.';
+ if(record.state.phase!=='shop')return 'Esta tienda ya no está abierta.';
+ if(dirty||!lock.owned||loadFailed)return 'Termina la edición o recupera el control de escritura antes de registrar la tienda.';
+ return null;
+}
 const blindScreen=mountBlindScreen({
  snapshot:()=>({state:record?structuredClone(record.state):null,writable:lock.owned&&!loadFailed,dirty}),
  observeTag:(kind,tag,binding)=>{
@@ -787,7 +795,37 @@ const blindScreen=mountBlindScreen({
   const state=record.state,current=value(state.observed.nextBlind),next=current?nextBlindAfter(state,current):null;
   if(next){const required=blindRequirement(next.ante,next.kind,value(next.bossId)??'',value(state.observed.deckId)??'');if(required.ok){if(next.target.status==='unknown')next.target={status:'known',source:'confirmedPreset',value:required.target};if(next.reward.status==='unknown')next.reward={status:'known',source:'confirmedPreset',value:required.reward};}}
   if(!commit(()=>store.progress({confirmationId:uuid(),confirmed:true,expected:analysisBinding(state),updatedAt:now(),command:{type:'record_cashout',...submission,...(next?{nextBlind:next}:{})},inventory:{unchanged:true}})))return $('message').textContent||'No se pudo guardar el cobro.';
-  location.hash='table';return null;
+  if(record?.state.phase==='finished')location.hash='table';return null;
+ },
+ shop:{
+  observe:(snapshot,binding)=>{
+   const problem=gameShopBinding(binding);if(problem)return problem;
+   const error=observeGameShop(snapshot);if(!error)reload();return error;
+  },
+  confirm:(kind,offerId,binding)=>{
+   const problem=gameShopBinding(binding);if(problem)return problem;
+   return requestMesaAction(kind==='voucher'?{type:'buy_voucher',offerId}:kind==='pack'?{type:'buy_pack',offerId}:{type:'buy',offerId,instanceId:uuid()});
+  },
+  next:binding=>{
+   const problem=gameShopBinding(binding);if(problem)return problem;
+   return commit(()=>store.progress({confirmationId:uuid(),confirmed:true,expected:analysisBinding(record!.state),updatedAt:now(),command:{type:'leave_shop'},inventory:{unchanged:true}}))?null:$('message').textContent||'No se pudo registrar la salida.';
+  },
+  reroll:binding=>{
+   const problem=gameShopBinding(binding);if(problem){message(problem,true);return;}
+   const state=record!.state,body=node('div'),done=checkbox('game-shop-reroll-done','Ya renové las ofertas en Balatro'),balance=field('game-shop-reroll-money','Dinero actual después de renovar ($)','number'),cost=field('game-shop-reroll-cost','Precio de la próxima renovación ($) · opcional','number');
+   body.append(done.wrap,balance.wrap,cost.wrap,node('small','Transcribe el resultado de la renovación. Después podrás indicar las nuevas cartas ofrecidas.'));
+   openDialog('Registrar renovación',body,'Registrar renovación',()=>{
+    const stale=gameShopBinding(binding);if(stale){message(stale,true);return false;}
+    const money=Number(balance.input.value),price=cost.input.value.trim()===''?null:Number(cost.input.value);
+    if(!done.input.checked||!balance.input.value.trim()||!Number.isSafeInteger(money)||price!==null&&(!Number.isSafeInteger(price)||price<0)){message('Confirma la renovación y transcribe el dinero actual; el precio debe ser un entero no negativo.',true);return false;}
+    const previous=value(state.observed.shop),context=structuredClone(value(state.observed.jokerContext)??{});
+    context.rerollCost=price===null?unknown():known(price);
+    const jokers=structuredClone(state.observed.jokers),flash=jokers.status==='known'&&jokers.value.some(joker=>joker.catalogId==='flash');
+    if(jokers.status==='known')for(const joker of jokers.value)if(joker.catalogId==='flash')for(const key of Object.keys(joker.counters))joker.counters[key]=unknown();
+    return commit(()=>store.correct({confirmationId:uuid(),confirmed:true,expected:analysisBinding(state),updatedAt:now(),patch:{money:known(money),jokerContext:known(context),...(flash?{jokers}:{}),shop:known({...(previous??{shopId:uuid()}),cardOffers:[],ignoredOtherOffers:['Cartas de la renovación pendientes de transcribir.']})},reason:'Renovación observada: saldo y precio transcritos; cartas nuevas pendientes, sin generar ofertas ni simular gastos.'}));
+   });
+  },
+  details:()=>{location.hash='table';$('joker-candidates')?.scrollIntoView({block:'start'});}
  },
  lost:()=>{$('run-report-result')?.click();const outcome=$<HTMLSelectElement>('progress-outcome');if(outcome)outcome.value='lost';},skip:()=>$('run-skip-blind')?.click(),options:()=>{const dialog=$<HTMLDialogElement>('menu-settings');dialog.addEventListener('close',()=>$('blind-screen').focus(),{once:true});$('menu-options').click();}
 });

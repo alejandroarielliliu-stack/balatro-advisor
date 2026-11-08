@@ -93,7 +93,7 @@ try{
  assert.equal(await p.locator('#round-cashout-amount').inputValue(),'3');
  assert.match(await p.locator('#round-cashout-error').innerText(),/guardar|almacen|espacio|fall/i);
  await p.evaluate(()=>window.__roundCashoutFail=false);await p.locator('#round-cashout-submit').click();
- await p.waitForFunction(()=>document.body.dataset.view==='table');const collected=await record(p);
+ await p.waitForFunction(()=>document.body.dataset.view==='blind'&&document.querySelector('#blind-screen')?.dataset.mode==='shop');const collected=await record(p);
  assert.equal(collected.state.phase,'shop');assert.equal(collected.state.observed.money.value,7);
  assert.equal(collected.state.revision,inRound.state.revision+1);assert.equal(collected.history.length,inRound.history.length+1,'Win, payout and joker observations are one history entry');
  assert.equal(collected.history.at(-1).progress.command.type,'record_cashout');
@@ -117,7 +117,7 @@ try{
  await d.locator('[data-cashout-joker="green-b"] [data-counter="greenMult"]').fill('22');
  await d.locator('#round-cashout-amount').fill('7');
  assert.equal(await raw(d),resumeRaw);await d.locator('#round-cashout-jokers').evaluate(element=>element.scrollTop=0);await d.screenshot({path:dir+'/desktop-jokers.png'});await d.locator('#round-cashout-submit').click();
- await d.waitForFunction(()=>document.body.dataset.view==='table');const changed=await record(d),jokers=changed.state.observed.jokers.value;
+ await d.waitForFunction(()=>document.body.dataset.view==='blind'&&document.querySelector('#blind-screen')?.dataset.mode==='shop');const changed=await record(d),jokers=changed.state.observed.jokers.value;
  assert.equal(changed.state.observed.money.value,30,'The entered payout is added once to the current known balance');
  assert.equal(jokers.find(j=>j.instanceId==='green-a').counters.greenMult.value,10);
  assert.equal(jokers.find(j=>j.instanceId==='green-b').counters.greenMult.value,22);
@@ -127,7 +127,7 @@ try{
  const cashout=progress(progress(structuredClone(generated.value),{type:'enter_round'}),{type:'report_result',outcome:'won'});
  const resumed=await session(undefined,fixture(cashout)),r=resumed.page;await continueRun(r);await r.locator('#round-cashout').waitFor({state:'visible'});
  const cashoutRaw=await raw(r);assert.equal(await r.locator('#round-cashout-money').count(),0);await r.locator('#round-cashout-amount').fill('4');assert.equal(await raw(r),cashoutRaw);
- await r.locator('#round-cashout-submit').click();await r.waitForFunction(()=>document.body.dataset.view==='table');assert.equal((await record(r)).state.observed.money.status,'unknown','A payout does not reconstruct an unknown earlier balance');
+ await r.locator('#round-cashout-submit').click();await r.waitForFunction(()=>document.body.dataset.view==='blind'&&document.querySelector('#blind-screen')?.dataset.mode==='shop');assert.equal((await record(r)).state.observed.money.status,'unknown','A payout does not reconstruct an unknown earlier balance');
  pass('previously-recorded-cashout-resumes-without-inferring-unknown-balance');await resumed.context.close();
 
  const final=structuredClone(generated.value);final.runId='cashout-final-eight';final.observed.nextBlind=known({ante:8,kind:'boss',bossId:known('amber_acorn'),target:known(100000),reward:known(8)});
@@ -190,7 +190,7 @@ try{
  assert.match(await s.locator('[data-cashout-joker="green-a"] [data-counter="greenMult"]').getAttribute('placeholder'),/18/,'Explicit refresh loads the current observation');
  assert.equal(await s.locator('#round-cashout-submit').isDisabled(),false);assert.equal(await s.locator('#round-cashout-reload').isVisible(),false);
  assert.equal(await raw(s),externalRaw,'Explicit draft refresh is also read-only');
- await s.locator('#round-cashout-amount').fill('5');await s.locator('#round-cashout-submit').click();await s.waitForFunction(()=>document.body.dataset.view==='table');
+ await s.locator('#round-cashout-amount').fill('5');await s.locator('#round-cashout-submit').click();await s.waitForFunction(()=>document.body.dataset.view==='blind'&&document.querySelector('#blind-screen')?.dataset.mode==='shop');
  assert.equal((await record(s)).state.observed.money.value,45,'After explicit refresh the new payout uses the updated balance of 40');
  pass('external-revision-preserves-draft-blocks-submit-and-requires-explicit-refresh');await stale.context.close();
 

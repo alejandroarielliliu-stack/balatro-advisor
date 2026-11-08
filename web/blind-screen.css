@@ -47,15 +47,24 @@ body[data-view="blind"] #app-shell{overflow:hidden;background:#246d50}body[data-
 
 /* Selection and cash-out share the table; only the blind panels leave. */
 .blind-round-score,.blind-last-hand{display:none}
-.blind-screen[data-mode="cashout"] .blind-advisor{display:none}
-.blind-screen[data-mode="cashout"] .blind-cards{visibility:hidden;pointer-events:none}
+.blind-screen:is([data-mode="cashout"],[data-mode="shop"]) .blind-advisor{display:none}
+.blind-screen:is([data-mode="cashout"],[data-mode="shop"]) .blind-cards{visibility:hidden;pointer-events:none}
 .blind-screen[data-mode="cashout"].blind-to-cashout .blind-cards{visibility:visible;animation:blind-cards-drop .42s cubic-bezier(.4,0,.8,.4) forwards}
-.blind-screen[data-mode="cashout"] .blind-round-score{position:absolute;left:4px;right:4px;top:205px;height:46px;display:flex;align-items:center;justify-content:space-between;gap:9px;border:5px solid #1c2c31;border-radius:11px;background:#34494e;padding:2px 8px;box-shadow:inset 0 2px #55656b}
+.blind-screen:is([data-mode="cashout"],[data-mode="shop"]) .blind-round-score{position:absolute;left:4px;right:4px;top:205px;height:46px;display:flex;align-items:center;justify-content:space-between;gap:9px;border:5px solid #1c2c31;border-radius:11px;background:#34494e;padding:2px 8px;box-shadow:inset 0 2px #55656b}
 .blind-round-score>span{font:19px/1 'Balatro Pixel',monospace;white-space:pre-line}
 .blind-round-score>b{font:33px/1 'Balatro Pixel',monospace;overflow:hidden;text-overflow:ellipsis}
 .blind-round-score>b::before{content:'✺';font-size:24px;margin-right:4px}
-.blind-screen[data-mode="cashout"] .blind-last-hand{position:absolute;left:4px;right:4px;top:255px;height:117px;display:flex;align-items:flex-end;justify-content:center;gap:5px;padding:10px 7px;border:5px solid #1c2c31;border-radius:11px;background:#13272c}
+.blind-screen:is([data-mode="cashout"],[data-mode="shop"]) .blind-last-hand{position:absolute;left:4px;right:4px;top:255px;height:117px;display:flex;align-items:flex-end;justify-content:center;gap:5px;padding:10px 7px;border:5px solid #1c2c31;border-radius:11px;background:#13272c}
 .blind-last-hand b{width:94px;height:49px;border-radius:8px;color:#fff6e4;display:flex;align-items:center;justify-content:flex-end;padding:0 7px;font:45px/1 'Balatro Pixel',monospace;box-shadow:0 4px #0d2029}
 .blind-last-hand .blind-last-chips{background:#009afa}.blind-last-hand .blind-last-mult{background:#ff4c45}.blind-last-hand>span{font:34px/1 'Balatro Pixel',monospace;color:#ff4c45;padding-bottom:8px}
 @keyframes blind-cards-drop{to{transform:translateY(120%);visibility:hidden}}
 @media(prefers-reduced-motion:reduce){.blind-screen[data-mode="cashout"].blind-to-cashout .blind-cards{animation:none;visibility:hidden}}
+
+.game-shop-sign{display:none;position:absolute;top:32px;left:5px;right:5px;height:160px;border:4px solid #f15a4e;border-radius:12px;background:#182c31;align-items:center;justify-content:center;flex-direction:column;padding:10px 12px;gap:11px}
+.game-shop-sign strong{display:grid;place-items:center;width:100%;height:106px;color:#f9cf78;font:78px/.9 'Balatro Pixel',monospace;text-shadow:3px 4px #6b3c1e,-2px -2px #ffecbd;letter-spacing:-2px;border:8px dotted #fff0d3;border-radius:13px;box-shadow:0 0 0 4px #a54a3e,inset 0 0 0 3px #d46544,0 0 9px #f56e42;background:#14262c}
+.game-shop-sign span{font:20px/1 'Balatro Pixel',monospace;color:#f1d278;white-space:nowrap}
+.blind-screen[data-mode="shop"] .game-shop-sign{display:flex}.blind-screen[data-mode="shop"] .blind-sidebar{border-color:#ee5b50}
+.cashout-to-shop #round-cashout{pointer-events:none;animation:game-cashout-drop .42s ease-in both}.cashout-to-shop #game-shop{animation:game-shop-rise .48s cubic-bezier(.15,.6,.25,1) both}
+@keyframes game-cashout-drop{to{transform:translateY(120%);opacity:0}}
+@keyframes game-shop-rise{from{transform:translateY(110%)}to{transform:translateY(0)}}
+@media(prefers-reduced-motion:reduce){.cashout-to-shop #round-cashout,.cashout-to-shop #game-shop{animation:none}}

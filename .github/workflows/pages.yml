@@ -42,6 +42,8 @@ jobs:
         run: node tools/boss-catalogue-test.mjs
       - name: Comprobar pantalla de cobro y cambios de comodines por instancia
         run: node tools/round-cashout-test.mjs
+      - name: Comprobar transición a tienda, ofertas reales y compras confirmadas
+        run: node tools/game-shop-test.mjs
       - name: Comprobar consejo rápido y separación del registro
         run: node tools/quick-shop-eval-test.mjs
       - name: Comprobar resumen compacto y detalle recuperable
