@@ -57,3 +57,8 @@ body[data-view="blind"] #app-shell{overflow:hidden;background:#246d50}body[data-
 @keyframes game-cashout-drop{to{transform:translateY(120%);opacity:0}}
 @keyframes game-shop-rise{from{transform:translateY(110%)}to{transform:translateY(0)}}
 @media(prefers-reduced-motion:reduce){.cashout-to-shop #round-cashout,.cashout-to-shop #game-shop{animation:none}}
+
+.shop-to-blind #game-shop{pointer-events:none;animation:game-shop-drop .42s ease-in both}.shop-to-blind .blind-cards{animation:game-blinds-rise .48s cubic-bezier(.15,.6,.25,1) both}
+@keyframes game-shop-drop{to{transform:translateY(120%);opacity:0}}
+@keyframes game-blinds-rise{from{transform:translateY(110%)}to{transform:translateY(0)}}
+@media(prefers-reduced-motion:reduce){.shop-to-blind #game-shop,.shop-to-blind .blind-cards{animation:none}}

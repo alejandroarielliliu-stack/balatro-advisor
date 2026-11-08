@@ -61,18 +61,24 @@ export function mountBlindScreen(options:BlindScreenOptions){
   else {const clear=el('button','Sin registrar','blind-picker-item');clear.type='button';clear.onclick=()=>choose(null);grid.append(clear);for(const tag of TAGS){const b=el('button','','blind-picker-item');b.type='button';b.dataset.tagChoice=tag.id;b.append(tagArt(tag.id,tag.name),el('span',tag.name));b.onclick=()=>choose(tag.id);grid.append(b);}}
   picker.showModal();heading.focus({preventScroll:true});picker.scrollTop=0;
  }
- let rendered='',transitionTimer:ReturnType<typeof setTimeout>|undefined;
+ let rendered='',transitionTimer:ReturnType<typeof setTimeout>|undefined,blindTransitionTimer:ReturnType<typeof setTimeout>|undefined;
  const finishShopTransition=()=>{cashoutPanel.hidden=true;host.classList.remove('cashout-to-shop');};
  shopPanel.addEventListener('animationend',event=>{if(event.target===shopPanel&&event.animationName==='game-shop-rise')finishShopTransition();});
+ const focusCurrentBlind=()=>{if(location.hash==='#blind'&&host.dataset.mode==='select')cards.querySelector<HTMLButtonElement>('[data-active="true"] .blind-select:not(:disabled)')?.focus({preventScroll:true});};
+ const finishBlindTransition=()=>{shopPanel.hidden=true;host.classList.remove('shop-to-blind');cards.inert=host.dataset.mode!=='select';focusCurrentBlind();};
+ cards.addEventListener('animationend',event=>{if(event.target===cards&&event.animationName==='game-blinds-rise')finishBlindTransition();});
  function refresh(){
   const snapshot=options.snapshot(),state=snapshot.state;
   if(state&&!['blind_select','in_round','cashout','shop'].includes(state.phase)){if(location.hash==='#blind')location.hash='table';return;}
   const token=JSON.stringify(snapshot);if(token===rendered)return;rendered=token;
   error.textContent='';if(!state){title.textContent='Elige una baraja';reason.textContent='Inicia la partida desde el menú.';cards.replaceChildren();return;}
-  const settling=state.phase==='in_round'||state.phase==='cashout',shopping=state.phase==='shop',previousMode=host.dataset.mode,animate=settling&&previousMode==='select',enteringShop=shopping&&previousMode==='cashout'&&!motion.matches;
-  host.dataset.mode=shopping?'shop':settling?'cashout':'select';host.setAttribute('aria-label',shopping?'Tienda':settling?'Cobro de la ronda':'Selección de ciega');shopPanel.hidden=!shopping;
+  const settling=state.phase==='in_round'||state.phase==='cashout',shopping=state.phase==='shop',selecting=state.phase==='blind_select',previousMode=host.dataset.mode,animate=settling&&previousMode==='select',enteringShop=shopping&&previousMode==='cashout'&&!motion.matches,enteringBlinds=selecting&&previousMode==='shop'&&!motion.matches;
+  host.dataset.mode=shopping?'shop':settling?'cashout':'select';host.setAttribute('aria-label',shopping?'Tienda':settling?'Cobro de la ronda':'Selección de ciega');
+  if(!selecting){clearTimeout(blindTransitionTimer);host.classList.remove('shop-to-blind');}
+  shopPanel.hidden=!shopping&&!host.classList.contains('shop-to-blind');shopPanel.inert=!shopping;cards.inert=!selecting||host.classList.contains('shop-to-blind');
   if(enteringShop){clearTimeout(transitionTimer);host.classList.add('cashout-to-shop');cashoutPanel.hidden=false;cashoutPanel.inert=true;transitionTimer=setTimeout(()=>{if(!shopPanel.getAnimations().some(animation=>animation.playState==='paused'))finishShopTransition();},1500);}
   else if(!shopping||!host.classList.contains('cashout-to-shop')){clearTimeout(transitionTimer);host.classList.remove('cashout-to-shop');cashoutPanel.hidden=!settling;cashoutPanel.inert=!settling;}
+  if(enteringBlinds){clearTimeout(blindTransitionTimer);host.classList.add('shop-to-blind');shopPanel.hidden=false;cards.inert=true;blindTransitionTimer=setTimeout(()=>{if(!cards.getAnimations().some(animation=>animation.playState==='paused'))finishBlindTransition();},1500);}
   if(animate)host.classList.add('blind-to-cashout');else if(!settling)host.classList.remove('blind-to-cashout');
   const current=value(state.observed.nextBlind),origin=state.schemaVersion==='0.2'&&state.phase==='shop'?value(state.phaseData.origin):undefined,anteValue=origin?.ante??current?.ante,deckId=value(state.observed.deckId)??'',writable=snapshot.writable&&!snapshot.dirty;
   const guidance=guideBlindChoice(state);title.textContent=settling?'Registra el cobro':guidance.ok?guidance.value.recommendation.title:'Revisa la partida';reason.textContent=settling?'Indica cuánto ganaste y los valores de los comodines que cambiaron.':guidance.ok?guidance.value.recommendation.reason:'Faltan datos para orientar esta decisión.';limit.textContent='Orientación · supervivencia sin evaluar';bubble.dataset.basis='heuristic';bubble.title=guidance.ok?[...guidance.value.conditions,...guidance.value.limitations].join('\n'):'';
@@ -105,6 +111,7 @@ export function mountBlindScreen(options:BlindScreenOptions){
    }else {const next=el('div','','blind-up-ante');next.append(el('strong','Sube el ante'),el('span','Aumentan las ciegas'),el('span','Renueva las ciegas'));card.append(next);}
    cards.append(card);
   }
+  if(previousMode==='shop'&&!enteringBlinds)focusCurrentBlind();
   if(snapshot.dirty)error.textContent='Termina la edición pendiente para registrar etiquetas o avanzar.';
  }
  const resize=()=>{const frame=document.getElementById('app-viewport')!;if(!frame.clientWidth||!frame.clientHeight)return;const scale=Math.min(frame.clientWidth/1280,frame.clientHeight/600);stage.style.setProperty('--blind-scale',String(scale));stage.style.setProperty('--blind-stage-height',`${Math.max(600,frame.clientHeight/scale)}px`);};
