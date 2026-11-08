@@ -42,6 +42,11 @@ try{
  const continueRun=async page=>{await page.locator('#menu-play').click();await page.locator('#setup-tab-continue').click();await page.locator('#setup-play').click();await shopReady(page);};
  const enterCashout=async page=>{await page.locator('#blind-select-small').click();await page.locator('#round-cashout').waitFor({state:'visible'});};
  const shellBounds=page=>page.locator('.blind-sidebar,.blind-joker-tray,.blind-consumable-tray,#blind-deck').evaluateAll(elements=>elements.map(element=>{const r=element.getBoundingClientRect();return {x:r.x,y:r.y,width:r.width,height:r.height};}));
+ const advisorBounds=async page=>{
+  for(const selector of ['.blind-advisor','.blind-advisor-avatar','.blind-speech'])assert.equal(await page.locator(selector).isVisible(),true,'Advisor remains visible: '+selector);
+  assert.equal(await page.locator('.game-shop-sign,.blind-round-score,.blind-last-hand').count(),0,'The static advisor is not replaced by a shop sign or scoring HUD');
+  return page.locator('.blind-advisor,.blind-advisor-avatar,.blind-speech').evaluateAll(logicalBounds);
+ };
  const observe=async(page,kind,catalogId,price)=>{
   await page.locator(`[data-game-shop-kind="${kind}"][data-game-shop-empty="true"]`).first().click();await page.locator('#game-shop-editor').waitFor({state:'visible'});
   await page.locator('#game-shop-catalog').selectOption(catalogId);await page.locator('#game-shop-price').fill(String(price));await page.locator('#game-shop-save').click();await page.locator('#game-shop-editor').waitFor({state:'hidden'});
@@ -64,10 +69,11 @@ try{
   assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
  };
 
- const main=await session(),p=main.page;await start(p);await enterCashout(p);
+ const main=await session(),p=main.page;await start(p);const initialAdvisor=await advisorBounds(p);await enterCashout(p);assert.deepEqual(await advisorBounds(p),initialAdvisor,'Selecting a blind does not move or replace the advisor');
  const beforeCashout=await record(p),stationary=await shellBounds(p);await p.locator('#round-cashout-amount').fill('3');await p.locator('#round-cashout-submit').click();await shopReady(p);
  const entered=await record(p);assert.equal(entered.state.phase,'shop');assert.equal(entered.state.observed.money.value,7);assert.equal(entered.state.revision,beforeCashout.state.revision+1);assert.equal(entered.history.length,beforeCashout.history.length+1);assert.equal(entered.history.at(-1).progress.command.type,'record_cashout');
  assert.deepEqual(await shellBounds(p),stationary,'Opening the shop retains sidebar, tray and deck positions');assert.equal(await p.locator('#round-cashout').isVisible(),false);assert.equal(await p.locator('#game-shop').evaluate(element=>getComputedStyle(element).animationName),'none','Reduced motion opens the shop without the rise animation');
+ assert.deepEqual(await advisorBounds(p),initialAdvisor,'The advisor keeps the same position and dimensions in selection, cashout and shop');
  const initialShop=entered.state.observed.shop;
  if(initialShop.status==='known'){assert.equal(initialShop.value.cardOffers.length,0);assert.equal((initialShop.value.voucherOffers??[]).length,0);assert.equal((initialShop.value.packOffers??[]).length,0);}
  assert.equal(await p.locator('[data-game-shop-empty="false"]').count(),0,'The reference screenshot does not become invented shop offers');

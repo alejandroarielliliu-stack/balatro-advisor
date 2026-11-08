@@ -4,6 +4,8 @@ import {ALL_JOKER_FACTS} from '../catalog/all-joker-facts.js';
 import {VOUCHER_CATALOG} from '../catalog/voucher-catalog.js';
 import {BOOSTER_CATALOG} from '../catalog/booster-catalog.js';
 import {engineArt,jokerArt} from './collection.js';
+import {inspectShopDecision} from '../advisor/decision.js';
+import {buildShopAdviceSummary} from './shop-advice-summary.js';
 
 const el=<K extends keyof HTMLElementTagNameMap>(tag:K,text='',className='')=>{const e=document.createElement(tag);e.textContent=text;e.className=className;return e;};
 const value=<T>(fact:Fact<T>|undefined)=>fact?.status==='known'?fact.value:undefined;
@@ -114,5 +116,5 @@ export function mountGameShop(stage:HTMLElement,options:GameShopOptions){
   for(const offer of snapshot.packs)packShelf.append(tile('pack',offer));for(let i=snapshot.packs.length;i<2;i++)packShelf.append(tile('pack'));
   const origin=current.schemaVersion==='0.2'&&current.phase==='shop'?value(current.phaseData.origin):undefined;voucherCaption.textContent=(origin?'ANTE '+origin.ante+' · ':'')+'VALE';
  }
- return {refresh,focus:()=>next.focus({preventScroll:true})};
+ return {refresh,focus:()=>next.focus({preventScroll:true}),advice:()=>{if(!state||!snapshot.jokers.length&&!snapshot.vouchers.length&&!snapshot.packs.length)return null;const result=inspectShopDecision(state,snapshot);return result.ok?buildShopAdviceSummary(result.value):null;}};
 }

@@ -2,7 +2,7 @@
 
 7 de noviembre de 2026. Interfaz basada en la captura de Cash Out del usuario.
 
-Al pulsar **Seleccionar**, se registra la entrada en la ciega y sus tres columnas bajan. Aparece un solo panel de cobro con la ficha y el objetivo de la ciega registrada. Se conservan fondo, inventario, mazo y posición del panel lateral. El lateral muestra la puntuación registrada o «—» cuando falta; no se copian los números de la captura. La transición respeta movimiento reducido. No se simulan manos ni se concede una victoria al abrirlo.
+Al pulsar **Seleccionar**, se registra la entrada en la ciega y sus tres columnas bajan. Aparece un solo panel de cobro con la ficha y el objetivo de la ciega registrada. Se conservan fondo, inventario, mazo y panel lateral con el comodín consejero. Por aclaración del usuario no se incorporan el rótulo de tienda, la puntuación de ronda ni los cuadros de fichas/multiplicador de la captura. La transición respeta movimiento reducido. No se simulan manos ni se concede una victoria al abrirlo.
 
 Por indicación del usuario, el botón naranja superior dice **Siguiente**. El recuadro **Cash Out**, a la derecha de la ficha de la ciega, sustituye los símbolos de dinero y permite introducir cuánto ganó. Se retira el campo adicional de saldo. El importe se suma al dinero previamente registrado cuando ese saldo es conocido; con un saldo desconocido se conserva esa incertidumbre y se permite continuar. Esta suma no reconstruye otros cambios de dinero ocurridos durante la ronda.
 

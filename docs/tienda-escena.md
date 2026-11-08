@@ -1,6 +1,6 @@
 # Tienda en la escena de partida
 
-8 de noviembre de 2026. Al confirmar **Siguiente** en el cobro, ese panel baja y la tienda sube en la misma mesa. El lateral, las bandejas y el mazo mantienen su posición. La tienda y el lateral tienen borde rojo y se muestra el rótulo SHOP de la referencia. Movimiento reducido abre la tienda sin animación.
+8 de noviembre de 2026. Al confirmar **Siguiente** en el cobro, ese panel baja y la tienda sube en la misma mesa. El lateral, las bandejas y el mazo mantienen su posición. Por aclaración del usuario, el panel izquierdo conserva el comodín consejero en selección, cobro y tienda; no se añaden el rótulo SHOP, la puntuación de ronda ni los cuadros de fichas/multiplicador. Solo cambia a rojo su borde en tienda. El consejero reutiliza el resumen de decisiones de tienda existente. Movimiento reducido abre la tienda sin animación.
 
 La presentación utiliza el registro existente: dos espacios iniciales para comodines, uno para vales y dos para sobres. No copia los artículos ni precios de la captura. Pulsar un espacio permite transcribir catálogo, precio y, en comodines, edición y pegatinas. Todas las ofertas adicionales permanecen accesibles mediante desplazamiento. Consultar o cancelar no modifica la partida.
 
