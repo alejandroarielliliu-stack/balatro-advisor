@@ -12,7 +12,11 @@ El fondo verde reutiliza el renderer del menú con tratamiento de color; solo an
 
 Baraja, manos, descartes, dinero y cartas proceden del registro ya creado. Roja muestra 4/4; Azul 5/3; no se copian cifras de la captura. El número de rondas en selección deriva de las posiciones anteriores del ciclo menos el total observado de saltos; si faltan los datos, muestra «—». No se infiere composición para Errática ni se usa la semilla para generar resultados.
 
-Los objetivos y premios de Pequeña/Grande utilizan `blindRequirement`, dentro de su cobertura y evidencia provisional existentes. Un objetivo actual observado prevalece sobre el valor de referencia. Con ciega actual desconocida no se inventan ante1 ni objetivos300/450. El jefe empieza sin identificar; su propio espacio permite transcribirlo. Las 28 identidades son presentación: solo se calculan los cuatro perfiles de jefe que ya admite el motor. Los demás conservan objetivo/premio desconocidos, salvo datos observados previamente para el mismo jefe/ante. Una ilustración no amplía la cobertura de reglas.
+Los objetivos y premios utilizan `blindRequirement`, dentro de Blanca y antes1–8. El [catálogo de 28 jefes](evidencia/jefes-catalogo.md) incorpora ilustración, descripción, mínimo, multiplicador y premio base: ordinarios$5; los cinco finales$8. El ante cambia la base de fichas y Plasma duplica el objetivo. Seleccionar un jefe rellena sus valores y conserva una corrección manual existente para el mismo jefe. La selección prioriza los disponibles en ese ante; los demás se consultan en Colección. Con ciega actual desconocida no se inventan ante1 ni objetivos300/450.
+
+La ficha y sus valores numéricos no implementan todos los efectos sobre cartas o jugadas. El motor conserva una comprobación separada de los cuatro efectos anteriores y rechaza puntuaciones afectadas por los demás, incluso si su objetivo y premio ya están catalogados. Las fuentes son inspección estática provisional, no observación de una partida. La sección «Ciegas jefe» de Colección permite buscar por nombre o efecto y consultar las28 fichas sin modificar el registro.
+
+Los paneles no tienen línea de cierre inferior: sus bordes laterales continúan hasta el límite de pantalla. Las cruces vacías se dibujan con dos barras CSS centradas, independientes de la línea base de la fuente.
 
 ## Etiquetas y acciones reales
 

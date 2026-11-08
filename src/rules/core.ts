@@ -4,7 +4,7 @@ import {counterSpecs} from '../catalog/joker-counters.js';
 import {advancedJoker} from '../catalog/advanced-jokers.js';
 import {jokerResourceDelta} from '../catalog/joker-resources.js';
 import {supportedVouchers,voucherResources} from '../catalog/vouchers.js';
-import {blindRequirement} from '../catalog/blinds.js';
+import {blindRequirement,implementedBossEffects} from '../catalog/blinds.js';
 import {deckDefinition} from '../catalog/decks.js';
 import type { Fact, GameState, Issue, JokerInstance } from '../state/model.js';
 import { validateState } from '../state/validation.js';
@@ -135,6 +135,7 @@ export function resources(state: GameState) {
 export function blindInfo(state: GameState) {
   const blind = need(state.observed.nextBlind, '$.observed.nextBlind');
   const boss = need(blind.bossId, '$.observed.nextBlind.bossId');
+  if(blind.kind==='boss'&&!implementedBossEffects(boss))fail('$.observed.nextBlind.bossId','unsupported_blind','Jefe catalogado con objetivo y premio; sus efectos sobre las manos todavía no están implementados.');
   const expected=blindRequirement(blind.ante,blind.kind,boss,need(state.observed.deckId,'$.observed.deckId'));
   if(!expected.ok)fail(expected.error.path,expected.error.code,expected.error.message);
   const target = need(blind.target, '$.observed.nextBlind.target');

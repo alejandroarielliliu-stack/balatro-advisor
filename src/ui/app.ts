@@ -24,6 +24,7 @@ import {cataloguedVouchers,voucherResources} from '../catalog/vouchers.js';
 import {mountVouchers} from './vouchers.js';
 import {invalidateCandidates,readShopSnapshot,refreshCandidateControls} from './storefront.js';
 import {blindRequirement} from '../catalog/blinds.js';
+import {BOSS_CATALOG} from '../catalog/bosses.js';
 import {previewJoker} from '../evaluation/joker-preview.js';
 import {contextRatings} from '../advisor/ratings.js';
 import type {JokerReference} from '../catalog/collection.js';
@@ -75,7 +76,7 @@ const now=()=>new Date().toISOString();
 const uuid=()=>crypto.randomUUID();
 const names:Record<string,string>=Object.fromEntries(Object.entries(ALL_JOKER_FACTS).map(([id,d])=>[id,d.name]));
 const handNames:Record<string,string>={five_kind:'Cinco iguales',flush_house:'Flush House',flush_five:'Flush Five',high_card:'Carta alta',pair:'Pareja',two_pair:'Doble pareja',three_kind:'Trío',straight:'Escalera',flush:'Color',full_house:'Full',four_kind:'Póquer',straight_flush:'Escalera de color'};
-const bossNames={none:'Sin efecto de jefe',the_psychic:'The Psychic',the_water:'The Water',the_wall:'The Wall',violet_vessel:'Violet Vessel'};
+const bossNames={none:'Sin efecto de jefe',...Object.fromEntries(BOSS_CATALOG.map(b=>[b.id,b.name]))};
 let record:ConfirmedRecord|null=null,seenRaw:string|null=null,loadFailed=false,advice:Advice|null=null,demoMode=false,dirty=false;
 let scenarioReaders:(()=>AdvisorScenario)[]=[];
 let refreshCashout=()=>{};let cashoutTimer:ReturnType<typeof setTimeout>|undefined;
@@ -770,7 +771,8 @@ const blindScreen=mountBlindScreen({
   const requirement=blindRequirement(current.ante,'boss',id,value(state.observed.deckId)??'');
   if(!requirement.ok&&requirement.error.code==='invalid_blind')return requirement.error.message;
   const old=value(state.observed.visibleBoss),same=old?.ante===current.ante&&value(old.bossId)===id;
-  const boss:BlindInfo={ante:current.ante,kind:'boss',bossId:known(id),target:requirement.ok?known(requirement.target):same?old.target:unknown(),reward:requirement.ok?known(requirement.reward):same?old.reward:unknown()};
+  const preset=<T>(value:T):Fact<T>=>({status:'known',source:'confirmedPreset',value});
+  const boss:BlindInfo={ante:current.ante,kind:'boss',bossId:known(id),target:same&&old.target.status==='known'&&old.target.source==='manual'?old.target:requirement.ok?preset(requirement.target):same?old.target:unknown(),reward:same&&old.reward.status==='known'&&old.reward.source==='manual'?old.reward:requirement.ok?preset(requirement.reward):same?old.reward:unknown()};
   return commit(()=>store.correct({confirmationId:uuid(),confirmed:true,expected:analysisBinding(state),updatedAt:now(),patch:{visibleBoss:known(boss),...(current.kind==='boss'?{nextBlind:known(boss)}:{})},reason:'Jefe visible transcrito desde la selección de ciegas; no se generan efectos ni recompensas.'}))?null:$('message').textContent||'No se pudo guardar el jefe.';
  },
  select:()=>$('run-enter-round')?.click(),skip:()=>$('run-skip-blind')?.click(),options:()=>{const dialog=$<HTMLDialogElement>('menu-settings');dialog.addEventListener('close',()=>$('blind-screen').focus(),{once:true});$('menu-options').click();}

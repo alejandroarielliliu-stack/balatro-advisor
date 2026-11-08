@@ -19,7 +19,7 @@ export function mountWorkspace(bridge:RunStartBridge){
  history.replaceState(null,'',location.pathname+location.search+'#menu');
  mountLandscape();
  const menu=mountMainMenu(bridge);
- const screens={menu:['','Balatro Advisor'],blind:['','Selección de ciega'],collection:['150 COMODINES · 1.0.1o','Colección'],table:['ENCAJE EN VIVO','Mesa'],evaluation:['MANOS Y ESCENARIOS','Análisis'],archive:['PARTIDA REGISTRADA','Registro y copias']} as const;
+ const screens={menu:['','Balatro Advisor'],blind:['','Selección de ciega'],collection:['COMODINES Y CIEGAS · 1.0.1o','Colección'],table:['ENCAJE EN VIVO','Mesa'],evaluation:['MANOS Y ESCENARIOS','Análisis'],archive:['PARTIDA REGISTRADA','Registro y copias']} as const;
  const show=()=>{const hash=location.hash.slice(1);const screen=Object.hasOwn(screens,hash)?hash as keyof typeof screens:'menu';
   document.body.dataset.view=screen;
   const home=screen==='menu',game=screen==='blind';

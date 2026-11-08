@@ -7,15 +7,13 @@ import {jokerArt,engineArt} from './collection.js';
 import {deckArt} from './deck-art.js';
 import {blindArt,tagArt} from './blind-art.js';
 import {mountMenuBackground} from './menu-background.js';
+import {BOSS_CATALOG,bossDefinition} from '../catalog/bosses.js';
 
 const el=<K extends keyof HTMLElementTagNameMap>(tag:K,text='',className='')=>{const e=document.createElement(tag);e.textContent=text;e.className=className;return e;};
 const value=<T>(f:Fact<T>|undefined)=>f?.status==='known'?f.value:undefined;
 const labels={small:'Ciega pequeña',big:'Ciega grande',boss:'Ciega jefe'};
 type Kind=keyof typeof labels;
 type ObservationBinding=Pick<GameState,'runId'|'revision'>;
-// Display identities only. Selecting one does not implement its rule effects.
-const bosses:Record<string,string>={the_hook:'El gancho',the_ox:'El buey',the_house:'La casa',the_wall:'La pared',the_wheel:'La rueda',the_arm:'El brazo',the_club:'El trébol',the_fish:'El pez',the_psychic:'El psíquico',the_goad:'La pica',the_water:'El agua',the_window:'La ventana',the_manacle:'El grillete',the_eye:'El ojo',the_mouth:'La boca',the_plant:'La planta',the_serpent:'La serpiente',the_pillar:'El pilar',the_needle:'La aguja',the_head:'La cabeza',the_tooth:'El diente',the_flint:'El pedernal',the_mark:'La marca',amber_acorn:'Bellota ámbar',verdant_leaf:'Hoja verde',violet_vessel:'Vasija violeta',crimson_heart:'Corazón carmesí',cerulean_bell:'Campana cerúlea'};
-const bossEffects:Record<string,string>={the_psychic:'Debes jugar 5 cartas.',the_water:'Empiezas sin descartes.',the_wall:'Ciega de tamaño extra grande.',violet_vessel:'Ciega de tamaño muy grande.'};
 export interface BlindScreenOptions {
  snapshot():{state:GameState|null;writable:boolean;dirty:boolean};
  observeTag(kind:'small'|'big',tag:string|null,binding:ObservationBinding):string|null;
@@ -41,16 +39,19 @@ export function mountBlindScreen(options:BlindScreenOptions){
  const cards=el('div','','blind-cards'),deck=el('a','','blind-deck');deck.href='#table';deck.id='blind-deck';deck.setAttribute('aria-label','Ver y editar cartas del mazo');const deckCount=el('span');deck.append(deckCount);
  const error=el('p','','blind-screen-error');error.id='blind-screen-error';error.setAttribute('role','alert');
  const menu=el('a','Menú','blind-menu-link');menu.href='#menu';stage.append(side,tray,consumables,cards,deck,error,menu);
- const picker=el('dialog','','blind-picker');picker.id='blind-picker';const heading=el('h2'),close=el('button','Volver','blind-picker-back');close.type='button';const grid=el('div','','blind-picker-grid'),pickerError=el('p','','error');pickerError.setAttribute('role','alert');picker.append(heading,grid,pickerError,close);host.append(picker);close.onclick=()=>picker.close();
+ const picker=el('dialog','','blind-picker');picker.id='blind-picker';const heading=el('h2'),close=el('button','Volver','blind-picker-back');heading.id='blind-picker-title';heading.tabIndex=-1;picker.setAttribute('aria-labelledby',heading.id);close.type='button';const grid=el('div','','blind-picker-grid'),pickerError=el('p','','error');pickerError.setAttribute('role','alert');picker.append(heading,grid,pickerError,close);host.append(picker);close.onclick=()=>picker.close();
  picker.addEventListener('click',e=>{if(e.target===picker){const r=picker.getBoundingClientRect();if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)picker.close();}});
- let returnFocus:HTMLElement|null=null;picker.addEventListener('close',()=>{if(returnFocus?.isConnected)returnFocus.focus();else host.querySelector<HTMLElement>('[data-tag-slot],#blind-boss-picker')?.focus();});
+ let returnFocus:HTMLElement|null=null,returnSelector='';picker.addEventListener('close',()=>{if(returnFocus?.isConnected)returnFocus.focus();else host.querySelector<HTMLElement>(returnSelector||'[data-tag-slot],#blind-boss-picker')?.focus();});
  function openPicker(kind:Kind,button:HTMLElement,state:GameState){
-  returnFocus=button;grid.replaceChildren();pickerError.textContent='';heading.textContent=kind==='boss'?'Jefe que aparece en tu partida':'Etiqueta de la ciega '+(kind==='small'?'pequeña':'grande');
+  returnFocus=button;returnSelector=kind==='boss'?'#blind-boss-picker':`[data-tag-slot=${kind}]`;grid.replaceChildren();pickerError.textContent='';heading.textContent=kind==='boss'?'Jefe que aparece en tu partida':'Etiqueta de la ciega '+(kind==='small'?'pequeña':'grande');
   const binding={runId:state.runId,revision:state.revision};
   const choose=(id:string|null)=>{const problem=kind==='boss'?options.observeBoss(id??'',binding):options.observeTag(kind,id,binding);if(problem){pickerError.textContent=problem;return;}picker.close();refresh();};
-  if(kind==='boss')for(const [id,name] of Object.entries(bosses)){const b=el('button','','blind-picker-item');b.type='button';b.dataset.bossChoice=id;b.append(blindArt(id,name),el('span',name));b.onclick=()=>choose(id);grid.append(b);}
+  const reference=value(state.observed.nextBlind),eligible=(id:string)=>!!reference&&blindRequirement(reference.ante,'boss',id,value(state.observed.deckId)??'').ok;
+  if(kind==='boss')for(const boss of [...BOSS_CATALOG].sort((a,b)=>Number(eligible(b.id))-Number(eligible(a.id)))){const b=el('button','','blind-picker-item boss-picker-item');b.type='button';b.dataset.bossChoice=boss.id;const text=el('span','','boss-picker-copy'),current=value(state.observed.nextBlind),required=current?blindRequirement(current.ante,'boss',boss.id,value(state.observed.deckId)??''):null;
+   text.append(el('strong',boss.name),el('span',boss.description),el('small',`Objetivo ×${boss.multiplier} · premio $${boss.reward} · ${boss.showdown?'jefe final':`ante ${boss.minAnte}+`}`));if(required?.ok)text.append(el('small',`${required.target.toLocaleString('es')} fichas en este ante`));else if(required&&!required.ok){b.disabled=true;b.title=required.error.message;}
+   b.append(blindArt(boss.artId,boss.name),text);b.onclick=()=>choose(boss.id);grid.append(b);}
   else {const clear=el('button','Sin registrar','blind-picker-item');clear.type='button';clear.onclick=()=>choose(null);grid.append(clear);for(const tag of TAGS){const b=el('button','','blind-picker-item');b.type='button';b.dataset.tagChoice=tag.id;b.append(tagArt(tag.id,tag.name),el('span',tag.name));b.onclick=()=>choose(tag.id);grid.append(b);}}
-  picker.showModal();close.focus();
+  picker.showModal();heading.focus({preventScroll:true});picker.scrollTop=0;
  }
  let rendered='';
  function refresh(){
@@ -68,22 +69,22 @@ export function mountBlindScreen(options:BlindScreenOptions){
   deck.querySelector('.deck-art')?.remove();deck.prepend(deckArt(deckId,DECK_PROFILES[deckId as keyof typeof DECK_PROFILES]?.name??'Baraja'));const composition=value(state.observed.deck);deckCount.textContent=composition?String('cards'in composition?composition.cards.length:52):'—';
   cards.replaceChildren();const boss=value(state.observed.visibleBoss),visibleBoss=boss?.ante===anteValue?boss:current?.kind==='boss'?current:undefined;
   for(const kind of ['small','big','boss'] as const){
-   const active=current?.kind===kind,past=!!current&&(['small','big','boss'].indexOf(kind)<['small','big','boss'].indexOf(current.kind)),id=kind==='boss'?value(visibleBoss?.bossId):kind,name=kind==='boss'?(id?bosses[id]??id:'Ciega jefe'):labels[kind];
+   const active=current?.kind===kind,past=!!current&&(['small','big','boss'].indexOf(kind)<['small','big','boss'].indexOf(current.kind)),id=kind==='boss'?value(visibleBoss?.bossId):kind,definition=kind==='boss'&&id?bossDefinition(id):undefined,name=kind==='boss'?(definition?.name??id??'Ciega jefe'):labels[kind];
    const card=el('section','','blind-card blind-card-'+kind);card.dataset.kind=kind;card.dataset.active=String(active);card.dataset.past=String(past);
    const select=el('button',past?'Pasada':active?'Seleccionar':'Próximamente','blind-select');select.type='button';select.id='blind-select-'+kind;select.disabled=!active||!writable;select.title=active?'Registrar que seleccionaste esta ciega en Balatro':'';select.onclick=options.select;
    const band=el('div',name,'blind-name'),portrait=kind==='boss'?el('button','','blind-boss-portrait'):el('div','','blind-chip');
    if(portrait instanceof HTMLButtonElement){portrait.type='button';portrait.id='blind-boss-picker';portrait.disabled=!writable||!current;portrait.setAttribute('aria-label',id?'Cambiar jefe: '+name:'Introducir jefe');portrait.onclick=()=>openPicker('boss',portrait,state);}
-   if(id)portrait.append(blindArt(id,name));else portrait.append(el('span','+','blind-pixel-plus'));
+   if(id)portrait.append(blindArt(definition?.artId??id,name));else portrait.append(el('span','','blind-pixel-plus'));
    const amounts=el('div','','blind-amounts');let target:number|undefined,reward:number|undefined;
    if(active){target=value(current.target);reward=value(current.reward);}else if(kind==='boss'){target=value(visibleBoss?.target);reward=value(visibleBoss?.reward);}else if(anteValue!==undefined){const requirement=blindRequirement(anteValue,kind,'none',deckId);if(requirement.ok){target=requirement.target;reward=requirement.reward;}}
-   if(kind==='boss'&&id)amounts.append(el('p',bossEffects[id]??'Efecto no compatible.','blind-boss-effect'));
+   if(kind==='boss'&&id){const calculated=anteValue===undefined?null:blindRequirement(anteValue,'boss',id,deckId);if(calculated?.ok){target??=calculated.target;reward??=calculated.reward;}if(definition){const effect=el('p',definition.shortDescription,'blind-boss-effect');effect.title=definition.description;amounts.append(effect);}else amounts.append(el('p','Jefe fuera del catálogo.','blind-boss-effect'));}
    const amount=el('strong',target===undefined?'—':target.toLocaleString('es'),'blind-score-target');amount.dataset.target=target===undefined?'unknown':String(target);amounts.append(el('span','Puntúa al menos'),amount,el('span','Premio: '+(reward===undefined?'—':reward<=8?'$'.repeat(reward):'$'+reward.toLocaleString('es')),'blind-reward'));
    card.append(select,band,portrait,amounts);
    if(kind!=='boss'){
     const row=el('div','','blind-skip-row'),slot=el('button','','blind-tag-slot');slot.type='button';slot.dataset.tagSlot=kind;
     const saved=state.schemaVersion==='0.2'?state.blindTags?.find(t=>t.ante===anteValue&&t.kind===kind)?.tag:undefined;
     const tag=active&&state.schemaVersion==='0.2'&&state.phase==='blind_select'?value(state.phaseData.skipTag):value(saved);
-    slot.dataset.empty=String(!tag);slot.setAttribute('aria-label',tag?'Cambiar '+(tagDefinition(tag)?.name??tag):'Introducir etiqueta: '+labels[kind]);slot.title=tag?tagDefinition(tag)?.name??tag:'Introducir etiqueta';slot.disabled=!writable||past||!current;slot.append(tag?tagArt(tag,tagDefinition(tag)?.name??tag):el('span','+','blind-pixel-plus'));slot.onclick=()=>openPicker(kind,slot,state);
+    slot.dataset.empty=String(!tag);slot.setAttribute('aria-label',tag?'Cambiar '+(tagDefinition(tag)?.name??tag):'Introducir etiqueta: '+labels[kind]);slot.title=tag?tagDefinition(tag)?.name??tag:'Introducir etiqueta';slot.disabled=!writable||past||!current;slot.append(tag?tagArt(tag,tagDefinition(tag)?.name??tag):el('span','','blind-pixel-plus'));slot.onclick=()=>openPicker(kind,slot,state);
     const skip=el('button','Saltar ciega','blind-skip');skip.type='button';skip.id='blind-skip-'+kind;skip.disabled=!active||!writable;skip.title='Registrar un salto que ya realizaste en Balatro';skip.onclick=options.skip;row.append(slot,skip);card.append(el('div','o','blind-or'),row);
    }else {const next=el('div','','blind-up-ante');next.append(el('strong','Sube el ante'),el('span','Aumentan las ciegas'),el('span','Renueva las ciegas'));card.append(next);}
    cards.append(card);

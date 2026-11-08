@@ -1,5 +1,6 @@
 import {ALL_JOKER_FACTS} from '../catalog/all-joker-facts.js';
 import {attachSynergies} from './synergies.js';
+import {bossCatalogue} from './boss-catalogue.js';
 import {filterCollection,rarityNames} from '../catalog/collection.js';
 import type {JokerCollection,JokerReference} from '../catalog/collection.js';
 const el=<K extends keyof HTMLElementTagNameMap>(tag:K,text='',className='')=>{const e=document.createElement(tag);e.textContent=text;e.className=className;return e;};
@@ -44,7 +45,7 @@ export function mountCollection(){
     if(!filtered.length)grid.append(el('p','Sin coincidencias.','empty'));
    };
    search.oninput=render;rarity.onchange=render;support.onchange=render;
-   const synergyHost=el('div');attachSynergies(synergyHost);host.replaceChildren(tools,note,synergyHost,grid,dialog);render();
+   const synergyHost=el('div');attachSynergies(synergyHost);host.replaceChildren(tools,note,synergyHost,bossCatalogue(),grid,dialog);render();
   }catch{loaded=false;const retry=el('button','Reintentar');retry.onclick=()=>void load();host.replaceChildren(el('p','No se pudo cargar la colección.','error'),retry);}
  };
  window.addEventListener('hashchange',()=>void load());void load();

@@ -38,6 +38,8 @@ jobs:
         run: node tools/run-setup-test.mjs
       - name: Comprobar selección de ciegas y etiquetas observadas independientes
         run: node tools/blind-screen-test.mjs
+      - name: Comprobar catálogo de28 jefes, metadatos y observaciones manuales
+        run: node tools/boss-catalogue-test.mjs
       - name: Comprobar consejo rápido y separación del registro
         run: node tools/quick-shop-eval-test.mjs
       - name: Comprobar resumen compacto y detalle recuperable
