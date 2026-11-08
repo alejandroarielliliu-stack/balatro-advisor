@@ -40,7 +40,7 @@ const cycleCommandSchema=union(
     union(object({type:enumeration('collect_cashout'),money:integer()},{nextBlind:progressBlindSchema}),
       union(object({type:enumeration('leave_shop')},{nextBlind:progressBlindSchema}),object({type:enumeration('end_run'),reason:text(2000)})))));
 const cashoutJokerUpdateSchema=object({instanceId:text(),counters:recordSchema(fact(integer()))},{sellValue:fact(integer(0)),removed:boolean});
-const recordCashoutCommandSchema=object({type:enumeration('record_cashout'),money:integer(),amount:integer(0),jokerUpdates:array(cashoutJokerUpdateSchema,100)},{nextBlind:progressBlindSchema});
+const recordCashoutCommandSchema=object({type:enumeration('record_cashout'),amount:integer(0),jokerUpdates:array(cashoutJokerUpdateSchema,100)},{money:integer(),nextBlind:progressBlindSchema});
 export type CashoutJokerUpdate=Infer<typeof cashoutJokerUpdateSchema>;
 export type RecordCashoutCommand=Infer<typeof recordCashoutCommandSchema>;
 export const runProgressCommandSchema=union(recordCashoutCommandSchema,union(cycleCommandSchema,union(
@@ -54,6 +54,7 @@ const known=<T>(value:T):Fact<T>=>({status:'known',source:'manual',value});
 const unknown=<T>(reason:string):Fact<T>=>({status:'unknown',reason});
 const issue=<T>(code:string,message:string,path='$progress'):Result<T>=>({ok:false,errors:[{path,code,message}]});
 const sameRef=(a:BlindRef,b:BlindRef)=>a.ante===b.ante&&a.kind===b.kind;
+const observedProgressLimitations=['El avance es declarado por el usuario; no verifica las reglas mediante una partida ni calcula efectos de manos omitidas.','El ciclo Small → Big → Boss y el final en ante 8 corresponden al alcance documentado, sin endless ni desafíos; no se infiere compatibilidad del perfil desconocido.'];
 
 /** Cycle order only. No tag effects, boss lottery, payout or scoring is performed. */
 export function advanceBlindRef(blind:BlindRef):BlindRef|null {
@@ -122,6 +123,20 @@ function applyInventory(state:GameStateV02,inventory:InventoryConfirmation){
   Object.assign(state.observed,structuredClone(inventory.patch));
 }
 
+/** Advances an observed payout without manufacturing a known final balance. */
+function enterShopAfterCashout(state:GameStateV02,proposed:BlindInfo|undefined,limitations:string[]):Result<GameStateV02>{
+  if(state.phase!=='cashout')return issue('wrong_phase','Solo se puede registrar el cobro tras una ronda ganada.');
+  if(state.phaseData.blind.status!=='known')return issue('missing_blind','Falta la ciega superada; corrige el registro antes de avanzar.');
+  const successor=nextBlindAfter(state,state.phaseData.blind.value);if(!successor)return issue('finished_run','El objetivo del ante 8 ya terminó; no se inventa una tienda posterior.');
+  if(proposed&&!sameRef(proposed,successor))return issue('wrong_blind','La ciega transcrita no coincide con la siguiente posición del ciclo.');
+  state.observed.nextBlind=known(structuredClone(proposed??successor));
+  if(state.phaseData.blind.value.kind==='boss')state.observed.visibleBoss=unknown('El jefe del nuevo ante todavía no se registró.');
+  state.observed.shop=unknown('Registra las ofertas de esta nueva tienda; no se reutilizan las anteriores.');
+  const next:GameStateV02={...state,phase:'shop',phaseData:{origin:structuredClone(state.phaseData.blind)}};
+  invalidateDynamic(next,'shop_entry',limitations);
+  return {ok:true,value:next};
+}
+
 /** Records a user's actual progress; never copies a H2/T07b projected state or runs round hooks. */
 export function applyRunProgress(input:unknown,commandInput:unknown,options:ProgressOptions):Result<ProgressResult>{
   const loaded=validateState(input);if(!loaded.ok)return loaded;
@@ -132,7 +147,7 @@ export function applyRunProgress(input:unknown,commandInput:unknown,options:Prog
   const command=structuredClone(commandInput) as RunProgressCommand,state=loaded.value;
   if(options.expectedRevision!==state.revision)return issue('stale_revision','La partida cambió; recarga antes de confirmar el avance.');
   if(command.type==='record_cashout')return recordObservedCashout(state,command,options);
-  const trace:Trace[]=[],limitations:string[]=['El avance es declarado por el usuario; no verifica las reglas mediante una partida ni calcula efectos de manos omitidas.','El ciclo Small → Big → Boss y el final en ante 8 corresponden al alcance documentado, sin endless ni desafíos; no se infiere compatibilidad del perfil desconocido.'];
+  const trace:Trace[]=[],limitations=[...observedProgressLimitations];
   let next:GameStateV02=state;
   const requireBlind=():Result<BlindInfo>=>{
     if(state.observed.nextBlind.status!=='known')return issue('missing_blind','Indica la ciega actual; no se deduce de una tienda de origen desconocido.');
@@ -209,15 +224,7 @@ export function applyRunProgress(input:unknown,commandInput:unknown,options:Prog
       else next={...state,phase:'cashout',phaseData:{blind:known({ante:blind.value.ante,kind:blind.value.kind}),amount:unknown('No se calcula el cobro a partir del resumen; registra el saldo final observado.')}};
     }else next={...state,phase:'finished',phaseData:{outcome:'lost',reason:known('El usuario confirmó que perdió la ronda. No se concedió premio.')}};
   }else if(command.type==='collect_cashout'){
-    if(state.phase!=='cashout')return issue('wrong_phase','Solo se puede registrar el cobro tras una ronda ganada.');
-    if(state.phaseData.blind.status!=='known')return issue('missing_blind','Falta la ciega superada; corrige el registro antes de avanzar.');
-    const successor=nextBlindAfter(state,state.phaseData.blind.value);if(!successor)return issue('finished_run','El objetivo del ante 8 ya terminó; no se inventa una tienda posterior.');
-    const upcoming=acceptBlind(command.nextBlind,successor);if(!upcoming.ok)return upcoming;
-    state.observed.nextBlind=known(upcoming.value);
-    if(state.phaseData.blind.value.kind==='boss')state.observed.visibleBoss=unknown('El jefe del nuevo ante todavía no se registró.');
-    state.observed.shop=unknown('Registra las ofertas de esta nueva tienda; no se reutilizan las anteriores.');
-    next={...state,phase:'shop',phaseData:{origin:structuredClone(state.phaseData.blind)}};
-    invalidateDynamic(next,'shop_entry',limitations);
+    const result=enterShopAfterCashout(state,command.nextBlind,limitations);if(!result.ok)return result;next=result.value;
   }else if(command.type==='leave_shop'){
     if(state.phase!=='shop')return issue('wrong_phase','Solo puedes salir de una tienda abierta.');
     const upcoming=requireBlind();if(!upcoming.ok)return upcoming;const accepted=acceptBlind(command.nextBlind,upcoming.value);if(!accepted.ok)return accepted;
@@ -259,6 +266,17 @@ export function applyRunProgress(input:unknown,commandInput:unknown,options:Prog
 /** One observed payout, one revision. Internal transitions never persist separately. */
 function recordObservedCashout(state:GameStateV02,command:RecordCashoutCommand,options:ProgressOptions):Result<ProgressResult>{
   if(state.phase!=='in_round'&&state.phase!=='cashout')return issue('wrong_phase','Registra el cobro desde una ciega en curso o su pantalla de cobro.');
+  const previousMoney=state.observed.money;
+  let finalMoney:Fact<number>;
+  if(command.money!==undefined)finalMoney=known(command.money);
+  else if(previousMoney.status==='known'){
+    const total=previousMoney.value+command.amount;
+    if(!Number.isSafeInteger(total))return issue('numeric_range','El saldo registrado más el cobro supera el rango de enteros seguros.','$command.amount');
+    // The admitted manual source describes the player's inputs. This is a
+    // literal addition to the recorded balance, not evidence of other income
+    // or money changes that may have happened during the unrecorded round.
+    finalMoney=known(total);
+  }else finalMoney=structuredClone(previousMoney);
   const original=state.observed.jokers,seen=new Set<string>();
   for(const [index,update]of command.jokerUpdates.entries()){
     const path=`$command.jokerUpdates[${index}]`;
@@ -273,7 +291,7 @@ function recordObservedCashout(state:GameStateV02,command:RecordCashoutCommand,o
       if(spec&&value.status==='known'&&(value.value<spec.min||spec.max!==undefined&&value.value>spec.max))return issue('out_of_range',spec.label+': valor fuera del rango admitido.',path+'.counters.'+key);
     }
   }
-  let next:GameStateV02=state;const limitations:string[]=[],trace:Trace[]=[];
+  let next:GameStateV02=state;const limitations=[...observedProgressLimitations],trace:Trace[]=[];
   const advance=(command:RunProgressCommand):Result<ProgressResult>=>applyRunProgress(next,command,{expectedRevision:next.revision,updatedAt:options.updatedAt,inventory:{unchanged:true}});
   if(next.phase==='in_round'){
     const result=advance({type:'report_result',outcome:'won'});if(!result.ok)return result;
@@ -281,16 +299,14 @@ function recordObservedCashout(state:GameStateV02,command:RecordCashoutCommand,o
   }
   if(next.phase==='cashout'){
     next.phaseData.amount=known(command.amount);
-    const result=advance({type:'collect_cashout',money:command.money,...(command.nextBlind?{nextBlind:command.nextBlind}:{})});if(!result.ok)return result;
-    next=result.value.state;limitations.push(...result.value.limitations);
+    const result=enterShopAfterCashout(next,command.nextBlind,limitations);if(!result.ok)return result;next=result.value;
   }else{
     if(command.nextBlind)return issue('finished_run','El jefe del ante 8 termina el recorrido; no se registra una siguiente tienda.');
-    next.observed.money=known(command.money);
   }
   applyInventory(next,options.inventory);
-  // A final observed balance always wins over any inventory patch. The payout
-  // amount is retained in the journal/trace and is never added to an old balance.
-  next.observed.money=known(command.money);
+  // An explicit final balance wins; otherwise use only the recorded baseline
+  // captured before round invalidation. An unknown baseline never becomes zero.
+  next.observed.money=finalMoney;
   for(const update of command.jokerUpdates){
     const inventory=next.observed.jokers;
     if(inventory.status!=='known')return issue('missing_inventory','Confirma el inventario actual antes de actualizar sus comodines.');
@@ -304,7 +320,11 @@ function recordObservedCashout(state:GameStateV02,command:RecordCashoutCommand,o
   next.revision=state.revision+1;next.updatedAt=options.updatedAt;
   const validated=validateCurrentState(next);if(!validated.ok)return validated;
   trace.push({ruleId:'run.observed',label:'Resultado y cobro confirmados por el usuario',values:{command:command.type,from:state.phase,to:next.phase,revision:next.revision}});
-  trace.push({ruleId:'run.observed.balance',label:'Saldo final transcrito; el cobro no se sumó al saldo anterior',values:{money:command.money,amount:command.amount}});
+  if(command.money!==undefined)trace.push({ruleId:'run.observed.balance',label:'Saldo final transcrito; el cobro no se sumó al saldo anterior',values:{method:'observed_balance',money:command.money,amount:command.amount}});
+  else if(previousMoney.status==='known'&&finalMoney.status==='known'){
+    trace.push({ruleId:'run.observed.balance',label:'Saldo derivado: saldo previo registrado más el cobro indicado',values:{method:'recorded_balance_plus_amount',balanceBefore:previousMoney.value,amount:command.amount,money:finalMoney.value}});
+    limitations.push('El saldo suma literalmente el cobro indicado al saldo previo registrado; no acredita otros ingresos o gastos no transcritos durante la ronda.');
+  }else trace.push({ruleId:'run.observed.balance',label:'Saldo previo desconocido; el cobro indicado no permite reconstruir el saldo final',values:{method:'unknown_previous_balance',amount:command.amount}});
   if(command.jokerUpdates.length)trace.push({ruleId:'run.observed.jokers',label:'Cambios de comodines observados por copia después de la ronda',values:{instances:command.jokerUpdates.length}});
   return {ok:true,value:{state:validated.value,trace,limitations:[...new Set(limitations)]}};
 }

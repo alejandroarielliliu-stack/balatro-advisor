@@ -57,7 +57,7 @@ try{
   return after;
  };
  const visibleBounds=async(page,viewport)=>{
-  for(const selector of ['#round-cashout-submit','#round-cashout-amount','#round-cashout-money','#blind-run-info','#blind-deck','.blind-joker-tray','.blind-consumable-tray']){
+  for(const selector of ['#round-cashout-submit','#round-cashout-amount','#blind-run-info','#blind-deck','.blind-joker-tray','.blind-consumable-tray']){
    const bounds=await page.locator(selector).boundingBox();
    assert.ok(bounds&&bounds.x>=-1&&bounds.y>=-1&&bounds.x+bounds.width<=viewport.width+1&&bounds.y+bounds.height<=viewport.height+1,selector+' is clipped: '+JSON.stringify({viewport,bounds}));
   }
@@ -66,6 +66,14 @@ try{
   assert.ok(Math.abs(sidebar.top)<=1&&Math.abs(sidebar.bottom-height)<=1,'Sidebar remains full height');
   assert.ok(Math.abs(panel.bottom-height)<=2,'Cashout panel continues to the bottom edge');
   assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true,'No horizontal page overflow');
+  assert.equal(await page.locator('#round-cashout-money').count(),0,'Only the earned amount is requested');
+  assert.equal(await page.locator('#round-cashout-submit').innerText(),'Siguiente');
+  assert.equal(await page.locator('#round-cashout-blind #round-cashout-amount').count(),1,'Cash Out input replaces the reward marks inside the blind row');
+  assert.equal(await page.locator('#round-cashout-blind .round-cashout-reward').count(),0,'Static reward marks are replaced by the editable Cash Out box');
+  assert.doesNotMatch(await page.locator('#round-cashout').innerText(),/\${2,}|Saldo al cobrar/,'The cashout panel has no redundant reward marks or balance field');
+  const [target]=await page.locator('.round-cashout-target').evaluateAll(logicalBounds),[amount]=await page.locator('#round-cashout-amount').evaluateAll(logicalBounds),[summary]=await page.locator('#round-cashout-blind').evaluateAll(logicalBounds);
+  assert.ok(amount.left>=target.right-1,'Cash Out input sits to the right of the blind target');
+  assert.ok(amount.top>=summary.top-1&&amount.bottom<=summary.bottom+1&&amount.right<=summary.right+1,'Cash Out input stays within the blind row');
  };
 
  const main=await session(),p=main.page;await start(p);const inRound=await enter(p);
@@ -73,22 +81,23 @@ try{
  assert.equal(await p.locator('.blind-cards').evaluate(element=>getComputedStyle(element).visibility),'hidden','Reduced motion hides the old blinds immediately');
  assert.equal(await p.locator('.blind-cards').evaluate(element=>getComputedStyle(element).pointerEvents),'none');
  assert.equal(await p.locator('#round-cashout-jokers').innerText(),'','No growth editors or placeholder content without dynamic jokers');
- assert.equal(await p.locator('#round-cashout-amount').inputValue(),'');assert.equal(await p.locator('#round-cashout-money').inputValue(),'');
+ assert.equal(await p.locator('#round-cashout-amount').inputValue(),'');assert.equal(await p.locator('#round-cashout-money').count(),0);
  assert.equal(inRound.state.observed.money.value,4,'Opening cashout grants neither payout nor victory');
  await visibleBounds(p,{width:1280,height:600});await p.screenshot({path:dir+'/desktop-empty.png'});
- const beforeEdit=await raw(p);await p.locator('#round-cashout-amount').fill('3');await p.locator('#round-cashout-money').fill('7');
+ const beforeEdit=await raw(p);await p.locator('#round-cashout-amount').fill('3');
  assert.equal(await raw(p),beforeEdit,'Typing observations does not save or change phase');
  pass('selection-opens-reference-layout-with-empty-joker-area-and-no-automatic-cobro');
 
  await p.evaluate(()=>window.__roundCashoutFail=true);await p.locator('#round-cashout-submit').click();
  assert.equal(await raw(p),beforeEdit,'Failed cashout keeps the complete prior record');
- assert.equal(await p.locator('#round-cashout-amount').inputValue(),'3');assert.equal(await p.locator('#round-cashout-money').inputValue(),'7');
+ assert.equal(await p.locator('#round-cashout-amount').inputValue(),'3');
  assert.match(await p.locator('#round-cashout-error').innerText(),/guardar|almacen|espacio|fall/i);
  await p.evaluate(()=>window.__roundCashoutFail=false);await p.locator('#round-cashout-submit').click();
  await p.waitForFunction(()=>document.body.dataset.view==='table');const collected=await record(p);
  assert.equal(collected.state.phase,'shop');assert.equal(collected.state.observed.money.value,7);
  assert.equal(collected.state.revision,inRound.state.revision+1);assert.equal(collected.history.length,inRound.history.length+1,'Win, payout and joker observations are one history entry');
  assert.equal(collected.history.at(-1).progress.command.type,'record_cashout');
+ assert.equal(Object.hasOwn(collected.history.at(-1).progress.command,'money'),false,'Cashout UI submits only the earned amount, not an invented final balance');
  assert.equal(collected.history.at(-1).progress.command.amount,3);assert.equal(collected.state.observed.nextBlind.value.kind,'big');
  pass('storage-failure-preserves-draft-retry-saves-one-history-entry');await main.context.close();
 
@@ -106,10 +115,10 @@ try{
  await continueRun(d);await d.locator('#round-cashout').waitFor({state:'visible'});assert.equal(await raw(d),resumeRaw,'Continue restores the round panel without replaying selection');
  await d.locator('[data-cashout-joker="green-a"] [data-counter="greenMult"]').fill('10');
  await d.locator('[data-cashout-joker="green-b"] [data-counter="greenMult"]').fill('22');
- await d.locator('#round-cashout-amount').fill('7');await d.locator('#round-cashout-money').fill('31');
+ await d.locator('#round-cashout-amount').fill('7');
  assert.equal(await raw(d),resumeRaw);await d.locator('#round-cashout-jokers').evaluate(element=>element.scrollTop=0);await d.screenshot({path:dir+'/desktop-jokers.png'});await d.locator('#round-cashout-submit').click();
  await d.waitForFunction(()=>document.body.dataset.view==='table');const changed=await record(d),jokers=changed.state.observed.jokers.value;
- assert.equal(changed.state.observed.money.value,31,'Final observed balance is literal, not prior balance plus payout');
+ assert.equal(changed.state.observed.money.value,30,'The entered payout is added once to the current known balance');
  assert.equal(jokers.find(j=>j.instanceId==='green-a').counters.greenMult.value,10);
  assert.equal(jokers.find(j=>j.instanceId==='green-b').counters.greenMult.value,22);
  assert.equal(jokers.find(j=>j.instanceId==='ice').counters.chips.status,'unknown','A blank post-round counter does not restore its previous value');
@@ -117,14 +126,14 @@ try{
 
  const cashout=progress(progress(structuredClone(generated.value),{type:'enter_round'}),{type:'report_result',outcome:'won'});
  const resumed=await session(undefined,fixture(cashout)),r=resumed.page;await continueRun(r);await r.locator('#round-cashout').waitFor({state:'visible'});
- const cashoutRaw=await raw(r);assert.equal(await r.locator('#round-cashout-money').inputValue(),'');await r.locator('#round-cashout-amount').fill('4');await r.locator('#round-cashout-money').fill('9');assert.equal(await raw(r),cashoutRaw);
- await r.locator('#round-cashout-submit').click();await r.waitForFunction(()=>document.body.dataset.view==='table');assert.equal((await record(r)).state.observed.money.value,9);
+ const cashoutRaw=await raw(r);assert.equal(await r.locator('#round-cashout-money').count(),0);await r.locator('#round-cashout-amount').fill('4');assert.equal(await raw(r),cashoutRaw);
+ await r.locator('#round-cashout-submit').click();await r.waitForFunction(()=>document.body.dataset.view==='table');assert.equal((await record(r)).state.observed.money.status,'unknown','A payout does not reconstruct an unknown earlier balance');
  pass('previously-recorded-cashout-resumes-without-inferring-unknown-balance');await resumed.context.close();
 
  const final=structuredClone(generated.value);final.runId='cashout-final-eight';final.observed.nextBlind=known({ante:8,kind:'boss',bossId:known('amber_acorn'),target:known(100000),reward:known(8)});
  const ending=await session(undefined,fixture(final)),e=ending.page;await continueRun(e);await enter(e);
- await e.locator('#round-cashout-amount').fill('8');await e.locator('#round-cashout-money').fill('45');await e.locator('#round-cashout-submit').click();
- await e.waitForFunction(()=>document.body.dataset.view==='table');const finished=await record(e);assert.equal(finished.state.phase,'finished');assert.equal(finished.state.phaseData.outcome,'won');assert.equal(finished.state.observed.money.value,45);
+ await e.locator('#round-cashout-amount').fill('8');await e.locator('#round-cashout-submit').click();
+ await e.waitForFunction(()=>document.body.dataset.view==='table');const finished=await record(e);assert.equal(finished.state.phase,'finished');assert.equal(finished.state.phaseData.outcome,'won');assert.equal(finished.state.observed.money.value,12);
  assert.notEqual(finished.state.observed.shop.status,'known','Final boss does not invent an extra shop');
  pass('final-boss-records-payout-and-completes-ante-eight');await ending.context.close();
 
@@ -157,7 +166,7 @@ try{
  pass('only-blind-cards-drop-while-shell-stays-stationary-and-reduced-motion-skips-drop');await animated.context.close();
 
  const stale=await session(undefined,fixture(dynamic)),s=stale.page;await continueRun(s);await enter(s);
- await s.locator('#round-cashout-amount').fill('7');await s.locator('#round-cashout-money').fill('31');
+ await s.locator('#round-cashout-amount').fill('7');
  await s.locator('[data-cashout-joker="green-a"] [data-counter="greenMult"]').fill('10');
  await s.locator('[data-cashout-joker="green-b"] [data-counter="greenMult"]').fill('22');
  const draftRaw=await raw(s);let externalRaw=draftRaw;
@@ -168,7 +177,7 @@ try{
  assert.equal(externalChange.ok,true,JSON.stringify(externalChange.errors));
  await s.evaluate(({key,previous,next})=>{localStorage.setItem(key,next);window.dispatchEvent(new StorageEvent('storage',{key,oldValue:previous,newValue:next,storageArea:localStorage,url:location.href}));},{key,previous:draftRaw,next:externalRaw});
  await s.locator('#round-cashout-reload').waitFor({state:'visible'});
- assert.equal(await s.locator('#round-cashout-amount').inputValue(),'7');assert.equal(await s.locator('#round-cashout-money').inputValue(),'31');
+ assert.equal(await s.locator('#round-cashout-amount').inputValue(),'7');
  assert.equal(await s.locator('[data-cashout-joker="green-a"] [data-counter="greenMult"]').inputValue(),'10');
  assert.equal(await s.locator('[data-cashout-joker="green-b"] [data-counter="greenMult"]').inputValue(),'22');
  assert.equal(await s.locator('#round-cashout-submit').isDisabled(),true,'A stale revision cannot be submitted');
@@ -176,16 +185,18 @@ try{
  assert.equal(await raw(s),externalRaw,'Refreshing the stale draft does not overwrite the newer valid record');
  await s.locator('#round-cashout-jokers').evaluate(element=>element.scrollTop=0);await s.screenshot({path:dir+'/stale-draft.png'});
  await s.locator('#round-cashout-reload').click();
- assert.equal(await s.locator('#round-cashout-amount').inputValue(),'');assert.equal(await s.locator('#round-cashout-money').inputValue(),'');
+ assert.equal(await s.locator('#round-cashout-amount').inputValue(),'');assert.equal(await s.locator('#round-cashout-money').count(),0);
  assert.equal(await s.locator('[data-cashout-joker="green-a"] [data-counter="greenMult"]').inputValue(),'');
  assert.match(await s.locator('[data-cashout-joker="green-a"] [data-counter="greenMult"]').getAttribute('placeholder'),/18/,'Explicit refresh loads the current observation');
  assert.equal(await s.locator('#round-cashout-submit').isDisabled(),false);assert.equal(await s.locator('#round-cashout-reload').isVisible(),false);
  assert.equal(await raw(s),externalRaw,'Explicit draft refresh is also read-only');
+ await s.locator('#round-cashout-amount').fill('5');await s.locator('#round-cashout-submit').click();await s.waitForFunction(()=>document.body.dataset.view==='table');
+ assert.equal((await record(s)).state.observed.money.value,45,'After explicit refresh the new payout uses the updated balance of 40');
  pass('external-revision-preserves-draft-blocks-submit-and-requires-explicit-refresh');await stale.context.close();
 
  for(const viewport of [{width:844,height:390},{width:390,height:844},{width:568,height:320}]){
   const mobile=await session(viewport),m=mobile.page;await start(m);await enter(m);await visibleBounds(m,viewport);
-  await m.locator('#round-cashout-amount').fill('3');await m.locator('#round-cashout-money').fill('7');
+  await m.locator('#round-cashout-amount').fill('3');
   await m.screenshot({path:`${dir}/mobile-${viewport.width}x${viewport.height}.png`});await mobile.context.close();
  }
  pass('cashout-controls-fit-horizontal-and-rotated-mobile');

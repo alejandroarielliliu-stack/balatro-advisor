@@ -12,7 +12,6 @@ const unobserved=():Fact<number>=>({status:'unknown',reason:'No se transcribió 
 
 export interface RoundCashoutSubmission {
  amount:number;
- money:number;
  jokerUpdates:Array<{instanceId:string;counters:Record<string,Fact<number>>;sellValue?:Fact<number>;removed?:boolean}>;
 }
 interface CashoutOptions {
@@ -24,14 +23,13 @@ interface CashoutOptions {
 export function mountRoundCashout(host:HTMLElement,options:CashoutOptions){
  const section=el('section','','round-cashout');section.id='round-cashout';section.hidden=true;section.setAttribute('aria-label','Cobro de la ronda');
  const form=el('form','','round-cashout-form');form.noValidate=true;
- const header=el('div','','round-cashout-header'),submit=el('button','Cash Out:','round-cashout-submit');submit.id='round-cashout-submit';submit.type='submit';submit.setAttribute('aria-label','Registrar cobro y continuar');
- const amountLabel=el('label','','round-cashout-amount-label');amountLabel.append(el('span','$'));
- const amount=el('input','','round-cashout-amount');amount.id='round-cashout-amount';amount.type='number';amount.inputMode='numeric';amount.min='0';amount.step='1';amount.required=true;amount.placeholder='—';amount.setAttribute('aria-label','Cuánto ganaste en este cobro ($)');amount.title='Transcribe el total de Cash Out que muestra Balatro.';amountLabel.append(amount);header.append(submit,amountLabel);
+ const header=el('div','','round-cashout-header'),submit=el('button','Siguiente','round-cashout-submit');submit.id='round-cashout-submit';submit.type='submit';header.append(submit);
+ const amountLabel=el('label','','round-cashout-amount-label'),amountValue=el('span','','round-cashout-amount-value');amountLabel.append(el('span','Cash Out','round-cashout-amount-title'));amountValue.append(el('span','$'));
+ const amount=el('input','','round-cashout-amount');amount.id='round-cashout-amount';amount.type='number';amount.inputMode='numeric';amount.min='0';amount.step='1';amount.required=true;amount.placeholder='—';amount.setAttribute('aria-label','Cuánto ganaste en este cobro ($)');amount.title='Transcribe el total de Cash Out que muestra Balatro.';amountValue.append(amount);amountLabel.append(amountValue);
  const summary=el('div','','round-cashout-blind');summary.id='round-cashout-blind';
- const balance=el('label','Saldo al cobrar','round-cashout-balance'),money=el('input');money.id='round-cashout-money';money.type='number';money.inputMode='numeric';money.step='1';money.required=true;money.placeholder='$—';money.setAttribute('aria-label','Saldo total después de cobrar ($)');money.title='Dinero total que muestra Balatro después del cobro; incluye el dinero que ya tenías.';balance.append(money);
  const body=el('div','','round-cashout-changes');body.id='round-cashout-jokers';
  const footer=el('div','','round-cashout-footer'),error=el('p','','round-cashout-error'),sync=el('button','Actualizar datos','round-cashout-lost'),lost=el('button','Perdí la ronda','round-cashout-lost');error.id='round-cashout-error';error.setAttribute('role','alert');sync.id='round-cashout-reload';sync.type='button';sync.hidden=true;sync.title='Descartar este borrador y cargar los datos actuales.';lost.id='round-cashout-lost';lost.type='button';lost.onclick=options.lost;footer.append(error,sync,lost);
- form.append(header,summary,balance,body,footer);section.append(form);host.append(section);
+ form.append(header,summary,body,footer);section.append(form);host.append(section);
  let binding:Pick<GameState,'runId'|'revision'>|null=null,rendered='',canSubmit=false,latestState:GameState|null=null,latestWritable=false;
  sync.onclick=()=>{if(!latestState)return;rendered='';binding=null;refresh(latestState,latestWritable);amount.focus({preventScroll:true});};
  let readers:Array<()=>RoundCashoutSubmission['jokerUpdates'][number]>=[];
@@ -42,7 +40,7 @@ export function mountRoundCashout(host:HTMLElement,options:CashoutOptions){
  form.onsubmit=event=>{
   event.preventDefault();if(!binding||!canSubmit)return;
   error.textContent='';try{
-   const submission={amount:parse(amount,'cuánto ganaste en el cobro',0),money:parse(money,'el saldo total después de cobrar'),jokerUpdates:readers.map(read=>read())};
+   const submission={amount:parse(amount,'cuánto ganaste en el cobro',0),jokerUpdates:readers.map(read=>read())};
    const problem=options.submit(submission,{...binding});if(problem)error.textContent=problem;
   }catch(problem){error.textContent=problem instanceof Error?problem.message:'Revisa los valores del cobro.';}
  };
@@ -63,17 +61,17 @@ export function mountRoundCashout(host:HTMLElement,options:CashoutOptions){
   readers.push(()=>removed.checked?{instanceId:joker.instanceId,counters:{},removed:true}:{instanceId:joker.instanceId,counters:Object.fromEntries(counterReaders.map(([key,read])=>[key,read()])),...(sell?{sellValue:sell.read()}: {})});
  };
  function refresh(state:GameState,writable:boolean){
-  latestState=state;latestWritable=writable;canSubmit=writable&&(state.phase==='in_round'||state.phase==='cashout');submit.disabled=!canSubmit;lost.disabled=!canSubmit||state.phase!=='in_round';amount.disabled=!canSubmit;money.disabled=!canSubmit;
-  const hasDraft=!!amount.value.trim()||!!money.value.trim()||Array.from(body.querySelectorAll<HTMLInputElement>('input')).some(input=>input.type==='checkbox'?input.checked:!!input.value.trim());
+  latestState=state;latestWritable=writable;canSubmit=writable&&(state.phase==='in_round'||state.phase==='cashout');submit.disabled=!canSubmit;lost.disabled=!canSubmit||state.phase!=='in_round';amount.disabled=!canSubmit;
+  const hasDraft=!!amount.value.trim()||Array.from(body.querySelectorAll<HTMLInputElement>('input')).some(input=>input.type==='checkbox'?input.checked:!!input.value.trim());
   if(binding?.runId===state.runId&&binding.revision!==state.revision&&hasDraft&&(state.phase==='in_round'||state.phase==='cashout')){
    error.textContent='La partida cambió. Conservamos tu borrador; actualiza los datos antes de cobrar.';sync.hidden=false;submit.disabled=true;body.querySelectorAll<HTMLInputElement>('input').forEach(input=>input.disabled=!canSubmit||(input.type!=='checkbox'&&input.closest<HTMLElement>('.round-cashout-joker')?.dataset.removed==='true'));return;
   }
   const token=JSON.stringify(state);if(token===rendered){body.querySelectorAll<HTMLInputElement>('input').forEach(input=>input.disabled=!canSubmit||(input.type!=='checkbox'&&input.closest<HTMLElement>('.round-cashout-joker')?.dataset.removed==='true'));return;}
-  rendered=token;binding={runId:state.runId,revision:state.revision};error.textContent='';sync.hidden=true;amount.value='';money.value='';readers=[];summary.replaceChildren();body.replaceChildren();
+  rendered=token;binding={runId:state.runId,revision:state.revision};error.textContent='';sync.hidden=true;amount.value='';readers=[];summary.replaceChildren();body.replaceChildren();
   const current=value(state.observed.nextBlind),boss=current?.kind==='boss'?bossDefinition(value(current.bossId)??''):undefined,name=current?.kind==='small'?'Ciega pequeña':current?.kind==='big'?'Ciega grande':boss?.name??'Ciega jefe';
   if(current){summary.append(blindArt(boss?.artId??(current.kind==='boss'?value(current.bossId)??'unknown':current.kind),name));}
   const target=el('div','','round-cashout-target');target.append(el('span','Puntúa al menos'),el('strong',current?.target.status==='known'?current.target.value.toLocaleString('es'):'—'));
-  const reward=value(current?.reward);summary.append(target,el('span',reward===undefined?'$—':'$'.repeat(Math.min(reward,8)),'round-cashout-reward'));summary.title=name+(reward===undefined?'':` · premio base $${reward}`);
+  summary.append(target,amountLabel);summary.title=name;
   const owned=value(state.observed.jokers),gift=owned?.some(j=>j.catalogId==='gift')??false;
   for(const [index,joker]of (owned??[]).entries())jokerEditor(joker,index,gift);
   if(readers.length){const note=el('p','Valores al terminar la ronda. Vacío = desconocido.','round-cashout-changes-note');body.prepend(note);}
