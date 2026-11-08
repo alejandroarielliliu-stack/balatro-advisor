@@ -24,15 +24,29 @@ try{
  const open=async name=>{await category(name).click();await panel(name).waitFor({state:'visible'});};
  const back=async name=>{await page.locator('#collection-back').click();await panel('home').waitFor({state:'visible'});await page.waitForFunction(name=>document.activeElement?.dataset.collectionCategory===name,name);};
  const shot=async name=>{await page.locator('#collection-view img').evaluateAll(images=>Promise.all(images.map(image=>image.decode().catch(()=>{}))));await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));return page.screenshot({path:`${dir}/${name}.png`});};
+ const settledLayout=async()=>{
+  await page.waitForFunction(()=>{
+   const frame=document.getElementById('app-viewport'),stage=document.querySelector('.collection-stage'),root=document.documentElement;
+   if(!frame||!stage)return false;
+   const width=frame.clientWidth,height=frame.clientHeight,scale=Number(stage.style.getPropertyValue('--collection-scale'));
+   return width===Math.max(innerWidth,innerHeight)&&height===Math.min(innerWidth,innerHeight)&&root.dataset.uiRotated===String(innerHeight>innerWidth)
+    &&parseFloat(root.style.getPropertyValue('--app-width'))===width&&parseFloat(root.style.getPropertyValue('--app-height'))===height
+    &&Math.abs(scale-Math.min(width/1280,height/600))<1e-9;
+  });
+  await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
+ };
  const fit=async selector=>{const bounds=await page.locator(selector).boundingBox(),size=page.viewportSize();assert.ok(bounds&&bounds.x>=-1&&bounds.y>=-1&&bounds.x+bounds.width<=size.width+1&&bounds.y+bounds.height<=size.height+1,`Unclipped ${selector}: ${JSON.stringify({bounds,size})}`);};
  assert.equal(await page.locator('[data-collection-category]').count(),12);assert.equal(await page.locator('#collection-view').evaluate(dialog=>dialog.open&&dialog.matches(':modal')),true);
  assert.equal(await page.locator('#menu-view').isVisible(),true);assert.equal(await page.locator('.app-header').isVisible(),false);assert.equal(await page.locator('.collection-notification,.notification-dot,[data-notification]').count(),0);
  const homeFit=async()=>{
-  const [bounds]=await panel('home').evaluateAll(logicalBounds),[backBounds]=await page.locator('#collection-back').evaluateAll(logicalBounds),buttons=await page.locator('[data-collection-category]').evaluateAll(logicalBounds);
-  for(const [index,category]of buttons.entries())assert.ok(category.left>=bounds.left&&category.right<=bounds.right&&category.top>=bounds.top&&category.bottom<backBounds.top,`Category is inside panel and above Back: ${index}`);
-  for(let a=0;a<buttons.length;a++)for(let b=a+1;b<buttons.length;b++){const x=buttons[a],y=buttons[b];assert.ok(x.right<=y.left||y.right<=x.left||x.bottom<=y.top||y.bottom<=x.top,`Distinct category buttons do not overlap: ${a}/${b}`);}
+  // One synchronous DOM snapshot: resize observers cannot change the scale
+  // between the panel, buttons and Back measurements.
+  const [bounds,...children]=await page.locator('.collection-panel[data-category="home"],.collection-panel[data-category="home"] [data-collection-category],.collection-panel[data-category="home"] #collection-back').evaluateAll(logicalBounds);
+  const backBounds=children.pop(),buttons=children;assert.equal(buttons.length,12);
+  for(const [index,category]of buttons.entries())assert.ok(category.left>=bounds.left&&category.right<=bounds.right&&category.top>=bounds.top&&category.bottom<backBounds.top,`Category is inside panel and above Back: ${JSON.stringify({index,viewport:page.viewportSize(),panel:bounds,back:backBounds,category})}`);
+  for(let a=0;a<buttons.length;a++)for(let b=a+1;b<buttons.length;b++){const x=buttons[a],y=buttons[b];assert.ok(x.right<=y.left||y.right<=x.left||x.bottom<=y.top||y.bottom<=x.top,`Distinct category buttons do not overlap: ${JSON.stringify({a,b,x,y,viewport:page.viewportSize()})}`);}
  };
- await fit('.collection-panel');await homeFit();await shot('home');pass('category-menu-over-title-screen-without-notifications');
+ await settledLayout();await fit('.collection-panel');await homeFit();await shot('home');pass('category-menu-over-title-screen-without-notifications');
  await open('joker');assert.equal(await items().count(),15);assert.match(await page.locator('#collection-page').innerText(),/1\s*\/\s*10/);
  const seen=new Set();for(let i=0;i<10;i++){for(const id of await items().evaluateAll(nodes=>nodes.map(node=>node.dataset.joker)))seen.add(id);await page.locator('#collection-next').click();}
  assert.equal(seen.size,150);assert.ok(seen.has('j_joker')&&seen.has('j_perkeo'));assert.match(await page.locator('#collection-page').innerText(),/1\s*\/\s*10/);await page.locator('#collection-prev').click();assert.match(await page.locator('#collection-page').innerText(),/10\s*\/\s*10/);await page.locator('#collection-next').click();await shot('jokers');
@@ -52,7 +66,7 @@ try{
   await back(name);
  }
  pass('all-reference-categories-pagination-art-and-detail-readonly');await open('deck');const firstDeck=await page.locator('.collection-deck-copy h2').innerText(),decks=new Set();for(let n=0;n<15;n++){decks.add(await page.locator('.collection-deck-copy h2').innerText());await page.locator('#collection-next').click();}assert.equal(decks.size,15);assert.equal(await page.locator('.collection-deck-copy h2').innerText(),firstDeck);await page.locator('#collection-prev').click();assert.notEqual(await page.locator('.collection-deck-copy h2').innerText(),firstDeck);await page.locator('#collection-next').click();await shot('decks');await back('deck');pass('all-fifteen-decks-carousel-wraps');
- for(const size of [{width:1440,height:900},{width:844,height:390},{width:390,height:844},{width:360,height:640},{width:568,height:320}]){await page.setViewportSize(size);await fit('.collection-panel');await homeFit();assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),true);await shot(`home-${size.width}x${size.height}`);await open('joker');await fit('.collection-panel');await fit('#collection-back');await fit('#collection-prev');await fit('#collection-next');await page.locator('[data-joker="j_joker"]').click();await fit('#joker-detail');assert.equal(await page.locator('#joker-detail').evaluate(dialog=>dialog.scrollWidth<=dialog.clientWidth+1),true);await page.keyboard.press('Escape');await back('joker');}
+ for(const size of [{width:1440,height:900},{width:844,height:390},{width:390,height:844},{width:360,height:640},{width:568,height:320}]){await page.setViewportSize(size);await settledLayout();await fit('.collection-panel');await homeFit();assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),true);await shot(`home-${size.width}x${size.height}`);await open('joker');await fit('.collection-panel');await fit('#collection-back');await fit('#collection-prev');await fit('#collection-next');await page.locator('[data-joker="j_joker"]').click();await fit('#joker-detail');assert.equal(await page.locator('#joker-detail').evaluate(dialog=>dialog.scrollWidth<=dialog.clientWidth+1),true);await page.keyboard.press('Escape');await back('joker');}
  pass('desktop-landscape-and-rotated-portrait-dialogs-fit');await open('tarot');await page.keyboard.press('Escape');await panel('home').waitFor({state:'visible'});await page.keyboard.press('Escape');await page.waitForFunction(()=>document.body.dataset.view==='menu');await page.waitForFunction(()=>document.activeElement?.id==='menu-collection');await page.locator('#menu-collection').click();await panel('home').waitFor({state:'visible'});await page.locator('#collection-back').click();await page.waitForFunction(()=>document.body.dataset.view==='menu');
  assert.equal(await raw(),original,'Browsing never writes local storage');assert.deepEqual(report.errors,[]);pass('escape-back-focus-and-exact-storage-preservation');report.status='passed';report.browser=await browser.version();await writeFile(`${dir}/report.json`,JSON.stringify(report,null,2)+'\n');console.log('PASS collection '+report.cases.length+' groups');
 }catch(error){report.status='failed';report.error=error.stack;await writeFile(`${dir}/report.json`,JSON.stringify(report,null,2)+'\n');if(page&&!page.isClosed())await page.screenshot({path:`${dir}/failed.png`}).catch(()=>{});throw error;}finally{await browser?.close();server?.kill();}
