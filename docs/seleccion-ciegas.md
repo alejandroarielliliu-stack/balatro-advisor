@@ -24,7 +24,7 @@ El espacio vacío de cada etiqueta es un recuadro blanco discontinuo con «+» p
 
 Observar no cobra premios, adquiere etiquetas pendientes, descuenta dinero ni simula la partida. La escritura reutiliza H1 y su historial atómico; cada selector conserva el ID de partida y revisión con los que se abrió. Un fallo de almacenamiento mantiene la copia anterior y el selector abierto con el error. Navegar fuera cierra el selector, incluido el botón Atrás del navegador.
 
-«Seleccionar» y «Saltar ciega» reutilizan los controles de avance real existentes: piden confirmar lo realizado en Balatro antes de guardar. Las ciegas futuras no permiten avanzar. Abrir la pantalla, consultar el consejo o cancelar no modifica el registro. Info partida, inventario y mazo llevan a Mesa; «Ver ciegas» permite regresar desde el recorrido cuando la fase es selección. Se conserva la interfaz anterior para cartas, tienda, resultados y copias; no se ha intentado implementar el juego dentro de esta pantalla.
+«Seleccionar» registra directamente la entrada en esa ciega y abre el [panel de cobro](cobro-ronda.md): las tres columnas bajan y se conserva la mesa. Esa entrada todavía no registra una victoria ni dinero. «Saltar ciega» conserva su confirmación de avance observado. Las ciegas futuras no permiten avanzar. Abrir la pantalla o consultar el consejo no modifica el registro. Info partida, inventario y mazo llevan a Mesa; «Ver ciegas» o «Ver cobro» permite regresar desde el recorrido. Se conserva la interfaz anterior para cartas, tienda, resultados y copias.
 
 ## Verificación
 

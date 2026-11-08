@@ -2,10 +2,11 @@ import {tagDefinition} from '../catalog/tags.js';
 import type {Fact,GameState,GameStateV02,Result} from '../state/model.js';
 import {createUnknownState} from '../state/model.js';
 import {validateCurrentState,validateState} from '../state/validation.js';
-import {array,checkJsonValue,enumeration,fact,integer,object,text,union} from '../state/schema.js';
+import {array,boolean,checkJsonValue,enumeration,fact,integer,object,record as recordSchema,text,union} from '../state/schema.js';
 import type {Infer,Schema} from '../state/schema.js';
 import {counterSpecs} from '../catalog/joker-counters.js';
 import {HISTORY_TARGET_KEYS} from '../catalog/history-jokers.js';
+import {observationCounterSpecs} from '../state/observations.js';
 import type {Trace} from '../rules/core.js';
 
 const refSchema=object({ante:integer(1,8),kind:enumeration('small','big','boss')});
@@ -38,10 +39,14 @@ const cycleCommandSchema=union(
   union(object({type:enumeration('report_result'),outcome:enumeration('won','lost')},{score:integer(0),handsUsed:integer(0,100),discardsUsed:integer(0,100)}),
     union(object({type:enumeration('collect_cashout'),money:integer()},{nextBlind:progressBlindSchema}),
       union(object({type:enumeration('leave_shop')},{nextBlind:progressBlindSchema}),object({type:enumeration('end_run'),reason:text(2000)})))));
-export const runProgressCommandSchema=union(cycleCommandSchema,union(
+const cashoutJokerUpdateSchema=object({instanceId:text(),counters:recordSchema(fact(integer()))},{sellValue:fact(integer(0)),removed:boolean});
+const recordCashoutCommandSchema=object({type:enumeration('record_cashout'),money:integer(),amount:integer(0),jokerUpdates:array(cashoutJokerUpdateSchema,100)},{nextBlind:progressBlindSchema});
+export type CashoutJokerUpdate=Infer<typeof cashoutJokerUpdateSchema>;
+export type RecordCashoutCommand=Infer<typeof recordCashoutCommandSchema>;
+export const runProgressCommandSchema=union(recordCashoutCommandSchema,union(cycleCommandSchema,union(
  object({type:enumeration('observe_skip_tag'),tag:fact(text())},{blind:object({ante:integer(1,8),kind:enumeration('small','big')})}),
  union(object({type:enumeration('observe_tag_queue'),tags:fact(array(text(),100))}),
- object({type:enumeration('skip_blind'),atNextSelection:{check:(v,p,e)=>v===true||(e.push({path:p,code:'confirmation_required',message:'Confirma que resolviste los efectos del salto y estás en la siguiente selección.'}),false)} as Schema<true>},{money:integer(),nextBlind:progressBlindSchema,tags:fact(array(text(),100))}))));
+ object({type:enumeration('skip_blind'),atNextSelection:{check:(v,p,e)=>v===true||(e.push({path:p,code:'confirmation_required',message:'Confirma que resolviste los efectos del salto y estás en la siguiente selección.'}),false)} as Schema<true>},{money:integer(),nextBlind:progressBlindSchema,tags:fact(array(text(),100))})))));
 export type RunProgressCommand=Infer<typeof runProgressCommandSchema>;
 export interface ProgressOptions {expectedRevision:number;updatedAt:string;inventory:InventoryConfirmation}
 export interface ProgressResult {state:GameStateV02;trace:Trace[];limitations:string[]}
@@ -126,6 +131,7 @@ export function applyRunProgress(input:unknown,commandInput:unknown,options:Prog
   if(errors.length||optionErrors.length)return {ok:false,errors:[...errors,...optionErrors]};
   const command=structuredClone(commandInput) as RunProgressCommand,state=loaded.value;
   if(options.expectedRevision!==state.revision)return issue('stale_revision','La partida cambió; recarga antes de confirmar el avance.');
+  if(command.type==='record_cashout')return recordObservedCashout(state,command,options);
   const trace:Trace[]=[],limitations:string[]=['El avance es declarado por el usuario; no verifica las reglas mediante una partida ni calcula efectos de manos omitidas.','El ciclo Small → Big → Boss y el final en ante 8 corresponden al alcance documentado, sin endless ni desafíos; no se infiere compatibilidad del perfil desconocido.'];
   let next:GameStateV02=state;
   const requireBlind=():Result<BlindInfo>=>{
@@ -248,4 +254,57 @@ export function applyRunProgress(input:unknown,commandInput:unknown,options:Prog
   trace.push({ruleId:'run.observed',label:'Avance confirmado por el usuario',values:{command:command.type,from:loaded.value.phase,to:next.phase,revision:next.revision}});
   if(command.type==='collect_cashout')trace.push({ruleId:'run.observed.balance',label:'Saldo final transcrito; no se sumó un cobro estimado',values:{money:command.money}});
   return {ok:true,value:{state:validated.value,trace,limitations}};
+}
+
+/** One observed payout, one revision. Internal transitions never persist separately. */
+function recordObservedCashout(state:GameStateV02,command:RecordCashoutCommand,options:ProgressOptions):Result<ProgressResult>{
+  if(state.phase!=='in_round'&&state.phase!=='cashout')return issue('wrong_phase','Registra el cobro desde una ciega en curso o su pantalla de cobro.');
+  const original=state.observed.jokers,seen=new Set<string>();
+  for(const [index,update]of command.jokerUpdates.entries()){
+    const path=`$command.jokerUpdates[${index}]`;
+    if(seen.has(update.instanceId))return issue('duplicate_id','Cada copia de comodín solo se actualiza una vez.',path+'.instanceId');
+    seen.add(update.instanceId);
+    const joker=original.status==='known'?original.value.find(j=>j.instanceId===update.instanceId):undefined;
+    if(!joker)return issue('unknown_reference','La copia de comodín no existe en el inventario registrado.',path+'.instanceId');
+    const specs=observationCounterSpecs(joker);
+    for(const [key,value]of Object.entries(update.counters)){
+      const spec=specs[key];
+      if(!spec&&!Object.hasOwn(joker.counters,key))return issue('unsupported_counter','Este contador no pertenece al comodín registrado.',path+'.counters.'+key);
+      if(spec&&value.status==='known'&&(value.value<spec.min||spec.max!==undefined&&value.value>spec.max))return issue('out_of_range',spec.label+': valor fuera del rango admitido.',path+'.counters.'+key);
+    }
+  }
+  let next:GameStateV02=state;const limitations:string[]=[],trace:Trace[]=[];
+  const advance=(command:RunProgressCommand):Result<ProgressResult>=>applyRunProgress(next,command,{expectedRevision:next.revision,updatedAt:options.updatedAt,inventory:{unchanged:true}});
+  if(next.phase==='in_round'){
+    const result=advance({type:'report_result',outcome:'won'});if(!result.ok)return result;
+    next=result.value.state;limitations.push(...result.value.limitations);
+  }
+  if(next.phase==='cashout'){
+    next.phaseData.amount=known(command.amount);
+    const result=advance({type:'collect_cashout',money:command.money,...(command.nextBlind?{nextBlind:command.nextBlind}:{})});if(!result.ok)return result;
+    next=result.value.state;limitations.push(...result.value.limitations);
+  }else{
+    if(command.nextBlind)return issue('finished_run','El jefe del ante 8 termina el recorrido; no se registra una siguiente tienda.');
+    next.observed.money=known(command.money);
+  }
+  applyInventory(next,options.inventory);
+  // A final observed balance always wins over any inventory patch. The payout
+  // amount is retained in the journal/trace and is never added to an old balance.
+  next.observed.money=known(command.money);
+  for(const update of command.jokerUpdates){
+    const inventory=next.observed.jokers;
+    if(inventory.status!=='known')return issue('missing_inventory','Confirma el inventario actual antes de actualizar sus comodines.');
+    const index=inventory.value.findIndex(j=>j.instanceId===update.instanceId);
+    if(index<0)return issue('unknown_reference','La copia de comodín ya no existe en el inventario final.');
+    if(update.removed){inventory.value.splice(index,1);continue;}
+    const joker=inventory.value[index]!;
+    for(const [key,value]of Object.entries(update.counters))joker.counters[key]=structuredClone(value);
+    if(update.sellValue)joker.sellValue=structuredClone(update.sellValue);
+  }
+  next.revision=state.revision+1;next.updatedAt=options.updatedAt;
+  const validated=validateCurrentState(next);if(!validated.ok)return validated;
+  trace.push({ruleId:'run.observed',label:'Resultado y cobro confirmados por el usuario',values:{command:command.type,from:state.phase,to:next.phase,revision:next.revision}});
+  trace.push({ruleId:'run.observed.balance',label:'Saldo final transcrito; el cobro no se sumó al saldo anterior',values:{money:command.money,amount:command.amount}});
+  if(command.jokerUpdates.length)trace.push({ruleId:'run.observed.jokers',label:'Cambios de comodines observados por copia después de la ronda',values:{instances:command.jokerUpdates.length}});
+  return {ok:true,value:{state:validated.value,trace,limitations:[...new Set(limitations)]}};
 }

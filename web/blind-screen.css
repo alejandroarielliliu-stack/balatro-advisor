@@ -44,3 +44,18 @@ body[data-view="blind"] #app-shell{overflow:hidden;background:#246d50}body[data-
 .boss-catalogue{margin:18px 0;background:#1e3838;border:1px solid #527565;border-radius:8px;padding:12px 15px}.boss-catalogue>summary{font:24px/1 'Balatro Pixel',monospace;color:#efd68e;cursor:pointer}.boss-catalogue-tools{display:flex;align-items:center;gap:16px;margin:16px 0}.boss-catalogue-tools label{flex:1}.boss-catalogue-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:10px}.boss-catalogue-card{display:flex;align-items:center;gap:12px;text-align:left;background:#152d30;border:2px solid #45685d;padding:12px;border-radius:8px;color:#f1f2de;--blind-art-size:54px}.boss-catalogue-card:hover{background:#294b41;border-color:#dbc778}.boss-catalogue-card[data-showdown=true]{border-color:#998152}.boss-catalogue-copy{display:flex;flex-direction:column;gap:5px}.boss-catalogue-copy strong{font:22px/1 'Balatro Pixel',monospace}.boss-catalogue-copy>span{font-size:13px;line-height:1.25}.boss-catalogue-copy small{font-size:11px;color:#bacbbf}.boss-catalogue-dialog{max-width:720px;max-height:calc(var(--app-height) - 24px);overflow:auto}.boss-catalogue-body{display:grid;grid-template-columns:90px 1fr;gap:22px;--blind-art-size:84px}.boss-catalogue-body strong{font:25px/1.1 'Balatro Pixel',monospace;color:#f0cf83}.boss-catalogue-body li{margin-bottom:7px}.boss-catalogue-close{flex-shrink:0}.boss-catalogue-body details{margin-top:14px}.boss-catalogue-body a{display:inline-block;margin-top:10px}
 
 #collection-view .boss-catalogue-card:hover,#collection-view .boss-catalogue-card:focus-visible,#blind-picker .boss-picker-item:hover:enabled{background:#294b41;color:#f1f2de;border-color:#dbc778}
+
+/* Selection and cash-out share the table; only the blind panels leave. */
+.blind-round-score,.blind-last-hand{display:none}
+.blind-screen[data-mode="cashout"] .blind-advisor{display:none}
+.blind-screen[data-mode="cashout"] .blind-cards{visibility:hidden;pointer-events:none}
+.blind-screen[data-mode="cashout"].blind-to-cashout .blind-cards{visibility:visible;animation:blind-cards-drop .42s cubic-bezier(.4,0,.8,.4) forwards}
+.blind-screen[data-mode="cashout"] .blind-round-score{position:absolute;left:4px;right:4px;top:205px;height:46px;display:flex;align-items:center;justify-content:space-between;gap:9px;border:5px solid #1c2c31;border-radius:11px;background:#34494e;padding:2px 8px;box-shadow:inset 0 2px #55656b}
+.blind-round-score>span{font:19px/1 'Balatro Pixel',monospace;white-space:pre-line}
+.blind-round-score>b{font:33px/1 'Balatro Pixel',monospace;overflow:hidden;text-overflow:ellipsis}
+.blind-round-score>b::before{content:'✺';font-size:24px;margin-right:4px}
+.blind-screen[data-mode="cashout"] .blind-last-hand{position:absolute;left:4px;right:4px;top:255px;height:117px;display:flex;align-items:flex-end;justify-content:center;gap:5px;padding:10px 7px;border:5px solid #1c2c31;border-radius:11px;background:#13272c}
+.blind-last-hand b{width:94px;height:49px;border-radius:8px;color:#fff6e4;display:flex;align-items:center;justify-content:flex-end;padding:0 7px;font:45px/1 'Balatro Pixel',monospace;box-shadow:0 4px #0d2029}
+.blind-last-hand .blind-last-chips{background:#009afa}.blind-last-hand .blind-last-mult{background:#ff4c45}.blind-last-hand>span{font:34px/1 'Balatro Pixel',monospace;color:#ff4c45;padding-bottom:8px}
+@keyframes blind-cards-drop{to{transform:translateY(120%);visibility:hidden}}
+@media(prefers-reduced-motion:reduce){.blind-screen[data-mode="cashout"].blind-to-cashout .blind-cards{animation:none;visibility:hidden}}

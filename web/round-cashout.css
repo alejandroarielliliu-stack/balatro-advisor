@@ -1,0 +1,38 @@
+/* Cash-out keeps the same logical table, trays and deck as blind selection. */
+.round-cashout{position:absolute;left:420px;top:185px;bottom:0;width:518px;background:#2b3c40;border:4px solid #192b30;border-bottom:0;border-radius:14px 14px 0 0;box-shadow:inset 3px 0 #526363,inset -3px 0 #526363,inset 0 3px #526363,3px 0 #17372c99;padding:12px 4px 0;color:#f5f3e2;animation:round-cashout-enter .34s ease-out both;font-family:'Balatro Pixel',monospace}
+.round-cashout[hidden]{display:none!important}
+.round-cashout-form{height:100%;display:flex;align-items:stretch;flex-direction:column;margin:0;padding:0;gap:0;border:0;background:transparent}
+.round-cashout-header{display:flex;justify-content:center;align-items:center;align-self:center;flex-shrink:0;width:336px;min-height:53px;border:0;border-radius:8px;background:#ff9f00;box-shadow:0 4px #9b5800,inset 0 -2px #ffd3404d;color:#fff6e5}
+.round-cashout-submit{height:53px;width:auto;min-width:0;padding:0 0 0 13px;margin:0;flex-shrink:0;border:0;box-shadow:none;background:transparent;color:inherit;border-radius:8px;font:42px/1 'Balatro Pixel',monospace;white-space:nowrap;cursor:pointer}
+.round-cashout-submit:hover:enabled{background:#ffbc2038;color:#fff9e8}
+.round-cashout-header:has(.round-cashout-submit:disabled){opacity:.6}
+.round-cashout-amount-label{display:flex;flex-direction:row;align-items:center;gap:0;min-width:0;padding:0;margin:0;color:inherit;font:42px/1 'Balatro Pixel',monospace}
+.round-cashout input.round-cashout-amount{width:82px;min-width:0;height:44px;padding:0 5px 0 0;margin:0;border:0;border-bottom:2px solid #fff1c44d;border-radius:0;background:transparent;box-shadow:none;color:#fff9e8;font:42px/1 'Balatro Pixel',monospace;text-align:left;appearance:textfield;-moz-appearance:textfield}
+.round-cashout input.round-cashout-amount::placeholder{color:#fff5ddaa;opacity:1}
+.round-cashout input::-webkit-inner-spin-button,.round-cashout input::-webkit-outer-spin-button{appearance:none;margin:0}
+.round-cashout-blind{margin-top:17px;min-height:77px;flex-shrink:0;display:flex;align-items:center;gap:14px;padding:0 9px 10px;border-radius:0 0 9px 9px;box-shadow:0 3px #17292d;--blind-art-size:58px;background:#1f3036}
+.round-cashout-target{display:flex;flex-direction:column;gap:4px;text-align:left}.round-cashout-target>span{font:20px/1 'Balatro Pixel',monospace;color:#f4f1df}.round-cashout-target>strong{font:38px/1 'Balatro Pixel',monospace;color:#ff4f48}.round-cashout-target>strong::before{content:'✺';font-size:29px;color:#e8efeb;margin-right:5px}
+.round-cashout-reward{margin-left:auto;align-self:center;max-width:150px;overflow-wrap:anywhere;text-align:right;color:#f6bf43;font:27px/1 'Balatro Pixel',monospace;letter-spacing:-2px}
+.round-cashout-balance{display:flex;align-items:center;justify-content:flex-end;gap:12px;font:18px/1 'Balatro Pixel',monospace;color:#d2dad1;padding:11px 13px 0;margin:0;flex-shrink:0}
+.round-cashout-balance input{width:100px;height:29px;min-width:0;padding:3px 8px;margin:0;background:#1d3034;border:2px solid #4b6260;border-radius:6px;color:#f6c75a;box-shadow:none;font:23px/1 'Balatro Pixel',monospace;text-align:center}
+.round-cashout-changes{flex:1;min-height:0;overflow:auto;overscroll-behavior:contain;padding:0 11px;scrollbar-width:thin;scrollbar-color:#778c79 #24363b}
+.round-cashout-changes[data-empty=true]{padding:0}
+.round-cashout-changes-note{margin:13px 0 9px;font:16px/1.1 'Balatro Pixel',monospace;color:#b9c6bd}
+.round-cashout-joker{display:grid;grid-template-columns:51px 1fr;gap:7px 13px;min-width:0;padding:8px 9px 9px;margin:0 0 10px;border:2px solid #536b62;border-radius:8px;background:#24373b}
+.round-cashout-joker legend{max-width:100%;padding:0 6px;font:20px/1.1 'Balatro Pixel',monospace;color:#f0d99c}
+.round-cashout-joker-art{display:block;width:45px;height:63px;flex-shrink:0;filter:drop-shadow(2px 3px #122a2b)}
+.round-cashout-joker-art .joker-art{width:142px;height:190px;transform:scale(.3169);transform-origin:top left}
+.round-cashout-joker-fields{display:flex;flex-wrap:wrap;gap:7px 10px;align-content:flex-start}
+.round-cashout-joker-fields>label{display:flex;flex-direction:column;gap:4px;min-width:125px;flex:1;margin:0;color:#dce2d7;font:16px/1.05 'Balatro Pixel',monospace}
+.round-cashout-joker-fields input[type=number]{width:100%;height:30px;min-width:0;padding:4px 7px;margin:0;background:#182e31;border:2px solid #5a7065;border-radius:5px;color:#fff2d4;box-shadow:none;font:21px/1 'Balatro Pixel',monospace}
+.round-cashout-joker-fields input[type=number]::placeholder{color:#9bafa5;font-size:17px;opacity:1}
+.round-cashout-joker-fields>.round-cashout-removed{display:flex;flex-direction:row;align-items:center;gap:7px;flex-basis:100%;min-width:0;font-size:16px;color:#c3d1c4}
+.round-cashout-removed input{width:17px;height:17px;margin:0;accent-color:#ffa31a}
+.round-cashout-joker[data-removed=true] .round-cashout-joker-art{opacity:.4}
+.round-cashout-footer{display:flex;gap:8px;align-items:center;justify-content:space-between;flex-shrink:0;padding:2px 13px 8px;min-height:24px}
+.round-cashout-error{margin:0;color:#ffd2a9;font:17px/1.05 'Balatro Pixel',monospace;flex:1;max-height:44px;overflow:auto}
+.round-cashout-lost{margin-left:auto;flex-shrink:0;min-height:24px;padding:0;border:0;border-radius:0;box-shadow:none;background:transparent;color:#afc1b5;font:16px/1 'Balatro Pixel',monospace;text-decoration:underline;text-underline-offset:3px;cursor:pointer}
+.round-cashout-lost:hover:enabled{background:transparent;color:#fff0d9}
+.round-cashout input:focus-visible,.round-cashout button:focus-visible{outline:3px solid #fff2be;outline-offset:2px}
+@keyframes round-cashout-enter{from{transform:translateY(-24px);opacity:0}to{transform:translateY(0);opacity:1}}
+@media(prefers-reduced-motion:reduce){.round-cashout{animation:none}}

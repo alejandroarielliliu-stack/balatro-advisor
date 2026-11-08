@@ -81,7 +81,8 @@
     "test:orientation": "npm run build && node tools/orientation-test.mjs",
     "test:run-setup": "npm run build && node tools/run-setup-test.mjs",
     "test:blind-screen": "npm run build && node tools/blind-screen-test.mjs",
-    "test:boss-catalogue": "npm run build && node tools/boss-catalogue-test.mjs"
+    "test:boss-catalogue": "npm run build && node tools/boss-catalogue-test.mjs",
+    "test:round-cashout": "npm run build && node tools/round-cashout-test.mjs"
   },
   "devDependencies": {
     "@types/node": "24.19.1",

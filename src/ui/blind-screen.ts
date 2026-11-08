@@ -8,6 +8,8 @@ import {deckArt} from './deck-art.js';
 import {blindArt,tagArt} from './blind-art.js';
 import {mountMenuBackground} from './menu-background.js';
 import {BOSS_CATALOG,bossDefinition} from '../catalog/bosses.js';
+import {mountRoundCashout} from './round-cashout-view.js';
+import type {RoundCashoutSubmission} from './round-cashout-view.js';
 
 const el=<K extends keyof HTMLElementTagNameMap>(tag:K,text='',className='')=>{const e=document.createElement(tag);e.textContent=text;e.className=className;return e;};
 const value=<T>(f:Fact<T>|undefined)=>f?.status==='known'?f.value:undefined;
@@ -18,7 +20,9 @@ export interface BlindScreenOptions {
  snapshot():{state:GameState|null;writable:boolean;dirty:boolean};
  observeTag(kind:'small'|'big',tag:string|null,binding:ObservationBinding):string|null;
  observeBoss(id:string,binding:ObservationBinding):string|null;
- select():void;skip():void;options():void;
+ select(binding:ObservationBinding):string|null;
+ cashout(submission:RoundCashoutSubmission,binding:ObservationBinding):string|null;
+ lost():void;skip():void;options():void;
 }
 /** A presentation of recorded observations. Opening it never plays or skips a blind. */
 export function mountBlindScreen(options:BlindScreenOptions){
@@ -31,6 +35,8 @@ export function mountBlindScreen(options:BlindScreenOptions){
  const side=el('aside','','blind-sidebar'),advisor=el('section','','blind-advisor'),avatar=el('div','','blind-advisor-avatar'),bubble=el('div','','blind-speech');
  avatar.append(jokerArt('j_joker','Comodín asesor'));const title=el('strong'),reason=el('p'),limit=el('small','Orientación · supervivencia sin evaluar');bubble.append(title,reason,limit);advisor.append(avatar,bubble);
  const info=el('a','Info\npartida','blind-hud-button blind-info');info.href='#table';info.id='blind-run-info';
+ const roundScore=el('section','','blind-round-score'),roundScoreValue=el('b','—');roundScoreValue.id='blind-round-score';roundScore.append(el('span','Puntuación\nronda'),roundScoreValue);
+ const lastHand=el('div','','blind-last-hand');lastHand.setAttribute('aria-label','Fichas y multiplicador de la última mano sin registrar');lastHand.append(el('b','—','blind-last-chips'),el('span','×'),el('b','—','blind-last-mult'));side.append(roundScore,lastHand);
  const settings=el('button','Opciones','blind-hud-button blind-options');settings.type='button';settings.onclick=options.options;
  const stats=el('div','','blind-hud');const stat=(label:string,id:string,tone='')=>{const box=el('div','','blind-stat '+tone);box.append(el('span',label));const n=el('b');n.id=id;box.append(n);return {box,n};};
  const hands=stat('Manos','blind-hands','hands'),discards=stat('Descartes','blind-discards','discards'),money=stat('','blind-money','money'),ante=stat('Ante','blind-ante','ante'),round=stat('Ronda','blind-round');stats.append(hands.box,discards.box,money.box,ante.box,round.box);side.append(advisor,info,settings,stats);
@@ -39,6 +45,7 @@ export function mountBlindScreen(options:BlindScreenOptions){
  const cards=el('div','','blind-cards'),deck=el('a','','blind-deck');deck.href='#table';deck.id='blind-deck';deck.setAttribute('aria-label','Ver y editar cartas del mazo');const deckCount=el('span');deck.append(deckCount);
  const error=el('p','','blind-screen-error');error.id='blind-screen-error';error.setAttribute('role','alert');
  const menu=el('a','Menú','blind-menu-link');menu.href='#menu';stage.append(side,tray,consumables,cards,deck,error,menu);
+ const cashout=mountRoundCashout(stage,{submit:options.cashout,lost:options.lost}),cashoutPanel=stage.querySelector<HTMLElement>('#round-cashout')!;cashoutPanel.hidden=true;
  const picker=el('dialog','','blind-picker');picker.id='blind-picker';const heading=el('h2'),close=el('button','Volver','blind-picker-back');heading.id='blind-picker-title';heading.tabIndex=-1;picker.setAttribute('aria-labelledby',heading.id);close.type='button';const grid=el('div','','blind-picker-grid'),pickerError=el('p','','error');pickerError.setAttribute('role','alert');picker.append(heading,grid,pickerError,close);host.append(picker);close.onclick=()=>picker.close();
  picker.addEventListener('click',e=>{if(e.target===picker){const r=picker.getBoundingClientRect();if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)picker.close();}});
  let returnFocus:HTMLElement|null=null,returnSelector='';picker.addEventListener('close',()=>{if(returnFocus?.isConnected)returnFocus.focus();else host.querySelector<HTMLElement>(returnSelector||'[data-tag-slot],#blind-boss-picker')?.focus();});
@@ -56,22 +63,26 @@ export function mountBlindScreen(options:BlindScreenOptions){
  let rendered='';
  function refresh(){
   const snapshot=options.snapshot(),state=snapshot.state;
-  if(state&&state.phase!=='blind_select'){if(location.hash==='#blind')location.hash='table';return;}
+  if(state&&!['blind_select','in_round','cashout'].includes(state.phase)){if(location.hash==='#blind')location.hash='table';return;}
   const token=JSON.stringify(snapshot);if(token===rendered)return;rendered=token;
   error.textContent='';if(!state){title.textContent='Elige una baraja';reason.textContent='Inicia la partida desde el menú.';cards.replaceChildren();return;}
-  if(state.phase!=='blind_select'){if(location.hash==='#blind')location.hash='table';return;}
+  const settling=state.phase==='in_round'||state.phase==='cashout',animate=settling&&host.dataset.mode==='select';
+  host.dataset.mode=settling?'cashout':'select';host.setAttribute('aria-label',settling?'Cobro de la ronda':'Selección de ciega');cashoutPanel.hidden=!settling;
+  if(animate)host.classList.add('blind-to-cashout');else if(!settling)host.classList.remove('blind-to-cashout');
   const current=value(state.observed.nextBlind),anteValue=current?.ante,deckId=value(state.observed.deckId)??'',writable=snapshot.writable&&!snapshot.dirty;
   const guidance=guideBlindChoice(state);title.textContent=guidance.ok?guidance.value.recommendation.title:'Revisa la partida';reason.textContent=guidance.ok?guidance.value.recommendation.reason:'Faltan datos para orientar esta decisión.';bubble.dataset.basis='heuristic';bubble.title=guidance.ok?[...guidance.value.conditions,...guidance.value.limitations].join('\n'):'';
-  hands.n.textContent=String(value(state.observed.resources.handsPerRound)??'—');discards.n.textContent=String(value(state.observed.resources.discardsPerRound)??'—');money.n.textContent=value(state.observed.money)===undefined?'$—':'$'+value(state.observed.money);ante.n.textContent=(anteValue??'—')+'/8';
-  const skipped=value(value(state.observed.jokerContext)?.blindsSkipped);round.n.textContent=current&&skipped!==undefined?String(Math.max(0,(current.ante-1)*3+({small:0,big:1,boss:2}[current.kind])-skipped)):'—';round.box.title='Ciegas anteriores menos saltos registrados. Desconocido si falta el total de saltos.';
+  hands.n.textContent=String(state.phase==='in_round'?value(state.phaseData.handsRemaining)??'—':settling?'—':value(state.observed.resources.handsPerRound)??'—');discards.n.textContent=String(state.phase==='in_round'?value(state.phaseData.discardsRemaining)??'—':settling?'—':value(state.observed.resources.discardsPerRound)??'—');money.n.textContent=value(state.observed.money)===undefined?'$—':'$'+value(state.observed.money);money.box.title=settling?'Último saldo registrado. Introduce el saldo actual al cobrar.':'';ante.n.textContent=(anteValue??'—')+'/8';
+  roundScoreValue.textContent=state.phase==='in_round'?(value(state.phaseData.score)?.toLocaleString('es')??'—'):'—';
+  const skipped=value(value(state.observed.jokerContext)?.blindsSkipped);round.n.textContent=current&&skipped!==undefined?String(Math.max(0,(current.ante-1)*3+({small:0,big:1,boss:2}[current.kind])-skipped+(settling?1:0))):'—';round.box.title='Ciegas anteriores menos saltos registrados, incluida la ronda actual al seleccionarla. Desconocido si falta el total de saltos.';
   tray.querySelectorAll('.blind-owned-card').forEach(e=>e.remove());const owned=value(state.observed.jokers);for(const j of owned??[]){const card=el('span','','blind-owned-card');card.append(jokerArt(engineArt[j.catalogId]??'j_joker',j.catalogId));tray.append(card);}jokerCount.textContent=(owned?.length??'—')+'/'+(value(state.observed.resources.jokerSlots)??'—');
   const context=value(state.observed.jokerContext);consumableCount.textContent=(value(context?.consumables)?.length??'—')+'/'+(value(context?.consumableSlots)??'—');
   deck.querySelector('.deck-art')?.remove();deck.prepend(deckArt(deckId,DECK_PROFILES[deckId as keyof typeof DECK_PROFILES]?.name??'Baraja'));const composition=value(state.observed.deck);deckCount.textContent=composition?String('cards'in composition?composition.cards.length:52):'—';
+  if(settling){cashout.refresh(state,writable);if(picker.open)picker.close();if(snapshot.dirty)error.textContent='Termina la edición pendiente antes de registrar el cobro.';return;}
   cards.replaceChildren();const boss=value(state.observed.visibleBoss),visibleBoss=boss?.ante===anteValue?boss:current?.kind==='boss'?current:undefined;
   for(const kind of ['small','big','boss'] as const){
    const active=current?.kind===kind,past=!!current&&(['small','big','boss'].indexOf(kind)<['small','big','boss'].indexOf(current.kind)),id=kind==='boss'?value(visibleBoss?.bossId):kind,definition=kind==='boss'&&id?bossDefinition(id):undefined,name=kind==='boss'?(definition?.name??id??'Ciega jefe'):labels[kind];
    const card=el('section','','blind-card blind-card-'+kind);card.dataset.kind=kind;card.dataset.active=String(active);card.dataset.past=String(past);
-   const select=el('button',past?'Pasada':active?'Seleccionar':'Próximamente','blind-select');select.type='button';select.id='blind-select-'+kind;select.disabled=!active||!writable;select.title=active?'Registrar que seleccionaste esta ciega en Balatro':'';select.onclick=options.select;
+   const select=el('button',past?'Pasada':active?'Seleccionar':'Próximamente','blind-select');select.type='button';select.id='blind-select-'+kind;select.disabled=!active||!writable;select.title=active?'Registrar que seleccionaste esta ciega en Balatro':'';select.onclick=()=>{const problem=options.select({runId:state.runId,revision:state.revision});if(problem){error.textContent=problem;return;}cashout.focus();};
    const band=el('div',name,'blind-name'),portrait=kind==='boss'?el('button','','blind-boss-portrait'):el('div','','blind-chip');
    if(portrait instanceof HTMLButtonElement){portrait.type='button';portrait.id='blind-boss-picker';portrait.disabled=!writable||!current;portrait.setAttribute('aria-label',id?'Cambiar jefe: '+name:'Introducir jefe');portrait.onclick=()=>openPicker('boss',portrait,state);}
    if(id)portrait.append(blindArt(definition?.artId??id,name));else portrait.append(el('span','','blind-pixel-plus'));

@@ -7,6 +7,7 @@ import {renderRunJourney} from './run-progress-view.js';
 import {createNewRun} from '../run/start.js';
 import {createRunStartBridge} from './run-start-bridge.js';
 import {mountBlindScreen} from './blind-screen.js';
+import {nextBlindAfter} from '../run/progress.js';
 import type {BlindInfo} from '../run/progress.js';
 import {observationPatch} from '../state/observations.js';
 import {prepareBasicObservation} from '../state/basic-observations.js';
@@ -183,7 +184,7 @@ function renderJourney(){
       if(commit(()=>store.undoLatest({confirmationId:uuid(),confirmed:true,expected,updatedAt:now(),targetEntryId:last.id,reason:'El usuario corrigió el último registro desde el recorrido.'})))message('Registro corregido. Esto no deshace acciones dentro de Balatro.');
     }
   });
-  if(base?.state.phase==='blind_select'){const link=node('a','Ver ciegas','button-link');link.href='#blind';$('run-journey').querySelector('.journey-actions')?.append(link);}
+  if(base&&['blind_select','in_round','cashout'].includes(base.state.phase)){const link=node('a',base.state.phase==='blind_select'?'Ver ciegas':'Ver cobro','button-link');link.href='#blind';$('run-journey').querySelector('.journey-actions')?.append(link);}
   let packHost=document.getElementById('pack-panel');if(!packHost){packHost=node('section');packHost.id='pack-panel';$('run-journey').after(packHost);}
   renderPackView(packHost,{state:base?.state??null,writable:lock.owned&&!loadFailed,dirty,confirm:action=>base?confirmAction(action,base.state):'Primero registra una partida.',controlsChanged:updateOwnership});
   let tarotHost=document.getElementById('tarot-panel');if(!tarotHost){tarotHost=node('section');tarotHost.id='tarot-panel';packHost.after(tarotHost);}
@@ -775,7 +776,20 @@ const blindScreen=mountBlindScreen({
   const boss:BlindInfo={ante:current.ante,kind:'boss',bossId:known(id),target:same&&old.target.status==='known'&&old.target.source==='manual'?old.target:requirement.ok?preset(requirement.target):same?old.target:unknown(),reward:same&&old.reward.status==='known'&&old.reward.source==='manual'?old.reward:requirement.ok?preset(requirement.reward):same?old.reward:unknown()};
   return commit(()=>store.correct({confirmationId:uuid(),confirmed:true,expected:analysisBinding(state),updatedAt:now(),patch:{visibleBoss:known(boss),...(current.kind==='boss'?{nextBlind:known(boss)}:{})},reason:'Jefe visible transcrito desde la selección de ciegas; no se generan efectos ni recompensas.'}))?null:$('message').textContent||'No se pudo guardar el jefe.';
  },
- select:()=>$('run-enter-round')?.click(),skip:()=>$('run-skip-blind')?.click(),options:()=>{const dialog=$<HTMLDialogElement>('menu-settings');dialog.addEventListener('close',()=>$('blind-screen').focus(),{once:true});$('menu-options').click();}
+ select:binding=>{
+  if(!record||record.state.revision!==binding.revision||record.state.runId!==binding.runId)return 'La partida cambió. Revisa la ciega antes de seleccionarla.';
+  if(dirty||!lock.owned||loadFailed)return 'Termina la edición o recupera el control de escritura antes de seleccionar.';
+  return commit(()=>store.progress({confirmationId:uuid(),confirmed:true,expected:analysisBinding(record!.state),updatedAt:now(),command:{type:'enter_round'},inventory:{unchanged:true}}))?null:$('message').textContent||'No se pudo guardar la selección.';
+ },
+ cashout:(submission,binding)=>{
+  if(!record||record.state.revision!==binding.revision||record.state.runId!==binding.runId)return 'La partida cambió. Revisa los datos del cobro.';
+  if(dirty||!lock.owned||loadFailed)return 'Termina la edición o recupera el control de escritura antes de cobrar.';
+  const state=record.state,current=value(state.observed.nextBlind),next=current?nextBlindAfter(state,current):null;
+  if(next){const required=blindRequirement(next.ante,next.kind,value(next.bossId)??'',value(state.observed.deckId)??'');if(required.ok){if(next.target.status==='unknown')next.target={status:'known',source:'confirmedPreset',value:required.target};if(next.reward.status==='unknown')next.reward={status:'known',source:'confirmedPreset',value:required.reward};}}
+  if(!commit(()=>store.progress({confirmationId:uuid(),confirmed:true,expected:analysisBinding(state),updatedAt:now(),command:{type:'record_cashout',...submission,...(next?{nextBlind:next}:{})},inventory:{unchanged:true}})))return $('message').textContent||'No se pudo guardar el cobro.';
+  location.hash='table';return null;
+ },
+ lost:()=>{$('run-report-result')?.click();const outcome=$<HTMLSelectElement>('progress-outcome');if(outcome)outcome.value='lost';},skip:()=>$('run-skip-blind')?.click(),options:()=>{const dialog=$<HTMLDialogElement>('menu-settings');dialog.addEventListener('close',()=>$('blind-screen').focus(),{once:true});$('menu-options').click();}
 });
 refreshBlindScreen=blindScreen.refresh;
 mountWorkspace(runStartBridge);mountCollection();renderScenarios();reload();lock.acquire();
