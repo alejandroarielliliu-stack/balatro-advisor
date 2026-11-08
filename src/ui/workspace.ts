@@ -22,13 +22,13 @@ export function mountWorkspace(bridge:RunStartBridge){
  const screens={menu:['','Balatro Advisor'],blind:['','Selección de ciega'],collection:['COMODINES Y CIEGAS · 1.0.1o','Colección'],table:['ENCAJE EN VIVO','Mesa'],evaluation:['MANOS Y ESCENARIOS','Análisis'],archive:['PARTIDA REGISTRADA','Registro y copias']} as const;
  const show=()=>{const hash=location.hash.slice(1);const screen=Object.hasOwn(screens,hash)?hash as keyof typeof screens:'menu';
   document.body.dataset.view=screen;
-  const home=screen==='menu',game=screen==='blind';
+  const home=screen==='menu',game=screen==='blind',collection=screen==='collection';
   menu.setSetupOpen(home&&hash==='setup');
-  document.getElementById('main')!.hidden=home||game;
-  document.querySelector<HTMLElement>('.app-header')!.hidden=home||game;
+  document.getElementById('main')!.hidden=home||game||collection;
+  document.querySelector<HTMLElement>('.app-header')!.hidden=home||game||collection;
   document.title=home?'Balatro Advisor':`${screens[screen][1]} · Balatro Advisor`;
-  menu.setActive(home);
-  document.querySelectorAll<HTMLElement>('[data-page]').forEach(e=>e.hidden=e.dataset.page!==screen);
+  menu.setActive(home||collection);
+  document.querySelectorAll<HTMLElement>('[data-page]').forEach(e=>e.hidden=e.dataset.page!==screen&&!(collection&&e.dataset.page==='menu'));
   document.querySelectorAll<HTMLElement>('[data-screen]').forEach(e=>{if(e.dataset.screen===screen)e.setAttribute('aria-current','page');else e.removeAttribute('aria-current');});
   document.getElementById('view-kicker')!.textContent=screens[screen][0];document.getElementById('view-title')!.textContent=screens[screen][1];
   const next=document.getElementById('next-view') as HTMLAnchorElement;next.hidden=home||screen==='archive'||screen==='collection';next.href=screen==='table'?'#evaluation':'#table';next.textContent=screen==='table'?'Calcular manos →':'← Volver a la mesa';next.onclick=null;

@@ -22,7 +22,7 @@ try{
  browser=await chromium.launch({channel:'chrome',headless:true});
  const raw=page=>page.evaluate(k=>localStorage.getItem(k),key),writes=page=>page.evaluate(()=>window.__frontendWrites);
  const observe=page=>{lastPage=page;page.on('pageerror',error=>report.pageErrors.push(error.message));};
- const go=(page,screen)=>page.locator(`[data-screen="${screen}"]`).click();
+ const go=async(page,screen)=>{if(await page.locator('body').getAttribute('data-view')==='collection'){await page.evaluate(target=>{location.hash=target;},screen);await page.waitForFunction(target=>document.body.dataset.view===target,screen);}else await page.locator(`[data-screen="${screen}"]`).click();};
  const ready=page=>page.waitForFunction(()=>document.querySelector('#ownership')?.textContent.includes('Esta pestaña tiene'));
  const shelf=page=>page.waitForFunction(()=>document.querySelectorAll('.bay-mini').length===150&&!document.querySelector('.candidate-pending'));
  const unchanged=async(page,before,count)=>{assert.equal(await raw(page),before,'Consultation preserves exact saved record');assert.equal(await writes(page),count,'Consultation never writes the confirmed record');};

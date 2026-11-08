@@ -47,7 +47,7 @@ try{
   await page.waitForFunction(()=>{const frame=document.getElementById('app-viewport');return frame&&Math.abs(frame.clientWidth-Math.max(innerWidth,innerHeight))<=1&&Math.abs(frame.clientHeight-Math.min(innerWidth,innerHeight))<=1&&document.documentElement.dataset.uiRotated===String(innerHeight>innerWidth);});
  }
  const view=(page,screen)=>page.waitForFunction(expected=>document.body.dataset.view===expected,screen);
- const go=async(page,screen)=>{if(screen==='menu')await page.locator('.brand-link').click();else if(await page.locator('#menu-view').isVisible()){await page.locator('#menu-collection').click();await view(page,'collection');if(screen!=='collection')await page.locator(`[data-screen="${screen}"]`).click();}else await page.locator(`[data-screen="${screen}"]`).click();await view(page,screen);};
+ const go=async(page,screen)=>{const current=await page.evaluate(()=>document.body.dataset.view);if(screen==='collection'&&current==='menu')await page.locator('#menu-collection').click();else if(current==='menu'||current==='collection')await page.evaluate(target=>{location.hash=target;},screen);else if(screen==='menu')await page.locator('.brand-link').click();else await page.locator(`[data-screen="${screen}"]`).click();await view(page,screen);};
  const fit=async(page,selector)=>{
   const r=await page.locator(selector).boundingBox(),size=page.viewportSize();
   assert.ok(r&&r.x>=-1&&r.y>=-1&&r.x+r.width<=size.width+1&&r.y+r.height<=size.height+1,'Unclipped interactive surface '+selector+': '+JSON.stringify({r,size}));
@@ -79,7 +79,7 @@ try{
  await p.setViewportSize({width:844,height:390});await layout(p);assert.equal(await p.locator('#menu-settings').evaluate(dialog=>dialog.open),true);await p.keyboard.press('Escape');
  for(const screen of ['table','evaluation','archive','collection']){
   await go(p,screen);await p.setViewportSize({width:390,height:844});await layout(p);await noOverflow(p);assert.equal(await p.evaluate(()=>document.body.dataset.view),screen);
-  if(screen==='collection'){await p.waitForFunction(()=>document.querySelectorAll('.collection-card').length===150);await p.locator('[data-joker="j_joker"]').click();await p.locator('#joker-detail').waitFor({state:'visible'});await fit(p,'#joker-detail');await p.keyboard.press('Escape');}
+  if(screen==='collection'){await p.locator('[data-collection-category="joker"]').click();await p.waitForFunction(()=>document.querySelectorAll('#collection-grid [data-joker]').length===15);await p.locator('[data-joker="j_joker"]').click();await p.locator('#joker-detail').waitFor({state:'visible'});await fit(p,'#joker-detail');await p.keyboard.press('Escape');}
   await screenshot(p,`${screen}-portrait-rotated`);await p.setViewportSize({width:844,height:390});await layout(p);await noOverflow(p);
  }
  await unchanged(p,base.saved);pass('all-screens-modal-focus-route-and-hypothetical-draft-survive-rotation');await base.context.close();

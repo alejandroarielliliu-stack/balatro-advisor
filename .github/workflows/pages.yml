@@ -40,6 +40,8 @@ jobs:
         run: node tools/blind-screen-test.mjs
       - name: Comprobar catálogo de28 jefes, metadatos y observaciones manuales
         run: node tools/boss-catalogue-test.mjs
+      - name: Comprobar categorías de colección, ilustraciones, páginas y navegación
+        run: node tools/collection-test.mjs
       - name: Comprobar pantalla de cobro y cambios de comodines por instancia
         run: node tools/round-cashout-test.mjs
       - name: Comprobar transición a tienda, ofertas reales y compras confirmadas

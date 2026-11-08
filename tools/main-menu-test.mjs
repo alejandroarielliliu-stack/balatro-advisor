@@ -43,9 +43,9 @@ try{
   await page.evaluate(()=>document.fonts.ready);return {page,context};
  };
  const view=(page,name)=>page.waitForFunction(expected=>document.body.dataset.view===expected,name);
- // Feature navigation through the existing collection/header, without creating
- // a run through the setup screen. Startup/Back/Continue are exercised below.
- const fromMenu=async(page,screen)=>{await page.locator('#menu-collection').click();await view(page,'collection');if(screen!=='collection')await page.locator(`[data-screen="${screen}"]`).click();await view(page,screen);};
+ // Fixture route selection for non-menu workspaces; the real collection entry
+ // remains exercised through its button. No run is created by this helper.
+ const fromMenu=async(page,screen)=>{if(screen==='collection')await page.locator('#menu-collection').click();else await page.evaluate(target=>{location.hash=target;},screen);await view(page,screen);};
  const raw=page=>page.evaluate(key=>localStorage.getItem(key),key);
  const writes=page=>page.evaluate(()=>window.__menuWrites);
  const unchanged=async(page,expected)=>{assert.equal(await raw(page),expected,'Menu navigation preserves exact state and journal');assert.deepEqual((await writes(page)).filter(item=>item.key!==motionKey),[],'Menu never writes run/shop storage');};
@@ -53,6 +53,9 @@ try{
  const setMotion=async(page,value)=>{await openOptions(page);await page.locator(`input[name="menu-motion"][value="${value}"]`).check();await page.keyboard.press('Escape');await page.locator('#menu-settings').waitFor({state:'hidden'});};
  const draws=page=>page.evaluate(()=>window.__menuDraws);
  const screenshots=async(page,name)=>page.screenshot({path:`${dir}/${name}.png`});
+ // Allow the last submitted WebGL frame to reach the compositor before taking
+ // the stopped-pixel baseline. This does not excuse subsequent renderer draws.
+ const settledScreenshot=async(page,clip)=>{let previous=await page.screenshot({clip});for(let i=0;i<10;i++){await page.waitForTimeout(100);const current=await page.screenshot({clip});if(previous.equals(current))return current;previous=current;}assert.fail('Disabled background did not reach a stable pixel baseline');};
  const empty=await session(),p=empty.page;
  await view(p,'menu');assert.equal(await p.locator('#menu-view').isVisible(),true);assert.equal(await p.locator('.app-header').isVisible(),false);assert.equal(await p.locator('#main').isVisible(),false);await unchanged(p,null);
  const menuHash=await p.evaluate(()=>location.hash);await p.locator('.skip-link').focus();await p.keyboard.press('Enter');await p.waitForFunction(()=>document.activeElement?.id==='menu-play');assert.equal(await p.evaluate(()=>location.hash),menuHash,'Menu skip link preserves route');await view(p,'menu');await unchanged(p,null);
@@ -61,8 +64,8 @@ try{
  await fromMenu(p,'table');assert.equal(await p.locator('#main').isVisible(),true);assert.equal(await p.locator('#run-new').isVisible(),true);await unchanged(p,null);
  await p.locator('.brand-link').click();await view(p,'menu');await p.waitForFunction(()=>document.activeElement?.id==='menu-play');await p.goBack();await view(p,'table');await p.goForward();await view(p,'menu');await unchanged(p,null);
  pass('root-play-setup-back-keyboard-brand-and-history-do-not-create-run');
- await p.locator('#menu-collection').click();await view(p,'collection');await p.waitForFunction(()=>document.querySelectorAll('.collection-card').length===150);await unchanged(p,null);
- await p.locator('.brand-link').click();await view(p,'menu');pass('collection-reuses-existing-150-cards-without-saving');
+ await p.locator('#menu-collection').click();await view(p,'collection');await p.locator('[data-collection-category="joker"]').click();await p.waitForFunction(()=>document.querySelectorAll('#collection-grid [data-joker]').length===15);await unchanged(p,null);
+ await p.locator('#collection-back').click();await p.locator('#collection-back').click();await view(p,'menu');pass('collection-opens-category-menu-and-paginated-jokers-without-saving');
  await p.locator('#menu-options').focus();await p.keyboard.press('Enter');await p.locator('#menu-settings').waitFor({state:'visible'});assert.equal(await p.locator('#menu-settings').evaluate(dialog=>dialog.contains(document.activeElement)),true);await p.keyboard.press('Escape');await p.locator('#menu-settings').waitFor({state:'hidden'});await p.waitForFunction(()=>document.activeElement?.id==='menu-options');await unchanged(p,null);
  await fromMenu(p,'table');await p.locator('.brand-link').click();await view(p,'menu');await openOptions(p);await p.goBack();await view(p,'table');await p.locator('#menu-settings').waitFor({state:'hidden'});await unchanged(p,null);await p.locator('.brand-link').click();await view(p,'menu');
  pass('options-keyboard-escape-focus-and-back-close-modal');
@@ -72,7 +75,7 @@ try{
  if(renderer==='webgl'){
   const clip={x:20,y:80,width:100,height:100};
   const firstDraws=await draws(p),movingBefore=await p.screenshot({clip});await p.waitForTimeout(350);const movingAfter=await p.screenshot({clip});assert.ok(await draws(p)>firstDraws,'Enabled motion actually draws new frames');assert.equal(movingBefore.equals(movingAfter),false,'Liquid pixels change while enabled');
-  await setMotion(p,'off');await p.mouse.move(0,0);await p.waitForTimeout(180);const stoppedDraws=await draws(p),stillBefore=await p.screenshot({clip});await p.waitForTimeout(350);const stillAfter=await p.screenshot({clip});assert.equal(await draws(p),stoppedDraws,'Disabled motion does not draw new frames');assert.equal(stillBefore.equals(stillAfter),true,'Background pixels stay fixed while disabled');
+  await setMotion(p,'off');await p.mouse.move(0,0);await p.waitForTimeout(180);const stoppedDraws=await draws(p),stillBefore=await settledScreenshot(p,clip);await p.waitForTimeout(350);const stillAfter=await p.screenshot({clip});assert.equal(await draws(p),stoppedDraws,'Disabled motion does not draw new frames');assert.equal(stillBefore.equals(stillAfter),true,'Background pixels stay fixed while disabled');
   await setMotion(p,'on');await fromMenu(p,'table');await p.waitForTimeout(120);const outside=await draws(p);await p.waitForTimeout(350);assert.equal(await draws(p),outside,'Leaving the menu pauses animation');await p.locator('.brand-link').click();await view(p,'menu');
   pass('webgl-actual-frame-pixels-move-stop-and-pause-outside-menu',{renderer,sample:'100x100 background-only crop; no reference-image baseline'});
  }else report.limitations.push(`WebGL motion/pixel checks not executed: renderer=${renderer}`);
@@ -90,12 +93,12 @@ try{
  await openOptions(p);await p.locator('#menu-settings-close').scrollIntoViewIfNeeded();assert.equal(await p.locator('#menu-settings-close').isVisible(),true);await screenshots(p,'options-320');await p.keyboard.press('Escape');await unchanged(p,null);
  pass('five-responsive-viewports-centered-touch-controls-and-options',{sizes,physicalAndroid:false});await empty.context.close();
  const saved=await session({saved:fixture}),q=saved.page;await unchanged(q,fixture);
- await q.locator('#menu-play').click();await q.locator('#run-setup').waitFor({state:'visible'});await q.locator('#setup-tab-continue').click();await unchanged(q,fixture);await q.locator('#setup-play').click();await view(q,'table');assert.equal(await q.locator('#money').inputValue(),String(prepared.value.state.observed.money.value));assert.equal(JSON.parse(await raw(q)).history.length,1);await q.locator('.brand-link').click();await view(q,'menu');await setMotion(q,'off');await q.locator('#menu-collection').click();await view(q,'collection');await q.locator('.brand-link').click();await view(q,'menu');await unchanged(q,fixture);await saved.context.close();
+ await q.locator('#menu-play').click();await q.locator('#run-setup').waitFor({state:'visible'});await q.locator('#setup-tab-continue').click();await unchanged(q,fixture);await q.locator('#setup-play').click();await view(q,'blind');assert.equal(await q.locator('#money').inputValue(),String(prepared.value.state.observed.money.value));assert.equal(JSON.parse(await raw(q)).history.length,1);await q.locator('.blind-menu-link').click();await view(q,'menu');await setMotion(q,'off');await q.locator('#menu-collection').click();await view(q,'collection');await q.locator('#collection-back').click();await view(q,'menu');await unchanged(q,fixture);await saved.context.close();
  pass('existing-state-and-nonempty-journal-byte-for-byte-unchanged');
  for(const screen of ['table','collection','evaluation','archive']){
   const deep=await session({saved:fixture,path:'#'+screen});await view(deep.page,'menu');assert.equal(await deep.page.evaluate(()=>location.hash),'#menu','Cold deep links still open the main menu');assert.equal(await deep.page.locator('#menu-view').isVisible(),true);assert.equal(await deep.page.locator('#main').isVisible(),false);await unchanged(deep.page,fixture);
-  await fromMenu(deep.page,screen);assert.equal(await deep.page.locator(`[data-page="${screen}"]`).first().isVisible(),true);assert.equal(await deep.page.locator('#menu-view').isVisible(),false);
-  const hash=await deep.page.evaluate(()=>location.hash);await deep.page.locator('.skip-link').focus();await deep.page.keyboard.press('Enter');await deep.page.waitForFunction(()=>document.activeElement?.id==='main');assert.equal(await deep.page.evaluate(()=>location.hash),hash,'Workspace skip link preserves the internally selected route');await view(deep.page,screen);
+  await fromMenu(deep.page,screen);assert.equal(await deep.page.locator(`[data-page="${screen}"]`).first().isVisible(),true);assert.equal(await deep.page.locator('#menu-view').isVisible(),screen==='collection');
+  const hash=await deep.page.evaluate(()=>location.hash);if(screen==='collection')await deep.page.waitForFunction(()=>{const dialog=document.querySelector('#collection-view');return dialog.open&&dialog.contains(document.activeElement);});else{await deep.page.locator('.skip-link').focus();await deep.page.keyboard.press('Enter');await deep.page.waitForFunction(()=>document.activeElement?.id==='main');}assert.equal(await deep.page.evaluate(()=>location.hash),hash,'Focus navigation preserves the internally selected route');await view(deep.page,screen);
   await unchanged(deep.page,fixture);await deep.context.close();
  }
  pass('four-cold-deep-links-open-menu-and-internal-routes-preserve-record');

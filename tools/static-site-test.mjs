@@ -61,7 +61,7 @@ try{
     page.on('response',r=>{if(r.status()>=400)failed.push({url:r.url(),status:r.status()});else loaded.add(r.url());});
   };
   instrument(p);
-  const go=async(page,screen)=>{const link=page.locator(`[data-screen="${screen}"]`);if(await link.getAttribute('aria-current')!=='page')await link.click();};
+  const go=async(page,screen)=>{if(await page.locator('body').getAttribute('data-view')==='collection'){await page.evaluate(target=>{location.hash=target;},screen);await page.waitForFunction(target=>document.body.dataset.view===target,screen);return;}const link=page.locator(`[data-screen="${screen}"]`);if(await link.getAttribute('aria-current')!=='page')await link.click();};
   const stored=page=>page.evaluate(k=>localStorage.getItem(k),key);
   const ready=page=>page.waitForFunction(()=>document.querySelector('#ownership')?.textContent.includes('Esta pestaña tiene'));
   const openCatalogue=async page=>{const dock=page.locator('#catalogue-dock');if(await dock.evaluate(e=>e instanceof HTMLDetailsElement&&!e.open))await dock.locator(':scope > summary').click();};

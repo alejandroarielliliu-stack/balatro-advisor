@@ -1,0 +1,12 @@
+/* Original atlas crops, without altering game images. See assets/collection/provenance.json. */
+.collection-art{position:relative;display:inline-block;flex:none;width:var(--collection-art-width,71px);aspect-ratio:var(--collection-art-ratio,.747368);line-height:0;overflow:hidden;isolation:isolate;vertical-align:middle;filter:drop-shadow(2px 3px 0 #12252b80)}
+.collection-art>img{position:absolute;display:block;max-width:none;image-rendering:pixelated;pointer-events:none;user-select:none}
+.collection-art[data-art-status="unavailable"]{background:#233d44;border:2px solid #8ba6a3}
+.collection-art[data-art-status="unavailable"]::after{content:'?';position:absolute;inset:0;display:grid;place-items:center;color:#e5e6d6;font:26px/1 'Balatro Pixel',monospace}
+.collection-art[data-edition]::after{content:'';position:absolute;inset:0;pointer-events:none;border-radius:3px;opacity:.35;mix-blend-mode:color-dodge}
+.collection-art[data-edition="base"]::after{display:none}
+.collection-art[data-edition="foil"]::after{background:repeating-linear-gradient(125deg,#c4ddff 0 4px,#708bb833 5px 10px,#e2e9ff 11px 13px);opacity:.48;mix-blend-mode:screen}
+.collection-art[data-edition="holo"]::after{background:repeating-conic-gradient(from 30deg,#ffa9e1 0 12%,#abddff 20%,#ffe8ad 34%,#b8b5fc 47%);opacity:.5;mix-blend-mode:hard-light}
+.collection-art[data-edition="polychrome"]::after{background:linear-gradient(125deg,#e2dd1b,#6dff24 25%,#38efff 45%,#a62bff 68%,#ed217f 90%);opacity:.56;mix-blend-mode:multiply}
+.collection-art[data-edition="negative"]>img{filter:invert(1) hue-rotate(175deg)}
+.collection-art[data-edition="negative"]::after{display:none}

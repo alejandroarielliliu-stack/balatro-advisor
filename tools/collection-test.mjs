@@ -1,47 +1,58 @@
 import {openWorkspace} from './workspace-navigation.mjs';
+import {logicalBounds} from './ui-logical-bounds.mjs';
 import assert from 'node:assert/strict';
 import {chromium,firefox} from 'playwright';
 import {spawn} from 'node:child_process';
 import {mkdir,writeFile} from 'node:fs/promises';
+
+// Presentation/reference contracts; no gameplay or strategic oracle.
 const engine=process.env.TEST_BROWSER==='firefox'?'firefox':'chromium';
-const dir=`docs/evidencia/collection/${engine}`;await mkdir(dir,{recursive:true});
-const server=spawn(process.execPath,['dist/src/server.js'],{env:{...process.env,PORT:'4177'},stdio:'pipe',windowsHide:true});
-await new Promise((resolve,reject)=>{server.stdout.on('data',d=>String(d).includes('Balatro Advisor local')&&resolve());server.on('error',reject);});
-let browser;
+const dir=`docs/evidencia/collection/${engine}`,origin=process.env.COLLECTION_ORIGIN??'http://127.0.0.1:4177/';
+await mkdir(dir,{recursive:true});
+const report={date:new Date().toISOString(),engine,gameObservation:false,physicalAndroid:false,readOnly:true,cases:[],errors:[]};
+const pass=id=>{report.cases.push(id);console.log('PASS',id);};
+const server=process.env.COLLECTION_ORIGIN?null:spawn(process.execPath,['dist/src/server.js'],{env:{...process.env,PORT:'4177'},stdio:'pipe',windowsHide:true});
+let browser,page;
 try{
+ if(server)await new Promise((resolve,reject)=>{const timer=setTimeout(()=>reject(Error('Collection server timeout')),15000);server.stdout.on('data',data=>{if(String(data).includes('Balatro Advisor local')){clearTimeout(timer);resolve();}});server.on('error',reject);});
  browser=await(engine==='firefox'?firefox:chromium).launch({headless:true,...(engine==='chromium'?{channel:'chrome'}:{})});
- const ctx=await browser.newContext({viewport:{width:1440,height:1000}}),p=await ctx.newPage(),errors=[];
- p.on('pageerror',e=>errors.push(e.message));p.on('console',m=>{if(m.type()==='error')errors.push(m.text());});
- await openWorkspace(p,'http://127.0.0.1:4177/#collection');await p.waitForSelector('.collection-card');
- const raw=()=>p.evaluate(()=>JSON.stringify(localStorage));const original=await raw();
- assert.equal(await p.locator('.collection-card').count(),150);assert.match(await p.locator('#collection-view > p.muted').innerText(),/82 compatibles con cálculo de jugadas.*Encaje contextual en la Mesa/);assert.equal(await p.locator('.collection-support').filter({hasText:'Cálculo con jugadas'}).count(),82);assert.equal(await p.locator('.collection-card .bay-score-value').count(),0);assert.doesNotMatch(await p.locator('#collection-view').innerText(),/Con cálculo|Encaje.*\/10|meta: pendiente/);
- const atlas=await p.request.get('http://127.0.0.1:4177/web/assets/jokers/atlas.png');assert.equal(atlas.headers()['content-type'],'image/png');
- await p.evaluate(()=>new Promise((resolve,reject)=>{const i=new Image();i.onload=()=>i.naturalWidth===1420?resolve():reject('width');i.onerror=reject;i.src='/web/assets/jokers/atlas.png';}));
- await p.screenshot({path:`${dir}/desktop.png`});
- await p.locator('#joker-search').fill('perkeo');assert.equal(await p.locator('.collection-card').count(),1);
- await p.locator('.collection-card').click();assert.match(await p.locator('#joker-detail').innerText(),/Solo catálogo de cálculo exacto/);assert.match(await p.locator('#joker-detail .quick-rating-status').innerText(),/Valora su encaje con tu construcción en la Mesa.*colección es de referencia/);assert.equal(await p.locator('#joker-detail .bay-score-value').count(),0);
- assert.match(await p.locator('#joker-detail').innerText(),/Legendario/);await p.screenshot({path:`${dir}/legendary.png`});await p.keyboard.press('Escape');
- await p.locator('#joker-search').fill('');await p.locator('#joker-rarity').selectOption('4');assert.equal(await p.locator('.collection-card').count(),5);
- await p.locator('#joker-rarity').selectOption('');await p.locator('#joker-support').selectOption('implemented');assert.equal(await p.locator('.collection-card').count(),82);
- await p.locator('#joker-support').selectOption('catalog-only');assert.equal(await p.locator('.collection-card').count(),68);
- await p.locator('#joker-search').fill('no existe');assert.match(await p.locator('#joker-collection').innerText(),/Sin coincidencias/);
- await p.locator('#joker-search').fill('');await p.locator('#joker-support').selectOption('');
- for(const width of [360,390,768,1280,1440]){await p.setViewportSize({width,height:844});assert.equal(await p.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true,`overflow ${width}`);}
- await p.setViewportSize({width:390,height:844});await p.screenshot({path:`${dir}/mobile.png`});
- await p.locator('[data-joker="j_scholar"]').click();assert.match(await p.locator('#joker-detail').innerText(),/20 fichas/);assert.match(await p.locator('#joker-detail .coverage-status').innerText(),/Puede calcular puntos con jugadas de prueba en Análisis/);assert.match(await p.locator('#joker-detail .quick-rating-status').innerText(),/Valora su encaje con tu construcción en la Mesa.*colección es de referencia/);assert.equal(await p.locator('#joker-detail .bay-score-value').count(),0);assert.doesNotMatch(await p.locator('#joker-detail').innerText(),/Encaje.*\/10|meta y sinergias: pendiente/);assert.equal(await p.evaluate(()=>document.querySelector('#joker-detail').scrollWidth<=document.querySelector('#joker-detail').clientWidth),true);await p.screenshot({path:`${dir}/detail-mobile.png`});await p.keyboard.press('Escape');
- await p.locator('#collection-view > div > .synergy-library > summary').click();
- await p.locator('#synergy-search').fill('acero');assert.ok(await p.locator('#collection-view > div .synergy-entry').count()>0);
- await p.locator('#collection-view > div [data-synergy="mime-steel"] > summary').click();
- assert.match(await p.locator('#collection-view > div [data-synergy="mime-steel"]').innerText(),/En mano al puntuar/);
- await p.screenshot({path:`${dir}/synergies-mobile.png`});
- await p.locator('#collection-view > div > .synergy-library > summary').click();
- await p.locator('#joker-search').fill('mime');await p.locator('[data-joker="j_mime"]').click();
- await p.locator('#joker-detail .synergy-library > summary').click();
- await p.locator('#joker-detail [data-synergy="mime-gold-seal-false"] > summary').click();
- assert.match(await p.locator('#joker-detail [data-synergy="mime-gold-seal-false"]').innerText(),/No se activa así/);
- assert.equal(await p.evaluate(()=>document.querySelector('#joker-detail').scrollWidth<=document.querySelector('#joker-detail').clientWidth),true);
- await p.keyboard.press('Escape');
- assert.equal(await raw(),original);assert.deepEqual(errors,[]);
- await writeFile(`${dir}/report.json`,JSON.stringify({date:'2026-10-13',engine,browser:await browser.version(),jokers:150,implemented:82,catalogOnlyExactCalculation:68,readOnly:true,checks:['bilingual search','rarity and support filters','unchanged exact hand coverage82/68','contextual fit in Mesa; hand calculations in Analysis','no context-free scores in reference details','empty result','legendary layers','image loaded with PNG MIME','keyboard dialog','5 widths without overflow','unchanged storage','no browser/CSP errors','synergy search, Mime detail, gold seal counterexample'],physicalAndroid:false},null,2));
- console.log('PASS collection: 150 reference cards, exact coverage82/68 unchanged, fit in Mesa and hand calculations in Analysis, filters, art, detail, responsive, read-only, no CSP errors');
-}finally{await browser?.close();server.kill();}
+ const context=await browser.newContext({viewport:{width:1280,height:600},reducedMotion:'reduce'});page=await context.newPage();
+ page.on('pageerror',error=>report.errors.push(error.message));page.on('console',message=>{if(message.type()==='error')report.errors.push(message.text());});
+ await openWorkspace(page,origin+'#collection');await page.locator('#collection-view').waitFor({state:'visible'});await page.evaluate(()=>document.fonts.ready);
+ const raw=()=>page.evaluate(()=>JSON.stringify(localStorage)),original=await raw();
+ const category=name=>page.locator(`[data-collection-category="${name}"]`),panel=name=>page.locator(`.collection-panel[data-category="${name}"]`),items=()=>page.locator('#collection-grid [data-collection-item]');
+ const open=async name=>{await category(name).click();await panel(name).waitFor({state:'visible'});};
+ const back=async name=>{await page.locator('#collection-back').click();await panel('home').waitFor({state:'visible'});await page.waitForFunction(name=>document.activeElement?.dataset.collectionCategory===name,name);};
+ const shot=async name=>{await page.locator('#collection-view img').evaluateAll(images=>Promise.all(images.map(image=>image.decode().catch(()=>{}))));await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));return page.screenshot({path:`${dir}/${name}.png`});};
+ const fit=async selector=>{const bounds=await page.locator(selector).boundingBox(),size=page.viewportSize();assert.ok(bounds&&bounds.x>=-1&&bounds.y>=-1&&bounds.x+bounds.width<=size.width+1&&bounds.y+bounds.height<=size.height+1,`Unclipped ${selector}: ${JSON.stringify({bounds,size})}`);};
+ assert.equal(await page.locator('[data-collection-category]').count(),12);assert.equal(await page.locator('#collection-view').evaluate(dialog=>dialog.open&&dialog.matches(':modal')),true);
+ assert.equal(await page.locator('#menu-view').isVisible(),true);assert.equal(await page.locator('.app-header').isVisible(),false);assert.equal(await page.locator('.collection-notification,.notification-dot,[data-notification]').count(),0);
+ const homeFit=async()=>{
+  const [bounds]=await panel('home').evaluateAll(logicalBounds),[backBounds]=await page.locator('#collection-back').evaluateAll(logicalBounds),buttons=await page.locator('[data-collection-category]').evaluateAll(logicalBounds);
+  for(const [index,category]of buttons.entries())assert.ok(category.left>=bounds.left&&category.right<=bounds.right&&category.top>=bounds.top&&category.bottom<backBounds.top,`Category is inside panel and above Back: ${index}`);
+  for(let a=0;a<buttons.length;a++)for(let b=a+1;b<buttons.length;b++){const x=buttons[a],y=buttons[b];assert.ok(x.right<=y.left||y.right<=x.left||x.bottom<=y.top||y.bottom<=x.top,`Distinct category buttons do not overlap: ${a}/${b}`);}
+ };
+ await fit('.collection-panel');await homeFit();await shot('home');pass('category-menu-over-title-screen-without-notifications');
+ await open('joker');assert.equal(await items().count(),15);assert.match(await page.locator('#collection-page').innerText(),/1\s*\/\s*10/);
+ const seen=new Set();for(let i=0;i<10;i++){for(const id of await items().evaluateAll(nodes=>nodes.map(node=>node.dataset.joker)))seen.add(id);await page.locator('#collection-next').click();}
+ assert.equal(seen.size,150);assert.ok(seen.has('j_joker')&&seen.has('j_perkeo'));assert.match(await page.locator('#collection-page').innerText(),/1\s*\/\s*10/);await page.locator('#collection-prev').click();assert.match(await page.locator('#collection-page').innerText(),/10\s*\/\s*10/);await page.locator('#collection-next').click();await shot('jokers');
+ const filters=page.locator('#collection-filters'),filterOpen=async()=>{if(!await filters.evaluate(element=>element.open))await filters.locator(':scope > summary').click();},filterClose=async()=>{if(await filters.evaluate(element=>element.open))await filters.locator(':scope > summary').click();};
+ await filterOpen();await page.locator('#joker-search').fill('perkeo');assert.equal(await items().count(),1);await filterClose();await page.locator('[data-joker="j_perkeo"]').click();
+ assert.match(await page.locator('#joker-detail').innerText(),/Legendario/);assert.match(await page.locator('#joker-detail .coverage-status').innerText(),/Solo catálogo/);assert.match(await page.locator('#joker-detail .quick-rating-status').innerText(),/colección es de referencia/);assert.equal(await page.locator('#joker-detail .bay-score-value').count(),0);await shot('legendary');await page.keyboard.press('Escape');await page.waitForFunction(()=>document.activeElement?.dataset.joker==='j_perkeo');
+ await filterOpen();await page.locator('#joker-search').fill('');await page.locator('#joker-rarity').selectOption('4');assert.equal(await items().count(),5);await page.locator('#joker-rarity').selectOption('');await page.locator('#joker-support').selectOption('implemented');assert.match(await page.locator('#collection-count').innerText(),/82/);await page.locator('#joker-support').selectOption('catalog-only');assert.match(await page.locator('#collection-count').innerText(),/68/);
+ await page.locator('#joker-search').fill('no existe');assert.match(await page.locator('#collection-grid').innerText(),/Sin coincidencias/);await page.locator('#joker-support').selectOption('');await page.locator('#joker-search').fill('scholar');await filterClose();await page.locator('[data-joker="j_scholar"]').click();assert.match(await page.locator('#joker-detail').innerText(),/20 fichas/);assert.match(await page.locator('#joker-detail .coverage-status').innerText(),/Puede calcular puntos/);await page.keyboard.press('Escape');
+ await filterOpen();await page.locator('#joker-search').fill('mime');await filterClose();await page.locator('[data-joker="j_mime"]').click();await page.locator('#joker-detail .synergy-library > summary').click();await page.locator('#joker-detail [data-synergy="mime-gold-seal-false"] > summary').click();assert.match(await page.locator('#joker-detail [data-synergy="mime-gold-seal-false"]').innerText(),/No se activa así/);await page.keyboard.press('Escape');await back('joker');pass('joker-pages-filters-coverage-details-synergies-and-focus');
+ const categories=[['tarot',22,11],['planet',12,12],['spectral',18,9],['voucher',32,8],['pack',32,8],['enhancement',8,8],['seal',4,4],['edition',5,5],['tag',24,24],['blind',30,30]];
+ for(const [name,total,pageSize]of categories){
+  await open(name);assert.equal(await items().count(),pageSize,name+' first page');await page.waitForLoadState('networkidle');await shot(name);const identities=new Set();
+  for(let n=0;n<Math.ceil(total/pageSize);n++){for(const id of await items().evaluateAll(nodes=>nodes.map(node=>node.dataset.collectionItem)))identities.add(id);if(total>pageSize)await page.locator('#collection-next').click();}
+  assert.equal(identities.size,total,name+' distinct identities');assert.equal(await page.locator('#collection-view .art-unavailable,#collection-view .blind-art-unavailable').count(),0);assert.equal(await page.locator('#collection-view img').evaluateAll(images=>images.every(image=>image.complete&&image.naturalWidth>0)),true,name+' art loaded');
+  if(name!=='blind'){await items().first().click();await page.locator('#collection-detail').waitFor({state:'visible'});assert.ok((await page.locator('#collection-detail').innerText()).trim().length>20);await page.keyboard.press('Escape');}
+  else{assert.equal(await page.locator('[data-boss-catalog-id]').count(),28);await page.locator('[data-boss-catalog-id="the_needle"]').click();assert.match(await page.locator('#boss-catalogue-detail').innerText(),/1.*manos|a 1 las manos/);await page.keyboard.press('Escape');}
+  await back(name);
+ }
+ pass('all-reference-categories-pagination-art-and-detail-readonly');await open('deck');const firstDeck=await page.locator('.collection-deck-copy h2').innerText(),decks=new Set();for(let n=0;n<15;n++){decks.add(await page.locator('.collection-deck-copy h2').innerText());await page.locator('#collection-next').click();}assert.equal(decks.size,15);assert.equal(await page.locator('.collection-deck-copy h2').innerText(),firstDeck);await page.locator('#collection-prev').click();assert.notEqual(await page.locator('.collection-deck-copy h2').innerText(),firstDeck);await page.locator('#collection-next').click();await shot('decks');await back('deck');pass('all-fifteen-decks-carousel-wraps');
+ for(const size of [{width:1440,height:900},{width:844,height:390},{width:390,height:844},{width:360,height:640},{width:568,height:320}]){await page.setViewportSize(size);await fit('.collection-panel');await homeFit();assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),true);await shot(`home-${size.width}x${size.height}`);await open('joker');await fit('.collection-panel');await fit('#collection-back');await fit('#collection-prev');await fit('#collection-next');await page.locator('[data-joker="j_joker"]').click();await fit('#joker-detail');assert.equal(await page.locator('#joker-detail').evaluate(dialog=>dialog.scrollWidth<=dialog.clientWidth+1),true);await page.keyboard.press('Escape');await back('joker');}
+ pass('desktop-landscape-and-rotated-portrait-dialogs-fit');await open('tarot');await page.keyboard.press('Escape');await panel('home').waitFor({state:'visible'});await page.keyboard.press('Escape');await page.waitForFunction(()=>document.body.dataset.view==='menu');await page.waitForFunction(()=>document.activeElement?.id==='menu-collection');await page.locator('#menu-collection').click();await panel('home').waitFor({state:'visible'});await page.locator('#collection-back').click();await page.waitForFunction(()=>document.body.dataset.view==='menu');
+ assert.equal(await raw(),original,'Browsing never writes local storage');assert.deepEqual(report.errors,[]);pass('escape-back-focus-and-exact-storage-preservation');report.status='passed';report.browser=await browser.version();await writeFile(`${dir}/report.json`,JSON.stringify(report,null,2)+'\n');console.log('PASS collection '+report.cases.length+' groups');
+}catch(error){report.status='failed';report.error=error.stack;await writeFile(`${dir}/report.json`,JSON.stringify(report,null,2)+'\n');if(page&&!page.isClosed())await page.screenshot({path:`${dir}/failed.png`}).catch(()=>{});throw error;}finally{await browser?.close();server?.kill();}

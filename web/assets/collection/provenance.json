@@ -1,0 +1,30 @@
+{
+  "schemaVersion": 1,
+  "gameVersion": "1.0.1o-FULL",
+  "date": "2026-11-08",
+  "sourceCommit": "f081d0e41508d9dcc7a01cba5bffcccfbb115af1",
+  "method": "Static literal tables and localization from owned Steam Balatro.exe ZIP. No Lua executed. Existing atlas bytes reused; Tarots.png copied unchanged. Display variables from config/source UI; run-dependent values labelled, not observed facts.",
+  "files": [
+    {
+      "file": "tarots.png",
+      "source": "resources/textures/2x/Tarots.png",
+      "bytes": 119662,
+      "sha256": "83de7eb06d21a9c87096c3bfc611222933fc3834524703718fd64e3d4486f282",
+      "width": 1420,
+      "height": 1140
+    }
+  ],
+  "copyright": "Balatro artwork and game text: LocalThunk / Playstack. Reference collection only.",
+  "counts": {
+    "TAROT": 22,
+    "PLANETS": 12,
+    "SPECTRAL": 18,
+    "ENHANCEMENTS": 8,
+    "EDITIONS": 5,
+    "BOOSTERS": 32,
+    "DECKS": 15,
+    "TAGS": 24,
+    "VOUCHERS": 32,
+    "SEALS": 4
+  }
+}
