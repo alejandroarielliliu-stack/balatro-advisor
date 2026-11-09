@@ -1,67 +1,99 @@
-/* Run selection: fixed game-like composition scaled to the logical landscape. */
-#run-setup[hidden] {display:none;}
-#run-setup {position:absolute;inset:0;z-index:6;background:#25333a99;backdrop-filter:blur(1px);font-family:'Balatro Pixel',monospace;}
-#menu-view[data-setup-open="true"]>.menu-title-stage,#menu-view[data-setup-open="true"]>.menu-actions {filter:brightness(.65);}
-.run-setup-panel {--setup-scale:1;position:absolute;left:50%;top:50%;width:540px;height:540px;translate:-50% -50%;scale:var(--setup-scale);transform-origin:center;overflow:visible;border:3px solid #a2b6b5;border-radius:12px;background:#334d55;box-shadow:inset 0 -8px #243c44,0 7px #172d35,0 14px 25px #071c2866;color:#f6f2e6;outline:none;}
-.run-setup-panel button,.run-setup-panel input,.run-setup-panel a {font-family:'Balatro Pixel',monospace;}
-.run-setup-tabs {position:absolute;left:76px;right:76px;top:22px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;}
-.run-setup-tabs>button {position:relative;min-width:0;min-height:40px;padding:4px 5px;border:0;border-radius:8px;background:#ff4c42;color:#fff8ec;font-size:22px;line-height:1;box-shadow:inset 0 3px #ff7a645c,0 4px #b33536;}
-.run-setup-tabs>button:hover {background:#ff6050;}
-.run-setup-tabs>button:first-child {font-size:18px;white-space:nowrap;letter-spacing:-.4px;}
-.run-setup-tabs>button[aria-selected="true"]::before {content:'';position:absolute;top:-19px;left:calc(50% - 9px);border-left:9px solid transparent;border-right:9px solid transparent;border-top:14px solid #ff594d;filter:drop-shadow(0 2px #96383c);}
-.run-setup-tabs>button:focus-visible,.setup-arrow:focus-visible,.setup-play:focus-visible,.setup-back:focus-visible {outline:3px solid #fff1b0;outline-offset:4px;}
-.setup-deck-stage {position:absolute;top:83px;left:0;width:100%;height:172px;touch-action:none;}
-.setup-deck-focus {position:absolute;top:3px;left:91px;width:348px;height:150px;display:grid;grid-template-columns:94px minmax(0,1fr);align-items:center;gap:10px;padding:2px;border:6px solid #1a3038;border-radius:10px;background:#263c43;z-index:2;pointer-events:none;}
-.setup-deck-portrait {--deck-art-width:94px;display:grid;place-items:center;}
-.setup-deck-info {display:grid;grid-template-rows:30px 1fr;align-self:stretch;gap:4px;min-width:0;}
-.setup-deck-info h2,.setup-stake-info h2 {margin:0;text-align:center;font:24px/1.1 'Balatro Pixel',monospace;color:#f9f7e9;text-shadow:0 2px #122c34;display:grid;align-items:center;}
-.setup-deck-info h2 {font-size:22px;}
-.setup-deck-info p,.setup-stake-info p {margin:0;padding:6px 8px;display:grid;place-items:center;background:#eff2ed;border-bottom:5px solid #c6d0cb;border-radius:6px;text-align:center;color:#243a44;font:22px/1 'Balatro Pixel',monospace;overflow-wrap:anywhere;}
-.setup-arrow {position:absolute;top:0;width:58px;height:170px;min-height:0;min-width:0;margin:0;padding:0;border:0;border-radius:9px;background:#ff4c42;color:#fff9e9;box-shadow:inset 0 3px #ff786355,0 4px #d03e37;font:34px/1 'Balatro Pixel',monospace;}
-.setup-arrow[data-direction="-1"] {left:25px;}
-.setup-arrow[data-direction="1"] {right:31px;}
-.setup-arrow:hover {background:#ff6556;}
-.setup-arrow:active {translate:0 2px;box-shadow:inset 0 2px #d03e37,0 2px #d03e37;}
-.setup-arrow:disabled {color:#ffe9ddaa;cursor:default;}
-.setup-stake-neighbors>.setup-arrow {height:92px;}
-.setup-dots {position:absolute;display:flex;align-items:center;justify-content:center;left:70px;right:70px;height:20px;}
-#setup-deck-dots {top:238px;}
-.setup-dot {position:relative;display:grid;place-items:center;width:8px;height:18px;min-height:0;margin:0;}
-.setup-dot input {position:absolute;inset:0;margin:0;width:100%;height:100%;min-height:0;padding:0;opacity:0;cursor:pointer;}
-.setup-dot>span {width:4px;height:4px;border-radius:50%;background:#172f36;pointer-events:none;}
-.setup-dot input:checked+span {background:#f6f6e6;box-shadow:0 0 5px #e2f7e48f;}
-.setup-dot input:focus-visible+span {outline:2px solid #f6dc7b;outline-offset:4px;}
-.setup-stake-stage {position:absolute;top:267px;left:0;width:100%;height:92px;touch-action:none;}
-.setup-stake-focus {position:absolute;top:4px;left:91px;right:97px;height:84px;display:grid;grid-template-columns:62px minmax(0,1fr);gap:8px;align-items:center;padding:4px 7px;border:6px solid #1b3038;border-radius:10px;background:#263c43;pointer-events:none;}
-.setup-stake-portrait {--stake-art-size:51px;display:grid;place-items:center;}
-.setup-stake-info {display:grid;grid-template-rows:20px 1fr;height:100%;gap:3px;min-width:0;}
-.setup-stake-info h2 {font-size:22px;}
-.setup-stake-info p {font-size:24px;padding:2px 4px;}
-#setup-stake-dots {top:346px;}
-.setup-seed-input {position:absolute;top:376px;left:151px;width:236px;height:32px;display:block;margin:0;}
-.setup-seed-input[hidden] {display:none;}
-.setup-seed-input>.sr-only {position:absolute;width:1px;height:1px;padding:0;overflow:hidden;clip-path:inset(50%);white-space:nowrap;}
-#setup-seed {height:32px;min-height:32px;width:100%;padding:2px 8px;border:2px solid #8fa8a6;border-radius:5px;background:#20373f;color:#fff6df;text-align:center;font-size:23px;line-height:1;}
-#setup-seed::placeholder {color:#c2d3c9;}
-#setup-seed-help {position:absolute;left:244px;top:5px;width:97px;color:#d1dcd3;font:15px/1 'Balatro Pixel',monospace;}
-.setup-start-row {position:absolute;top:410px;left:0;right:0;height:52px;}
-.setup-seed-toggle {position:absolute;left:30px;top:0;display:flex;align-items:center;gap:8px;height:52px;margin:0;color:#f7f3e5;font:16px/1 'Balatro Pixel',monospace;cursor:pointer;}
-.setup-seed-toggle input {position:absolute;width:100%;height:100%;inset:0;opacity:0;margin:0;cursor:pointer;}
-.setup-check {width:21px;height:21px;border:3px solid #e3eddf;border-radius:50%;background:#1a333b;box-shadow:0 2px #182b33;}
-.setup-seed-toggle input:checked+.setup-check::after {content:'✓';position:relative;top:-4px;left:0;color:#fbf9e5;font:27px/1 'Balatro Pixel',monospace;}
-.setup-seed-toggle input:focus-visible+.setup-check {outline:3px solid #ffdc6b;outline-offset:3px;}
-.setup-play {position:absolute;left:151px;top:0;width:236px;min-height:52px;padding:5px 10px;border:2px solid #17aeeb;border-radius:9px;background:#009ee8;color:#f9f5e8;box-shadow:inset 0 3px #37bdeb44,0 5px #006aa7;font:38px/1 'Balatro Pixel',monospace;}
-.setup-play:hover {background:#10aff2;}
-.setup-play:disabled {color:#d0d8cf;background:#526a6d;border-color:#678487;box-shadow:0 5px #29414a;opacity:.75;cursor:not-allowed;}
-.setup-back {position:absolute;bottom:14px;left:9px;right:9px;display:grid;place-items:center;min-height:40px;padding:3px 10px;border:2px solid #ffb338;border-radius:7px;background:#f3a410;color:#fff8ed;box-shadow:0 4px #b36c14;text-decoration:none;font:28px/1 'Balatro Pixel',monospace;}
-.setup-back:hover {background:#ffb62b;}
-.setup-error {position:absolute;left:14px;right:14px;top:70px;margin:0;min-height:16px;text-align:center;font:16px/1 'Balatro Pixel',monospace;color:#ffe1a1;pointer-events:none;}
-.setup-error:empty {display:none;}
-.setup-summary {position:absolute;left:70px;right:70px;top:105px;height:270px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;text-align:center;}
-.setup-summary[hidden],.setup-new[hidden],.setup-seed-toggle[hidden] {display:none;}
-.setup-summary .deck-art {--deck-art-width:72px;}
-.setup-summary h2 {margin:0;font:30px/1 'Balatro Pixel',monospace;}
-.setup-summary p,.setup-import {margin:0;font:24px/1.1 'Balatro Pixel',monospace;overflow-wrap:anywhere;}
-.setup-import {padding:10px;color:#ffe7a8;}
-
-.setup-replace {position:absolute;top:347px;left:94px;right:94px;display:flex;align-items:center;justify-content:center;gap:8px;font-size:17px;color:#fff1c9}.setup-replace input {accent-color:#ff4a43;width:18px;height:18px;margin:0}.setup-replace[hidden] {display:none}
+/* The 480 × 480 logical panel scales as one piece, including its pixel art. */
+#run-setup {position:absolute;inset:0;z-index:6;background:#29374399;font-family:'Balatro Pixel',monospace}
+#menu-view[data-setup-open="true"] > :is(.menu-title-stage,.menu-actions) {filter:brightness(.68)}
+#menu-view[data-setup-open="true"] #menu-title {font-size:min(calc(40 * var(--app-vh)),calc(27 * var(--app-vw)))}
+.run-setup-panel {
+  position:absolute;left:50%;top:49.3%;width:480px;height:480px;
+  transform:translate(-50%,-50%) scale(var(--setup-scale,1));transform-origin:center;
+  border:3px solid #b5c2d0;border-radius:9px;background:#394f54;
+  box-shadow:inset 0 -3px #27363a,0 4px #74848e,0 7px #25353c66;color:#fff;isolation:isolate;
+}
+.run-setup-panel :is(button,input,a) {font-family:'Balatro Pixel',monospace}
+.run-setup-panel :is(button,a):focus-visible {outline:2px solid #fff2a3;outline-offset:2px}
+.run-setup-tabs {position:absolute;left:67px;right:67px;top:23px;display:grid;grid-template-columns:repeat(3,1fr);gap:7px}
+.run-setup-tabs > button,.setup-arrow {
+  position:relative;border:0;border-radius:6px;min-width:0;min-height:0;padding:0 2px;
+  background:#fc4c42;box-shadow:0 4px #202f33;color:white;font-size:20px;line-height:1;
+}
+.run-setup-tabs > button {height:34px}
+.run-setup-tabs > button:first-child {font-size:18px}
+.run-setup-tabs > button:hover,.setup-arrow:hover {background:#ff6458}
+.run-setup-tabs > button[aria-selected=true]::before {
+  content:'';position:absolute;left:50%;top:-18px;transform:translateX(-50%);
+  border-style:solid;border-width:13px 7px 0;border-color:#ff5144 transparent transparent;filter:drop-shadow(0 2px #20292c);
+}
+.setup-deck-stage,.setup-stake-stage {position:absolute;inset-inline:0;touch-action:none}
+.setup-deck-stage {top:75px;height:154px}
+.setup-stake-stage {top:244px;height:74px}
+.setup-stake-stage .setup-arrow {background:#202e31;color:#b1c1c3}
+.setup-stake-stage .setup-arrow:hover {background:#354a50;color:white}
+.setup-arrow {position:absolute;top:0;width:27px;height:calc(100% - 3px);font-size:25px}
+.setup-arrow[data-direction="-1"] {left:47px}
+.setup-arrow[data-direction="1"] {right:47px}
+.setup-deck-focus,.setup-stake-focus {
+  position:absolute;left:50%;transform:translateX(-50%);display:grid;align-items:center;
+  background:#1b2a2d;border-radius:7px;box-shadow:0 3px #111b1e;
+}
+.setup-deck-focus {top:6px;width:318px;height:132px;grid-template-columns:84px minmax(0,1fr) 18px;gap:9px;padding:6px 7px 6px 9px}
+.setup-deck-portrait {display:grid;place-items:center;--deck-art-width:83px}
+.setup-deck-portrait .deck-art {filter:drop-shadow(1px 4px #d0cfca) drop-shadow(1px 3px #707575)}
+.setup-deck-info,.setup-stake-info {background:#394f54;min-width:0;align-self:stretch;display:grid;grid-template-rows:36px minmax(0,1fr);padding:0 4px 6px;border-radius:6px}
+.setup-deck-info h2,.setup-stake-info h2 {
+  margin:0;display:grid;place-items:center;text-align:center;color:#fff;font:21px/1 'Balatro Pixel',monospace;text-shadow:0 2px #263338;
+}
+.setup-deck-body,.setup-stake-info p {
+  background:#fcfcfa;color:#384e53;border-radius:6px;display:grid;place-items:center;
+  text-align:center;margin:0;padding:5px 9px;font:16px/1.03 'Balatro Pixel',monospace;text-wrap:balance;overflow-wrap:anywhere;
+}
+.setup-stake-focus {top:0;width:315px;height:70px;grid-template-columns:15px 43px minmax(0,1fr);padding:4px;gap:2px}
+.setup-stake-caption {writing-mode:vertical-rl;transform:rotate(180deg);justify-self:center;color:#546b70;font-size:14px;line-height:1}
+.setup-stake-portrait {--stake-art-size:42px;display:grid;place-items:center}
+.setup-stake-info {grid-template-rows:17px minmax(0,1fr);padding:0 3px 3px}
+.setup-stake-info h2 {font-size:16px}.setup-stake-info p {font-size:16px}
+.setup-deck-description {max-width:100%;margin:0;font:inherit}
+.setup-deck-description b {color:#ed5147;font-weight:normal}
+.setup-dots {display:flex;align-items:center;justify-content:center}
+#setup-deck-dots {position:absolute;left:25%;right:25%;top:216px;height:18px;pointer-events:none}
+.setup-dot {position:relative;display:grid;place-items:center;width:6.5px;height:17px;min-height:0;margin:0;pointer-events:auto}
+.setup-dot input {position:absolute;inset:0;opacity:0;width:100%;height:100%;min-height:0;margin:0;padding:0;cursor:pointer}
+.setup-dot > span,.setup-stake-rail > i {margin:0;width:4.5px;height:4.5px;border-radius:50%;background:#1a292c;pointer-events:none}
+.setup-dot input:checked + span {background:white}
+.setup-dot input:focus-visible + span {outline:1.5px solid #ffd66b;outline-offset:1px}
+#setup-stake-dots,.setup-stake-rail {height:100%;width:18px;display:flex;flex-direction:column-reverse;justify-content:space-between;align-items:center}
+#setup-stake-dots .setup-dot {width:18px;height:13px}
+#setup-stake-dots .setup-dot > span,.setup-stake-rail > i {background:#3b494b;width:6px;height:6px}
+#setup-stake-dots input:checked + span,.setup-stake-rail > .selected {width:20px;height:11px;border:2px solid white;border-radius:2px}
+.setup-stake-rail {padding:3px 0 0}
+.setup-save-stats {display:grid;grid-template-columns:max-content max-content;align-items:baseline;justify-content:center;gap:0 6px;margin:0;font:15px/1 'Balatro Pixel',monospace}
+.setup-save-stats dt {text-align:right}.setup-save-stats dd {text-align:left;margin:0}
+.setup-save-stats dd::before {content:':';margin-right:5px;color:#384e53}
+.setup-save-stats .round,.setup-save-stats .hand {color:#ec5146}.setup-save-stats .ante {color:#009ef6}.setup-save-stats .money {color:#ed9400}
+.setup-summary > h2,.setup-summary > .setup-import,.setup-summary > p {position:absolute;left:16px;right:16px;text-align:center;margin:0}
+.setup-summary > h2 {top:150px;font:26px/1 'Balatro Pixel',monospace}
+.setup-summary > p,.setup-summary > .setup-import {top:192px;font:18px/1.1 'Balatro Pixel',monospace}
+.setup-summary > .setup-saved-seed {top:337px;overflow-wrap:anywhere;font-size:15px}
+.setup-seed-input {position:absolute;left:53px;top:337px;height:26px;display:flex;align-items:center;gap:5px}
+#setup-seed-help {width:101px;text-align:center;color:#f6f4ec;font:13px/1 'Balatro Pixel',monospace;text-wrap:balance}
+#setup-seed,.setup-paste {
+  min-height:0;height:26px;padding:2px;border:0;border-radius:5px;background:#009df6;color:white;
+  box-shadow:0 3px #20333a;text-align:center;font:17px/1 'Balatro Pixel',monospace;
+}
+#setup-seed {width:109px}#setup-seed::placeholder {color:#b2e6ff;font-size:15px}
+.setup-paste {width:47px;font-size:14px}
+.setup-start-row {position:absolute;top:369px;left:0;right:0;height:47px}
+.setup-seed-toggle {position:absolute;top:0;left:9px;width:109px;height:100%;display:flex;align-items:center;justify-content:flex-end;gap:6px;cursor:pointer;color:#fff;font-size:14px}
+.setup-seed-toggle span {margin:0}
+.setup-seed-toggle input {position:absolute;inset:0;width:100%;height:100%;min-height:0;margin:0;opacity:0;cursor:pointer}
+.setup-check {display:grid;place-items:center;width:20px;height:20px;border:2px solid #f2f2ea;border-radius:50%;background:#192a2d;box-shadow:0 2px #233036}
+.setup-seed-toggle input:checked + .setup-check {background:#f75046}
+.setup-seed-toggle input:checked + .setup-check::after {content:'✓';font:18px/1 'Balatro Pixel',monospace}
+.setup-seed-toggle input:focus-visible + .setup-check {outline:2px solid #ffd66b;outline-offset:2px}
+.setup-play,.setup-back {border:0;border-radius:6px;color:#fff;text-align:center;box-shadow:0 4px #233238}
+.setup-play {position:absolute;left:50%;transform:translateX(-50%);width:218px;height:46px;min-height:0;padding:0;background:#009dfa;font:35px/1 'Balatro Pixel',monospace}
+.setup-play:active:not(:disabled) {transform:translate(-50%,1px)}
+.setup-play:hover:not(:disabled),.setup-paste:hover:not(:disabled) {background:#16aefa}
+.setup-play:disabled {background:#4e6468;opacity:.8}
+.setup-back {position:absolute;bottom:9px;left:8px;right:8px;display:grid;place-items:center;height:27px;background:#ff9f00;text-decoration:none;font:21px/1 'Balatro Pixel',monospace}
+.setup-back:hover {background:#ffb222}
+.setup-error {position:absolute;top:59px;left:14px;right:14px;margin:0;text-align:center;font:13px/1 'Balatro Pixel',monospace;color:#ffe6a5}
+.setup-error:empty {display:none}

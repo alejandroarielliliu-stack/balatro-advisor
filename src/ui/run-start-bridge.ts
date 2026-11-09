@@ -8,7 +8,7 @@ import type {ConfirmedRecord} from '../storage/confirmed-store.js';
 export interface RunStartRequest {
   deckId:string;
   profileConfirmed:boolean;
-  /** Explicit inline consent in the New Run panel; avoids a second modal. */
+  /** The New Run panel treats pressing Play as the replacement action. */
   replaceConfirmed?:boolean;
   /** A manual label. The adviser never generates or inspects a seeded game. */
   seed?:string;
