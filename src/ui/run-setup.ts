@@ -136,7 +136,7 @@ export function mountRunSetup(menu:HTMLElement,bridge:RunStartBridge){
   }
  }
  play.onclick=()=>{
-  error.textContent='';if(tab==='continue'){const state=bridge.snapshot().record?.state;if(state)location.hash=(['blind_select','in_round','cashout'].includes(state.phase)||state.schemaVersion==='0.2'&&state.phase==='shop')?'blind':'table';else render();return;}if(tab!=='new'||play.disabled)return;
+  error.textContent='';if(tab==='continue'){const state=bridge.snapshot().record?.state;if(state)location.hash=(['blind_select','in_round','cashout'].includes(state.phase)||state.schemaVersion==='0.2'&&state.phase==='shop')?'blind':state.phase==='open_pack'?'pack':'table';else render();return;}if(tab!=='new'||play.disabled)return;
   if(seeded.checked&&!seed.value.trim()){error.textContent='Introduce la semilla o desmarca «Con semilla».';seed.focus();return;}
   if(starting)return;
   starting=true;

@@ -5,7 +5,7 @@ import {VOUCHER_CATALOG} from '../catalog/voucher-catalog.js';
 import {BOOSTER_CATALOG} from '../catalog/booster-catalog.js';
 import {engineArt,jokerArt} from './collection.js';
 import {inspectShopDecision} from '../advisor/decision.js';
-import {buildShopAdviceSummary} from './shop-advice-summary.js';
+import {buildShopAdviceSummary,comparedShopPurchase} from './shop-advice-summary.js';
 
 const el=<K extends keyof HTMLElementTagNameMap>(tag:K,text='',className='')=>{const e=document.createElement(tag);e.textContent=text;e.className=className;return e;};
 const value=<T>(fact:Fact<T>|undefined)=>fact?.status==='known'?fact.value:undefined;
@@ -37,6 +37,7 @@ export function mountGameShop(stage:HTMLElement,options:GameShopOptions){
  const editor=el('dialog','','game-shop-editor');editor.id='game-shop-editor';editor.setAttribute('aria-label','Oferta observada en la tienda');section.append(editor);
  let state:GameState|null=null,snapshot:ShopSnapshot={id:crypto.randomUUID(),jokers:[],vouchers:[],packs:[],rerollCost:null},writable=false,rendered='';
  let returnOffer='',returnKind:Kind='joker';
+ let advice:ReturnType<typeof buildShopAdviceSummary>|null=null,preferred:ReturnType<typeof comparedShopPurchase>=null;
  const fail=(message:string|null)=>{error.textContent=message??'';};
  next.onclick=()=>{if(!state||!writable)return;fail(options.next({runId:state.runId,revision:state.revision}));};
  reroll.onclick=()=>{if(state&&writable)options.reroll({runId:state.runId,revision:state.revision});};
@@ -67,6 +68,7 @@ export function mountGameShop(stage:HTMLElement,options:GameShopOptions){
   for(const [id,name]of [['eternal','Eterno'],['perishable','Perecedero'],['rental','Alquiler'],['unknown','Desconocidas']]){const label=el('label'),input=el('input');input.type='checkbox';input.value=id!;input.checked=!!offer&&'stickers'in offer&&offer.stickers.includes(id!);label.append(input,el('span',name));stickerBox.append(label);stickers.set(id!,input);}
   if(kind==='joker')editor.append(editionLabel,stickerBox);
   const note=el('p','Registrar una oferta no compra el artículo. Introduce lo que ves en Balatro.','game-shop-editor-note');
+  const why=el('p','','game-shop-editor-note');why.hidden=true;
   const editorError=el('p','','game-shop-editor-error');editorError.id='game-shop-editor-error';editorError.setAttribute('role','alert');
   const actions=el('div','','game-shop-editor-actions'),save=el('button','Guardar oferta'),buy=el('button',kind==='pack'?'Abrir sobre':'Comprar'),remove=el('button','Quitar oferta','game-shop-editor-remove');
   save.id='game-shop-save';buy.id='game-shop-buy';remove.id='game-shop-remove';for(const button of [save,buy,remove])button.type='button';
@@ -75,6 +77,8 @@ export function mountGameShop(stage:HTMLElement,options:GameShopOptions){
    save.disabled=!writable;remove.disabled=!writable||!offer;
    const changed=catalog.value!==originalCatalog||price.value!==originalPrice||kind==='joker'&&(edition.value!==originalEdition||JSON.stringify([...stickers].filter(([,input])=>input.checked).map(([key])=>key))!==originalStickers);
    buy.disabled=!writable||!offer||changed;buy.title=changed?'Guarda la oferta antes de registrar su compra.':!offer?'Guarda primero la oferta.':'';
+   why.hidden=changed||!preferred||preferred.offerId!==offerId||state?.revision!==binding.revision||state?.runId!==binding.runId;
+   why.textContent=why.hidden?'':preferred!.reason;
   };
   editor.oninput=updateControls;editor.onchange=updateControls;
   const observe=(changed:ShopSnapshot)=>{const problem=options.observe(changed,binding);if(problem){editorError.textContent=problem;updateControls();return;}editor.close();};
@@ -89,7 +93,7 @@ export function mountGameShop(stage:HTMLElement,options:GameShopOptions){
   };
   remove.onclick=()=>{const changed=structuredClone(shelf);if(kind==='joker')changed.jokers=changed.jokers.filter(item=>item.offerId!==offerId);else if(kind==='voucher')changed.vouchers=changed.vouchers.filter(item=>item.offerId!==offerId);else changed.packs=changed.packs.filter(item=>item.offerId!==offerId);observe(changed);};
   buy.onclick=()=>{const problem=options.confirm(kind,offerId,binding);if(problem){editorError.textContent=problem;return;}editor.close();};
-  actions.append(save);if(offer)actions.append(buy,remove);editor.append(note,editorError,actions);updateControls();editor.showModal();catalog.focus({preventScroll:true});
+  actions.append(save);if(offer)actions.append(buy,remove);editor.append(note,why,editorError,actions);updateControls();editor.showModal();catalog.focus({preventScroll:true});
  }
  const tile=(kind:Kind,offer?:JokerOffer|VoucherOffer|PackOffer)=>{
   const button=el('button','','game-shop-offer');button.type='button';button.dataset.gameShopKind=kind;button.dataset.gameShopEmpty=String(!offer);
@@ -100,15 +104,26 @@ export function mountGameShop(stage:HTMLElement,options:GameShopOptions){
    else if(kind==='voucher'){const item=offer as VoucherOffer;name=VOUCHER_CATALOG.find(entry=>entry.id===item.catalogId)?.name??item.catalogId;art=el('span','','voucher-art '+item.catalogId);art.setAttribute('role','img');art.setAttribute('aria-label',name);}
    else {const pack=offer as PackOffer;name=BOOSTER_CATALOG.find(entry=>entry.family===pack.family&&entry.size===pack.size)?.name??'Sobre';art=el('span','','booster-art pack-'+pack.family+'-'+pack.size);art.setAttribute('role','img');art.setAttribute('aria-label',name);}
    const portrait=el('span','','game-shop-offer-art');portrait.append(art);const price=el('strong',offer.price===null?'$?':'$'+offer.price,'game-shop-price-tag');button.append(price,portrait);button.setAttribute('aria-label',`${name} · ${offer.price===null?'precio desconocido':'$'+offer.price}`);button.title=name;
+   if(preferred?.offerId===offer.offerId){
+    button.dataset.offerPreference=preferred.partial?'conditional':'compared';button.title=preferred.reason;
+    button.setAttribute('aria-description','Refuerzo de Mult preferido entre los comodines comparados. '+preferred.reason);
+    const mark=el('span',preferred.partial?'?':'✓','game-shop-preferred-mark');mark.setAttribute('aria-hidden','true');button.append(mark);
+   }
   }
   button.onclick=()=>inspect(kind,offer);return button;
  };
- function refresh(current:GameState,canWrite:boolean){
+ function refresh(current:GameState,canWrite:boolean,dirty:boolean){
   state=current;writable=canWrite&&current.phase==='shop';next.disabled=!writable;reroll.disabled=!writable;
   section.querySelectorAll<HTMLButtonElement>('[data-game-shop-empty="true"]').forEach(button=>button.disabled=!writable);
   if(editor.open)editor.dispatchEvent(new Event('input'));
-  const token=JSON.stringify(current);if(token===rendered)return;const previousRun=snapshot.id;rendered=token;snapshot=readSnapshot(current);
-  if(current.observed.shop.status!=='known'&&previousRun!==snapshot.id)snapshot.id=crypto.randomUUID();
+  const token=JSON.stringify([current,dirty]);if(token===rendered)return;rendered=token;snapshot=readSnapshot(current);
+  const saved=current.observed.shop.status==='known'?current.observed.shop.value:undefined;
+  const hasOffers=snapshot.jokers.length||snapshot.vouchers.length||snapshot.packs.length||saved?.cardOffers.length||saved?.ignoredOtherOffers.length||
+   (current.schemaVersion==='0.2'&&current.observed.shop.status==='known'&&current.observed.shop.value.packOffers?.length);
+  const result=!dirty&&hasOffers?inspectShopDecision(current,snapshot):null;
+  advice=result?.ok?buildShopAdviceSummary(result.value):null;
+  preferred=result?.ok?comparedShopPurchase(result.value):null;
+  if(editor.open)editor.dispatchEvent(new Event('input'));
   error.textContent='';rerollPrice.textContent=snapshot.rerollCost===null?'$—':'$'+snapshot.rerollCost;reroll.title=snapshot.rerollCost===null?'Coste de renovación sin registrar. Transcribe lo que ocurrió en Balatro.':'Registrar una renovación realizada en Balatro; coste observado $'+snapshot.rerollCost;
   cardShelf.replaceChildren();voucherShelf.replaceChildren();packShelf.replaceChildren();
   for(const offer of snapshot.jokers)cardShelf.append(tile('joker',offer));for(let i=snapshot.jokers.length;i<2;i++)cardShelf.append(tile('joker'));
@@ -116,5 +131,5 @@ export function mountGameShop(stage:HTMLElement,options:GameShopOptions){
   for(const offer of snapshot.packs)packShelf.append(tile('pack',offer));for(let i=snapshot.packs.length;i<2;i++)packShelf.append(tile('pack'));
   const origin=current.schemaVersion==='0.2'&&current.phase==='shop'?value(current.phaseData.origin):undefined;voucherCaption.textContent=(origin?'ANTE '+origin.ante+' · ':'')+'VALE';
  }
- return {refresh,focus:()=>next.focus({preventScroll:true}),advice:()=>{if(!state||!snapshot.jokers.length&&!snapshot.vouchers.length&&!snapshot.packs.length)return null;const result=inspectShopDecision(state,snapshot);return result.ok?buildShopAdviceSummary(result.value):null;}};
+ return {refresh,focus:()=>next.focus({preventScroll:true}),advice:()=>advice};
 }

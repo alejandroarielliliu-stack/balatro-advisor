@@ -20,7 +20,7 @@ export function mountWorkspace(bridge:RunStartBridge){
  mountLandscape();
  const menu=mountMainMenu(bridge);
  const screens={menu:['','Balatro Advisor'],blind:['','Selección de ciega'],collection:['COMODINES Y CIEGAS · 1.0.1o','Colección'],table:['ENCAJE EN VIVO','Mesa'],evaluation:['MANOS Y ESCENARIOS','Análisis'],archive:['PARTIDA REGISTRADA','Registro y copias']} as const;
- const show=()=>{const hash=location.hash.slice(1);const screen=Object.hasOwn(screens,hash)?hash as keyof typeof screens:'menu';
+ const show=()=>{const hash=location.hash.slice(1);const screen=hash==='pack'?'table':Object.hasOwn(screens,hash)?hash as keyof typeof screens:'menu';
   document.body.dataset.view=screen;
   const home=screen==='menu',game=screen==='blind',collection=screen==='collection';
   menu.setSetupOpen(home&&hash==='setup');
@@ -34,7 +34,16 @@ export function mountWorkspace(bridge:RunStartBridge){
   const next=document.getElementById('next-view') as HTMLAnchorElement;next.hidden=home||screen==='archive'||screen==='collection';next.href=screen==='table'?'#evaluation':'#table';next.textContent=screen==='table'?'Calcular manos →':'← Volver a la mesa';next.onclick=null;
   const skip=document.querySelector<HTMLAnchorElement>('.skip-link')!;skip.href=home?'#menu-play':game?'#blind-screen':'#main';skip.onclick=event=>{event.preventDefault();if(home&&hash==='setup')menu.focusSetup();else document.getElementById(home?'menu-play':game?'blind-screen':'main')!.focus();};
  };
- window.addEventListener('hashchange',()=>{show();if(location.hash==='#setup')menu.focusSetup();else document.getElementById(document.body.dataset.view==='menu'?'menu-play':document.body.dataset.view==='blind'?'blind-screen':'main')!.focus({preventScroll:true});document.getElementById('app-shell')!.scrollTo(0,0);});show();
+ window.addEventListener('hashchange',()=>{
+  show();
+  if(location.hash==='#pack'){
+   const panel=document.getElementById('pack-panel');
+   if(panel&&!panel.hidden){panel.tabIndex=-1;panel.focus({preventScroll:true});panel.scrollIntoView({block:'start'});return;}
+   location.hash='table';return;
+  }
+  if(location.hash==='#setup')menu.focusSetup();else document.getElementById(document.body.dataset.view==='menu'?'menu-play':document.body.dataset.view==='blind'?'blind-screen':'main')!.focus({preventScroll:true});
+  document.getElementById('app-shell')!.scrollTo(0,0);
+ });show();
 }
 export function organizeRecord(host:HTMLElement,_existing=false,preview?:PreviewRenderer,replacements:()=>{id:string;name:string}[]=()=>[],addJoker?:AddJoker,vouchers?:HTMLElement,composition?:HTMLElement,ownedSale?:OwnedSale,shopContext?:ShopContext){
  const fs=host.querySelector('fieldset');if(!fs)return;

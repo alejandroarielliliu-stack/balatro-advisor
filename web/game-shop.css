@@ -88,3 +88,6 @@
     .game-shop-price-tag { top: 0; }
   }
 }
+.game-shop-offer[data-offer-preference] .game-shop-offer-art {outline:3px solid #53d389;outline-offset:1px;border-radius:4px}
+.game-shop-offer[data-offer-preference="conditional"] .game-shop-offer-art {outline-style:dashed}
+.game-shop-preferred-mark {position:absolute;right:0;bottom:3px;background:#216341;color:white;font:16px/1 'Balatro Pixel',monospace;padding:1px 3px;border-radius:3px}

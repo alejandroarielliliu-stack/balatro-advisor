@@ -31,6 +31,12 @@ try{
  assert.equal(await p.locator('[data-tag-slot][data-empty=true]').count(),2);assert.equal(await p.locator('[data-tag-slot=small]').evaluate(e=>getComputedStyle(e).borderTopStyle),'dashed');assert.equal(await p.locator('#blind-select-big').isDisabled(),true);assert.equal(await p.locator('#blind-skip-big').isDisabled(),true);
  const initial=await record(p);await p.locator('[data-tag-slot=small]').click();await p.locator('#blind-picker').waitFor();await p.keyboard.press('Escape');await p.locator('#blind-picker').waitFor({state:'hidden'});assert.deepEqual(await record(p),initial,'Browsing a picker never changes recorded facts');
  pass('direct-start-and-literal-red-initial-values-not-copied-from-image');
+ const beforeAdvice=await raw(p);
+ await p.locator('#blind-compare').click();await p.locator('#blind-risk').selectOption('tight');
+ await p.locator('#dialog-accept').click();await p.locator('#confirmation').waitFor({state:'hidden'});
+ assert.match(await p.locator('.blind-speech strong').innerText(),/riesgo/i);
+ assert.equal(await raw(p),beforeAdvice,'Comparing before selection never enters the blind or writes the player assessment');
+ pass('preselection-risk-reaches-the-fixed-adviser-without-writing');
 
  await tag(p,'big','tag_rare');let saved=await record(p);assert.equal(saved.state.phaseData.skipTag.status,'unknown');assert.equal(saved.state.blindTags[0].kind,'big');assert.equal(saved.state.blindTags[0].tag.value,'tag_rare');assert.equal(saved.state.observed.money.value,4);assert.equal(saved.state.phase,'blind_select');assert.equal(await p.locator('#blind-round').innerText(),'0');
  await tag(p,'small','tag_investment');saved=await record(p);assert.equal(saved.state.phaseData.skipTag.value,'tag_investment');assert.equal(saved.state.observed.money.value,4);assert.equal(saved.state.blindTags.find(t=>t.kind==='big').tag.value,'tag_rare');

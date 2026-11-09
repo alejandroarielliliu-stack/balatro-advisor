@@ -9,6 +9,22 @@ export interface ShopAdviceSummary {
  choices:{id:string;title:string;moneyAfter:number|null;price:number|null}[];
 }
 type Capability=Pick<ActionCapability,'id'|'optionId'|'status'|'errors'|'consequences'|'moneyAfter'>;
+/** Use the existing comparisons for every competing Joker. Other categories
+ * keep the mark conditional; their value is never treated as zero. */
+export function comparedShopPurchase(decision:ShopDecision){
+ const {recommendation,options,comparisons}=decision.context;
+ if(decision.scenarios||recommendation.status!=='conditional'||recommendation.offerIds.length!==1||
+    !comparisons?.length)return null;
+ const id=recommendation.offerIds[0]!;
+ const action=decision.actions.find(item=>item.optionId===id&&item.action.type==='buy');
+ if(action?.confirmation!=='explicit_confirmation_required')return null;
+ const comparisonsWon=comparisons.filter(item=>item.preferredId===id);
+ const competitors=options.filter(option=>option.id!==id&&option.kind==='joker'&&option.affordability!=='unaffordable');
+ if(!competitors.length||!competitors.every(option=>comparisonsWon.some(item=>item.otherId===option.id)))return null;
+ const partial=!!recommendation.pendingOfferIds?.length||options.some(option=>['voucher','pack','other'].includes(option.kind)&&option.affordability!=='unaffordable');
+ const reason=comparisonsWon.map(item=>item.message).join(' ')+(partial?' Otras ofertas podrían cambiar qué conviene hacer.':'');
+ return {offerId:id,partial,reason};
+}
 const resourceLabels:Record<string,string>={handsPerRound:'manos/ronda',discardsPerRound:'descartes/ronda',handSize:'cartas en mano',jokerSlots:'espacios de comodines',interestCap:'tope de interés ($)'};
 const name=(id:string)=>ALL_JOKER_FACTS[id]?.name??Object.values(ALL_JOKER_FACTS).find(j=>j.artId===id)?.name??id;
 

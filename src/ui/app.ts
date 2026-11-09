@@ -174,7 +174,7 @@ function renderJourney(){
     return commit(()=>store.correct({confirmationId:id,confirmed:true,expected,updatedAt:now(),patch:changed.value.patch,reason:changed.value.description}));
   }});
   renderRunJourney($('run-journey'),{record:base,dirty,writable:lock.owned&&!loadFailed,open:openDialog,comparisonState:()=>liveState(true),scenarios:()=>{const previous=quietRead;quietRead=true;try{return scenarioReaders.map(read=>read()).filter(Boolean);}finally{quietRead=previous;}},
-    error:text=>message(text,true),export:()=>$('export').click(),
+    riskChanged:()=>refreshBlindScreen(),error:text=>message(text,true),export:()=>$('export').click(),
     migrate:()=>{location.hash='archive';$('run-migrate').click();},
     submit:(command,inventory)=>{if(!expected){message('Primero registra la partida.',true);return false;}return commit(()=>store.progress({confirmationId:id,confirmed:true,expected,updatedAt:now(),command,inventory}));},
     start:(deckId,profileConfirmed)=>{
@@ -188,6 +188,7 @@ function renderJourney(){
   if(base&&['blind_select','in_round','cashout','shop'].includes(base.state.phase)){const link=node('a',base.state.phase==='shop'?'Ver tienda':base.state.phase==='blind_select'?'Ver ciegas':'Ver cobro','button-link');link.href='#blind';$('run-journey').querySelector('.journey-actions')?.append(link);}
   let packHost=document.getElementById('pack-panel');if(!packHost){packHost=node('section');packHost.id='pack-panel';$('run-journey').after(packHost);}
   renderPackView(packHost,{state:base?.state??null,writable:lock.owned&&!loadFailed,dirty,confirm:action=>base?confirmAction(action,base.state):'Primero registra una partida.',controlsChanged:updateOwnership});
+  if(location.hash==='#pack'&&packHost.hidden)location.hash=base?.state.phase==='shop'?'blind':'table';
   let tarotHost=document.getElementById('tarot-panel');if(!tarotHost){tarotHost=node('section');tarotHost.id='tarot-panel';packHost.after(tarotHost);}
   renderTarotView(tarotHost,{state:base?.state??null,writable:lock.owned&&!loadFailed,dirty,confirm:action=>base?confirmAction(action,base.state):'Primero registra una partida.',editConsumables:()=>$('inventory-consumables').click(),controlsChanged:updateOwnership});
   renderObservationRequests($('observation-requests'),base?.state??null,{writable:lock.owned&&!loadFailed,dirty,error:text=>message(text,true),submit:answers=>{
@@ -766,6 +767,7 @@ function gameShopBinding(binding:Pick<GameState,'runId'|'revision'>):string|null
  return null;
 }
 const blindScreen=mountBlindScreen({
+ compareBlind:()=>$('run-compare-blind')?.click(),
  snapshot:()=>({state:record?structuredClone(record.state):null,writable:lock.owned&&!loadFailed,dirty}),
  observeTag:(kind,tag,binding)=>{
   if(!record||record.state.revision!==binding.revision||record.state.runId!==binding.runId)return 'La partida cambió. Abre de nuevo la etiqueta.';

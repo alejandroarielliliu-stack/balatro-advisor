@@ -10,9 +10,15 @@ import type {BlindGuidance,BlindRisk} from '../advisor/blind-guidance.js';
 const el=<K extends keyof HTMLElementTagNameMap>(tag:K,text='',cl='')=>{const e=document.createElement(tag);e.textContent=text;e.className=cl;return e;};
 const amount=(n:number|null)=>n===null?'Sin dato':'$'+n;
 const signed=(n:number)=>n>0?'+'+n:String(n);
+// A player's answer belongs to this observed decision, never to the saved run.
+let declaredRisk:{runId:string;revision:number;risk:BlindRisk}|undefined;
+export function currentBlindRisk(state:GameState):BlindRisk{
+ return state.phase==='blind_select'&&declaredRisk?.runId===state.runId&&declaredRisk.revision===state.revision?declaredRisk.risk:'unknown';
+}
 export interface BlindViewOptions {
  open:(title:string,body:HTMLElement,accept:string,submit:()=>boolean)=>void;
  state:()=>GameState;scenarios:()=>AdvisorScenario[];
+ riskChanged?:()=>void;
 }
 function route(host:HTMLElement,title:string,decision:Result<ShopDecision>|null){
  if(!decision)return;const section=el('section','','blind-route');section.append(el('h4',title));
@@ -73,15 +79,20 @@ export function blindComparisonButton(options:BlindViewOptions):HTMLButtonElemen
   for(const [id,text]of [['unknown','No lo sé'],['comfortable','La suelo superar'],['tight','Voy justo']]){const o=el('option',text);o.value=id!;risk.append(o);}riskLabel.append(risk);
   const result=el('div'),advanced=el('div','','blind-plan-controls');advanced.append(label,strictLabel);body.append(riskLabel,result,advanced);
   let evaluatedState='';
-  const calculate=()=>{result.replaceChildren();try{
+  const calculate=(rememberRisk=false)=>{result.replaceChildren();try{
    const state=options.state(),stateToken=JSON.stringify(state),scenarios=scope.value==='none'?undefined:options.scenarios();
-   if(evaluatedState&&evaluatedState!==stateToken)risk.value='unknown';evaluatedState=stateToken;
+   if(!evaluatedState||evaluatedState!==stateToken)risk.value=currentBlindRisk(state);
+   evaluatedState=stateToken;
+   if(rememberRisk){
+    declaredRisk={runId:state.runId,revision:state.revision,risk:risk.value as BlindRisk};
+    options.riskChanged?.();
+   }
    const guidance=guideBlindChoice(state,{requireObserved:strict.checked,risk:risk.value as BlindRisk});
    if(scopesNeedPlan(scope.value)&&!scenarios?.length){result.append(el('p','Añade jugadas en Análisis y declara sus cartas y robos.','error'));return;}
    const report=compareBlindChoices(state,{requireObserved:strict.checked,...(scope.value==='play'?{playScenarios:scenarios!}:scope.value==='skip'?{afterSkipScenarios:scenarios!}:{})});
    if(report.ok)result.append(renderBlindDecision(report.value,state,guidance.ok?guidance.value:undefined));else{if(guidance.ok)result.append(renderBlindGuidance(guidance.value));for(const e of report.errors)result.append(el('p',e.message,'error'));}
   }catch(e){result.append(el('p',e instanceof Error?e.message:'Revisa los datos.','error'));}};
-  scope.onchange=calculate;strict.onchange=calculate;risk.onchange=calculate;
+  scope.onchange=()=>calculate();strict.onchange=()=>calculate();risk.onchange=()=>calculate(true);
   const link=el('a','Editar jugadas en Análisis →');link.href='#evaluation';link.onclick=()=>document.querySelector<HTMLDialogElement>('#confirmation')?.close();body.append(link);
   calculate();options.open('Jugar o saltar',body,'Cerrar',()=>true);
  };

@@ -52,6 +52,8 @@ body[data-view="blind"] #app-shell{overflow:hidden;background:#246d50}body[data-
 @media(prefers-reduced-motion:reduce){.blind-screen[data-mode="cashout"].blind-to-cashout .blind-cards{animation:none;visibility:hidden}}
 
 .blind-screen[data-mode="shop"] .blind-sidebar{border-color:#ee5b50}
+.blind-compare {display:block;margin:6px auto 0;min-height:0;padding:2px 4px;border:0;background:transparent;box-shadow:none;color:#205052;text-decoration:underline;font:15px/1 'Balatro Pixel',monospace}
+.blind-compare:hover:not(:disabled) {color:#17363b;background:#dce4d4}
 .blind-speech{min-height:0;max-height:200px;overflow:auto;flex:1}
 .cashout-to-shop #round-cashout{pointer-events:none;animation:game-cashout-drop .42s ease-in both}.cashout-to-shop #game-shop{animation:game-shop-rise .48s cubic-bezier(.15,.6,.25,1) both}
 @keyframes game-cashout-drop{to{transform:translateY(120%);opacity:0}}

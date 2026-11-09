@@ -124,8 +124,27 @@ try{
  assert.equal(await p.locator('.blind-cards').evaluate(element=>getComputedStyle(element).animationName),'none','Reduced motion makes the next ciegas available without a rise');assert.equal(await p.locator('#game-shop').evaluate(element=>getComputedStyle(element).animationName),'none');
  pass('next-round-reuses-recorded-progression-without-repeating-payout');await main.context.close();
 
+ const comparedSave=JSON.parse(shopFixture());
+ for(const state of [comparedSave.state,comparedSave.initialState])state.observed.shop={status:'known',source:'manual',value:{shopId:'compared-offers',cardOffers:[],ignoredOtherOffers:[]}};
+ const compared=await session(undefined,JSON.stringify(comparedSave)),q=compared.page;await continueRun(q);
+ const plain=await observe(q,'joker','joker',2);await observe(q,'joker','abstract_joker',4);
+ const tile=q.locator(`[data-game-shop-offer="${plain}"]`);
+ assert.equal(await tile.getAttribute('data-offer-preference'),'compared');
+ await observe(q,'pack','buffoon-normal',4);
+ assert.equal(await tile.getAttribute('data-offer-preference'),'conditional');
+ assert.equal(await q.locator('[data-game-shop-kind="pack"][data-offer-preference]').count(),0);
+ const beforeReason=await raw(q);await openOffer(q,plain);assert.match(await q.locator('#game-shop-editor').innerText(),/Mult propio/i);
+ assert.equal(await raw(q),beforeReason);await q.locator('#game-shop-price').fill('');await q.locator('#game-shop-save').click();await q.locator('#game-shop-editor').waitFor({state:'hidden'});
+ assert.equal(await q.locator('[data-offer-preference]').count(),0,'Missing price removes the comparison');
+ pass('shop-mark-belongs-to-a-supported-comparison-and-expires-with-the-price');await compared.context.close();
+
  const purchases=await session(undefined,shopFixture()),v=purchases.page;await continueRun(v);const paidVoucher=await observe(v,'voucher','v_seed_money',10);await beginPurchase(v,paidVoucher);await confirmPurchase(v);await shopReady(v);assert.equal((await record(v)).state.observed.money.value,15);assert.ok((await record(v)).state.observed.outOfScope.value.vouchers.includes('v_seed_money'));
  const paidPack=await observe(v,'pack','buffoon-normal',4);await beginPurchase(v,paidPack);await confirmPurchase(v);const opened=await record(v);assert.equal(opened.state.observed.money.value,11);assert.equal(opened.state.phase,'open_pack');assert.equal(opened.state.observed.jokers.value.length,0,'Buying a closed pack does not invent its contents');
+ await v.waitForFunction(()=>location.hash==='#pack'&&document.activeElement?.id==='pack-panel');const beforeResume=await raw(v);
+ await v.reload();await v.locator('#menu-play').click();await v.locator('#setup-tab-continue').click();await v.locator('#setup-play').click();
+ await v.waitForFunction(()=>location.hash==='#pack');assert.equal(await raw(v),beforeResume);
+ await v.locator('#pack-skip').click();await v.locator('#performed').check();await v.locator('#dialog-accept').click();await shopReady(v);
+ assert.equal(await v.evaluate(()=>location.hash),'#blind');assert.equal((await record(v)).state.observed.money.value,11);
  pass('voucher-and-pack-purchases-use-existing-confirmations-and-pack-flow');await purchases.context.close();
 
  const animated=await session(undefined,null,'no-preference'),a=animated.page;await start(a);await enterCashout(a);
