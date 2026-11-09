@@ -29,3 +29,62 @@
 .game-shop-editor>label{display:flex;flex-direction:column;gap:5px;font:22px/1 'Balatro Pixel',monospace;margin:13px 0}.game-shop-editor select,.game-shop-editor input[type=number]{width:100%;height:38px;padding:5px 8px;border:2px solid #7a9485;border-radius:6px;background:#182f34;color:#f7f3da;box-shadow:none;font:23px/1 'Balatro Pixel',monospace}
 .game-shop-editor-note{font:18px/1.1 'Balatro Pixel',monospace;color:#c0cec0;margin:15px 0}.game-shop-stickers{display:flex;flex-wrap:wrap;gap:8px 15px;border:1px solid #748b7a;border-radius:6px;padding:9px;margin:12px 0}.game-shop-stickers legend{font:19px/1 'Balatro Pixel',monospace;padding:0 5px}.game-shop-stickers label{display:flex;align-items:center;gap:5px;font:19px/1 'Balatro Pixel',monospace}.game-shop-stickers input{width:17px;height:17px;margin:0;accent-color:#e99b3c}
 .game-shop-editor-actions{display:flex;flex-wrap:wrap;gap:8px}.game-shop-editor-actions button{border:0;border-radius:6px;background:#eba13b;color:#fff8e1;padding:8px 13px;font:23px/1 'Balatro Pixel',monospace}.game-shop-editor-actions #game-shop-buy{background:#32b990}.game-shop-editor-actions .game-shop-editor-remove{background:#c6534c}.game-shop-editor-actions button:disabled{opacity:.45;cursor:default}.game-shop-editor-error{font:19px/1.1 'Balatro Pixel',monospace;color:#ffd0ac;margin:8px 0}
+
+/* Desktop uses the same 960 × 600 table coordinates as the trays and blinds.
+   Both shelves keep their reference height when the viewport changes. */
+.blind-stage[data-layout="desktop"] {
+  .game-shop {
+    left: 268px;
+    top: 207px;
+    width: 516px;
+    min-height: 0;
+    padding: 9px 10px 0 14px;
+    border-width: 2px;
+    background: linear-gradient(to bottom, #1a282c 355px, #132225 355px 358px, #2c3a3d 358px);
+    grid-template-columns: 122px minmax(0, 1fr);
+    grid-template-rows: 150px 157px;
+    gap: 26px 7px;
+  }
+  .game-shop-controls { gap: 5px; padding-top: 4px; }
+  .game-shop-next, .game-shop-reroll { height: 66px; font-size: 19px; }
+  .game-shop-reroll b { font-size: 27px; }
+  .game-shop-card-well, .game-shop-voucher-well, .game-shop-pack-well {
+    overflow: visible;
+    border-width: 4px;
+  }
+  .game-shop-card-well { padding: 0; }
+  .game-shop-voucher-well { margin-left: 4px; width: 244px; padding: 0 3px 0 22px; }
+  .game-shop-pack-well { margin-left: 251px; margin-right: 8px; padding: 0; }
+  .game-shop-shelf { justify-content: center; gap: 9px; padding: 0; }
+  .game-shop-pack-well .game-shop-shelf { gap: 0; }
+  .game-shop-offer, .game-shop-offer-art {
+    width: 86px;
+    height: 115px;
+  }
+  .game-shop-offer-art .joker-art { transform: scale(.606); }
+  .game-shop-offer-art .voucher-art { transform: scale(1.72); }
+  .game-shop-pack-well .game-shop-offer, .game-shop-pack-well .game-shop-offer-art {
+    width: 108px;
+    height: 145px;
+  }
+  .game-shop-pack-well .booster-art { transform: scale(2.16); }
+  .game-shop-pack-well .game-shop-empty { width: 88px; margin-inline: 10px; }
+  .game-shop-voucher-well .game-shop-empty { width: 74px; }
+  .game-shop-price-tag {
+    top: -27px;
+    min-width: 45px;
+    border-width: 2px;
+    padding: 2px 5px;
+    font-size: 21px;
+  }
+  .game-shop-voucher-caption { left: 9px; text-align: center; font-size: 17px; }
+  .game-shop-details { right: 14px; bottom: 6px; font-size: 13px; }
+  /* Extra recorded offers stay reachable on their own shelf. Keep their
+     price labels inside the scrolling area. */
+  :is(.game-shop-card-well:has(.game-shop-offer:nth-child(4)),
+      .game-shop-voucher-well:has(.game-shop-offer:nth-child(3)),
+      .game-shop-pack-well:has(.game-shop-offer:nth-child(3))) {
+    overflow: auto hidden;
+    .game-shop-price-tag { top: 0; }
+  }
+}

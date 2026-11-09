@@ -114,7 +114,20 @@ export function mountBlindScreen(options:BlindScreenOptions){
   if(previousMode==='shop'&&!enteringBlinds)focusCurrentBlind();
   if(snapshot.dirty)error.textContent='Termina la edición pendiente para registrar etiquetas o avanzar.';
  }
- const resize=()=>{const frame=document.getElementById('app-viewport')!;if(!frame.clientWidth||!frame.clientHeight)return;const scale=Math.min(frame.clientWidth/1280,frame.clientHeight/600);stage.style.setProperty('--blind-scale',String(scale));stage.style.setProperty('--blind-stage-height',`${Math.max(600,frame.clientHeight/scale)}px`);};
+ const touchLayout=matchMedia('(pointer: coarse)');
+ const resize=()=>{
+  const frame=document.getElementById('app-viewport')!;
+  const width=frame.clientWidth,height=frame.clientHeight;
+  if(!width||!height)return;
+  // Fit one uniformly scaled table. The desktop reference uses a 16:10 board;
+  // the mobile reference uses the wider 1280×600 landscape composition.
+  const desktop=width>=960&&height>=540&&!touchLayout.matches;
+  const scale=Math.min(width/(desktop?960:1280),height/600);
+  stage.dataset.layout=desktop?'desktop':'compact';
+  stage.style.setProperty('--blind-scale',String(scale));
+  stage.style.setProperty('--blind-stage-height',`${height/scale}px`);
+ };
+ touchLayout.addEventListener('change',resize);
  const observer=new ResizeObserver(resize);observer.observe(document.getElementById('app-viewport')!);window.addEventListener('hashchange',()=>{const active=location.hash==='#blind';background.setActive(active);if(!active&&picker.open)picker.close();if(active){refresh();resize();}});resize();
  return {refresh};
 }

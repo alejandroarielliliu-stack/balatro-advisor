@@ -1,0 +1,110 @@
+/* Desktop game table. One logical pixel is two pixels in the 1920×1200 reference. */
+.blind-stage[data-layout="desktop"] {
+  width: 960px;
+}
+
+.blind-stage[data-layout="desktop"] .blind-sidebar {
+  left: 16px;
+  width: 227px;
+  background: #2c393c;
+}
+.blind-stage[data-layout="desktop"] .blind-advisor {
+  top: 50px;
+  height: 298px;
+  gap: 15px;
+}
+.blind-stage[data-layout="desktop"] .blind-advisor-avatar {
+  width: 72px;
+  height: 97px;
+}
+.blind-stage[data-layout="desktop"] .blind-advisor-avatar .joker-art {
+  transform: scale(.507);
+}
+.blind-stage[data-layout="desktop"] .blind-speech {
+  flex: 1;
+  max-height: 186px;
+  padding: 10px;
+}
+.blind-stage[data-layout="desktop"] .blind-speech strong { font-size: 23px; }
+.blind-stage[data-layout="desktop"] .blind-speech p { font-size: 17px; }
+.blind-stage[data-layout="desktop"] .blind-speech small { font-size: 13px; }
+
+.blind-stage[data-layout="desktop"] .blind-hud {
+  left: 86px;
+  right: 4px;
+  bottom: 44px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+}
+.blind-stage[data-layout="desktop"] .blind-stat {
+  height: 52px;
+  min-width: 0;
+}
+.blind-stage[data-layout="desktop"] .blind-stat span { font-size: 16px; }
+.blind-stage[data-layout="desktop"] .blind-stat b { font-size: 31px; }
+.blind-stage[data-layout="desktop"] .blind-stat.money b { font-size: 37px; }
+.blind-stage[data-layout="desktop"] .blind-hud-button {
+  left: 10px;
+  width: 67px;
+  height: 76px;
+  padding: 4px;
+  font-size: 19px;
+}
+.blind-stage[data-layout="desktop"] .blind-options { bottom: 50px; }
+.blind-stage[data-layout="desktop"] .blind-info { bottom: 134px; }
+.blind-stage[data-layout="desktop"] .blind-menu-link { left: 30px; bottom: 12px; }
+
+.blind-stage[data-layout="desktop"] :is(.blind-joker-tray, .blind-consumable-tray) {
+  top: 50px;
+  height: 114px;
+  padding: 3px 9px;
+  justify-content: center;
+  gap: 4px;
+  border-radius: 6px;
+  background: #173d3080;
+  box-shadow: none;
+}
+.blind-stage[data-layout="desktop"] .blind-joker-tray { left: 252.5px; width: 438px; }
+.blind-stage[data-layout="desktop"] .blind-consumable-tray { left: 700px; width: 205px; }
+.blind-stage[data-layout="desktop"] .blind-tray-count {
+  left: 7px;
+  bottom: -15px;
+  font-size: 15px;
+}
+.blind-stage[data-layout="desktop"] .blind-consumable-tray .blind-tray-count { left: auto; right: 7px; }
+.blind-stage[data-layout="desktop"] .blind-owned-card {
+  width: 80px;
+  height: 107px;
+  min-width: 0;
+  flex-shrink: 1;
+}
+.blind-stage[data-layout="desktop"] .blind-owned-card .joker-art { transform: scale(.5634); }
+.blind-stage[data-layout="desktop"] .blind-owned-card:last-child { flex-shrink: 0; }
+
+.blind-stage[data-layout="desktop"] .blind-deck {
+  left: 816px;
+  bottom: 33px;
+  gap: 14px;
+  --deck-art-width: 82px;
+}
+.blind-stage[data-layout="desktop"] .blind-deck > span:last-child { font-size: 16px; }
+.blind-stage[data-layout="desktop"] .blind-screen-error {
+  left: 260px;
+  top: 178px;
+  z-index: 2;
+  max-width: 525px;
+  background: #233a3b;
+}
+.blind-stage[data-layout="desktop"] .round-cashout {
+  left: 293px;
+  top: 207px;
+  width: 470px;
+}
+
+.blind-screen:has(.blind-stage[data-layout="desktop"]) {
+  background: #377c60;
+}
+.blind-screen:has(.blind-stage[data-layout="desktop"]) #blind-background {
+  opacity: .18;
+}
+.blind-screen:has(.blind-stage[data-layout="desktop"])::after { opacity: .14; }

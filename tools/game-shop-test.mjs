@@ -24,8 +24,8 @@ let browser,lastPage;
 try{
  if(server)await new Promise((resolve,reject)=>{const timer=setTimeout(()=>reject(Error('Game shop server timeout')),15000);server.stdout.on('data',chunk=>{if(String(chunk).includes('Balatro Advisor local')){clearTimeout(timer);resolve();}});server.on('error',reject);server.on('exit',()=>reject(Error('Game shop server stopped')));});
  browser=await chromium.launch({channel:'chrome',headless:true});
- const session=async(viewport={width:1280,height:600},saved=null,reducedMotion='reduce')=>{
-  const context=await browser.newContext({viewport,reducedMotion,hasTouch:true,isMobile:true});
+ const session=async(viewport={width:1280,height:600},saved=null,reducedMotion='reduce',touch=true)=>{
+  const context=await browser.newContext({viewport,reducedMotion,hasTouch:touch,isMobile:touch});
   await context.addInitScript(({key,saved})=>{
    if(saved&&localStorage.getItem(key)===null)localStorage.setItem(key,saved);
    window.__gameShopFail=false;
@@ -69,7 +69,18 @@ try{
   assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
  };
 
- const main=await session(),p=main.page;await start(p);const initialAdvisor=await advisorBounds(p);await enterCashout(p);assert.deepEqual(await advisorBounds(p),initialAdvisor,'Selecting a blind does not move or replace the advisor');
+ const desktop={width:1920,height:1200};
+ const main=await session(desktop,null,'reduce',false),p=main.page;await start(p);
+ await p.locator('.blind-stage[data-layout="desktop"]').waitFor();
+ const referenceBox=async(selector,x,y,width,height)=>{
+  const box=await p.locator(selector).boundingBox();
+  for(const [key,expected] of Object.entries({x,y,width,height})){
+   assert.ok(box&&Math.abs(box[key]-expected)<=4,selector+' '+key+' in the desktop reference: expected '+expected+', got '+box?.[key]);
+  }
+ };
+ await referenceBox('.blind-joker-tray',505,100,876,228);
+ await referenceBox('.blind-card-small',520,362,326,838);
+ const initialAdvisor=await advisorBounds(p);await enterCashout(p);assert.deepEqual(await advisorBounds(p),initialAdvisor,'Selecting a blind does not move or replace the advisor');
  const beforeCashout=await record(p),stationary=await shellBounds(p);await p.locator('#round-cashout-amount').fill('3');await p.locator('#round-cashout-submit').click();await shopReady(p);
  const entered=await record(p);assert.equal(entered.state.phase,'shop');assert.equal(entered.state.observed.money.value,7);assert.equal(entered.state.revision,beforeCashout.state.revision+1);assert.equal(entered.history.length,beforeCashout.history.length+1);assert.equal(entered.history.at(-1).progress.command.type,'record_cashout');
  assert.deepEqual(await shellBounds(p),stationary,'Opening the shop retains sidebar, tray and deck positions');assert.equal(await p.locator('#round-cashout').isVisible(),false);assert.equal(await p.locator('#game-shop').evaluate(element=>getComputedStyle(element).animationName),'none','Reduced motion opens the shop without the rise animation');
@@ -78,7 +89,11 @@ try{
  if(initialShop.status==='known'){assert.equal(initialShop.value.cardOffers.length,0);assert.equal((initialShop.value.voucherOffers??[]).length,0);assert.equal((initialShop.value.packOffers??[]).length,0);}
  assert.equal(await p.locator('[data-game-shop-empty="false"]').count(),0,'The reference screenshot does not become invented shop offers');
  assert.ok(await p.locator('[data-game-shop-kind="joker"][data-game-shop-empty="true"]').count()>=2);assert.ok(await p.locator('[data-game-shop-kind="voucher"][data-game-shop-empty="true"]').count()>=1);assert.ok(await p.locator('[data-game-shop-kind="pack"][data-game-shop-empty="true"]').count()>=2);
- assert.equal(await p.locator('#game-shop').getAttribute('aria-label'),'Tienda');await geometry(p,{width:1280,height:600});await p.screenshot({path:dir+'/desktop-empty.png'});
+ assert.equal(await p.locator('#game-shop').getAttribute('aria-label'),'Tienda');await geometry(p,desktop);
+ await referenceBox('#game-shop',536,414,1032,786);
+ await referenceBox('.game-shop-card-well',827,437,716,300);
+ await referenceBox('.game-shop-pack-well',1071,789,456,314);
+ await p.screenshot({path:dir+'/desktop-empty.png'});
  pass('cashout-opens-empty-shop-on-same-table-with-one-payment-and-red-edges');
 
  const beforeBrowse=await raw(p);await p.locator('[data-game-shop-kind="joker"][data-game-shop-empty="true"]').first().click();await p.locator('#game-shop-editor').waitFor({state:'visible'});assert.equal(await p.locator('#game-shop-price').inputValue(),'','A blank slot has no assumed screenshot price');
