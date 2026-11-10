@@ -1,4 +1,4 @@
-import {blindComparisonButton,currentBlindRisk} from './blind-decision-view.js';
+import {blindComparisonButton,currentBlindAnswers} from './blind-decision-view.js';
 import {guideBlindChoice} from '../advisor/blind-guidance.js';
 import type {AdvisorScenario} from '../advisor/advisor.js';
 import {TAGS,tagDefinition} from '../catalog/tags.js';
@@ -94,7 +94,7 @@ export function renderRunJourney(host:HTMLElement,options:JourneyOptions){
   action('run-enter-round','Entré en la ciega',()=>openCommand('Entré en la ciega','Registrar entrada',{type:'enter_round'}),true);
   if(blind&&blind.kind!=='boss'){
    const hint=el('p','','journey-blind-hint');hint.id='run-blind-guidance';
-   const refreshHint=()=>{const guidance=guideBlindChoice(state,{risk:currentBlindRisk(state)});hint.textContent=guidance.ok?guidance.value.recommendation.title+' · '+guidance.value.recommendation.reason:'';};
+   const refreshHint=()=>{const guidance=guideBlindChoice(state,currentBlindAnswers(state));hint.textContent=guidance.ok?guidance.value.recommendation.title+' · '+guidance.value.recommendation.reason:'';};
    toolbar.append(blindComparisonButton({open:options.open,state:options.comparisonState??(()=>structuredClone(state)),scenarios:options.scenarios??(()=>[]),riskChanged:()=>{refreshHint();options.riskChanged?.();}}));
    refreshHint();host.append(hint);
    const current=value(state.phaseData.skipTag);title.append(el('small',current?(tagDefinition(current)?.name??current):'Etiqueta de salto sin registrar','journey-tag'));

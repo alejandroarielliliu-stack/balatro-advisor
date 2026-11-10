@@ -54,6 +54,29 @@ try{
  await p.locator('#blind-select-small').click();await p.locator('#round-cashout').waitFor();assert.equal(await p.locator('#confirmation').isVisible(),false);assert.equal((await record(p)).state.phase,'in_round');assert.equal((await record(p)).state.observed.money.value,4);assert.equal(await p.locator('#round-cashout-amount').inputValue(),'');assert.equal(await p.locator('#blind-round').innerText(),'1');
  pass('select-opens-cashout-without-granting-a-win-or-income');await main.context.close();
 
+ // XII-067: resumed Blue/White Small at ante 2, $40 and a visible Economy tag.
+ const guideRun=createNewRun({runId:'guide-xii-067',updatedAt:'2026-11-10T12:00:00Z',deckId:'blue',profileConfirmed:true});
+ assert.equal(guideRun.ok,true);const economy=guideRun.value;
+ const observed=value=>({status:'known',source:'manual',value});
+ economy.observed.money=observed(40);economy.observed.nextBlind.value.ante=2;economy.observed.nextBlind.value.target=observed(800);
+ economy.phaseData.skipTag=observed('tag_economy');
+ const economySave=JSON.stringify({schemaVersion:'confirmed-2',initialState:economy,state:economy,history:[]});
+ const compared=await session(undefined,economySave),q=compared.page;
+ await q.locator('#menu-play').click();await q.locator('#setup-tab-continue').click();await q.locator('#setup-play').click();
+ await q.locator('#blind-compare').click();const plan=q.locator('#blind-next-plan'),detail=q.locator('#blind-guidance');
+ assert.equal(await plan.inputValue(),'unknown');assert.equal(await detail.getAttribute('data-preferred'),'none');
+ await plan.selectOption('ready');assert.equal(await detail.getAttribute('data-preferred'),'skip');
+ const skipTitle=await detail.locator('h3').innerText();await q.locator('#dialog-accept').click();await q.locator('#confirmation').waitFor({state:'hidden'});
+ assert.equal(await q.locator('.blind-speech strong').innerText(),skipTitle);assert.equal(await q.locator('#blind-money').innerText(),'$40');
+ await q.locator('#blind-compare').click();assert.equal(await plan.inputValue(),'ready');
+ await plan.selectOption('need_shop');assert.equal(await detail.getAttribute('data-preferred'),'play');
+ const playTitle=await detail.locator('h3').innerText();await q.locator('#dialog-accept').click();await q.locator('#confirmation').waitFor({state:'hidden'});
+ assert.equal(await q.locator('.blind-speech strong').innerText(),playTitle);assert.equal(await raw(q),economySave,'Recommendations do not skip, pay, or modify the saved game');
+ await tag(q,'big','tag_rare');const afterTag=await raw(q);
+ await q.locator('#blind-compare').click();assert.equal(await plan.inputValue(),'unknown','New observations invalidate the previous answer');
+ assert.equal(await detail.getAttribute('data-preferred'),'none');assert.equal(await raw(q),afterTag);
+ await compared.context.close();pass('economy-skip-and-play-in-scene-and-detail-without-ever-skipping-or-paying');
+
  const generated=createNewRun({runId:'unknown-blind-ui',updatedAt:'2026-11-07T18:00:00Z',deckId:'red',profileConfirmed:true});assert.equal(generated.ok,true);const unknownState=generated.value;unknownState.observed.nextBlind={status:'unknown',reason:'Synthetic resumed game with unknown current blind.'};const unknownRaw=JSON.stringify({schemaVersion:'confirmed-2',initialState:unknownState,state:unknownState,history:[]});
  const missing=await session(undefined,unknownRaw),u=missing.page;await u.locator('#menu-play').click();await u.locator('#setup-tab-continue').click();await u.locator('#setup-play').click();await u.waitForFunction(()=>document.body.dataset.view==='blind');assert.equal(await u.locator('#blind-ante').innerText(),'—/8');assert.deepEqual(await u.locator('.blind-score-target').allTextContents(),['—','—','—']);assert.equal(await u.locator('[data-tag-slot=small]').isDisabled(),true);assert.equal(await raw(u),unknownRaw);await missing.context.close();
  const large=structuredClone(generated.value);large.observed.nextBlind={status:'known',source:'manual',value:{ante:1,kind:'small',bossId:{status:'known',source:'manual',value:'none'},target:{status:'known',source:'manual',value:300},reward:{status:'known',source:'manual',value:1000000000}}};const largeRaw=JSON.stringify({schemaVersion:'confirmed-2',initialState:large,state:large,history:[]});

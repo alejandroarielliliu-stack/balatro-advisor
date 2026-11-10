@@ -18,6 +18,8 @@ Revisión del 9 de noviembre de 2026. El objetivo principal es ayudar a ganar ha
 
 ## 2. Cómo se convierte un párrafo en una regla
 
+**Primera regla de salto implementada (10 de noviembre).** Con Economía, el Joker compara el ingreso inmediato con los cobros posibles si se gana la ronda. Por ejemplo, en la pequeña del ante 2 con baraja azul, apuesta blanca y $40, saltar deja $80. Ganar con una mano deja $52 si el saldo no cambia durante la ronda. Cuando incluso el mejor cobro calculado queda por debajo del salto, «Valorar la próxima ciega» pregunta si puedes afrontarla prescindiendo de esta tienda y del crecimiento de esta ronda. Si respondes que sí, el Joker recomienda saltar. Si necesitas comprar, recomienda jugar para acceder a la tienda al ganar; si además vas justo, explica el riesgo de ambas alternativas. La pregunta solo aparece cuando se conocen los datos pertinentes y los efectos de la ronda admiten esta comparación.
+
 Para cada consejo se conservan el **pasaje de la guía**, el **momento de decisión**, los **hechos necesarios**, la **operación legal**, el **motivo** y un **contraejemplo**. Una regla del juego puede calcular un coste o una puntuación. Una preferencia de la guía necesita explicar bajo qué condiciones resulta útil. Si falta un dato decisivo, el Joker plantea la pregunta concreta o presenta el intercambio.
 
 | Pasaje de la guía revisada | Aplicación en el flujo | Caso que limita la recomendación |

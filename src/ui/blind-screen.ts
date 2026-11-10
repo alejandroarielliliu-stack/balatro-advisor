@@ -3,7 +3,7 @@ import {blindRequirement} from '../catalog/blinds.js';
 import {TAGS,tagDefinition} from '../catalog/tags.js';
 import {DECK_PROFILES} from '../catalog/decks.js';
 import {guideBlindChoice} from '../advisor/blind-guidance.js';
-import {currentBlindRisk} from './blind-decision-view.js';
+import {currentBlindAnswers} from './blind-decision-view.js';
 import {jokerArt,engineArt} from './collection.js';
 import {deckArt} from './deck-art.js';
 import {blindArt,tagArt} from './blind-art.js';
@@ -73,8 +73,8 @@ export function mountBlindScreen(options:BlindScreenOptions){
  function refresh(){
   const snapshot=options.snapshot(),state=snapshot.state;
   if(state&&!['blind_select','in_round','cashout','shop'].includes(state.phase)){if(location.hash==='#blind')location.hash=state.phase==='open_pack'?'pack':'table';return;}
-  const risk=state?currentBlindRisk(state):'unknown';
-  const token=JSON.stringify([snapshot,risk]);if(token===rendered)return;rendered=token;
+  const answers=state?currentBlindAnswers(state):undefined;
+  const token=JSON.stringify([snapshot,answers]);if(token===rendered)return;rendered=token;
   compare.hidden=true;
   error.textContent='';if(!state){title.textContent='Elige una baraja';reason.textContent='Inicia la partida desde el menú.';cards.replaceChildren();return;}
   const settling=state.phase==='in_round'||state.phase==='cashout',shopping=state.phase==='shop',selecting=state.phase==='blind_select',previousMode=host.dataset.mode,animate=settling&&previousMode==='select',enteringShop=shopping&&previousMode==='cashout'&&!motion.matches,enteringBlinds=selecting&&previousMode==='shop'&&!motion.matches;
@@ -87,7 +87,9 @@ export function mountBlindScreen(options:BlindScreenOptions){
   if(animate)host.classList.add('blind-to-cashout');else if(!settling)host.classList.remove('blind-to-cashout');
   const current=value(state.observed.nextBlind),origin=state.schemaVersion==='0.2'&&state.phase==='shop'?value(state.phaseData.origin):undefined,anteValue=origin?.ante??current?.ante,deckId=value(state.observed.deckId)??'',writable=snapshot.writable&&!snapshot.dirty;
   compare.hidden=!selecting||!current||current.kind==='boss';
-  const guidance=guideBlindChoice(state,{risk});title.textContent=settling?'Registra el cobro':guidance.ok?guidance.value.recommendation.title:'Revisa la partida';reason.textContent=settling?'Indica cuánto ganaste y los valores de los comodines que cambiaron.':guidance.ok?guidance.value.recommendation.reason:'Faltan datos para orientar esta decisión.';limit.textContent='Orientación · supervivencia sin evaluar';bubble.dataset.basis='heuristic';bubble.title=guidance.ok?[...guidance.value.conditions,...guidance.value.limitations].join('\n'):'';
+  const guidance=guideBlindChoice(state,answers);
+  compare.textContent=guidance.ok&&guidance.value.askNextBlindPlan&&answers?.nextBlindPlan==='unknown'?'Valorar la próxima ciega':'Comparar jugar o saltar';
+  title.textContent=settling?'Registra el cobro':guidance.ok?guidance.value.recommendation.title:'Revisa la partida';reason.textContent=settling?'Indica cuánto ganaste y los valores de los comodines que cambiaron.':guidance.ok?guidance.value.recommendation.reason:'Faltan datos para orientar esta decisión.';limit.textContent=guidance.ok&&guidance.value.askNextBlindPlan&&answers?.nextBlindPlan!=='unknown'?'Orientación · según tu plan':guidance.ok&&guidance.value.survival.status==='player_reported'?'Orientación · riesgo declarado':'Orientación · supervivencia sin evaluar';bubble.dataset.basis='heuristic';bubble.title=guidance.ok?[...guidance.value.conditions,...guidance.value.limitations].join('\n'):'';
   hands.n.textContent=String(state.phase==='in_round'?value(state.phaseData.handsRemaining)??'—':settling?'—':value(state.observed.resources.handsPerRound)??'—');discards.n.textContent=String(state.phase==='in_round'?value(state.phaseData.discardsRemaining)??'—':settling?'—':value(state.observed.resources.discardsPerRound)??'—');money.n.textContent=value(state.observed.money)===undefined?'$—':'$'+value(state.observed.money);money.box.title=settling?'Último saldo registrado. Introduce el saldo actual al cobrar.':'';ante.n.textContent=(anteValue??'—')+'/8';
   const skipped=value(value(state.observed.jokerContext)?.blindsSkipped),roundRef=origin??current;round.n.textContent=roundRef&&skipped!==undefined?String(Math.max(0,(roundRef.ante-1)*3+({small:0,big:1,boss:2}[roundRef.kind])-skipped+(settling||origin?1:0))):'—';round.box.title='Ciegas anteriores menos saltos registrados, incluida la ronda actual al seleccionarla. Desconocido si falta el total de saltos.';
   tray.querySelectorAll('.blind-owned-card').forEach(e=>e.remove());const owned=value(state.observed.jokers);for(const j of owned??[]){const card=el('span','','blind-owned-card');card.append(jokerArt(engineArt[j.catalogId]??'j_joker',j.catalogId));tray.append(card);}jokerCount.textContent=(owned?.length??'—')+'/'+(value(state.observed.resources.jokerSlots)??'—');

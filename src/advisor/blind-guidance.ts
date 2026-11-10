@@ -5,6 +5,8 @@ import {analysisBinding,canonical,equal} from '../storage/confirmed-record.js';
 import type {AnalysisBinding} from '../storage/confirmed-record.js';
 import {ENGINE_RULESET,GAME_VERSION} from '../catalog/initial.js';
 import {deckDefinition} from '../catalog/decks.js';
+import {currentDeckCards} from '../state/deck-material.js';
+import {bossDefinition} from '../catalog/bosses.js';
 import {tagDefinition} from '../catalog/tags.js';
 import {tagStrategyProfile} from '../catalog/tag-strategy.js';
 import type {TagStrategyProfile} from '../catalog/tag-strategy.js';
@@ -12,13 +14,15 @@ import {projectSkipBlind,selectionScenarioState} from '../rules/tags.js';
 import {projectCashout} from '../rules/economy.js';
 import {BLIND_POLICY} from './blind-decision.js';
 
-export const BLIND_GUIDANCE_POLICY={version:'blind-guidance-1',rules:{
+export const BLIND_GUIDANCE_POLICY={version:'blind-guidance-2',rules:{
  opportunity:'BG-ROUND-AND-SHOP',cashThreshold:'BG-CASH-THRESHOLD',rewardTradeoff:'BG-REWARD-TRADEOFF',
  risk:'BG-DECLARED-RISK',persistent:'BG-PERSISTENT-TRADEOFF',queue:'BG-TAG-QUEUE',
- strict:'BG-STRICT-EVIDENCE',compatibility:'BG-COMPATIBILITY',boss:'BG-BOSS-NO-SKIP'
+ strict:'BG-STRICT-EVIDENCE',compatibility:'BG-COMPATIBILITY',boss:'BG-BOSS-NO-SKIP',
+ economySkip:'BG-ECONOMY-SKIP',shopNeeded:'BG-NEED-NEXT-SHOP'
 }} as const;
 export type BlindRisk='comfortable'|'tight'|'unknown';
-export interface BlindGuidanceOptions {requireObserved?:boolean;risk?:BlindRisk}
+export type NextBlindPlan='unknown'|'ready'|'need_shop';
+export interface BlindGuidanceOptions {requireObserved?:boolean;risk?:BlindRisk;nextBlindPlan?:NextBlindPlan}
 export interface BlindCashflowReference {
  basis:'conditional_cashflow_only';
  skipImmediateIncome:number;
@@ -35,7 +39,7 @@ export interface BlindGuidance {
  tag:{id:string|null;name:string;profile:TagStrategyProfile|null};
  survival:{status:'not_evaluated'|'player_reported';risk:BlindRisk;source:'player_declaration'|null};
  cashflowReference:BlindCashflowReference|null;
- askRisk:boolean;projected:true;exhaustive:false;
+ askRisk:boolean;askNextBlindPlan:boolean;projected:true;exhaustive:false;
  evidence:{status:'provisional';verification:'static_inspection_and_heuristic';source:string;observedInGame:false};
 }
 const value=<T>(fact:Fact<T>|undefined):T|null=>fact?.status==='known'?fact.value:null;
@@ -52,9 +56,23 @@ const temporary:Record<string,string>={
 };
 function parsedOptions(input:unknown):Result<Required<BlindGuidanceOptions>> {
  const errors=checkJsonValue(input);if(errors.length)return {ok:false,errors};
- if(!isObject(input)||Object.keys(input).some(key=>!['requireObserved','risk'].includes(key)))return {ok:false,errors:[{path:'$guidance.options',code:'invalid_options',message:'Opciones de orientación de ciega no reconocidas.'}]};
- const issues:Issue[]=[];object({},{requireObserved:boolean,risk:enumeration('comfortable','tight','unknown')}).check(input,'$guidance.options',issues);
- return issues.length?{ok:false,errors:issues}:{ok:true,value:{requireObserved:input.requireObserved===true,risk:(input.risk??'unknown') as BlindRisk}};
+ if(!isObject(input)||Object.keys(input).some(key=>!['requireObserved','risk','nextBlindPlan'].includes(key)))return {ok:false,errors:[{path:'$guidance.options',code:'invalid_options',message:'Opciones de orientación de ciega no reconocidas.'}]};
+ const issues:Issue[]=[];object({},{requireObserved:boolean,risk:enumeration('comfortable','tight','unknown'),nextBlindPlan:enumeration('unknown','ready','need_shop')}).check(input,'$guidance.options',issues);
+ return issues.length?{ok:false,errors:issues}:{ok:true,value:{requireObserved:input.requireObserved===true,risk:(input.risk??'unknown') as BlindRisk,nextBlindPlan:(input.nextBlindPlan??'unknown') as NextBlindPlan}};
+}
+
+// XII-067 compares money only after accounting for what the skipped round
+// could produce. Cashout already handles Golden Joker and voucher interest.
+function economySkipLimit(state:GameState):string|null {
+ const queue=value(value(state.observed.jokerContext)?.tags);
+ if(!queue||queue.length)return 'Revisa las etiquetas pendientes antes de renunciar a la tienda.';
+ if(value(state.observed.jokers)?.some(j=>j.catalogId==='green_joker'))return 'Jugar permite desarrollar Green Joker. Compara ese crecimiento con el dinero de Economía.';
+ const cards=currentDeckCards(state);
+ if(!cards?.length)return 'Falta el mazo actual para valorar qué podrías ganar jugando.';
+ if(cards.some(c=>c.seal!=='none'||!['none','bonus','mult','wild','steel','stone'].includes(c.enhancement)))return 'Las mejoras o sellos de tu mazo pueden cambiar lo que ganas o consumes al jugar esta ronda.';
+ const blind=value(state.observed.nextBlind),boss=value(state.observed.visibleBoss);
+ if(blind?.kind==='big'&&(!boss||boss.kind!=='boss'||boss.ante!==blind.ante||!bossDefinition(value(boss.bossId)??'')))return 'Registra el jefe de este ante para valorar si puedes llegar sin pasar por la tienda.';
+ return null;
 }
 
 /** H2 supplies every amount. This enumerates conditional cashouts, never hands,
@@ -96,9 +114,9 @@ export function guideBlindChoice(input:unknown,options:BlindGuidanceOptions={}):
   limitations:['Orientación heurística, sin porcentajes de victoria ni de confianza.','No se conocen las ofertas futuras ni se asigna un precio a una tienda.','No se puntúan manos ni se predicen cartas, robos o recursos sobrantes.','Inspección estática de Steam1.0.1o-FULL; no observación en una partida.'],
   tag:{id:tagId,name:tagId?tagDefinition(tagId)?.name??tagId:'Etiqueta sin registrar',profile},
   survival:{status:settings.risk==='unknown'?'not_evaluated':'player_reported',risk:settings.risk,source:settings.risk==='unknown'?null:'player_declaration'},
-  cashflowReference:null,askRisk:false,projected:true,exhaustive:false,
+  cashflowReference:null,askRisk:false,askNextBlindPlan:false,projected:true,exhaustive:false,
   evidence:{status:'provisional',verification:'static_inspection_and_heuristic',source:'docs/evidencia/str02-etiquetas.md',observedInGame:false}};
- const recommend=(status:BlindGuidance['recommendation']['status'],preferred:'play'|null,ruleId:string,title:string,reason:string)=>{result.recommendation={status,preferred,ruleId,title,reason};};
+ const recommend=(status:BlindGuidance['recommendation']['status'],preferred:BlindGuidance['recommendation']['preferred'],ruleId:string,title:string,reason:string)=>{result.recommendation={status,preferred,ruleId,title,reason};};
  if(state.rulesetId!==ENGINE_RULESET||value(state.observed.gameVersion)!==GAME_VERSION||value(state.observed.gamePlatform)!=='pc-steam'||value(state.observed.modsPresent)!==false||value(state.observed.stakeId)!=='white'||!deckDefinition(value(state.observed.deckId)??'')||!blind||blind.ante<1||blind.ante>8){
   recommend('abstain',null,policy.compatibility,'Revisa el contexto de la ciega','Falta un contexto compatible de versión, baraja, dificultad o ciega; no se presupone su equivalencia.');return {ok:true,value:result};
  }
@@ -112,7 +130,12 @@ export function guideBlindChoice(input:unknown,options:BlindGuidanceOptions={}):
  if(money!==null)result.reasons.push(`Saldo actual $${money}; no se da por disponible ninguna recompensa futura.`);
  if(deck==='green')result.reasons.push('La baraja verde no cobra intereses; sus manos y descartes sobrantes influyen en el cobro.');
  if(profile){result.reasons.push(result.tag.name+': '+profile.benefit);result.conditions.push(...profile.conditions);if(profile.execution==='not_implemented')result.limitations.push('El beneficio se conoce cualitativamente; su efecto no se ejecuta ni se concede en el motor de esta consulta.');}
- else result.conditions.push(`El beneficio de ${result.tag.name} no está valorado; podría invertir esta orientación inicial. No se considera cero.`);
+ else {
+  result.conditions.push(`El beneficio de ${result.tag.name} no está valorado; podría invertir esta orientación inicial. No se considera cero.`);
+  result.recommendation.reason=tagId
+   ?`Jugar conserva el cobro y la visita a tienda si ganas. Falta valorar el efecto de ${result.tag.name} para aconsejar el salto.`
+   :'Si ganas, cobras y visitas la tienda. Indica la etiqueta en la ciega para comparar qué recibirías al saltar.';
+ }
  if(settings.risk==='comfortable')result.conditions.push('Has indicado que la sueles superar; es tu valoración declarada, no una certificación del motor.');
  if(jokers?.some(joker=>joker.catalogId==='green_joker'))result.reasons.push('Green Joker puede desarrollarse al jugar manos y reducirse al descartar; no se presupone qué acciones harás ni cuánto crecerá.');
  if(profile?.id==='tag_economy'){
@@ -123,7 +146,29 @@ export function guideBlindChoice(input:unknown,options:BlindGuidanceOptions={}):
    const condition=n===0?'si superas la ciega':`si superas la ciega dejando al menos ${n} ${n===1?'mano':'manos'} sin usar`;
    recommend('conditional','play',policy.cashThreshold,'Jugar conserva la tienda',`El cobro condicionado iguala o supera los $${ref.skipImmediateIncome} inmediatos de Economía ${condition}. Conservas además la visita a tienda.`);
    result.conditions.push(...ref.assumptions,`El umbral de ${n} manos sobrantes es una condición monetaria, no una predicción de supervivencia.`);
-  }else{recommend('tradeoff',null,policy.rewardTradeoff,'Economía ofrece un intercambio',ref?`Economía aporta $${ref.skipImmediateIncome} inmediatos y ninguno de los cobros condicionados enumerados lo iguala. Jugar conserva tienda y desarrollo, cuyo valor no está monetizado.`:'La etiqueta puede aportar dinero, pero faltan datos o reglas para comparar ese ingreso con un cobro condicionado; no se trata como cero.');if(!ref)result.limitations.push('Sin referencia numérica de cobro: no se han resuelto los cambios de selección/ronda o los datos que podrían alterar sus ingresos.');}
+  }else if(ref&&money!==null){
+   const best=ref.rows.reduce((highest,row)=>row.balanceAfter>highest.balanceAfter?row:highest);
+   const afterSkip=money+ref.skipImmediateIncome;
+   const limit=economySkipLimit(state);
+   result.askNextBlindPlan=limit===null;
+   result.conditions.push(...ref.assumptions);
+   if(limit){
+    recommend('tradeoff',null,policy.rewardTradeoff,'¿Qué pierdes al saltar?',limit);
+   }else if(settings.nextBlindPlan==='ready'){
+    recommend('conditional','skip',policy.economySkip,'Me inclino por saltar',
+     `Economía te deja $${afterSkip}. Si juegas y ganas, llegarías hasta $${best.balanceAfter} sin otros cambios de dinero. Saltar te da $${afterSkip-best.balanceAfter} más y dices que puedes seguir sin esta tienda.`);
+    result.conditions.push('El jugador indica que puede afrontar la siguiente ciega sin esta tienda ni el crecimiento de esta ronda.');
+   }else if(settings.nextBlindPlan==='need_shop'){
+    recommend('conditional','play',policy.shopNeeded,'Juega para llegar a la tienda',
+     `Si ganas, puedes buscar el refuerzo que necesitas para la siguiente ciega. Saltar daría $${ref.skipImmediateIncome} ahora, pero perderías esta visita.`);
+   }else{
+    recommend('tradeoff',null,policy.rewardTradeoff,'¿Puedes saltar esta tienda?',
+     `Economía aporta $${ref.skipImmediateIncome} inmediatos. Si ganas jugando, el cobro llegaría a $${best.earned} sin otros ingresos. Saltaría si ya puedes con la siguiente sin comprar ni crecer aquí.`);
+   }
+  }else{
+   recommend('tradeoff',null,policy.rewardTradeoff,'Economía ofrece un intercambio','Faltan datos para comparar el ingreso de Economía con el cobro. Al saltar también pierdes esta tienda.');
+   result.limitations.push('Sin referencia numérica de cobro: no se han resuelto los cambios de selección/ronda o los datos que podrían alterar sus ingresos.');
+  }
  }else if(profile&&['tag_investment','tag_coupon','tag_double'].includes(profile.id)){
   recommend('tradeoff',null,policy.rewardTradeoff,'Compara la recompensa con otra ronda',`${result.tag.name} aporta un beneficio condicionado que podría compensar el salto. Jugar conserva cobro y tienda; no se les asigna un precio común.`);
  }
@@ -143,7 +188,10 @@ export function guideBlindChoice(input:unknown,options:BlindGuidanceOptions={}):
  }
  if(settings.risk==='tight'){
   result.conditions.push('Has indicado que vas justo; es una valoración declarada del jugador.','Saltar evita esta ronda, pero no demuestra que la siguiente ciega sea viable.');
-  recommend('tradeoff',null,policy.risk,'El riesgo cambia la decisión','Has indicado que vas justo: no conviene preferir jugar automáticamente por su economía. Contrasta el beneficio de la etiqueta y las condiciones de la siguiente ciega.');
+  if(result.recommendation.preferred!=='skip')recommend('tradeoff',null,policy.risk,'El riesgo cambia la decisión',
+   result.askNextBlindPlan&&settings.nextBlindPlan==='need_shop'
+    ?'Necesitas la tienda para preparar la siguiente ciega, pero vas justo en esta. Solo llegarás a comprar si consigues ganarla.'
+    :'Has indicado que vas justo: no conviene preferir jugar automáticamente por su economía. Contrasta el beneficio de la etiqueta y las condiciones de la siguiente ciega.');
  }
  result.askRisk=settings.risk==='unknown'&&result.recommendation.preferred==='play';
  result.reasons=[...new Set(result.reasons)];result.conditions=[...new Set(result.conditions)];return {ok:true,value:result};
@@ -151,5 +199,5 @@ export function guideBlindChoice(input:unknown,options:BlindGuidanceOptions={}):
 
 export function blindGuidanceIsCurrent(report:BlindGuidance,input:unknown,options:BlindGuidanceOptions={}):boolean {
  const checked=validateState(input),settings=parsedOptions(options);
- return checked.ok&&settings.ok&&report.stateToken===token(checked.value)&&report.optionsToken===token(settings.value)&&equal(report.binding,analysisBinding(checked.value));
+ return checked.ok&&settings.ok&&report.policyVersion===BLIND_GUIDANCE_POLICY.version&&report.stateToken===token(checked.value)&&report.optionsToken===token(settings.value)&&equal(report.binding,analysisBinding(checked.value));
 }
