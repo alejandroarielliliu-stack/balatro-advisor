@@ -5,25 +5,16 @@ import {ALL_JOKER_FACTS} from '../catalog/all-joker-facts.js';
 
 export interface ShopAdviceSummary {
  title:string;status:'conditional'|'tie'|'abstain';
- benefit:string|null;sacrifice:string|null;pending:string|null;scope:string;
+ benefit:string|null;sacrifice:string|null;pending:string|null;scope:string;planReason:string|null;
  choices:{id:string;title:string;moneyAfter:number|null;price:number|null}[];
 }
 type Capability=Pick<ActionCapability,'id'|'optionId'|'status'|'errors'|'consequences'|'moneyAfter'>;
-/** Use the existing comparisons for every competing Joker. Other categories
- * keep the mark conditional; their value is never treated as zero. */
+/** The green mark describes a purchase the policy compared and the player can actually register. */
 export function comparedShopPurchase(decision:ShopDecision){
- const {recommendation,options,comparisons}=decision.context;
- if(decision.scenarios||recommendation.status!=='conditional'||recommendation.offerIds.length!==1||
-    !comparisons?.length)return null;
- const id=recommendation.offerIds[0]!;
- const action=decision.actions.find(item=>item.optionId===id&&item.action.type==='buy');
- if(action?.confirmation!=='explicit_confirmation_required')return null;
- const comparisonsWon=comparisons.filter(item=>item.preferredId===id);
- const competitors=options.filter(option=>option.id!==id&&option.kind==='joker'&&option.affordability!=='unaffordable');
- if(!competitors.length||!competitors.every(option=>comparisonsWon.some(item=>item.otherId===option.id)))return null;
- const partial=!!recommendation.pendingOfferIds?.length||options.some(option=>['voucher','pack','other'].includes(option.kind)&&option.affordability!=='unaffordable');
- const reason=comparisonsWon.map(item=>item.message).join(' ')+(partial?' Otras ofertas podrían cambiar qué conviene hacer.':'');
- return {offerId:id,partial,reason};
+ const preferred=decision.context.recommendation.preferredJoker;
+ if(decision.scenarios||!preferred)return null;
+ const action=decision.actions.find(item=>item.optionId===preferred.offerId&&item.action.type==='buy');
+ return action?.confirmation==='explicit_confirmation_required'?preferred:null;
 }
 const resourceLabels:Record<string,string>={handsPerRound:'manos/ronda',discardsPerRound:'descartes/ronda',handSize:'cartas en mano',jokerSlots:'espacios de comodines',interestCap:'tope de interés ($)'};
 const name=(id:string)=>ALL_JOKER_FACTS[id]?.name??Object.values(ALL_JOKER_FACTS).find(j=>j.artId===id)?.name??id;
@@ -110,7 +101,9 @@ export function buildShopAdviceSummary(decision:ShopDecision):ShopAdviceSummary 
  const capabilities:Capability[]=[...decision.actions,...decision.voucherActions,...decision.packActions];
  let benefit:string|null=null,cost:string|null=null;
  if(recommendation.status!=='abstain'){
-  if(selected.length===1){const option=selected[0]!,comparison=decision.context.comparisons?.find(c=>c.preferredId===option.id);benefit=comparison?`Mult propio con este inventario: +${comparison.values.preferredMult} por $${comparison.values.preferredNetCost}, frente a +${comparison.values.otherMult} por $${comparison.values.otherNetCost}.`:preparedBenefit(option);cost=sacrifice(option,capabilities.find(c=>c.optionId===option.id));}
+  if(selected.length===1){const option=selected[0]!,comparison=decision.context.comparisons?.find(c=>c.preferredId===option.id);benefit=comparison?`Mult propio con este inventario: +${comparison.values.preferredMult} por $${comparison.values.preferredNetCost}, frente a +${comparison.values.otherMult} por $${comparison.values.otherNetCost}.`:preparedBenefit(option);cost=sacrifice(option,capabilities.find(c=>c.optionId===option.id));
+   if(option.kind==='reroll'&&option.price!==null&&option.moneyAfter!==null){cost=`Renovar cuesta $${option.price}. Te quedarían $${option.moneyAfter} para comprar.`;}
+  }
   else if(selected.length>1){benefit='Las compras ofrecen efectos distintos; el cálculo no demuestra una ganadora.';cost='Compara los saldos y lo que sustituye cada opción en sus detalles.';}
   else if(choices.some(o=>o.id==='hold')){const hold=choices.find(o=>o.id==='hold')!;benefit=hold.moneyAfter===null?'Conservas tus comodines actuales.':`Conservas $${hold.moneyAfter} y tus comodines actuales.`;
    const investment=decision.context.options.find(o=>o.findings?.some(f=>f.ruleId===QUICK_SHOP_POLICY.rules.futureInvestment));
@@ -119,5 +112,5 @@ export function buildShopAdviceSummary(decision:ShopDecision):ShopAdviceSummary 
  }
  const provisional=capabilities.some(c=>c.status==='provisional');
  const scope=(decision.context.recommendation.scope==='evaluated-options'?'Comparación parcial · ':'')+(decision.scenarios===null?'Heurístico · supervivencia sin evaluar':'Heurístico · consulta los resultados de los planes fijos; no predicen la partida')+(provisional?' · reglas provisionales':'');
- return {title:recommendation.title,status:recommendation.status,benefit,sacrifice:cost,pending:pending(decision,selected,capabilities),scope,choices};
+ return {title:recommendation.title,status:recommendation.status,benefit,sacrifice:cost,pending:pending(decision,selected,capabilities),scope,choices,planReason:recommendation.planReason??null};
 }

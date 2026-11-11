@@ -329,7 +329,7 @@ try {
     assert.ok(channels[0] > channels[2] && channels[1] > channels[2], 'Observed prices use yellow/gold text.');
   }
   advice = await main.advice();
-  assert.equal(await advice.locator('[data-advice-offer="reroll"]').count(), 0, 'Unavailable game renewal is excluded from this advisor UI.');
+  assert.equal(await advice.locator('[data-advice-offer="reroll"]').count(), 1, 'Renewal appears as advice with its observed cost.');
   assert.equal(await advice.getByRole('button', { name: /^(?:Actualizar|Renovar(?: ofertas)?|Reroll|Next Round|Siguiente ronda)$/i }).count(), 0);
   assert.equal(await advice.locator('[data-write="true"]').count(), 0, 'Advice exposes no confirmation transaction.');
   await main.close();

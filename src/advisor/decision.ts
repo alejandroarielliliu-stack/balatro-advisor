@@ -16,7 +16,8 @@ import {engineEvidence} from '../rules/engine-evidence.js';
 import {ENGINE_VERSION} from '../catalog/initial.js';
 import type {AnalysisGate} from '../rules/evidence.js';
 import {evaluateShopContext,validateShopSnapshot} from './shop-context.js';
-import type {ShopSnapshot,ShopContextResult} from './shop-context.js';
+import type {ShopSnapshot,ShopContextResult,ShopPlan} from './shop-context.js';
+import {shopPlanSchema} from './shop-plan.js';
 import {adviseShop} from './advisor.js';
 import type {Advice,AdvisorScenario} from './advisor.js';
 import {catalogCapabilities} from '../catalog/capabilities.js';
@@ -40,7 +41,7 @@ export interface ShopDecision {
  scenarioConsequences:ScenarioConsequences;
  limitations:string[];projected:true;exhaustive:false;
 }
-export interface DecisionOptions {ante?:number;requireObserved?:boolean;hand?:HandInput;scenarios?:AdvisorScenario[];actions?:ShopAction[]}
+export interface DecisionOptions {ante?:number;requireObserved?:boolean;hand?:HandInput;scenarios?:AdvisorScenario[];actions?:ShopAction[];shopPlan?:ShopPlan}
 const fail=(code:string,message:string,path='$decision'):Result<never>=>({ok:false,errors:[{path,code,message}]});
 const token=(snapshot:ShopSnapshot)=>JSON.stringify(canonical(snapshot));
 const value=<T>(f:{status:'known';value:T}|{status:'unknown'}|undefined)=>f?.status==='known'?f.value:undefined;
@@ -59,12 +60,13 @@ function matchesRecordedOffer(state:GameState,snapshot:ShopSnapshot,offerId:stri
 export function inspectShopDecision(input:unknown,snapshotInput:unknown,options:DecisionOptions={}):Result<ShopDecision>{
  const checked=validateState(input);if(!checked.ok)return checked;const snapshot=validateShopSnapshot(snapshotInput);if(!snapshot.ok)return snapshot;
  const jsonErrors=checkJsonValue(options);if(jsonErrors.length)return {ok:false,errors:jsonErrors};
- if(!isObject(options as unknown)||Object.keys(options).some(k=>!['ante','requireObserved','hand','scenarios','actions'].includes(k)))return fail('invalid_options','Opciones de análisis no reconocidas.');
+ if(!isObject(options as unknown)||Object.keys(options).some(k=>!['ante','requireObserved','hand','scenarios','actions','shopPlan'].includes(k)))return fail('invalid_options','Opciones de análisis no reconocidas.');
  const optionErrors:Issue[]=[];object({},{ante:integer(1),requireObserved:boolean}).check(Object.fromEntries(Object.entries(options).filter(([k])=>k==='ante'||k==='requireObserved')),'$options',optionErrors);
  if(options.actions!==undefined)array(actionSchema,50).check(options.actions,'$options.actions',optionErrors);
+ if(options.shopPlan!==undefined)shopPlanSchema.check(options.shopPlan,'$options.shopPlan',optionErrors);
  if(optionErrors.length)return {ok:false,errors:optionErrors};
  const state=checked.value,shop=snapshot.value,requireObserved=options.requireObserved??false;
- const context=evaluateShopContext(state,shop,{...(options.ante===undefined?{}:{ante:options.ante}),requireObserved});
+ const context=evaluateShopContext(state,shop,{...(options.ante===undefined?{}:{ante:options.ante}),...(options.shopPlan?{shopPlan:options.shopPlan}:{}),requireObserved});
  const actions:ActionCapability[]=[],used=new Set<string>(),owned=value(state.observed.jokers)??[];
  let index=0;
  const probes:ShopAction[]=options.actions??[{type:'hold' as const},...shop.jokers.map(o=>{const instanceId=shopPurchaseInstanceId(o.offerId,owned);return o.replacementId?{type:'replace' as const,sellInstanceId:o.replacementId,offerId:o.offerId,instanceId}:{type:'buy' as const,offerId:o.offerId,instanceId};})];

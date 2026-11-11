@@ -138,6 +138,56 @@ try{
  assert.equal(await q.locator('[data-offer-preference]').count(),0,'Missing price removes the comparison');
  pass('shop-mark-belongs-to-a-supported-comparison-and-expires-with-the-price');await compared.context.close();
 
+ // The normal cashout/continue path begins with an unobserved shop, including the
+ // legacy annotation for offers still pending. The plan can confirm transcription.
+ const guide=await session(desktop,shopFixture(),'reduce',false),g=guide.page;await continueRun(g);
+ const basic=await observe(g,'joker','joker',2),golden=await observe(g,'joker','golden_joker',6);
+ const plan=async(page,need,reserve='',quote='5',complete=true)=>{
+  await page.locator('#game-shop-plan').click();await page.locator('#shop-plan-dialog').waitFor({state:'visible'});
+  await page.locator('#shop-plan-need').selectOption(need);
+  if(['score','economy'].includes(need))await page.locator('#shop-plan-reserve').fill(reserve);
+  await page.locator('#game-shop-quoted-cost').fill(quote);
+  await page.locator('#shop-plan-complete').setChecked(complete);
+  await page.locator('#shop-plan-apply').click();await page.locator('#shop-plan-dialog').waitFor({state:'hidden'});
+ };
+ await plan(g,'score');
+ assert.match(await g.locator('.blind-speech strong').innerText(),/Compra Joker/);
+ assert.equal(await g.locator(`[data-game-shop-offer="${basic}"]`).getAttribute('data-offer-preference'),'compared');
+ const advised=await raw(g);await plan(g,'economy');
+ assert.match(await g.locator('.blind-speech strong').innerText(),/Compra Golden/);
+ assert.equal(await g.locator(`[data-game-shop-offer="${golden}"]`).getAttribute('data-offer-preference'),'compared');
+ assert.equal(await raw(g),advised,'Changing the buying goal consults the same record');
+ await plan(g,'save');
+ assert.match(await g.locator('.blind-speech strong').innerText(),/Guarda/);
+ assert.equal(await g.locator('[data-offer-preference]').count(),0);
+ assert.equal(await g.locator('#game-shop-next').getAttribute('data-advised-action'),'');
+ assert.equal(await raw(g),advised,'Advising to save does not leave the shop or spend');
+ await g.screenshot({path:dir+'/guide-save-desktop.png'});await guide.context.close();
+ pass('guide-picks-points-income-or-saving-from-normal-recorded-shop');
+
+ const search=await session(undefined,shopFixture()),h=search.page;await continueRun(h);
+ await observe(h,'joker','steel_joker',7);await observe(h,'joker','credit_card',1);
+ await plan(h,'score','8','5');
+ assert.match(await h.locator('.blind-speech strong').innerText(),/Renueva una vez/);
+ assert.equal(await h.locator('#game-shop-reroll').getAttribute('data-advised-action'),'');
+ const budget=await raw(h),budgetState=await record(h);
+ assert.equal(budgetState.state.observed.money.value,25);assert.equal(budgetState.state.observed.shop.value.cardOffers.length,2);
+ assert.equal(budgetState.state.observed.jokerContext.value.visibleRerollCost.value,5);
+ await plan(h,'score','24','5');assert.match(await h.locator('.blind-speech strong').innerText(),/Guarda/);
+ assert.equal(await raw(h),budget,'Only the search budget changed');
+ await h.locator('#game-shop-details').click();await h.locator('#shop-recommendation').waitFor({state:'visible'});
+ assert.match(await h.locator('#shop-recommendation').innerText(),/Guarda/);
+ await h.locator('#store-shop-plan').click();await h.locator('#shop-plan-reserve').fill('8');await h.locator('#shop-plan-apply').click();
+ await h.locator('#shop-recommendation').click();assert.match(await h.locator('#shop-advice-summary').innerText(),/Renueva una vez/);
+ await h.locator('#shop-advice-dialog').getByRole('button',{name:'Cerrar',exact:true}).click();
+ await h.evaluate(()=>location.hash='blind');await shopReady(h);
+ assert.match(await h.locator('.blind-speech strong').innerText(),/Renueva una vez/);
+ assert.equal(await raw(h),budget,'Scene and detail consult the same plan and saved balance');
+ await plan(h,'score','8','0');assert.equal((await record(h)).state.observed.money.value,25);
+ assert.match(await h.locator('#game-shop-reroll').innerText(),/\$0/);
+ await h.screenshot({path:dir+'/guide-search-mobile.png'});await search.context.close();
+ pass('guide-renews-with-purchase-budget-and-shares-plan-with-table-without-spending');
+
  const purchases=await session(undefined,shopFixture()),v=purchases.page;await continueRun(v);const paidVoucher=await observe(v,'voucher','v_seed_money',10);await beginPurchase(v,paidVoucher);await confirmPurchase(v);await shopReady(v);assert.equal((await record(v)).state.observed.money.value,15);assert.ok((await record(v)).state.observed.outOfScope.value.vouchers.includes('v_seed_money'));
  const paidPack=await observe(v,'pack','buffoon-normal',4);await beginPurchase(v,paidPack);await confirmPurchase(v);const opened=await record(v);assert.equal(opened.state.observed.money.value,11);assert.equal(opened.state.phase,'open_pack');assert.equal(opened.state.observed.jokers.value.length,0,'Buying a closed pack does not invent its contents');
  await v.waitForFunction(()=>location.hash==='#pack'&&document.activeElement?.id==='pack-panel');const beforeResume=await raw(v);

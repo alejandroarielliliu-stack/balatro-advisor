@@ -37,6 +37,7 @@ import type {ConfirmedRecord} from '../storage/confirmed-store.js';
 import {createShopSessionStore} from '../storage/shop-session.js';
 import type {ShopOffer} from '../storage/shop-session.js';
 import type {ShopSnapshot} from '../advisor/shop-context.js';
+import {observedRerollQuote} from '../rules/reroll-quote.js';
 import {createDraft} from '../state/model.js';
 import type {GameState,Fact,Result,Issue,JokerInstance} from '../state/model.js';
 import {validateState,parseState} from '../state/validation.js';
@@ -476,7 +477,7 @@ function renderRecord(){
    describe:id=>{try{const j=value(liveState(true).observed.jokers)?.find(j=>j.instanceId===id);return {price:value(j?.sellValue)??null,...(value(j?.stickers)?.includes('eternal')?{blocked:'Eternal: no se puede vender.'}:{})};}catch{return {price:null};}},
    sell:id=>requestMesaAction({type:'sell',instanceId:id})
   },{state:()=>liveState(true),recordedState:()=>record?.state,ante:()=>Number(ante.input.value),scenarios:()=>{const previous=quietRead;quietRead=true;try{return scenarioReaders.map(read=>read()).filter(Boolean);}finally{quietRead=previous;}},changed:()=>{handRequest++;$('hand-results')?.replaceChildren();},
-    observe:observeShelf,confirm:(offerId,sellId)=>requestMesaAction(sellId?{type:'replace',sellInstanceId:sellId,offerId,instanceId:uuid()}:{type:'buy',offerId,instanceId:uuid()}),
+    observe:observeShelf,observeQuote:observeShopQuote,confirm:(offerId,sellId)=>requestMesaAction(sellId?{type:'replace',sellInstanceId:sellId,offerId,instanceId:uuid()}:{type:'buy',offerId,instanceId:uuid()}),
     confirmSale:instanceId=>requestMesaAction({type:'sell',instanceId}),
     confirmVoucher:offerId=>requestMesaAction({type:'buy_voucher',offerId}),
     confirmPack:offerId=>requestMesaAction({type:'buy_pack',offerId}),
@@ -766,6 +767,30 @@ function gameShopBinding(binding:Pick<GameState,'runId'|'revision'>):string|null
  if(dirty||!lock.owned||loadFailed)return 'Termina la edición o recupera el control de escritura antes de registrar la tienda.';
  return null;
 }
+function shopQuoteContext(state:GameState,price:number|null,afterReroll=false){
+ const context=structuredClone(value(state.observed.jokerContext)??{});
+ context.visibleRerollCost=price===null?unknown():known(price);
+ if(price!==null&&price>0){
+  context.rerollCost=known(price);
+  context.freeRerolls=known(0);
+ }else if(afterReroll){
+  // The amount displayed after a manual reroll doesn't reveal the paid rate or uses left.
+  context.rerollCost=unknown();
+  context.freeRerolls=unknown();
+ }else if(price===0&&value(context.freeRerolls)===0&&value(context.rerollCost)!==0){
+  context.freeRerolls=unknown();
+ }
+ return context;
+}
+function observeShopQuote(price:number|null,binding:Pick<GameState,'runId'|'revision'>,complete=false):string|null{
+ const problem=gameShopBinding(binding);if(problem)return problem;
+ if(price!==null&&(!Number.isSafeInteger(price)||price<0))return 'Introduce el precio de renovar que ves en la tienda.';
+ const state=record!.state;
+ const previous=value(state.observed.shop),sameQuote=observedRerollQuote(state)===price;
+ if(sameQuote&&(!complete||previous?.ignoredOtherOffers.length===0))return null;
+ const shop=complete?known({...previous??{shopId:uuid(),cardOffers:[],voucherOffers:[],packOffers:[]},ignoredOtherOffers:[]}):undefined;
+ return commit(()=>store.correct({confirmationId:uuid(),confirmed:true,expected:analysisBinding(state),updatedAt:now(),patch:{...(!sameQuote?{jokerContext:known(shopQuoteContext(state,price))}:{}),...(shop?{shop}:{})},reason:'Precio visible y ofertas registradas de esta tienda.'}))?null:$('message').textContent||'No se pudo guardar el precio.';
+}
 const blindScreen=mountBlindScreen({
  compareBlind:()=>$('run-compare-blind')?.click(),
  snapshot:()=>({state:record?structuredClone(record.state):null,writable:lock.owned&&!loadFailed,dirty}),
@@ -800,6 +825,7 @@ const blindScreen=mountBlindScreen({
   if(record?.state.phase==='finished')location.hash='table';return null;
  },
  shop:{
+  observeQuote:observeShopQuote,
   observe:(snapshot,binding)=>{
    const problem=gameShopBinding(binding);if(problem)return problem;
    const error=observeGameShop(snapshot);if(!error)reload();return error;
@@ -820,8 +846,7 @@ const blindScreen=mountBlindScreen({
     const stale=gameShopBinding(binding);if(stale){message(stale,true);return false;}
     const money=Number(balance.input.value),price=cost.input.value.trim()===''?null:Number(cost.input.value);
     if(!done.input.checked||!balance.input.value.trim()||!Number.isSafeInteger(money)||price!==null&&(!Number.isSafeInteger(price)||price<0)){message('Confirma la renovación y transcribe el dinero actual; el precio debe ser un entero no negativo.',true);return false;}
-    const previous=value(state.observed.shop),context=structuredClone(value(state.observed.jokerContext)??{});
-    context.rerollCost=price===null?unknown():known(price);
+    const previous=value(state.observed.shop),context=shopQuoteContext(state,price,true);
     const jokers=structuredClone(state.observed.jokers),flash=jokers.status==='known'&&jokers.value.some(joker=>joker.catalogId==='flash');
     if(jokers.status==='known')for(const joker of jokers.value)if(joker.catalogId==='flash')for(const key of Object.keys(joker.counters))joker.counters[key]=unknown();
     return commit(()=>store.correct({confirmationId:uuid(),confirmed:true,expected:analysisBinding(state),updatedAt:now(),patch:{money:known(money),jokerContext:known(context),...(flash?{jokers}:{}),shop:known({...(previous??{shopId:uuid()}),cardOffers:[],ignoredOtherOffers:['Cartas de la renovación pendientes de transcribir.']})},reason:'Renovación observada: saldo y precio transcritos; cartas nuevas pendientes, sin generar ofertas ni simular gastos.'}));

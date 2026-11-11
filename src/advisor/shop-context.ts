@@ -19,6 +19,10 @@ import {QUICK_SHOP_POLICY} from './quick-shop-policy.js';
 import type {ShopFinding} from './quick-shop-policy.js';
 import {comparePreparedOffers} from './shop-comparison.js';
 import type {ShopOfferComparison} from './shop-comparison.js';
+import {guideShopPlan,shopPlanSchema} from './shop-plan.js';
+import type {AssessedShopOffer as Evaluated,ShopPlan} from './shop-plan.js';
+import {observedRerollQuote} from '../rules/reroll-quote.js';
+export type {ShopPlan} from './shop-plan.js';
 
 /** Visible manual offers. null is an unknown price, never a free offer. */
 export interface ShopSnapshot {
@@ -40,7 +44,8 @@ export interface ShopOption {
 }
 export interface ShopContextResult {
  policy:string;
- recommendation:{status:'conditional'|'tie'|'abstain';title:string;offerIds:string[];reasons:string[];scope?:'evaluated-options'|'observed-options';pendingOfferIds?:string[]};
+ recommendation:{status:'conditional'|'tie'|'abstain';title:string;offerIds:string[];reasons:string[];scope?:'evaluated-options'|'observed-options';pendingOfferIds?:string[];
+  planReason?:string;preferredJoker?:{offerId:string;partial:boolean;reason:string}};
  comparisons?:ShopOfferComparison[];
  options:ShopOption[];limitations:string[];errors:Issue[];exhaustive:false;
 }
@@ -114,7 +119,6 @@ function costReasons(option:ShopOption,state:GameState,sale=0):void {
  if((option.price??0)>sale&&(ids?.includes('bull')||ids?.includes('bootstraps')))option.reasons.push('Gastar reduce el soporte de Bull/Bootstraps; no se resta esa pérdida como puntos.');
  if(option.moneyAfter!==null&&money!==undefined&&option.moneyAfter<money)finding(option,QUICK_SHOP_POLICY.rules.reserve,`Comprar deja $${option.moneyAfter}; ahorrar conserva $${money} para otras compras. ${option.moneyAfter<=0?'Sin reserva positiva; hace falta justificar la necesidad de gastar.':'El dinero conservado mantiene opciones futuras.'} No se presume una oferta futura ni se garantiza supervivencia.`,{before:money,after:option.moneyAfter,unit:'dollars'});
 }
-interface Evaluated {option:ShopOption;eligible:boolean;uncertain:boolean;tradeoff?:boolean}
 function evaluateJoker(state:GameState,offer:ShopSnapshot['jokers'][number],report:CompositionReport,ante:number|undefined,requireObserved:boolean):Evaluated {
  const owned=value(state.observed.jokers),sold=offer.replacementId?owned?.find(j=>j.instanceId===offer.replacementId):undefined;
  const peers=owned?.filter(j=>j.instanceId!==offer.replacementId),sale=offer.replacementId?value(sold?.sellValue)??null:0;
@@ -258,15 +262,19 @@ function evaluatePack(state:GameState,offer:ShopSnapshot['packs'][number],report
 }
 
 /** Pure advice: validates H1 and a copied snapshot, never mutates either. */
-export function evaluateShopContext(input:GameState,snapshotInput:ShopSnapshot,options:{ante?:number;requireObserved?:boolean}={}):ShopContextResult {
+export function evaluateShopContext(input:GameState,snapshotInput:ShopSnapshot,options:{ante?:number;requireObserved?:boolean;shopPlan?:ShopPlan}={}):ShopContextResult {
  const checked=validateState(input),snapshot=validateShopSnapshot(snapshotInput);
  if(!checked.ok||!snapshot.ok)return result([...(checked.ok?[]:checked.errors),...(snapshot.ok?[]:snapshot.errors)]);
+ const planErrors:Issue[]=[];
+ if(options.shopPlan!==undefined&&!shopPlanSchema.check(options.shopPlan,'$options.shopPlan',planErrors))return result(planErrors);
  const state=checked.value,shop=snapshot.value,report=evaluateComposition(state,options),ante=options.ante??value(state.observed.nextBlind)?.ante;
  const output=result(),hold:ShopOption={id:'hold',kind:'hold',title:'Ahorrar',price:0,moneyAfter:value(state.observed.money)??null,affordability:'affordable',coverage:'modeled',reasons:['Conserva saldo y los comodines actuales. No supone ingresos futuros ni espera una oferta específica.'],limitations:[]};
  const requireObserved=options.requireObserved??false;
  const assessed=[...shop.jokers.map(offer=>evaluateJoker(state,offer,report,ante,requireObserved)),...shop.vouchers.map(offer=>evaluateVoucher(state,offer,requireObserved))];
  const packs=shop.packs.map(offer=>evaluatePack(state,offer,report));
- const reroll:ShopOption={id:'reroll',kind:'reroll',title:'Renovar ofertas',...cost(state,shop.rerollCost),coverage:'unknown',reasons:['El coste actual solo compra información nueva: las ofertas posteriores son desconocidas y no se garantiza una mejora. Renueva el área de cartas; conserva sobres y vale.'],limitations:['No genera nuevo stock ni aplica eventos de reroll. El siguiente precio y los rerolls gratuitos necesitan observación real.']};
+ const sameShop=state.observed.shop.status==='known'&&state.observed.shop.value.shopId===shop.id;
+ const rerollPrice=shop.rerollCost??(sameShop?observedRerollQuote(state):null);
+ const reroll:ShopOption={id:'reroll',kind:'reroll',title:'Renovar ofertas',...cost(state,rerollPrice),coverage:'unknown',reasons:['El coste actual solo compra información nueva: las ofertas posteriores son desconocidas y no se garantiza una mejora. Renueva el área de cartas; conserva sobres y vale.'],limitations:['No genera nuevo stock ni aplica eventos de reroll. El siguiente precio y los rerolls gratuitos necesitan observación real.']};
  costReasons(reroll,state);
  const others=(shop.others??[]).map(offer=>{const option:ShopOption={id:offer.offerId,kind:'other',title:offer.name,...cost(state,offer.price),coverage:'unknown',reasons:[`Oferta manual ${offer.kind}: ${offer.name}. Se conserva el nombre transcrito, sin inferir un efecto por su texto.`],limitations:['No se puntúa: falta identidad mecánica, objetivos y evento de compra/uso compatible. Puede cambiar la elección; no se ignora al comparar.']};costReasons(option,state);return option;});
  // A UI snapshot may omit a saved unsupported article. Preserve that competing
@@ -313,12 +321,23 @@ export function evaluateShopContext(input:GameState,snapshotInput:ShopSnapshot,o
  }else{
   output.recommendation={status:'conditional',title:'Ahorra mientras no haya una mejora conocida',offerIds:['hold'],reasons:['Los datos actuales no justifican preferir una compra compatible. Ahorrar conserva saldo y opciones; no prueba que las ofertas sean inútiles en otros escenarios.',...(packs.length?['El contenido de los sobres sigue desconocido; abrirlos depende de un objetivo concreto.']:[]),'Renovar tiene coste conocido o pendiente y stock futuro desconocido; no promete una oferta mejor.']};
  }
+ if(!requireObserved&&(!noVisibleOffers||sameShop)){
+  output.recommendation=guideShopPlan(state,options.shopPlan,assessed,candidates,unscored,reroll,output.recommendation);
+ }
  const unmodeledVouchers=assessed.filter(a=>a.option.kind==='voucher'&&a.option.coverage!=='modeled'&&a.option.affordability!=='unaffordable'&&!supportsVoucher(shop.vouchers.find(v=>v.offerId===a.option.id)?.catalogId??'')).map(a=>a.option);
  const pendingIds=[...new Set([...uncertain,...unscored,...packs.filter(o=>o.affordability!=='unaffordable'),...unmodeledVouchers].map(o=>o.id))];
  output.recommendation.scope=pendingIds.length?'evaluated-options':'observed-options';output.recommendation.pendingOfferIds=pendingIds;
  if(pendingIds.length&&output.recommendation.status!=='abstain'){
   output.recommendation.title='Entre lo evaluado: '+output.recommendation.title;
   output.recommendation.reasons.unshift('Comparación parcial: las ofertas pendientes pueden cambiar la elección. La preferencia solo abarca las opciones compatibles evaluadas.');
+ }
+ const rec=output.recommendation;
+ const preferred=rec.status==='conditional'&&rec.offerIds.length===1?candidates.find(o=>o.kind==='joker'&&o.id===rec.offerIds[0]):undefined;
+ if(preferred&&!uncertain.some(o=>o.kind==='joker')){
+  const partial=pendingIds.length>0||output.options.some(o=>['voucher','pack','other'].includes(o.kind)&&o.affordability!=='unaffordable');
+  const evidence=comparisons.filter(item=>item.preferredId===preferred.id).map(item=>item.message).join(' ')||
+   rec.planReason||preferred.fit?.signals.find(s=>s.id==='preparation')?.text;
+  if(evidence)rec.preferredJoker={offerId:preferred.id,partial,reason:evidence+(partial?' Otras ofertas podrían cambiar qué conviene hacer.':'')};
  }
  if(output.recommendation.offerIds.length===1&&output.recommendation.offerIds[0]==='hold')for(const option of assessed.map(a=>a.option)){
   const investment=option.findings?.find(f=>f.ruleId===QUICK_SHOP_POLICY.rules.futureInvestment);if(investment)output.recommendation.reasons.unshift(option.title+': '+investment.message);

@@ -55,6 +55,7 @@ export function mountFullJokerData(host:HTMLElement,initial:GameState['observed'
  const read=():GameState['observed']['jokerContext']|undefined=>{
   if(!touched)return original?structuredClone(original):undefined;
   const result:FullJokerContext=structuredClone(ctx);
+  if(numbers.get('freeRerolls')?.dirty||numbers.get('rerollCost')?.dirty)delete result.visibleRerollCost;
   for(const [key,e] of numbers)if(e.dirty){const fact=e.input.value.trim()?known(number(e.input,e.label)):unknown(e.label);Object.assign(result,{[key]:fact});}
   for(const [key,fields] of histories){if(![...fields.values()].some(f=>f.dirty))continue;const values=structuredClone(result[key]??{});for(const [id,e] of fields)if(e.dirty)values[id]=e.input.value.trim()?known(number(e.input,handNames[id])):unknown(handNames[id]);result[key]=values;}
   for(const [key,e] of lists)if(e.dirty){if(!knownLists.get(key)!.checked)result[key]=unknown(e.label);else {const values=e.input.value.split(/[\s,;]+/).map(s=>s.trim()).filter(Boolean);if(key==='planetsUsed'&&new Set(values).size!==values.length)throw new Error(e.label+': hay IDs repetidos.');if(key==='planetsUsed'&&values.some(id=>CONSUMABLE_KINDS[id]!=='planet'))throw new Error('Planetas usados: utiliza IDs como c_mercury o c_mars.');result[key]=known(values);}}

@@ -12,6 +12,8 @@ import {BOSS_CATALOG,bossDefinition} from '../catalog/bosses.js';
 import {mountRoundCashout} from './round-cashout-view.js';
 import type {RoundCashoutSubmission} from './round-cashout-view.js';
 import {mountGameShop} from './game-shop-view.js';
+import {currentShopPlan,openShopPlan} from './shop-plan-view.js';
+import {observedRerollQuote} from '../rules/reroll-quote.js';
 
 const el=<K extends keyof HTMLElementTagNameMap>(tag:K,text='',className='')=>{const e=document.createElement(tag);e.textContent=text;e.className=className;return e;};
 const value=<T>(f:Fact<T>|undefined)=>f?.status==='known'?f.value:undefined;
@@ -39,6 +41,9 @@ export function mountBlindScreen(options:BlindScreenOptions){
  const side=el('aside','','blind-sidebar'),advisor=el('section','','blind-advisor'),avatar=el('div','','blind-advisor-avatar'),bubble=el('div','','blind-speech');
  avatar.append(jokerArt('j_joker','Comodín asesor'));const title=el('strong'),reason=el('p'),limit=el('small','Orientación · supervivencia sin evaluar');bubble.append(title,reason,limit);advisor.append(avatar,bubble);
  const compare=el('button','Comparar jugar o saltar','blind-compare');compare.type='button';compare.id='blind-compare';compare.hidden=true;compare.onclick=options.compareBlind;bubble.append(compare);
+ const plan=el('button','Orientar mi compra','blind-compare');plan.type='button';plan.id='game-shop-plan';plan.hidden=true;plan.setAttribute('aria-haspopup','dialog');bubble.append(plan);
+ plan.onclick=()=>openShopPlan({state:()=>options.snapshot().state!,quote:()=>{const state=options.snapshot().state;return state?observedRerollQuote(state):null;},observeQuote:options.shop.observeQuote,changed:refresh},plan);
+ document.addEventListener('shop-plan-change',refresh);
  const info=el('a','Info\npartida','blind-hud-button blind-info');info.href='#table';info.id='blind-run-info';
  const settings=el('button','Opciones','blind-hud-button blind-options');settings.type='button';settings.onclick=options.options;
  const stats=el('div','','blind-hud');const stat=(label:string,id:string,tone='')=>{const box=el('div','','blind-stat '+tone);box.append(el('span',label));const n=el('b');n.id=id;box.append(n);return {box,n};};
@@ -74,8 +79,9 @@ export function mountBlindScreen(options:BlindScreenOptions){
   const snapshot=options.snapshot(),state=snapshot.state;
   if(state&&!['blind_select','in_round','cashout','shop'].includes(state.phase)){if(location.hash==='#blind')location.hash=state.phase==='open_pack'?'pack':'table';return;}
   const answers=state?currentBlindAnswers(state):undefined;
-  const token=JSON.stringify([snapshot,answers]);if(token===rendered)return;rendered=token;
+  const token=JSON.stringify([snapshot,answers,state?currentShopPlan(state):null]);if(token===rendered)return;rendered=token;
   compare.hidden=true;
+  plan.hidden=state?.phase!=='shop';
   error.textContent='';if(!state){title.textContent='Elige una baraja';reason.textContent='Inicia la partida desde el menú.';cards.replaceChildren();return;}
   const settling=state.phase==='in_round'||state.phase==='cashout',shopping=state.phase==='shop',selecting=state.phase==='blind_select',previousMode=host.dataset.mode,animate=settling&&previousMode==='select',enteringShop=shopping&&previousMode==='cashout'&&!motion.matches,enteringBlinds=selecting&&previousMode==='shop'&&!motion.matches;
   host.dataset.mode=shopping?'shop':settling?'cashout':'select';host.setAttribute('aria-label',shopping?'Tienda':settling?'Cobro de la ronda':'Selección de ciega');
@@ -95,7 +101,18 @@ export function mountBlindScreen(options:BlindScreenOptions){
   tray.querySelectorAll('.blind-owned-card').forEach(e=>e.remove());const owned=value(state.observed.jokers);for(const j of owned??[]){const card=el('span','','blind-owned-card');card.append(jokerArt(engineArt[j.catalogId]??'j_joker',j.catalogId));tray.append(card);}jokerCount.textContent=(owned?.length??'—')+'/'+(value(state.observed.resources.jokerSlots)??'—');
   const context=value(state.observed.jokerContext);consumableCount.textContent=(value(context?.consumables)?.length??'—')+'/'+(value(context?.consumableSlots)??'—');
   deck.querySelector('.deck-art')?.remove();deck.prepend(deckArt(deckId,DECK_PROFILES[deckId as keyof typeof DECK_PROFILES]?.name??'Baraja'));const composition=value(state.observed.deck);deckCount.textContent=composition?String('cards'in composition?composition.cards.length:52):'—';
-  if(shopping){shop.refresh(state,writable,snapshot.dirty);const advice=shop.advice();title.textContent=snapshot.dirty?'Termina la edici�n':advice?.title??'Registra las ofertas';reason.textContent=[advice?.benefit,advice?.sacrifice].filter(Boolean).join(' ')||advice?.pending||(snapshot.dirty?'Guarda o corrige los cambios para actualizar el consejo.':'Introduce las ofertas para comparar las opciones de esta tienda.');limit.textContent='Orientación · Ver análisis de tienda';bubble.title=[advice?.pending,advice?.scope].filter(Boolean).join('\n');if(picker.open)picker.close();if(snapshot.dirty)error.textContent='Termina la edición pendiente antes de registrar la tienda.';return;}
+  if(shopping){
+   shop.refresh(state,writable,snapshot.dirty);
+   const advice=shop.advice();
+   title.textContent=snapshot.dirty?'Termina la edición':advice?.title??'Registra las ofertas';
+   reason.textContent=advice?.planReason||[advice?.benefit,advice?.sacrifice].filter(Boolean).join(' ')||advice?.pending||(snapshot.dirty?'Guarda o corrige los cambios para actualizar el consejo.':'Introduce las ofertas para comparar las opciones de esta tienda.');
+   limit.textContent='Orientación · Ver análisis de tienda';
+   bubble.title=[advice?.pending,advice?.scope].filter(Boolean).join('\n');
+   bubble.scrollTop=0;
+   if(picker.open)picker.close();
+   if(snapshot.dirty)error.textContent='Termina la edición pendiente antes de registrar la tienda.';
+   return;
+  }
   if(settling){cashout.refresh(state,writable);if(picker.open)picker.close();if(snapshot.dirty)error.textContent='Termina la edición pendiente antes de registrar el cobro.';return;}
   cards.replaceChildren();const boss=value(state.observed.visibleBoss),visibleBoss=boss?.ante===anteValue?boss:current?.kind==='boss'?current:undefined;
   for(const kind of ['small','big','boss'] as const){

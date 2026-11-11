@@ -8,7 +8,7 @@ export interface FullJokerContext {
  handCounts?:Record<string,Fact<number>>;roundHandCounts?:Record<string,Fact<number>>;
  tarotsUsed?:Fact<number>;planetsUsed?:Fact<string[]>;startingDeckSize?:Fact<number>;blindsSkipped?:Fact<number>;
  consumables?:Fact<Consumable[]>;consumableSlots?:Fact<number>;
- rerollCost?:Fact<number>;freeRerolls?:Fact<number>;bossDisabled?:Fact<boolean>;
+ rerollCost?:Fact<number>;freeRerolls?:Fact<number>;visibleRerollCost?:Fact<number>;bossDisabled?:Fact<boolean>;
 }
 /** A concrete scenario branch, never a sample or a probability-weighted average. */
 export interface EffectChoice {

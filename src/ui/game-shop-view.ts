@@ -6,6 +6,8 @@ import {BOOSTER_CATALOG} from '../catalog/booster-catalog.js';
 import {engineArt,jokerArt} from './collection.js';
 import {inspectShopDecision} from '../advisor/decision.js';
 import {buildShopAdviceSummary,comparedShopPurchase} from './shop-advice-summary.js';
+import {currentShopPlan} from './shop-plan-view.js';
+import {observedRerollQuote} from '../rules/reroll-quote.js';
 
 const el=<K extends keyof HTMLElementTagNameMap>(tag:K,text='',className='')=>{const e=document.createElement(tag);e.textContent=text;e.className=className;return e;};
 const value=<T>(fact:Fact<T>|undefined)=>fact?.status==='known'?fact.value:undefined;
@@ -16,6 +18,7 @@ type VoucherOffer=ShopSnapshot['vouchers'][number];
 type PackOffer=ShopSnapshot['packs'][number];
 interface GameShopOptions {
  observe(snapshot:ShopSnapshot,binding:Binding):string|null;
+ observeQuote(price:number|null,binding:Binding,complete?:boolean):string|null;
  confirm(kind:Kind,offerId:string,binding:Binding):string|null;
  next(binding:Binding):string|null;
  reroll(binding:Binding):void;
@@ -44,11 +47,11 @@ export function mountGameShop(stage:HTMLElement,options:GameShopOptions){
  editor.addEventListener('click',event=>{if(event.target===editor){const r=editor.getBoundingClientRect();if(event.clientX<r.left||event.clientX>r.right||event.clientY<r.top||event.clientY>r.bottom)editor.close();}});
  editor.addEventListener('close',()=>{const target=returnOffer?section.querySelector<HTMLElement>(`[data-game-shop-offer="${CSS.escape(returnOffer)}"]`):section.querySelector<HTMLElement>(`[data-game-shop-kind="${returnKind}"][data-game-shop-empty="true"]`);(target??next).focus({preventScroll:true});});
  const readSnapshot=(current:GameState):ShopSnapshot=>{
-  const shop=current.observed.shop.status==='known'?current.observed.shop.value:undefined,extras=current.schemaVersion==='0.2'&&current.observed.shop.status==='known'?current.observed.shop.value:undefined,context=value(current.observed.jokerContext);
+  const shop=current.observed.shop.status==='known'?current.observed.shop.value:undefined,extras=current.schemaVersion==='0.2'&&current.observed.shop.status==='known'?current.observed.shop.value:undefined;
   return {id:shop?.shopId??snapshot.id,jokers:(shop?.cardOffers??[]).filter(offer=>offer.kind==='joker').map(offer=>({offerId:offer.offerId,catalogId:offer.catalogId,price:value(offer.price)??null,edition:value(offer.edition)??'unknown',stickers:[...(value(offer.stickers)??['unknown'])]})),
    vouchers:(extras?.voucherOffers??[]).map(offer=>({offerId:offer.offerId,catalogId:offer.catalogId,price:value(offer.price)??null})),
    packs:(extras?.packOffers??[]).flatMap(offer=>{const definition=BOOSTER_CATALOG.find(pack=>pack.id===offer.catalogId);return definition?[{offerId:offer.offerId,family:definition.family,size:definition.size,price:value(offer.price)??null}]:[];}),
-   rerollCost:value(context?.rerollCost)??null};
+   rerollCost:observedRerollQuote(current)};
  };
  function inspect(kind:Kind,offer?:JokerOffer|VoucherOffer|PackOffer){
   if(!state)return;
@@ -106,7 +109,7 @@ export function mountGameShop(stage:HTMLElement,options:GameShopOptions){
    const portrait=el('span','','game-shop-offer-art');portrait.append(art);const price=el('strong',offer.price===null?'$?':'$'+offer.price,'game-shop-price-tag');button.append(price,portrait);button.setAttribute('aria-label',`${name} · ${offer.price===null?'precio desconocido':'$'+offer.price}`);button.title=name;
    if(preferred?.offerId===offer.offerId){
     button.dataset.offerPreference=preferred.partial?'conditional':'compared';button.title=preferred.reason;
-    button.setAttribute('aria-description','Refuerzo de Mult preferido entre los comodines comparados. '+preferred.reason);
+    button.setAttribute('aria-description','Comodín preferido entre las compras comparadas. '+preferred.reason);
     const mark=el('span',preferred.partial?'?':'✓','game-shop-preferred-mark');mark.setAttribute('aria-hidden','true');button.append(mark);
    }
   }
@@ -116,14 +119,19 @@ export function mountGameShop(stage:HTMLElement,options:GameShopOptions){
   state=current;writable=canWrite&&current.phase==='shop';next.disabled=!writable;reroll.disabled=!writable;
   section.querySelectorAll<HTMLButtonElement>('[data-game-shop-empty="true"]').forEach(button=>button.disabled=!writable);
   if(editor.open)editor.dispatchEvent(new Event('input'));
-  const token=JSON.stringify([current,dirty]);if(token===rendered)return;rendered=token;snapshot=readSnapshot(current);
+  const plan=currentShopPlan(current),token=JSON.stringify([current,dirty,plan]);if(token===rendered)return;rendered=token;snapshot=readSnapshot(current);
   const saved=current.observed.shop.status==='known'?current.observed.shop.value:undefined;
   const hasOffers=snapshot.jokers.length||snapshot.vouchers.length||snapshot.packs.length||saved?.cardOffers.length||saved?.ignoredOtherOffers.length||
    (current.schemaVersion==='0.2'&&current.observed.shop.status==='known'&&current.observed.shop.value.packOffers?.length);
-  const result=!dirty&&hasOffers?inspectShopDecision(current,snapshot):null;
+  const result=!dirty&&(hasOffers||plan)?inspectShopDecision(current,snapshot,plan?{shopPlan:plan}:{}):null;
   advice=result?.ok?buildShopAdviceSummary(result.value):null;
   preferred=result?.ok?comparedShopPurchase(result.value):null;
   if(editor.open)editor.dispatchEvent(new Event('input'));
+  const choice=advice?.choices.length===1&&advice.status==='conditional'?advice.choices[0]?.id:null;
+  for(const [button,id] of [[reroll,'reroll'],[next,'hold']] as const){
+   button.toggleAttribute('data-advised-action',choice===id);
+   if(choice===id)button.setAttribute('aria-description',advice?.planReason??advice!.title);else button.removeAttribute('aria-description');
+  }
   error.textContent='';rerollPrice.textContent=snapshot.rerollCost===null?'$—':'$'+snapshot.rerollCost;reroll.title=snapshot.rerollCost===null?'Coste de renovación sin registrar. Transcribe lo que ocurrió en Balatro.':'Registrar una renovación realizada en Balatro; coste observado $'+snapshot.rerollCost;
   cardShelf.replaceChildren();voucherShelf.replaceChildren();packShelf.replaceChildren();
   for(const offer of snapshot.jokers)cardShelf.append(tile('joker',offer));for(let i=snapshot.jokers.length;i<2;i++)cardShelf.append(tile('joker'));

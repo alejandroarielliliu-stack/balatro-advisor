@@ -46,7 +46,7 @@ const jokerContext = object({}, {
  grosMichelExtinct:fact(boolean),tags:fact(strings),visibleHands:fact(array(enumeration('high_card','pair','two_pair','three_kind','straight','flush','full_house','four_kind','straight_flush','five_kind','flush_house','flush_five'))),
  handCounts:record(fact(count)),roundHandCounts:record(fact(count)),tarotsUsed:fact(count),planetsUsed:fact(strings),
  startingDeckSize:fact(count),blindsSkipped:fact(count),consumables:fact(array(consumable,100)),consumableSlots:fact(count),
- rerollCost:fact(count),freeRerolls:fact(count),bossDisabled:fact(boolean)
+ rerollCost:fact(count),freeRerolls:fact(count),visibleRerollCost:fact(count),bossDisabled:fact(boolean)
 });
 
 export const cardSchema=card, jokerSchema=joker, consumableSchema=consumable;

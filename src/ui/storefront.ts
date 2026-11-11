@@ -15,6 +15,8 @@ import {buildShopAdviceSummary} from './shop-advice-summary.js';
 import {inspectShopAlternatives,shopAlternativesAreCurrent} from '../advisor/shop-alternatives.js';
 import type {ShopAlternativesReport} from '../advisor/shop-alternatives.js';
 import {mountShopComparison} from './shop-comparison-view.js';
+import {currentShopPlan,openShopPlan} from './shop-plan-view.js';
+import {observedRerollQuote} from '../rules/reroll-quote.js';
 
 const el=<K extends keyof HTMLElementTagNameMap>(tag:K,text='',cl='')=>{const e=document.createElement(tag);e.textContent=text;e.className=cl;return e;};
 const known=<T>(value:T)=>({status:'known' as const,source:'manual' as const,value});
@@ -24,6 +26,7 @@ export interface ShopContext {
  scenarios?:()=>AdvisorScenario[];
  /** Transcribe visible joker offers; this is not an acquisition. */
  observe?:(snapshot:ShopSnapshot,scope?:'all'|'voucher'|'pack')=>string|null;
+ observeQuote?:(price:number|null,binding:Pick<GameState,'runId'|'revision'>,complete?:boolean)=>string|null;
  /** Opens the explicit performed-action confirmation, separate from consultation. */
  confirm?:(offerId:string,replacementId:string)=>string|null;
  confirmSale?:(instanceId:string)=>string|null;
@@ -42,6 +45,7 @@ let invalidate=()=>{},refreshControls=()=>{};let timer:ReturnType<typeof setTime
 export function invalidateCandidates(){invalidate();}
 /** Refresh a saved revision without replacing a dialog the user just opened. */
 export function refreshCandidateControls(){clearTimeout(timer);refreshControls();}
+document.addEventListener('shop-plan-change',refreshCandidateControls);
 export function mountCandidates(host:HTMLElement,preview:PreviewRenderer,replacements:()=>{id:string;name:string}[],context?:ShopContext){
  const mounted=++mountId;
  let hydrated=false,extrasHydrated=false;
@@ -52,6 +56,7 @@ export function mountCandidates(host:HTMLElement,preview:PreviewRenderer,replace
  host.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target instanceof HTMLInputElement)e.preventDefault();});
  const changed=()=>context?.changed?.();
  const restoreExtras=(state:GameState|undefined)=>{
+  rerollCost=state?observedRerollQuote(state):null;
   const shop=state?.schemaVersion==='0.2'&&state.observed.shop.status==='known'?state.observed.shop.value:undefined;
   voucherOffers.splice(0,voucherOffers.length,...(shop?.voucherOffers??[]).filter(v=>VOUCHER_CATALOG.some(entry=>entry.id===v.catalogId)).map(v=>({offerId:v.offerId,catalogId:v.catalogId,price:v.price.status==='known'?v.price.value:null})));
   packOffers.splice(0,packOffers.length,...(shop?.packOffers??[]).flatMap(o=>{const p=BOOSTER_CATALOG.find(p=>p.id===o.catalogId);return p?[{offerId:o.offerId,family:p.family,size:p.size,price:o.price.status==='known'?o.price.value:null}]:[];}));extrasHydrated=!!state;
@@ -91,6 +96,11 @@ export function mountCandidates(host:HTMLElement,preview:PreviewRenderer,replace
   }
  },()=>context?.controlsChanged?.());
  const compareJump=el('button','Comparar opciones','store-compare-jump');compareJump.type='button';compareJump.id='store-compare-options';compareJump.setAttribute('aria-controls','shop-comparison');compareJump.onclick=()=>comparison.focus();headingTools.prepend(compareJump);
+ const planButton=el('button','Orientar mi compra','secondary');planButton.type='button';planButton.id='store-shop-plan';planButton.setAttribute('aria-haspopup','dialog');
+ if(context?.observeQuote){
+  adviceStrip.append(planButton);
+  planButton.onclick=()=>openShopPlan({state:()=>context.recordedState?.()??context.state(),quote:()=>observedRerollQuote(context.state()),observeQuote:context.observeQuote!,changed:refreshCandidateControls},planButton);
+ }
  const adviceDialog=el('dialog','','shop-advice-dialog');adviceDialog.id='shop-advice-dialog';adviceDialog.setAttribute('aria-label','Decisión de tienda');
  const editor=el('dialog','','store-item-editor');editor.id='store-item-editor';editor.setAttribute('aria-label','Registrar oferta');
  host.append(heading,status,layout,adviceDialog,editor);
@@ -108,6 +118,7 @@ export function mountCandidates(host:HTMLElement,preview:PreviewRenderer,replace
    if(!text)continue;const p=el('p','','store-advice-'+kind);p.append(el('b',label+' · '),document.createTextNode(text));adviceCopy.append(p);
   }
   adviceCopy.hidden=!adviceCopy.childElementCount;
+  if(summary?.planReason&&summary.planReason!==summary.benefit){adviceCopy.prepend(el('p',summary.planReason));adviceCopy.hidden=false;}
   advicePending.textContent=summary?.pending??'';advicePending.hidden=!summary?.pending;
   adviceScope.textContent=summary?.scope??'';adviceScope.hidden=!summary;
  };
@@ -118,14 +129,18 @@ export function mountCandidates(host:HTMLElement,preview:PreviewRenderer,replace
   if(!report||!decision){adviceDialog.append(el('p','Revisa los datos de la partida.'));return;}
   const summary=buildShopAdviceSummary(decision),overview=el('section','','shop-advice-overview');overview.id='shop-advice-summary';overview.dataset.status=summary.status;overview.setAttribute('aria-label','Consejo actual');
   overview.append(el('small',{conditional:'Opción condicionada',tie:'Opciones a comparar',abstain:'Falta información'}[summary.status],'shop-advice-status'),el('h3',summary.title));
+  if(summary.planReason&&summary.planReason!==summary.benefit)overview.append(el('p',summary.planReason));
   if(summary.choices.length){const choices=el('ul','','shop-advice-choices');for(const choice of summary.choices){const item=el('li');item.dataset.adviceChoice=choice.id;item.append(el('b',choice.title));if(choice.moneyAfter!==null)item.append(el('span',`Quedan $${choice.moneyAfter}`));if(choice.price!==null&&choice.id!=='hold')item.append(el('small',`Precio $${choice.price}`));choices.append(item);}overview.append(choices);}
   for(const [id,label,text] of [['shop-advice-benefit','Aporta',summary.benefit],['shop-advice-sacrifice','Sacrificas',summary.sacrifice]] as const){if(!text)continue;const p=el('p');p.id=id;p.append(el('b',label+' · '),document.createTextNode(text));overview.append(p);}
   if(summary.pending){const pending=el('div',summary.pending,'shop-advice-pending');pending.id='shop-advice-pending';pending.setAttribute('role','status');overview.append(pending);}
   const scope=el('small',summary.scope,'shop-advice-scope');scope.id='shop-advice-scope';overview.append(scope);adviceDialog.append(overview);
   const reasons=disclosure('shop-advice-reasons','Ver por qué');for(const text of report.recommendation.reasons)reasons.append(el('p',text));adviceDialog.append(reasons);
   if(decision.questions.length){const questions=disclosure('decision-questions',`Datos pendientes · ${decision.questions.length}`);for(const question of decision.questions)questions.append(el('p',question.message));adviceDialog.append(questions);}
-  const alternatives=disclosure('shop-advice-alternatives',`Alternativas · ${report.options.filter(o=>o.kind!=='reroll').length}`);adviceDialog.append(alternatives);
-  for(const option of report.options){if(option.kind==='reroll')continue;const row=el('article','','store-advice-option');row.dataset.adviceOffer=option.id;row.dataset.kind=option.kind;row.dataset.affordability=option.affordability;row.dataset.coverage=option.coverage;row.dataset.recommended=String(report.recommendation.status!=='abstain'&&report.recommendation.offerIds.includes(option.id));row.append(el('b',option.title));
+  const alternatives=disclosure('shop-advice-alternatives',`Alternativas · ${report.options.length}`);adviceDialog.append(alternatives);
+  for(const option of report.options){const row=el('article','','store-advice-option');row.dataset.adviceOffer=option.id;row.dataset.kind=option.kind;row.dataset.affordability=option.affordability;row.dataset.coverage=option.coverage;row.dataset.recommended=String(report.recommendation.status!=='abstain'&&report.recommendation.offerIds.includes(option.id));row.append(el('b',option.title));
+   if(option.kind==='reroll'){
+    row.append(el('p',option.price===null?'Indica el precio de renovar en «Orientar mi compra».':`Precio $${option.price}${option.moneyAfter===null?'':` · Quedarían $${option.moneyAfter}`}. Las próximas cartas son desconocidas.`));alternatives.append(row);continue;
+   }
    if(option.moneyAfter!==null)row.append(el('small',`Saldo $${option.moneyAfter}${option.price!==null?' · coste $'+option.price:''}`));const changes=(option.kind==='voucher'?decision.voucherActions:option.kind==='pack'?decision.packActions:decision.actions).find(a=>a.optionId===option.id)?.consequences;if(changes)row.append(renderImmediateConsequences(changes));for(const reason of option.reasons)row.append(el('p',reason));
    {const d=el('details');d.append(el('summary','Cobertura'));const action=(option.kind==='voucher'?decision.voucherActions:option.kind==='pack'?decision.packActions:decision.actions).find(a=>a.optionId===option.id),labels:Record<OperationStatus,string>={available:'Validación disponible',provisional:'H2: cálculo provisional',missing_data:'H2: faltan datos',pending_evidence:'H2: falta evidencia de partida',illegal:'H2: acción ilegal',unsupported:'H2: fuera de cobertura',invalid:'H2: datos inválidos'};
     const capability=el('p',action?labels[action.status]+(action.confirmation==='explicit_confirmation_required'?' · Registrar requiere confirmación.':' · No se puede confirmar esta acción.'):'La adquisición de esta categoría no está integrada.');capability.dataset.operationStatus=action?.status??'unsupported';d.append(capability);
@@ -141,13 +156,16 @@ export function mountCandidates(host:HTMLElement,preview:PreviewRenderer,replace
   if(report.limitations.length){const d=el('details');d.append(el('summary','Límites de esta comparación'));for(const text of report.limitations)d.append(el('p',text));adviceDialog.append(d);}for(const error of report.errors)adviceDialog.append(el('p',error.message,'error'));
  };
  const refreshAdvice=()=>{
-  const hasOffers=candidates.length+voucherOffers.length+packOffers.length+otherOffers.length>0;
+  let hasOffers=candidates.length+voucherOffers.length+packOffers.length+otherOffers.length>0;
   suggestion.disabled=!hasOffers;
   try{
    if(!context)throw Error('Completa los datos de la partida para comparar.');
-   const state=context.state(),shelf=snapshot();let scenarios:AdvisorScenario[]|undefined;scenarioError='';
+   const state=context.state(),shopPlan=currentShopPlan(state);
+   hasOffers=hasOffers||!!shopPlan;suggestion.disabled=!hasOffers;
+   rerollCost=observedRerollQuote(state);
+   const shelf=snapshot();let scenarios:AdvisorScenario[]|undefined;scenarioError='';
    if(useScenarios)try{scenarios=context.scenarios?.();if(!scenarios?.length)throw Error('No hay escenarios. Configúralos en Análisis; la valoración rápida sigue disponible.');}catch(e){scenarios=undefined;scenarioError=e instanceof Error?e.message:'Revisa los escenarios de Análisis.';}
-   const inspected=inspectShopDecision(state,shelf,{ante:context.ante(),...(scenarios?{scenarios}:{})});
+   const inspected=inspectShopDecision(state,shelf,{ante:context.ante(),...(scenarios?{scenarios}:{}),...(shopPlan?{shopPlan}:{})});
    if(!inspected.ok)throw Error(inspected.errors.map(e=>e.message).join(' '));
    decision=inspected.value;report=decision.context;
    suggestion.textContent=hasOffers?report.recommendation.title:'Añade las ofertas que ves';suggestion.dataset.status=hasOffers?report.recommendation.status:'abstain';

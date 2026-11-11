@@ -70,7 +70,7 @@ export function nextBlindAfter(state:GameState,blind:BlindRef):BlindInfo|null {
   if(next.kind==='boss'&&boss.status==='known'&&sameRef(next,boss.value))return structuredClone(boss.value);
   return {...next,bossId:next.kind==='boss'?unknown('Todavía no se registró este jefe.'):known('none'),target:unknown('Confirma el objetivo de la siguiente ciega.'),reward:unknown('Confirma el premio de la siguiente ciega.')};
 }
-const dynamicContext=['tags','visibleHands','tarotsUsed','planetsUsed','grosMichelExtinct','consumables','rerollCost','freeRerolls','bossDisabled'] as const;
+const dynamicContext=['tags','visibleHands','tarotsUsed','planetsUsed','grosMichelExtinct','consumables','rerollCost','freeRerolls','visibleRerollCost','bossDisabled'] as const;
 // These grow through shop/pack decisions, not through a played round by itself.
 const shopOnlyCounters=new Set(['red_card','flash']);
 
@@ -94,7 +94,8 @@ function invalidateDynamic(state:GameStateV02,scope:'gap'|'selection'|'round'|'s
   const context=state.observed.jokerContext;
   if(context?.status==='known'){
     const ctx=context.value;
-    const fields=scope==='shop_entry'?['rerollCost','freeRerolls'] as const:scope==='shop'?['rerollCost','freeRerolls',...(inventory.status==='known'&&inventory.value.some(j=>j.catalogId==='perkeo')?['consumables' as const]:[])] as const:dynamicContext;
+    const renewalFields=['rerollCost','freeRerolls','visibleRerollCost'] as const;
+    const fields=scope==='shop_entry'?renewalFields:scope==='shop'?[...renewalFields,...(inventory.status==='known'&&inventory.value.some(j=>j.catalogId==='perkeo')?['consumables' as const]:[])] as const:dynamicContext;
     for(const field of fields)if(ctx[field]&&!(field==='tags'&&ctx.tags?.status==='known'&&ctx.tags.value.length===0)&&!(field==='grosMichelExtinct'&&ctx.grosMichelExtinct?.status==='known'&&ctx.grosMichelExtinct.value===true))ctx[field]=unknown(reason) as never;
     if(scope==='round'||scope==='gap')for(const field of ['handCounts','roundHandCounts'] as const)if(ctx[field])for(const key of Object.keys(ctx[field]))ctx[field][key]=unknown(reason);
   }
