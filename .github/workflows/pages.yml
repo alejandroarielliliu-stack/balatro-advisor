@@ -32,8 +32,11 @@ jobs:
         run: node --test tools/evaluate-advisor.test.mjs && node tools/evaluate-advisor.mjs --no-build --split development --output docs/evidencia/eval01/ci-development.json
       - name: Construir la web
         run: npm run build:site
-      - name: Instalar Chrome para la prueba estática
-        run: npx --no-install playwright install --with-deps chrome
+      - name: Preparar Chrome para las pruebas de pantalla
+        run: |
+          if ! node --input-type=module -e "import {chromium} from 'playwright'; const browser=await chromium.launch({channel:'chrome',headless:true}); await browser.close();"; then
+            npx --no-install playwright install --with-deps chrome
+          fi
       - name: Comprobar entrada, selector de partida y semilla registrada
         run: node tools/run-setup-test.mjs
       - name: Comprobar selección de ciegas y etiquetas observadas independientes
