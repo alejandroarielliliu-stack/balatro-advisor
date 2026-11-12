@@ -123,7 +123,8 @@ try {
       await page.locator(`#store-${kind}-add`).click();
       await page.locator('#store-item-editor').waitFor({ state: 'visible' });
       await page.locator('#store-item-id').selectOption(id);
-      if (price !== undefined) await page.locator('#store-item-price').fill(String(price));
+      assert.equal(await page.locator('input#store-item-price').count(), 0, 'The shop calculates prices.');
+      if (price !== undefined) assert.equal(await page.locator('#store-item-price').innerText(), '$'+price);
       await page.locator('#store-item-save').click();
       await page.locator('#store-item-editor').waitFor({ state: 'hidden' });
       if (kind === 'voucher' || kind === 'pack') await checkpoint();
@@ -145,19 +146,18 @@ try {
   assert.equal(await p.locator('#shop-recommendation').isEnabled(), true, 'A real transcribed offer enables advice.');
   assert.equal(await joker.getAttribute('data-preview-status'), 'fit');
   await joker.locator('.candidate-hero').click();
-  let price = p.locator('.candidate-dialog[open] input[id^="store-price-"]');
-  assert.equal(await price.inputValue(), '2', 'Joker starts with its catalogue suggestion $2.');
-  await price.fill('1');
+  let price = p.locator('.candidate-dialog[open] output[id^="store-price-"]');
+  assert.equal(await price.innerText(), '$2', 'Joker starts with its calculated base price $2.');
+  assert.equal(await p.locator('.candidate-dialog[open] input[id^="store-price-"]').count(), 0);
   const submitsBeforeEnter = await main.submits();
-  await price.press('Enter');
-  assert.equal(await main.submits(), submitsBeforeEnter, 'Enter in a store price cannot implicitly submit the real-state form.');
+  assert.equal(await main.submits(), submitsBeforeEnter, 'Inspecting the price does not submit the real-state form.');
   assert.equal(await p.locator('.candidate-dialog[open]').count(), 1);
   assert.equal(await p.locator('#confirmation[open]').count(), 0);
   await main.unchanged();
-  pass('price-enter', 'Enter in observed-price input preserves the open editor and makes no state-form submit or confirmed write', { stateFormSubmits: 0, confirmedWrites: 0 });
+  pass('price-readonly', 'A calculated output replaces the manual price input and inspection makes no state-form submit or confirmed write', { stateFormSubmits: 0, confirmedWrites: 0 });
   assert.equal(await p.locator('.candidate-dialog[open] .bay-score-value').count(), 0);
-  await price.press('Tab'); // Completed observed-price edit persists separately.
-  await p.waitForFunction(() => document.querySelector('.candidate-card[data-candidate="j_joker"] .store-joker-price')?.textContent === '$1');
+  await p.locator('.candidate-dialog[open] select[id^="store-edition-"]').selectOption('foil');
+  await p.waitForFunction(() => document.querySelector('.candidate-card[data-candidate="j_joker"] .store-joker-price')?.textContent === '$4');
   await main.checkpoint();
   await main.close();
   // The shop recomputes automatically from current run inputs.
@@ -165,18 +165,18 @@ try {
   await p.locator('#money').fill('25');
   await p.waitForFunction(() => document.querySelector('.candidate-card[data-candidate="j_joker"]')?.dataset.previewStatus === 'fit');
   await joker.locator('.candidate-hero').click();
-  price = p.locator('.candidate-dialog[open] input[id^="store-price-"]');
-  assert.equal(await price.inputValue(), '1', 'Recalculation preserves the manually observed price.');
+  price = p.locator('.candidate-dialog[open] output[id^="store-price-"]');
+  assert.equal(await price.innerText(), '$4', 'Recalculation preserves the Foil premium.');
   await main.close();
   let advice = await main.advice();
   const jokerAdvice = advice.locator(`[data-advice-offer="${await joker.getAttribute('data-offer-id')}"]`);
-  assert.match(await jokerAdvice.innerText(), /\$24|25\s*→\s*24/);
-  assert.equal(await jokerAdvice.getAttribute('data-coverage'), 'limited', 'Manual discounted price keeps H2 coverage limited.');
+  assert.match(await jokerAdvice.innerText(), /\$21|25\s*→\s*21/);
+  assert.equal(await jokerAdvice.getAttribute('data-coverage'), 'modeled', 'The calculated edition price is supported by H2.');
   await jokerAdvice.locator('details > summary').click();
-  assert.match(await jokerAdvice.innerText(), /H2.*desconocid|compra.*(?:desconocid|sin validar)|precio.*catálogo/i);
+  assert.match(await jokerAdvice.innerText(), /\$4|25\s*→\s*21/);
   await main.close();
   await main.unchanged();
-  pass('observed-joker-price', 'Joker $2 suggestion → observed $1; $25 → $24 after recomputation; no acquisition', { suggested: 2, observed: 1, projectedMoney: 24, realMoney: 25 });
+  pass('calculated-joker-price', 'Joker base $2 + Foil $2 calculates $4; $25 → $21 projected after recomputation; no acquisition', { base: 2, edition: 2, calculated: 4, projectedMoney: 21, realMoney: 25 });
 
   // Recalculation above used an explicitly unsaved base-field edit. Discard it
   // before recording another observation; SHOP03a must not merge a dirty draft.
@@ -201,21 +201,21 @@ try {
   await main.unchanged();
   pass('current-deck', 'Known standard52 has zero Steel: no purchase recommendation for Steel Joker', { steelCards: 0, bought: false });
 
-  const voucher = await main.addExtra('voucher', 'v_seed_money', 4);
+  const voucher = await main.addExtra('voucher', 'v_seed_money', 10);
   assert.ok(await voucher.locator('.voucher-art').count(), 'The visible voucher uses the actual voucher sprite.');
   assert.match(await voucher.locator('.voucher-art').evaluate(art => getComputedStyle(art).backgroundImage), /assets\/vouchers\/atlas\.png/);
   assert.equal(await p.locator('#vouchers [data-voucher="v_seed_money"]').getAttribute('data-owned'), 'false');
   advice = await main.advice();
   let voucherAdvice = advice.locator(`[data-advice-offer="${await voucher.getAttribute('data-offer-id')}"]`);
   assert.equal(await voucherAdvice.count(), 1);
-  assert.match(await voucherAdvice.innerText(), /\$21|25\s*→\s*21/);
+  assert.match(await voucherAdvice.innerText(), /\$15|25\s*→\s*15/);
   assert.doesNotMatch(await voucherAdvice.innerText(), /saldo.*\$50|dinero.*\$50|cobro(?: inmediato)?:.*\$|intereses recibidos/i);
   assert.match(await voucherAdvice.innerText(), /tope|capacidad|interés|intereses/i);
   await main.close();
   await main.unchanged();
   await voucher.locator('.store-extra-inspect').click();
-  assert.equal(await p.locator(`[data-voucher-confirm="${await voucher.getAttribute('data-offer-id')}"]`).isDisabled(), true, 'The observed $4 voucher cannot be confirmed under the base-price-only H2 rule.');
-  assert.match(await p.locator('#voucher-confirm-note').innerText(), /precio.*base|base.*\$10/i);
+  assert.equal(await p.locator('#store-item-price').innerText(), '$10');
+  assert.equal(await p.locator(`[data-voucher-confirm="${await voucher.getAttribute('data-offer-id')}"]`).isEnabled(), true, 'The calculated voucher price supports a separately confirmed purchase.');
   const discountedVoucher = await p.evaluate(async ({ key, id }) => {
     const record = JSON.parse(localStorage.getItem(key));
     const [{ inspectShopDecision }, { readShopSnapshot }] = await Promise.all([
@@ -225,12 +225,12 @@ try {
     if (!result.ok) throw new Error(JSON.stringify(result.errors));
     return result.value.voucherActions.find(action => action.optionId === id);
   }, { key: storageKey, id: await voucher.getAttribute('data-offer-id') });
-  assert.equal(discountedVoucher.errors[0].code, 'unsupported_price');
-  assert.equal(discountedVoucher.confirmation, 'unavailable');
+  assert.deepEqual(discountedVoucher.errors, []);
+  assert.equal(discountedVoucher.confirmation, 'explicit_confirmation_required');
   assert.equal(await p.locator('#confirmation[open]').count(), 0);
   await main.close();
   await main.unchanged();
-  pass('voucher-projection', 'Observed Seed Money $4 persists without acquisition: contextual $25−$4=$21, no immediate interest income, H2 explicitly refuses unsupported_price', { price: 4, projectedMoney: 21, realMoney: 25, owned: false, persisted: true, h2Error: 'unsupported_price' });
+  pass('voucher-projection', 'Calculated Seed Money $10 persists without acquisition: contextual $25−$10=$15, no immediate interest income, H2 requires an explicit purchase confirmation', { price: 10, projectedMoney: 15, realMoney: 25, owned: false, persisted: true, confirmation: 'explicit_confirmation_required' });
 
   await p.locator('#store-pack-add').click();
   const packChoices = await p.locator('#store-item-id option').evaluateAll(options => options.map(option => option.value).filter(Boolean));
@@ -242,7 +242,7 @@ try {
     'buffoon-normal', 'buffoon-jumbo', 'buffoon-mega',
   ].sort(), 'The pack selector has the 15 real family/size combinations.');
   await p.locator('#store-item-id').selectOption('arcana-normal');
-  assert.equal(await p.locator('#store-item-price').inputValue(), '4');
+  assert.equal(await p.locator('#store-item-price').innerText(), '$4');
   await p.locator('#store-item-save').click();
   await p.locator('#store-item-editor').waitFor({ state: 'hidden' });
   const arcana = p.locator('.store-extra-tile[data-store-kind="pack"]').last();
@@ -271,7 +271,7 @@ try {
   await p.locator('#store-item-editor').waitFor({ state: 'visible' });
   await p.locator('#store-item-kind').selectOption('tarot');
   await p.locator('#store-item-name').fill('El Mago observado');
-  await p.locator('#store-item-price').fill('3');
+  assert.equal(await p.locator('#store-item-price').innerText(), '$3');
   await p.locator('#store-item-save').click();
   await p.locator('#store-item-editor').waitFor({ state: 'hidden' });
   const other = p.locator('.store-extra-tile[data-store-kind="other"]');
@@ -409,11 +409,11 @@ try {
   pass('clear-offers', 'Clear offers persists removal of observed jokers, vouchers and packs, clears session other cards and disables advice while preserving $25 and inventory', { offers: 0, adviceDisabled: true, realMoney: 25, purchased: false });
   // Refill after reset: joker/voucher/pack observations persist; other cards remain temporary.
   await main.addJoker('j_joker');
-  await main.addExtra('voucher', 'v_seed_money', 4);
+  await main.addExtra('voucher', 'v_seed_money', 10);
   await main.addExtra('pack', 'arcana-normal');
   await p.locator('#store-other-add').click();
   await p.locator('#store-item-name').fill('El Mago temporal');
-  await p.locator('#store-item-price').fill('3');
+  assert.equal(await p.locator('#store-item-price').innerText(), '$3');
   await p.locator('#store-item-save').click();
   await p.locator('#store-item-editor').waitFor({ state: 'hidden' });
   assert.equal(await p.locator('.candidate-card,.store-extra-tile').count(), 4);
@@ -425,7 +425,7 @@ try {
   assert.equal(await main.stored(), beforeReload, 'Reload itself must not rewrite the record.');
   assert.equal(await p.locator('.candidate-card[data-candidate="j_joker"]').count(), 1, 'Observed joker offer is restored without being acquired.');
   assert.equal(await p.locator('.store-extra-tile[data-store-kind="voucher"]').count(), 1, 'The observed voucher is restored without being acquired.');
-  assert.match(await p.locator('.store-extra-tile[data-store-kind="voucher"]').innerText(), /\$4/);
+  assert.match(await p.locator('.store-extra-tile[data-store-kind="voucher"]').innerText(), /\$10/);
   assert.equal(await p.locator('.store-extra-tile[data-store-kind="pack"]').count(), 1, 'The observed pack survives reload without opening.');
   assert.equal(await p.locator('.store-extra-tile[data-store-kind="other"]').count(), 0, 'Other observations remain session-only.');
   assert.deepEqual(await main.inventory(), []);

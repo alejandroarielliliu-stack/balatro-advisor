@@ -112,7 +112,7 @@ export function mountBlindScreen(options:BlindScreenOptions){
    else if(choice?.id==='hold'){title.textContent='Ahorra';reason.textContent=choice.moneyAfter===null?'Conserva el dinero para otra tienda.':`Conserva $${choice.moneyAfter} para otra tienda.`;}
    else if(choice?.id==='reroll'){title.textContent='Renueva';reason.textContent=`Cuesta $${choice.price} y quedarían $${choice.moneyAfter} para comprar.`;}
    else if(choice){title.textContent='Compra '+choice.title;reason.textContent=choice.moneyAfter===null?'Encaja con tu equipo.':`Encaja con tu equipo. Te quedan $${choice.moneyAfter}.`;}
-   else {title.textContent=advice?.status==='tie'?'Compara las ofertas':'Registra las ofertas';reason.textContent=advice?.status==='tie'?'Elige el efecto que necesita tu equipo.':'Introduce las cartas y sus precios.';}
+   else {title.textContent=advice?.status==='tie'?'Compara las ofertas':'Registra las ofertas';reason.textContent=advice?.status==='tie'?'Elige el efecto que necesita tu equipo.':'Añade las cartas que ves en la tienda.';}
    bubble.scrollTop=0;
    if(picker.open)picker.close();
    if(snapshot.dirty)error.textContent='Termina la edición pendiente antes de registrar la tienda.';

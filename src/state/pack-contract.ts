@@ -1,10 +1,10 @@
 import {effectChoiceSchema} from './effect-choices.js';
 import {jokerSchema} from './legacy-model.js';
-import {array,enumeration,fact,integer,object,text,union} from './schema.js';
+import {array,boolean,enumeration,fact,integer,object,text,union} from './schema.js';
 import type {Infer} from './schema.js';
 
 /** Recorded pack facts. Prices, contents and outcomes are never generated here. */
-export const packOfferSchema=object({offerId:text(),catalogId:text(),price:fact(integer(0))});
+export const packOfferSchema=object({offerId:text(),catalogId:text(),price:fact(integer(0))},{couponed:boolean});
 export type PackOffer=Infer<typeof packOfferSchema>;
 export const packEntrySchema=union(
  object({entryId:text(),kind:enumeration('joker'),joker:jokerSchema}),

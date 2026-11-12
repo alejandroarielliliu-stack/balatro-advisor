@@ -89,7 +89,8 @@ try{
  const messages=async page=>(await page.locator('#shop-session-status,#message,#dialog-error,#store-item-error,#voucher-confirm-note,#pack-panel').allTextContents()).join(' ');
  const prepare=async(page,catalogId='buffoon-mega',price)=>{
   await page.locator('#store-pack-add').click();await editor(page).waitFor({state:'visible'});await page.locator('#store-item-id').selectOption(catalogId);
-  if(price!==undefined)await page.locator('#store-item-price').fill(price===null?'':String(price));
+  assert.equal(await page.locator('input#store-item-price').count(),0,'Pack prices are calculated');
+  if(price!==undefined)assert.equal(await page.locator('#store-item-price').innerText(),price===null?'$—':'$'+price);
  };
  const add=async(page,catalogId='buffoon-mega',price)=>{
   const previous=(await record(page)).state.observed.shop.value.packOffers??[];
@@ -118,7 +119,7 @@ try{
  const main=await session(),p=main.page,original=await record(p),id=await add(p);
  let saved=await record(p),before,count;
  assert.equal(saved.state.observed.money.value,20);assert.deepEqual(saved.state.observed.jokers.value,[]);
- assert.equal(saved.state.phase,'shop');assert.deepEqual(saved.state.observed.shop.value.packOffers,[{offerId:id,catalogId:'buffoon-mega',price:known(8)}]);
+ assert.equal(saved.state.phase,'shop');assert.deepEqual(saved.state.observed.shop.value.packOffers,[{offerId:id,catalogId:'buffoon-mega',price:known(8),couponed:false}]);
  assert.equal(saved.state.revision,original.state.revision+1);
  await reload(p);await tile(p,id).waitFor();before=await raw(p);count=await writes(p);
  await p.locator('#shop-recommendation').click();await p.locator('#shop-advice-dialog').waitFor({state:'visible'});await closeAdvice(p);
@@ -217,7 +218,9 @@ try{
  // 10. Illegal pack branches are explicit and preserve the complete record.
  const rejected=[{id:'buffoon-normal',price:4,money:3,pattern:/insuficiente|dinero|saldo/i},{id:'buffoon-normal',price:3,money:20,pattern:/precio|admitid|cobertura/i},{id:'spectral-normal',price:4,money:20,pattern:/Buffoon|Celestial|implementad|admite|cobertura/i}];
  for(const example of rejected){
-  const current=await session(fixture({money:example.money})),page=current.page,offer=await add(page,example.id,example.price);before=await raw(page);count=await writes(page);
+  const input=fixture({money:example.money}),legacyPrice=example.id==='buffoon-normal'&&example.price===3;
+  if(legacyPrice)for(const state of [input.state,input.initialState])state.observed.shop.value.packOffers=[{offerId:'legacy-mismatched-price',catalogId:example.id,price:known(3)}];
+  const current=await session(input),page=current.page,offer=legacyPrice?'legacy-mismatched-price':await add(page,example.id,example.price);before=await raw(page);count=await writes(page);
   await tile(page,offer).locator('.store-extra-inspect').click();const button=page.locator(`[data-pack-confirm="${offer}"]`);
   if(await button.isEnabled()){await button.click();if(await page.locator('#confirmation[open]').count()){await page.locator('#performed').check();await page.locator('#dialog-accept').click();}}
   assert.equal(await raw(page),before);assert.equal(await writes(page),count);assert.match(await messages(page),example.pattern);

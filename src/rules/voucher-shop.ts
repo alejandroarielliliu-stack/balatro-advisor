@@ -9,6 +9,7 @@ import {historyResourceDelta} from './history-jokers.js';
 import {fail,guardPendingTags,inventory,need,run,safe,stateInput,valueFact} from './core.js';
 import type {EngineOptions,EngineResult} from './core.js';
 import type {Mutation,ShopChange} from './shop.js';
+import {quoteShopPrice,repriceShopOffers} from './shop-pricing.js';
 
 export interface VoucherPurchaseAction {type:'buy_voucher';offerId:string}
 export type VoucherPurchaseChange=Omit<ShopChange,'occupiedSlots'|'freeSlots'> & {occupiedSlots:number|null;freeSlots:number|null};
@@ -36,7 +37,8 @@ export function applyVoucherPurchase(input:unknown,action:VoucherPurchaseAction,
 
   const price=need(offer.price,`$.observed.shop.voucherOffers.${offer.offerId}.price`);
   use('shop.prices');
-  if(price!==10)fail('$action.offerId','unsupported_price','Solo se admite el precio base de $10; no se reemplaza el precio observado.');
+  const expectedPrice=quoteShopPrice(state,{kind:'voucher',catalogId:offer.catalogId});
+  if(price!==need(expectedPrice.price,'$.shop.price'))fail('$action.offerId','unsupported_price','El precio del vale no coincide con su precio calculado.');
   const before=bankBalance(need(state.observed.money,'$.observed.money')),after=bankBalance(before-price);
   const effect=VOUCHER_EFFECTS[offer.catalogId]!;
   const roundField=effect.hands?'handsPerRound':effect.discards?'discardsPerRound':effect.handSize?'handSize':undefined;
@@ -44,12 +46,12 @@ export function applyVoucherPurchase(input:unknown,action:VoucherPurchaseAction,
   if(state.observed.jokers.status==='known'||roundField||effect.jokerSlots||after<0){
    const physical=need(state.observed.jokers,'$.observed.jokers');
    if(effect.jokerSlots)need(state.observed.resources.jokerSlots,'$.observed.resources.jokerSlots');
-   if(state.observed.resources.jokerSlots.status==='known')jokers=inventory(state);
+   if(state.observed.resources.jokerSlots.status==='known')jokers=inventory(state,true);
    else{
     const expected=voucherResources(need(state.observed.deckId,'$.observed.deckId'),owned).jokerSlots+physical.filter(joker=>need(joker.edition,'$.jokers.edition')==='negative').length;
     // This derived capacity is used only to validate physical compatibility.
     // The unknown observed capacity stays unknown in the returned projection.
-    jokers=inventory({...state,observed:{...state.observed,resources:{...state.observed.resources,jokerSlots:valueFact(expected)}}});
+    jokers=inventory({...state,observed:{...state.observed,resources:{...state.observed.resources,jokerSlots:valueFact(expected)}}},true);
    }
   }
   const credit=after<0?creditLimit(state):0;
@@ -72,6 +74,7 @@ export function applyVoucherPurchase(input:unknown,action:VoucherPurchaseAction,
   if(offer.catalogId==='v_seed_money'||offer.catalogId==='v_money_tree')use('vouchers.interest');
 
   owned.push(offer.catalogId);
+  if(offer.catalogId==='v_clearance_sale'||offer.catalogId==='v_liquidation')repriceShopOffers(state);
   if(roundField)state.observed.resources[roundField]=valueFact(safe(roundBefore+1));
   else if(effect.jokerSlots){
    // inventory already verified the old deck/voucher/negative-edition total.

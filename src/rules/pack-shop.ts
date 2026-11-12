@@ -12,7 +12,8 @@ import type {EngineOptions,EngineResult} from './core.js';
 import type {Mutation} from './shop.js';
 import {acquireObservedJoker,freshJokerInstance,sellObservedJoker} from './shop.js';
 import {effectiveJokers} from './joker-context.js';
-import {generationEvent,generationShopPrice} from './generation-jokers.js';
+import {generationEvent} from './generation-jokers.js';
+import {quoteShopPrice} from './shop-pricing.js';
 import {applyPlanetUse,PLANET_HANDS} from './planet.js';
 import {applyTargetedTarotUse,tarotUseDefinition} from './tarot.js';
 import type {TarotCardChange} from './tarot.js';
@@ -68,12 +69,12 @@ function packHand(state:GameStateV02,cardIds:readonly string[],path='$action.car
   if(cardIds.length!==expected)fail(path,'incomplete_pack_hand',`Registra las ${expected} cartas visibles de la mano de Arcana; se recibieron ${cardIds.length}. No se completan con robos hipotéticos.`);
  }
 }
-function freshObserved(joker:JokerInstance){
+function freshObserved(state:GameStateV02,joker:JokerInstance){
  if(!ALL_JOKER_FACTS[joker.catalogId])fail('$joker.catalogId','unsupported_joker','Comodín fuera del catálogo.');
  if(ALL_JOKER_FACTS[joker.catalogId]!.rarity===4)fail('$joker.catalogId','unsupported_pack_item','Los legendarios no pertenecen a la generación Buffoon normal de este alcance.');
  if(need(joker.stickers,'$joker.stickers').length)fail('$joker.stickers','unsupported_modifier','Los Buffoon de White Stake de este alcance no generan pegatinas.');
- const expected=freshJokerInstance(joker.catalogId,joker.instanceId,need(joker.edition,'$joker.edition'));
- if(need(joker.sellValue,'$joker.sellValue')!==need(expected.sellValue,'$expected.sellValue'))fail('$joker.sellValue','unsupported_price','El valor de venta observado no coincide con una instancia nueva sin descuentos.');
+ const expected=freshJokerInstance(joker.catalogId,joker.instanceId,need(joker.edition,'$joker.edition'),state);
+ if(need(joker.sellValue,'$joker.sellValue')!==need(expected.sellValue,'$expected.sellValue'))fail('$joker.sellValue','unsupported_price','El valor de venta observado no coincide con una instancia nueva y los descuentos actuales.');
  for(const key of Object.keys(joker.counters))if(!Object.hasOwn(expected.counters,key)&&key!=='extraSell')fail('$joker.counters.'+key,'unsupported_counter','Contador no compatible con un comodín nuevo.');
  for(const [key,fact] of Object.entries(expected.counters)){
   const actual=joker.counters[key];if(!actual)fail('$joker.counters.'+key,'unknown_data','Falta el contador inicial observado '+key+'.');
@@ -100,11 +101,11 @@ export function applyPackAction(input:unknown,action:PackAction,mutation:Mutatio
   if(action.type==='buy_pack'){
    if(state.phase!=='shop')fail('$.phase','wrong_phase','Solo puedes comprar un sobre desde la tienda.');
    use('packs.purchase');use('shop.prices');
-   const physical=inventory(state);
+   const physical=inventory(state,true);
    const shop=need(state.observed.shop,'$.observed.shop'),offers=shop.packOffers??[],index=offers.findIndex(offer=>offer.offerId===action.offerId);
    if(index<0)fail('$action.offerId','missing_offer','La oferta de sobre ya no existe.');
    const offer=offers[index]!,pack=definition(offer.catalogId),price=need(offer.price,'$.observed.shop.packOffers.'+offer.offerId+'.price');
-   const expected=generationShopPrice(state,pack.family==='celestial'?'celestial_pack':'other_pack',pack.basePrice);
+   const expected=need(quoteShopPrice(state,{kind:'pack',catalogId:offer.catalogId,couponed:offer.couponed??false}).price,'$.pack.price');
    if(expected===0)use('jokers.generation');
    if(price!==expected)fail('$action.offerId','unsupported_price',`El precio observado no coincide con el precio admitido ($${expected}); no se sustituye.`);
    const before=bankBalance(need(state.observed.money,'$.observed.money')),after=bankBalance(before-price);
@@ -144,7 +145,7 @@ export function applyPackAction(input:unknown,action:PackAction,mutation:Mutatio
     if(entry.kind==='unsupported')fail('$action.entryId','unsupported_pack_item','Esta carta se conserva como observada, pero su elección todavía no está implementada. Puedes omitir el resto del sobre.');
     if(entry.kind!=='tarot'&&action.targetCardIds!==undefined)fail('$action.targetCardIds','unexpected_targets','Esta elección no usa cartas objetivo.');
     if(entry.kind==='joker'){
-     freshObserved(entry.joker);acquireObservedJoker(state,entry.joker,trace,use);synchronizeResourceFacts(state);inventory(state);
+     freshObserved(state,entry.joker);acquireObservedJoker(state,entry.joker,trace,use);synchronizeResourceFacts(state);inventory(state,true);
     }else if(entry.kind==='planet'){
      use('packs.planet');
      applyPlanetUse(state,{instanceId:context.offerId+':'+entry.entryId,catalogId:entry.catalogId,kind:'planet',edition:'base',sellValue:1},trace,use);
@@ -178,7 +179,7 @@ export function applyPackAction(input:unknown,action:PackAction,mutation:Mutatio
     use('packs.skip');generationEvent({state,stage:'skip_pack',cards:[],trace,use,...(action.choices?{choices:action.choices}:{})},effectiveJokers(need(state.observed.jokers,'$.observed.jokers')));
     trace.push({ruleId:'packs.skip',label:'Resto del sobre omitido',values:{offerId:context.offerId,remaining:context.remainingChoices,previouslySelected:context.selectedEntryIds.length}});close(state,context);
    }else{
-    sellObservedJoker(state,action.instanceId,action.choices??[],trace,use,options);synchronizeResourceFacts(state);inventory(state);
+    sellObservedJoker(state,action.instanceId,action.choices??[],trace,use,options);synchronizeResourceFacts(state);inventory(state,true);
    }
   }
   state.revision=safe(state.revision+1,'$.revision');state.updatedAt=mutation.updatedAt;

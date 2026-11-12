@@ -1,7 +1,7 @@
 import {packOfferSchema} from '../state/pack-contract.js';
 import type {PackOffer} from '../state/pack-contract.js';
 import type {Result,VoucherOffer,CurrentShopOffer} from '../state/model.js';
-import {array, boolean, checkJsonValue, object, text} from '../state/schema.js';
+import {array, boolean, checkJsonValue, enumeration, object, text} from '../state/schema.js';
 import type {Schema} from '../state/schema.js';
 import {voucherOfferSchema} from '../state/model.js';
 import {validateState} from '../state/validation.js';
@@ -21,6 +21,10 @@ export interface ObserveJokerOffersRequest {
   offers:ShopOffer[];
   voucherOffers?:VoucherOffer[];
   packOffers?:PackOffer[];
+  /** Remaining shop price effects; distinct from the run's pending tag queue. */
+  pricingTags?:string[];
+  /** Known price tags used by the newly observed offers, consumed atomically. */
+  consumedPricingTags?:string[];
   /** Explicit transcription of other offers' coverage; never interpreted as purchasable contents. */
   ignoredOtherOffers?:string[];
 }
@@ -30,9 +34,10 @@ const offerList:Schema<unknown[]>={check(value,path,errors){
   if(Array.isArray(value))return true;
   errors.push({path,code:'array',message:'Las ofertas deben ser una lista.'});return false;
 }};
+const priceTag=enumeration('tag_coupon','tag_uncommon','tag_rare','tag_foil','tag_holo','tag_polychrome','tag_negative');
 const observationSchema=object({confirmationId:text(),confirmed:boolean,
   expected:bindingSchema,updatedAt:text(),shopId:text(),offers:offerList
-},{ignoredOtherOffers:array(text()),voucherOffers:array(voucherOfferSchema,100),packOffers:array(packOfferSchema,100)});
+},{ignoredOtherOffers:array(text()),voucherOffers:array(voucherOfferSchema,100),packOffers:array(packOfferSchema,100),pricingTags:array(priceTag,100),consumedPricingTags:array(priceTag,100)});
 
 /**
  * The visual shop and H2 share the T09b journal, not a second storage document.
@@ -55,6 +60,7 @@ export function createShopSessionStore(getStorage:()=>StoragePort) {
       const record=loaded.value,state=record.state,previous=state.observed.shop;
       if(request.voucherOffers!==undefined&&state.schemaVersion!=='0.2')return fail('migration_required','Actualiza explícitamente la partida al formato 0.2 desde Registro antes de guardar ofertas de vales.');
       if(request.packOffers!==undefined&&state.schemaVersion!=='0.2')return fail('migration_required','Actualiza explícitamente la partida al formato 0.2 desde Registro antes de guardar ofertas de sobres.');
+      if((request.pricingTags!==undefined||request.consumedPricingTags!==undefined)&&state.schemaVersion!=='0.2')return fail('migration_required','Actualiza la partida al formato 0.2 antes de aplicar etiquetas de precio.');
       if(state.schemaVersion==='0.2'&&state.phase!=='shop')return fail('wrong_phase','Las ofertas solo se registran cuando estás en la tienda.');
       // Keep existing annotations only for the same shelf. A new shelf must not
       // inherit observations about vouchers/packs from a previous shop.
@@ -64,8 +70,24 @@ export function createShopSessionStore(getStorage:()=>StoragePort) {
       const vouchers=request.voucherOffers??previousVouchers;
       const previousPacks=state.schemaVersion==='0.2'&&state.observed.shop.status==='known'&&state.observed.shop.value.shopId===request.shopId?state.observed.shop.value.packOffers:undefined;
       const packs=request.packOffers??previousPacks;
-      const shop={status:'known' as const,source:'manual' as const,value:{shopId:request.shopId,cardOffers:request.offers,ignoredOtherOffers:ignored,...(vouchers===undefined?{}:{voucherOffers:structuredClone(vouchers)}),...(packs===undefined?{}:{packOffers:structuredClone(packs)})}};
-      const checked=validateState({...state,revision:state.revision+1,updatedAt:request.updatedAt,observed:{...state.observed,shop}});
+      const previousPricingTags=state.schemaVersion==='0.2'&&state.observed.shop.status==='known'&&state.observed.shop.value.shopId===request.shopId?state.observed.shop.value.pricingTags:undefined;
+      const pricingTags=request.pricingTags??previousPricingTags;
+      let jokerContext=state.observed.jokerContext;
+      if(request.consumedPricingTags?.length){
+        if(jokerContext?.status!=='known')return fail('unknown_data','Confirma las etiquetas pendientes antes de aplicar su precio.','$shop.consumedPricingTags');
+        const pending=jokerContext.value.tags;
+        if(pending?.status!=='known')return fail('unknown_data','Confirma las etiquetas pendientes antes de aplicar su precio.','$shop.consumedPricingTags');
+        const remaining=[...pending.value];
+        for(const tag of request.consumedPricingTags){
+          const index=remaining.indexOf(tag);
+          if(index<0)return fail('missing_tag','La etiqueta de precio ya no está pendiente: '+tag+'.','$shop.consumedPricingTags');
+          remaining.splice(index,1);
+        }
+        jokerContext={...structuredClone(jokerContext),value:{...structuredClone(jokerContext.value),tags:{status:'known',source:'confirmedPreset',value:remaining}}};
+      }
+      const shop={status:'known' as const,source:'manual' as const,value:{shopId:request.shopId,cardOffers:request.offers,ignoredOtherOffers:ignored,...(vouchers===undefined?{}:{voucherOffers:structuredClone(vouchers)}),...(packs===undefined?{}:{packOffers:structuredClone(packs)}),...(pricingTags?{pricingTags:structuredClone(pricingTags)}:{})}};
+      const contextPatch=request.consumedPricingTags?.length?{jokerContext}:{};
+      const checked=validateState({...state,revision:state.revision+1,updatedAt:request.updatedAt,observed:{...state.observed,shop,...contextPatch}});
       if(!checked.ok)return checked;
       if(request.confirmed!==true)return fail('confirmation_required','Confirma que estas son las ofertas observadas.');
       if(record.history.some(entry=>entry.id===request.confirmationId))return fail('duplicate_confirmation','Este ID ya fue registrado. No se aplica dos veces.');
@@ -75,10 +97,10 @@ export function createShopSessionStore(getStorage:()=>StoragePort) {
       // An unused ID on this no-op has not been consumed as a confirmation.
       const canonical=(value:unknown):unknown=>Array.isArray(value)?value.map(canonical):value && typeof value==='object'
         ? Object.fromEntries(Object.entries(value).sort(([a],[b])=>a.localeCompare(b)).map(([key,v])=>[key,canonical(v)])):value;
-      if(JSON.stringify(canonical(previous))===JSON.stringify(canonical(shop)))return {ok:true,value:record};
+      if(!request.consumedPricingTags?.length&&JSON.stringify(canonical(previous))===JSON.stringify(canonical(shop)))return {ok:true,value:record};
       return confirmed.correct({
         confirmationId:request.confirmationId,confirmed:request.confirmed,expected:request.expected,updatedAt:request.updatedAt,
-        patch:{shop},
+        patch:{shop,...contextPatch},
         reason:'Ofertas de tienda transcritas por el usuario. Registrar una oferta no confirma su compra.'
       });
     },

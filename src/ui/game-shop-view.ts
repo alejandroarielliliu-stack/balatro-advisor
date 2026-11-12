@@ -9,6 +9,7 @@ import {buildShopAdviceSummary,comparedShopPurchase} from './shop-advice-summary
 import {currentShopPlan} from './shop-plan-view.js';
 import {observedRerollQuote} from '../rules/reroll-quote.js';
 import {openShopJokerPicker} from './shop-joker-picker.js';
+import {normalizeShopSnapshot} from '../rules/shop-offer-prices.js';
 
 const el=<K extends keyof HTMLElementTagNameMap>(tag:K,text='',className='')=>{const e=document.createElement(tag);e.textContent=text;e.className=className;return e;};
 const value=<T>(fact:Fact<T>|undefined)=>fact?.status==='known'?fact.value:undefined;
@@ -49,22 +50,25 @@ export function mountGameShop(stage:HTMLElement,options:GameShopOptions){
  editor.addEventListener('close',()=>{const target=returnOffer?section.querySelector<HTMLElement>(`[data-game-shop-offer="${CSS.escape(returnOffer)}"]`):section.querySelector<HTMLElement>(`[data-game-shop-kind="${returnKind}"][data-game-shop-empty="true"]`);(target??next).focus({preventScroll:true});});
  const readSnapshot=(current:GameState):ShopSnapshot=>{
   const shop=current.observed.shop.status==='known'?current.observed.shop.value:undefined,extras=current.schemaVersion==='0.2'&&current.observed.shop.status==='known'?current.observed.shop.value:undefined;
-  return {id:shop?.shopId??snapshot.id,jokers:(shop?.cardOffers??[]).filter(offer=>offer.kind==='joker').map(offer=>{
+  return normalizeShopSnapshot(current,{id:shop?.shopId??snapshot.id,jokers:(shop?.cardOffers??[]).filter(offer=>offer.kind==='joker').map(offer=>{
    const counters=extras?.cardOffers.find(item=>item.offerId===offer.offerId)?.counters;
-   return {offerId:offer.offerId,catalogId:offer.catalogId,price:value(offer.price)??null,edition:value(offer.edition)??'unknown',stickers:[...(value(offer.stickers)??['unknown'])],...(counters?{counters:structuredClone(counters)}:{})};
+   const extra=extras?.cardOffers.find(item=>item.offerId===offer.offerId);
+   return {offerId:offer.offerId,catalogId:offer.catalogId,price:value(offer.price)??null,edition:value(offer.edition)??'unknown',stickers:[...(value(offer.stickers)??['unknown'])],...(counters?{counters:structuredClone(counters)}:{}),...(extra?.couponed===undefined?{}:{couponed:extra.couponed})};
   }),
    vouchers:(extras?.voucherOffers??[]).map(offer=>({offerId:offer.offerId,catalogId:offer.catalogId,price:value(offer.price)??null})),
-   packs:(extras?.packOffers??[]).flatMap(offer=>{const definition=BOOSTER_CATALOG.find(pack=>pack.id===offer.catalogId);return definition?[{offerId:offer.offerId,family:definition.family,size:definition.size,price:value(offer.price)??null}]:[];}),
-   rerollCost:observedRerollQuote(current)};
+   packs:(extras?.packOffers??[]).flatMap(offer=>{const definition=BOOSTER_CATALOG.find(pack=>pack.id===offer.catalogId);return definition?[{offerId:offer.offerId,family:definition.family,size:definition.size,price:value(offer.price)??null,...(offer.couponed===undefined?{}:{couponed:offer.couponed})}]:[];}),
+   rerollCost:observedRerollQuote(current)}).snapshot;
  };
  function inspect(kind:Kind,offer?:JokerOffer|VoucherOffer|PackOffer){
   if(!state)return;
   const binding={runId:state.runId,revision:state.revision},shelf=structuredClone(snapshot),offerId=offer?.offerId??crypto.randomUUID();
   if(kind==='joker'){
    const existing=offer as JokerOffer|undefined,trigger=document.activeElement instanceof HTMLElement?document.activeElement:undefined;
+   const recorded=state.observed.shop.status==='known'?state.observed.shop.value.cardOffers.find(item=>item.offerId===existing?.offerId):undefined;
    openShopJokerPicker({
-    ...(existing?{offer:structuredClone(existing)}:{}),
+    ...(existing?{offer:{...structuredClone(existing),price:recorded?value(recorded.price)??null:existing.price}}:{}),
     canWrite:()=>writable,
+    quote:item=>{const changed=structuredClone(shelf),index=changed.jokers.findIndex(previous=>previous.offerId===item.offerId);if(index<0)changed.jokers.push(item);else changed.jokers[index]=item;return {price:normalizeShopSnapshot(state!,changed).snapshot.jokers.find(offer=>offer.offerId===item.offerId)!.price};},
     save:item=>{
      const changed=structuredClone(shelf),index=changed.jokers.findIndex(previous=>previous.offerId===item.offerId);
      if(index<0)changed.jokers.push(item);else changed.jokers[index]=item;
@@ -85,16 +89,18 @@ export function mountGameShop(stage:HTMLElement,options:GameShopOptions){
   const choices=kind==='voucher'?VOUCHER_CATALOG:BOOSTER_CATALOG;
   for(const choice of choices){const option=el('option',choice.name);option.value=choice.id;catalog.append(option);}catalogLabel.append(catalog);editor.append(catalogLabel);
   catalog.value=offer?('catalogId'in offer?offer.catalogId:offer.family+'-'+offer.size):'';
-  const priceLabel=el('label','Precio observado ($)'),price=el('input');price.id='game-shop-price';price.type='number';price.inputMode='numeric';price.step='1';price.min='0';price.value=offer?.price===null||!offer?'':String(offer.price);price.placeholder='Desconocido';priceLabel.append(price);editor.append(priceLabel);
+  const priceLabel=el('label','Precio calculado'),price=el('output');price.id='game-shop-price';priceLabel.append(price);editor.append(priceLabel);
+  const calculated=()=>{const changed=structuredClone(shelf);if(kind==='voucher'){changed.vouchers=changed.vouchers.filter(item=>item.offerId!==offerId);changed.vouchers.push({offerId,catalogId:catalog.value,price:null});}else {const pack=BOOSTER_CATALOG.find(item=>item.id===catalog.value);changed.packs=changed.packs.filter(item=>item.offerId!==offerId);if(pack)changed.packs.push({offerId,family:pack.family,size:pack.size,price:null});}const normalized=normalizeShopSnapshot(state!,changed).snapshot;return (kind==='voucher'?normalized.vouchers:normalized.packs).find(item=>item.offerId===offerId)?.price??null;};
   const note=el('p','Registrar una oferta no compra el artículo. Introduce lo que ves en Balatro.','game-shop-editor-note');
   const why=el('p','','game-shop-editor-note');why.hidden=true;
   const editorError=el('p','','game-shop-editor-error');editorError.id='game-shop-editor-error';editorError.setAttribute('role','alert');
   const actions=el('div','','game-shop-editor-actions'),save=el('button','Guardar oferta'),buy=el('button',kind==='pack'?'Abrir sobre':'Comprar'),remove=el('button','Quitar oferta','game-shop-editor-remove');
   save.id='game-shop-save';buy.id='game-shop-buy';remove.id='game-shop-remove';for(const button of [save,buy,remove])button.type='button';
-  const originalCatalog=catalog.value,originalPrice=price.value;
+  const originalCatalog=catalog.value;
   const updateControls=()=>{
    save.disabled=!writable;remove.disabled=!writable||!offer;
-   const changed=catalog.value!==originalCatalog||price.value!==originalPrice;
+   const amount=calculated();price.value=amount===null?'$—':'$'+amount;
+   const changed=catalog.value!==originalCatalog;
    buy.disabled=!writable||!offer||changed;buy.title=changed?'Guarda la oferta antes de registrar su compra.':!offer?'Guarda primero la oferta.':'';
    why.hidden=changed||!preferred||preferred.offerId!==offerId||state?.revision!==binding.revision||state?.runId!==binding.runId;
    why.textContent=why.hidden?'':preferred!.reason;
@@ -102,7 +108,7 @@ export function mountGameShop(stage:HTMLElement,options:GameShopOptions){
   editor.oninput=updateControls;editor.onchange=updateControls;
   const observe=(changed:ShopSnapshot)=>{const problem=options.observe(changed,binding);if(problem){editorError.textContent=problem;updateControls();return;}editor.close();};
   save.onclick=()=>{
-   const amount=price.value.trim()===''?null:Number(price.value);if(amount!==null&&(!Number.isSafeInteger(amount)||amount<0)){editorError.textContent='Introduce un precio entero no negativo o déjalo desconocido.';price.focus();return;}
+   const amount=calculated();
    if(!choices.some(choice=>choice.id===catalog.value)){editorError.textContent='Selecciona el artículo que ves en la tienda.';catalog.focus();return;}
    const changed=structuredClone(shelf);
    if(kind==='voucher'){const item:VoucherOffer={offerId,catalogId:catalog.value,price:amount},index=changed.vouchers.findIndex(item=>item.offerId===offerId);if(index<0)changed.vouchers.push(item);else changed.vouchers[index]=item;}

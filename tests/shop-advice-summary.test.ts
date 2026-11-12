@@ -45,7 +45,7 @@ test('UX01: unknown current price prompts for that price without inventing cost 
 });
 test('UX01: unsupported observed discount remains a visible blocker, not a successful cheap purchase',()=>{
  const f=fixture();f.snapshot.jokers=[offer('joker',1)];const s=buildShopAdviceSummary(inspect(f));
- assert.equal(s.status,'abstain');assert.match(s.pending!,/Fuera del cálculo compatible.*Precio distinto/);assert.equal(s.sacrifice,null);
+ assert.equal(s.status,'abstain');assert.match(s.pending!,/Fuera del cálculo compatible.*precio registrado.*precio calculado/);assert.equal(s.sacrifice,null);
 });
 test('UX01: strict mode surfaces pending gameplay evidence before generic data questions',()=>{
  const f=fixture();f.snapshot.jokers=[offer('joker',2)];const s=buildShopAdviceSummary(inspect(f,true));

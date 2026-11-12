@@ -8,6 +8,7 @@ import type {RunProgressCommand,InventoryConfirmation,BlindInfo} from '../run/pr
 import {nextBlindAfter,inventoryGroups} from '../run/progress.js';
 import {DECK_PROFILES,deckDefinition} from '../catalog/decks.js';
 import {blindRequirement} from '../catalog/blinds.js';
+import {tagsAfterObservedSkip} from '../rules/price-tags.js';
 
 const el=<K extends keyof HTMLElementTagNameMap>(tag:K,text='',cl='')=>{const e=document.createElement(tag);e.textContent=text;e.className=cl;return e;};
 const value=<T>(f:Fact<T>|undefined)=>f?.status==='known'?f.value:undefined;
@@ -106,7 +107,7 @@ export function renderRunJourney(host:HTMLElement,options:JourneyOptions){
    action('run-skip-blind','Salté esta ciega',()=>{
     const body=el('div','','journey-dialog'),done=check('progress-skip-resolved','Ya resolví los efectos y estoy en la siguiente selección'),money=field('progress-money','Saldo actual ($) · opcional');
     body.append(done.wrap,money.wrap,el('small','No cobras una ronda ni visitas una tienda. Indica cambios después de resolver sobres y recompensas en Balatro.'));
-    const readInventory=inventory(body),details=el('details');details.append(el('summary','Etiquetas pendientes después del salto'));const readTags=queueEditor(details,undefined);body.append(details);
+    const readInventory=inventory(body),details=el('details');details.append(el('summary','Etiquetas pendientes después del salto'));const readTags=queueEditor(details,tagsAfterObservedSkip(state));body.append(details);
     open('Registré el salto',body,'Registrar salto',()=>{
      if(!done.input.checked)throw Error('Termina los efectos en Balatro y confirma que estás en la siguiente selección.');
      const moneyValue=number(money.input,Number.MIN_SAFE_INTEGER,true),next=nextBlindAfter(state,blind);

@@ -28,7 +28,7 @@ function fixture({money=40,jokers=[]}={}){
  state.observed.resources={handsPerRound:known(5),discardsPerRound:known(3),handSize:known(8),jokerSlots:known(5)};
  state.observed.outOfScope=known({vouchers:[],consumables:[],pendingTags:[],otherModifiers:[]});
  state.observed.shop=known({shopId:'voucher-shop',cardOffers:[{
-  offerId:'o1',catalogId:'joker',label:'Joker',kind:'joker',price:known(2),edition:known('base'),stickers:known([])
+  offerId:'o1',catalogId:'joker',label:'Joker',kind:'joker',price:known(2),edition:known('base'),stickers:known([]),couponed:false
  }],voucherOffers:[],ignoredOtherOffers:['Contenido de sobres sin observar.']});
  return {schemaVersion:'confirmed-2',initialState:structuredClone(state),state,history:[]};
 }
@@ -37,9 +37,10 @@ const modules=[
  'dist/src/rules/voucher-shop.js','dist/src/state/model.js','dist/src/state/validation.js',
  'dist/src/state/legacy-model.js','dist/src/state/migration.js','dist/src/storage/confirmed-store.js',
  'dist/src/storage/confirmed-record.js','dist/src/storage/shop-session.js','dist/src/catalog/vouchers.js',
- 'dist/src/rules/engine-evidence.js','dist/src/rules/economic-jokers.js'
+ 'dist/src/rules/engine-evidence.js','dist/src/rules/economic-jokers.js',
+ 'dist/src/rules/shop-pricing.js','dist/src/rules/shop-offer-prices.js','dist/src/rules/price-tags.js'
 ];
-assert.equal(modules.length,14);
+assert.equal(modules.length,17);
 const report={date:new Date().toISOString(),url:origin.href,commit:process.env.VOUCHER_SHOP_COMMIT??null,
  workflow:process.env.VOUCHER_SHOP_WORKFLOW??null,environment:'Chrome temporary profiles; desktop and 390px mobile emulation',
  gameObservation:false,physicalAndroid:false,criticalModules:modules.length,hashes:[],cases:[],pageErrors:[]};
@@ -109,14 +110,18 @@ try{
  const editor=page=>page.locator('#store-item-editor');
  const closeEditor=async page=>{if(await page.locator('#store-item-editor[open]').count())await editor(page).getByRole('button',{name:'Cerrar',exact:true}).click();};
  const openVoucher=async(page,id)=>{await tile(page,id).locator('.store-extra-inspect').click();await editor(page).waitFor({state:'visible'});};
- const prepareOffer=async(page,catalogId='v_grabber',price=10)=>{
+ const assertPrice=async(page,amount)=>{
+  assert.equal(await page.locator('input#store-item-price').count(),0,'Shop prices are calculated, never editable');
+  assert.equal(await page.locator('output#store-item-price').textContent(),`$${amount??'—'}`);
+ };
+ const prepareOffer=async(page,catalogId='v_grabber')=>{
   await page.locator('#store-voucher-add').click();await editor(page).waitFor({state:'visible'});
   await page.locator('#store-item-id').selectOption(catalogId);
-  await page.locator('#store-item-price').fill(price===null?'':String(price));
+  await assertPrice(page,10);
  };
- const add=async(page,catalogId='v_grabber',price=10)=>{
+ const add=async(page,catalogId='v_grabber')=>{
   const before=(await record(page)).state.observed.shop.value.voucherOffers??[];
-  await prepareOffer(page,catalogId,price);await page.locator('#store-item-save').click();
+  await prepareOffer(page,catalogId);await page.locator('#store-item-save').click();
   await editor(page).waitFor({state:'hidden'});
   const next=(await record(page)).state.observed.shop.value.voucherOffers??[];
   const added=next.filter(offer=>!before.some(previous=>previous.offerId===offer.offerId));
@@ -169,7 +174,7 @@ try{
  assert.match(await page.locator(`[data-advice-offer="${id}"]`).innerText(),/Agarrador|Grabber/);
  await closeAdvice(page);await openVoucher(page,id);
  assert.equal(await page.locator('#store-item-id').inputValue(),'v_grabber');
- assert.equal(await page.locator('#store-item-price').inputValue(),'10');
+ await assertPrice(page,10);
  await page.screenshot({path:dir+'/desktop.png',fullPage:false});
  await closeEditor(page);
  assert.equal(await raw(page),before,'Inspecting advice and an offered voucher preserves exact bytes');
@@ -214,17 +219,22 @@ try{
  // 4. Each rejected voucher leaves its bytes intact, while an affordable Joker
  // remains independently purchasable. A full Joker area still permits a voucher.
  const rejectedCases=[
-  {name:'discounted-price',catalogId:'v_grabber',price:7,money:40,jokerAfter:38,pattern:/precio|base|cobertura/i},
-  {name:'unknown-price',catalogId:'v_grabber',price:null,money:40,jokerAfter:38,pattern:/precio|dato|desconocid/i},
-  {name:'unsupported-voucher',catalogId:'v_clearance_sale',price:10,money:40,jokerAfter:38,pattern:/implementad|cobertura|compatible/i},
-  {name:'missing-prerequisite',catalogId:'v_nacho_tong',price:10,money:40,jokerAfter:38,pattern:/requer|requisito|primero|Agarrador|Grabber/i},
-  {name:'insufficient-money',catalogId:'v_grabber',price:10,money:9,jokerAfter:7,pattern:/insuficiente|dinero|saldo/i}
+  {name:'historical-wrong-price',catalogId:'v_grabber',historicalPrice:7,money:40,jokerAfter:38,pattern:/precio|base|cobertura/i},
+  {name:'historical-unknown-price',catalogId:'v_grabber',historicalPrice:null,money:40,jokerAfter:38,pattern:/precio|dato|desconocid/i},
+  {name:'unsupported-voucher',catalogId:'v_overstock_norm',money:40,jokerAfter:38,pattern:/implementad|cobertura|compatible/i},
+  {name:'missing-prerequisite',catalogId:'v_nacho_tong',money:40,jokerAfter:38,pattern:/requer|requisito|primero|Agarrador|Grabber/i},
+  {name:'insufficient-money',catalogId:'v_grabber',money:9,jokerAfter:7,pattern:/insuficiente|dinero|saldo/i}
  ];
  const rejectedResults=[];
  for(const example of rejectedCases){
-  const current=await session(fixture({money:example.money})),p=current.page;
-  const offer=await add(p,example.catalogId,example.price);
+  const input=fixture({money:example.money}),historical=Object.hasOwn(example,'historicalPrice'),historicalId='historical-'+example.name;
+  if(historical){
+   input.state.observed.shop.value.voucherOffers=[{offerId:historicalId,catalogId:example.catalogId,price:example.historicalPrice===null?{status:'unknown',reason:'Precio histórico sin observar.'}:known(example.historicalPrice)}];
+   input.initialState=structuredClone(input.state);
+  }
+  const current=await session(input),p=current.page,offer=historical?historicalId:await add(p,example.catalogId);
   before=await raw(p);count=await writes(p);await openVoucher(p,offer);
+  await assertPrice(p,10);
   const confirm=p.locator(`[data-voucher-confirm="${offer}"]`);
   assert.equal(await confirm.count(),1);
   if(await confirm.isEnabled())await confirm.click();
@@ -266,9 +276,10 @@ try{
  const quotaId=(await record(q)).state.observed.shop.value.voucherOffers[0].offerId;
  assert.equal((await record(q)).state.observed.shop.value.voucherOffers.length,1);
  before=await raw(q);await openVoucher(q,quotaId);
- await q.locator('#store-item-price').fill('7');await q.evaluate(()=>window.__voucherFailConfirmedWrite=true);
+ await q.locator('#store-item-id').selectOption('v_wasteful');await assertPrice(q,10);await q.evaluate(()=>window.__voucherFailConfirmedWrite=true);
  await q.locator('#store-item-save').click();assert.equal(await raw(q),before);
  assert.equal((await cache(q)).vouchers[0].price,10);
+ assert.equal((await cache(q)).vouchers[0].catalogId,'v_grabber','A failed identity edit restores the prior cached voucher');
  assert.match(await tile(q,quotaId).innerText(),/\$10/);
  await q.evaluate(()=>window.__voucherFailConfirmedWrite=false);await closeEditor(q);
  await begin(q,quotaId);await q.locator('#performed').check();
@@ -349,7 +360,7 @@ try{
  before=await raw(t);count=await writes(t);
  await t.locator('#store-pack-add').click();await editor(t).waitFor({state:'visible'});
  await t.locator('#store-item-id').selectOption('celestial-normal');
- await t.locator('#store-item-price').fill('4');await t.locator('#store-item-save').click();
+ await assertPrice(t,4);await t.locator('#store-item-save').click();
  await editor(t).waitFor({state:'hidden'});
  assert.equal(await t.locator('.store-extra-tile[data-store-kind="pack"]').count(),1);
  assert.notEqual(await raw(t),before);assert.equal(await writes(t),count+1);
@@ -395,20 +406,21 @@ try{
  assert.equal(await raw(c),before);assert.equal(await writes(c),count);
  assert.deepEqual((await record(c)).state.observed.shop.value.cardOffers,exactPreviousCards);
 
- const catalogFailureId=await add(c,'v_grabber',10);
+ const catalogFailureId=await add(c,'v_grabber');
  saved=await record(c);
  assert.equal(saved.state.observed.money.value,40);
  assert.equal(saved.state.observed.resources.handsPerRound.value,5);
  assert.deepEqual(saved.state.observed.outOfScope.value.vouchers,[]);
  assert.deepEqual(saved.state.observed.shop.value.cardOffers,exactPreviousCards,'Adding a voucher preserves every prior card offer exactly');
  await openVoucher(c,catalogFailureId);
- await c.locator('#store-item-price').fill('7');await c.locator('#store-item-save').click();
+ await c.locator('#store-item-id').selectOption('v_wasteful');await assertPrice(c,10);await c.locator('#store-item-save').click();
  await editor(c).waitFor({state:'hidden'});
  saved=await record(c);
- assert.equal(saved.state.observed.shop.value.voucherOffers.find(offer=>offer.offerId===catalogFailureId).price.value,7);
+ assert.equal(saved.state.observed.shop.value.voucherOffers.find(offer=>offer.offerId===catalogFailureId).catalogId,'v_wasteful');
+ assert.equal(saved.state.observed.shop.value.voucherOffers.find(offer=>offer.offerId===catalogFailureId).price.value,10);
  assert.deepEqual(saved.state.observed.shop.value.cardOffers,exactPreviousCards,'Editing a voucher preserves opaque cards and their unknown facts');
  await openVoucher(c,catalogFailureId);
- await c.locator('#store-item-price').fill('10');await c.locator('#store-item-save').click();
+ await c.locator('#store-item-id').selectOption('v_grabber');await assertPrice(c,10);await c.locator('#store-item-save').click();
  await editor(c).waitFor({state:'hidden'});
  before=await raw(c);count=await writes(c);
  await openVoucher(c,catalogFailureId);await closeEditor(c);

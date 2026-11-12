@@ -6,6 +6,7 @@ import {suitMatches} from './hand-patterns.js';
 import {fail,need,safe,valueFact} from './core.js';
 import type {Trace} from './core.js';
 import type {EffectBonus,FullJokerInput,FullEventInput} from './full-joker-contract.js';
+import {quoteShopPrice} from './shop-pricing.js';
 export const economicRule='jokers.economy';
 export function bankBalance(n:number){if(!Number.isSafeInteger(n))fail('$.observed.money','numeric_range','Saldo fuera del rango entero seguro.');return n;}
 export function economicCard(input:FullJokerInput,j:JokerInstance,card:Card):EffectBonus{
@@ -23,9 +24,10 @@ export function baseballBonus(input:FullJokerInput,other:JokerInstance):EffectBo
  const count=input.effective.filter(j=>j.catalogId==='baseball'&&j.instanceId!==other.instanceId).length;
  if(count){input.use(economicRule);return {xmult:1.5**count};}return {};
 }
-export function growSell(j:JokerInstance,amount:number,trace:Trace[]){
+export function growSell(j:JokerInstance,amount:number,trace:Trace[],state?:GameState){
  const current=need(j.sellValue,'$.jokers.'+j.instanceId+'.sellValue');
- const extra=j.counters.extraSell;const previous=extra?need(extra,'$.jokers.'+j.instanceId+'.counters.extraSell'):current-ALL_JOKER_FACTS[j.catalogId]!.sell;
+ const extra=j.counters.extraSell;
+ const previous=extra?need(extra,'$.jokers.'+j.instanceId+'.counters.extraSell'):current-(state?need(quoteShopPrice(state,{kind:'joker',catalogId:j.catalogId,edition:need(j.edition,'$.jokers.edition'),stickers:need(j.stickers,'$.jokers.stickers')}).sellValue,'$.jokers.sellValue'):ALL_JOKER_FACTS[j.catalogId]!.sell);
  if(previous<0)fail('$.jokers.'+j.instanceId,'price_mismatch','Valor de venta menor que la base sin un modificador registrado.');
  j.counters.extraSell=valueFact(safe(previous+amount));j.sellValue=valueFact(safe(current+amount));
  trace.push({ruleId:economicRule,label:'Valor de venta: '+j.catalogId,values:{instanceId:j.instanceId,before:current,increase:amount,after:current+amount}});
@@ -37,13 +39,13 @@ export function economicEvent(input:FullEventInput){
  if(input.stage==='end_round'){
   // Egg and Gift are not Blueprint-compatible. Only physical instances grow sell values.
   for(const j of physical){
-   if(j.catalogId==='egg'){input.use(economicRule);growSell(j,3,input.trace);}
+   if(j.catalogId==='egg'){input.use(economicRule);growSell(j,3,input.trace,input.state);}
    if(j.catalogId==='gift'){
     input.use(economicRule);
     const context=input.state.observed.jokerContext;
     if(!context||context.status!=='known'||!context.value.consumables)fail('$.observed.jokerContext.consumables','unknown_data','Gift Card necesita conocer los consumibles, incluso si no tienes ninguno.');
     const consumables=need(context.value.consumables,'$.observed.jokerContext.consumables');
-    for(const p of physical)growSell(p,1,input.trace);
+    for(const p of physical)growSell(p,1,input.trace,input.state);
     for(const c of consumables)c.sellValue=safe(c.sellValue+1);
    }
   }

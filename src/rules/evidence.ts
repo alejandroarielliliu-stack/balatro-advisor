@@ -22,6 +22,7 @@ export interface RuleRecord {
 export type RuleRegistry = Readonly<Record<string, RuleRecord>>;
 
 export const evidenceSources: Readonly<Record<string, Evidence>> = {
+  L15:{id:'L15',kind:'local_source',reviewedAt:'2026-11-12',uri:'docs/precios-tienda.md',summary:'Card:set_cost y Tag:apply_to_run inspeccionados en Steam1.0.1o-FULL: redondeo, ediciones, descuentos, Alquiler, Astrónomo y cupón; sin partida observada.'},
   L14:{id:'L14',kind:'local_source',reviewedAt:'2026-10-18',uri:'docs/tarot-dinero-deck04d.md',summary:'Ermitaño y Templanza: caps20/50, ingresos y uso sin objetivos inspeccionados en card.lua/game.lua de Steam1.0.1o-FULL. No partida observada.'},
   L13:{id:'L13',kind:'local_source',reviewedAt:'2026-10-18',uri:'docs/evidencia/arcana/README.md',summary:'Arcana: tamaño/precio/elecciones, mano robada una vez, Mega sin nuevo robo, uso directo y retorno a tienda, Soul/Omen Globe inspeccionados en Steam1.0.1o-FULL. Sin partida observada.'},
   L12:{id:'L12',kind:'local_source',reviewedAt:'2026-10-17',uri:'docs/evidencia/tarot/README.md',summary:'Doce Tarot dirigidos: límites, reemplazo de mejoras, cambios de palo, historial y refresco de debuff inspeccionados en Steam1.0.1o-FULL. Sin observación de partida.'},

@@ -78,7 +78,7 @@ test('Compra los diez vales integrados con efectos literales, consume solo su of
 test('Prerrequisitos, duplicados y ofertas ajenas se rechazan sin mutación',()=>{
  for(const id of ['v_nacho_tong','v_recyclomancy','v_palette','v_antimatter','v_money_tree'])rejected(fixture(id),'missing_prerequisite');
  for(const id of ['v_blank','v_seed_money'])rejected(fixture(id,[id]),'voucher_already_owned');
- for(const id of ['v_clearance_sale','v_observatory','v_future_voucher'])rejected(fixture(id),'unsupported_voucher');
+ for(const id of ['v_overstock_norm','v_observatory','v_future_voucher'])rejected(fixture(id),'unsupported_voucher');
  const noOffers=fixture();if(noOffers.observed.shop.status==='known')delete noOffers.observed.shop.value.voucherOffers;
  rejected(noOffers,'missing_offer');
  const cardOnly=fixture();const before=structuredClone(cardOnly),result=buy(cardOnly,'o1');
@@ -207,7 +207,7 @@ test('Datos necesarios desconocidos y modificadores no implementados producen er
  for(const key of ['money','shop','jokers','outOfScope'] as const){const state=fixture();state.observed[key]=missing;rejected(state,'unknown_data');}
  const slots=fixture('v_antimatter',['v_blank']);slots.observed.resources.jokerSlots=missing;rejected(slots,'unknown_data');
  const hands=fixture();hands.observed.resources.handsPerRound=missing;rejected(hands,'unknown_data');
- const unsupported=fixture();unsupported.observed.outOfScope=known({vouchers:['v_clearance_sale'],consumables:[],pendingTags:[],otherModifiers:[]});
+ const unsupported=fixture();unsupported.observed.outOfScope=known({vouchers:['v_overstock_norm'],consumables:[],pendingTags:[],otherModifiers:[]});
  rejected(unsupported,'unsupported_modifier');
  const tags=fixture();tags.observed.jokerContext=known({tags:known(['tag_handy'])});rejected(tags,'unsupported_tag');
 });

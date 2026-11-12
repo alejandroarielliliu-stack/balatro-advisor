@@ -6,6 +6,7 @@ import {currentDeckCards,summarizeDeckCards} from '../state/deck-material.js';
 import type {Card} from '../catalog/initial.js';
 import {initialCounters,counterSpecs} from '../catalog/joker-counters.js';
 import {applyShopAction} from '../rules/shop.js';
+import {quoteShopPrice} from '../rules/shop-pricing.js';
 import {FIT_PROFILES} from './fit-profiles.js';
 import type {FitProfile,FitRole} from './fit-profiles.js';
 import {inspectCompositions} from './composition-signals.js';
@@ -16,7 +17,7 @@ export const FIT_POLICY=FIT_INDEX_POLICY.id;
 export const FIT_AXES={stage:4,readiness:3,integration:3} as const;
 /** Editorial bands of known deck composition, never probabilities of draws. */
 export const FIT_MATERIAL_BANDS={moderate:1/4,strong:1/2} as const;
-export interface FitOptions {ante?:number;instanceId?:string;purchase?:boolean;replacementId?:string;intendedHand?:string;requireObserved?:boolean;offer?:{price:Fact<number>;edition:Fact<string>;stickers:Fact<string[]>;counters?:Record<string,Fact<number>>}}
+export interface FitOptions {ante?:number;instanceId?:string;purchase?:boolean;replacementId?:string;intendedHand?:string;requireObserved?:boolean;offer?:{price:Fact<number>;edition:Fact<string>;stickers:Fact<string[]>;counters?:Record<string,Fact<number>>;couponed?:boolean}}
 export interface FitSignal {id:string;kind:'fact'|'heuristic'|'potential'|'conflict';text:string}
 export interface QuickFit {
  id:string;instanceId?:string;policy:string;score:number|null;range:[number,number|null]|null;
@@ -201,7 +202,7 @@ export function projectJokerPurchase(state:GameState,id:string,options:FitOption
  const none:QuickFit['purchase']={status:'not-requested',errors:[],limitations:[]};if(!options.purchase)return none;
  const definition=jokerDefinition(id);if(!definition)return {status:'unknown',errors:[],limitations:['La transacción de este efecto queda fuera de H2.']};
  const copy=structuredClone(state);let instanceId='hypothetical:quick-fit';while(v(copy.observed.jokers)?.some(j=>j.instanceId===instanceId))instanceId='_'+instanceId;
- copy.observed.shop=k({shopId:'hypothetical:quick-fit',cardOffers:[{offerId:'quick-fit',catalogId:id,label:ALL_JOKER_FACTS[id]!.name,kind:'joker',price:structuredClone(options.offer?.price??k(definition.price)),edition:structuredClone(options.offer?.edition??k('base')),stickers:structuredClone(options.offer?.stickers??k([])),...(options.offer?.counters?{counters:structuredClone(options.offer.counters)}:{})}],ignoredOtherOffers:[]});
+ copy.observed.shop=k({shopId:'hypothetical:quick-fit',cardOffers:[{offerId:'quick-fit',catalogId:id,label:ALL_JOKER_FACTS[id]!.name,kind:'joker',price:structuredClone(options.offer?.price??quoteShopPrice(copy,{kind:'joker',catalogId:id,edition:'base',stickers:[]}).price),edition:structuredClone(options.offer?.edition??k('base')),stickers:structuredClone(options.offer?.stickers??k([])),...(options.offer?.counters?{counters:structuredClone(options.offer.counters)}:{}),...(options.offer?.couponed===undefined?{}:{couponed:options.offer.couponed})}],ignoredOtherOffers:[]});
  const result=applyShopAction(copy,options.replacementId?{type:'replace',sellInstanceId:options.replacementId,offerId:'quick-fit',instanceId}:{type:'buy',offerId:'quick-fit',instanceId},{expectedRevision:copy.revision,updatedAt:copy.updatedAt},{requireObserved:!!options.requireObserved});
  const limits=result.evidence.limitations.map(item=>item.message);
  if(!result.ok)return {status:result.errors.some(e=>['insufficient_money','no_slots','eternal_joker','missing_joker'].includes(e.code))?'illegal':'unknown',errors:result.errors,limitations:limits};

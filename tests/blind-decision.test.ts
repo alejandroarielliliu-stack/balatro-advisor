@@ -62,7 +62,7 @@ test('TAG01b fin de ronda consume Investment una vez y preserva Double; plan ter
 });
 test('TAG01b sin planes solo hay efecto inmediato; no diagnostica supervivencia ni guarda proyección',()=>{
  const s=selection(),copy=structuredClone(s),r=success(compareBlindChoices(s));assert.equal(r.recommendation.status,'abstain');assert.equal(r.play,null);assert.equal(r.afterSkip,null);assert.equal(r.differences.length,0);assert.equal(r.skip.ok,true);assert.deepEqual(s,copy);
- const real=success(applyRunProgress(s,{type:'skip_blind',atNextSelection:true},{expectedRevision:0,updatedAt:now,inventory:{unchanged:true}}));assert.equal(real.state.observed.money.status,'unknown');assert.equal(real.state.observed.jokerContext?.status==='known'?real.state.observed.jokerContext.value.tags?.status:null,'unknown');
+ const real=success(applyRunProgress(s,{type:'skip_blind',atNextSelection:true},{expectedRevision:0,updatedAt:now,inventory:{unchanged:true}}));assert.equal(real.state.observed.money.status,'unknown');assert.deepEqual(real.state.observed.jokerContext?.status==='known'?real.state.observed.jokerContext.value.tags:null,{status:'known',source:'confirmedPreset',value:[]});
 });
 test('TAG01b jugar condicional: royal1208, $11 frente8 sin precio ficticio de tienda',()=>{
  const s=selection(),copy=structuredClone(s),r=success(compareBlindChoices(s,{playScenarios:[scenario()]}));assert.equal(r.differences[0]?.score,1208);assert.equal(r.differences[0]?.moneyAfterPlay,11);assert.equal(r.differences[0]?.moneyAfterSkip,8);assert.equal(r.differences[0]?.playMinusSkip,3);assert.equal(r.recommendation.status,'conditional');assert.equal(r.recommendation.preferred,'play');assert.deepEqual(s,copy);

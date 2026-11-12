@@ -4,7 +4,7 @@ import {VOUCHER_CATALOG} from './voucher-catalog.js';
 export const VOUCHER_EFFECTS:Readonly<Record<string,Readonly<Partial<Record<'hands'|'discards'|'handSize'|'jokerSlots',number>>>>>={
  v_grabber:{hands:1},v_nacho_tong:{hands:1},v_wasteful:{discards:1},v_recyclomancy:{discards:1},
  v_paint_brush:{handSize:1},v_palette:{handSize:1},v_blank:{},v_antimatter:{jokerSlots:1},
- v_seed_money:{},v_money_tree:{}
+ v_seed_money:{},v_money_tree:{},v_clearance_sale:{},v_liquidation:{}
 };
 export const supportsVoucher=(id:string)=>Object.hasOwn(VOUCHER_EFFECTS,id);
 /** Manual annotations may use the full catalogue without enabling their rules. */

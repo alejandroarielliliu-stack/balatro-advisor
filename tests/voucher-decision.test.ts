@@ -105,7 +105,7 @@ test('SHOP02a DEC00 dinero, prerrequisitos, duplicados y cobertura del vale no b
  const poor=fixture();poor.observed.money=known(9);cases.push([poor,'insufficient_money']);
  const prerequisite=fixture();shelf(prerequisite).voucherOffers![0]!.catalogId='v_nacho_tong';cases.push([prerequisite,'missing_prerequisite']);
  const duplicate=fixture();shelf(duplicate).voucherOffers![0]!.catalogId='v_blank';duplicate.observed.outOfScope=known({vouchers:['v_blank'],consumables:[],pendingTags:[],otherModifiers:[]});cases.push([duplicate,'voucher_already_owned']);
- const unsupported=fixture();shelf(unsupported).voucherOffers![0]!.catalogId='v_clearance_sale';cases.push([unsupported,'unsupported_voucher']);
+ const unsupported=fixture();shelf(unsupported).voucherOffers![0]!.catalogId='v_overstock_norm';cases.push([unsupported,'unsupported_voucher']);
  const discounted=fixture();shelf(discounted).voucherOffers![0]!.price=known(7);cases.push([discounted,'unsupported_price']);
  for(const [state,code] of cases){
   const before=structuredClone(state),decision=success(inspectShopDecision(state,snapshot(state))),voucher=decision.voucherActions[0]!;

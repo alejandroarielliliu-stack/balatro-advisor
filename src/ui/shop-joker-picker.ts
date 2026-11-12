@@ -13,6 +13,7 @@ export interface ShopJokerDraft {
 export interface ShopJokerPickerOptions {
  offer?:ShopJokerDraft;
  canWrite():boolean;
+ quote(offer:ShopJokerDraft):{price:number|null;reason?:string};
  save(offer:ShopJokerDraft):string|null;
  remove?():string|null;
  buy?():string|null;
@@ -48,11 +49,16 @@ export function openShopJokerPicker(options:ShopJokerPickerOptions,trigger?:HTML
  const original=options.offer?structuredClone(options.offer):undefined;
  let draft:ShopJokerDraft=original?structuredClone(original):{offerId:crypto.randomUUID(),catalogId:'',price:null,edition:'base',stickers:[]};
  let data:JokerCollection|null=null,page=0,query='',chosen:JokerReference|undefined,modifier:'edition'|'stickers'|'counters'|null=null;
- let price:HTMLInputElement|undefined,error:HTMLElement|undefined;
+ let error:HTMLElement|undefined;
  const initialHash=location.hash;
  const resize=()=>{
   const frame=document.getElementById('app-viewport');
-  if(frame)stage.style.setProperty('--shop-picker-scale',String(Math.min(frame.clientWidth/1280,frame.clientHeight/600)));
+  if(!frame)return;
+  const detail=dialog.dataset.mode==='detail',desktop=detail&&document.querySelector<HTMLElement>('.blind-stage')?.dataset.layout==='desktop';
+  const width=desktop?960:1280,scale=Math.min(frame.clientWidth/width,frame.clientHeight/600);
+  stage.dataset.layout=desktop?'desktop':'compact';
+  stage.style.width=width+'px';stage.style.height=(detail?frame.clientHeight/scale:600)+'px';
+  stage.style.setProperty('--shop-picker-scale',String(scale));
  };
  const onRoute=()=>{if(location.hash!==initialHash)dialog.close();};
  const close=()=>dialog.close();
@@ -61,11 +67,10 @@ export function openShopJokerPicker(options:ShopJokerPickerOptions,trigger?:HTML
   const defaults=draft.catalogId==='green_joker'?{greenMult:{status:'known' as const,source:'manual' as const,value:0}}:initialCounters(draft.catalogId);
   return {...defaults,...draft.counters};
  };
- const readPrice=()=>{
-  if(!price)return true;
-  const amount=price.value.trim()===''?null:Number(price.value);
-  if(amount!==null&&(!Number.isSafeInteger(amount)||amount<0)){showError('Introduce un precio entero desde $0.');price.focus();return false;}
-  draft.price=amount;return true;
+ const calculatePrice=()=>{
+  const quote=options.quote(structuredClone(draft));
+  draft.price=quote.price;
+  return quote;
  };
  const unchanged=()=>!!original&&JSON.stringify(draft)===JSON.stringify(original);
  const finish=(operation:()=>string|null)=>{
@@ -79,6 +84,7 @@ export function openShopJokerPicker(options:ShopJokerPickerOptions,trigger?:HTML
   draft.catalogId=id;chosen=joker;modifier=null;renderDetail();
  };
  function renderGallery(){
+  dialog.dataset.mode='gallery';resize();
   modifier=null;panel.className='shop-joker-panel shop-joker-gallery';panel.removeAttribute('id');
   const heading=element('div','','shop-joker-heading'),title=element('h2','Comodines');
   heading.append(title,button('Cerrar','shop-joker-close',close));heading.lastElementChild!.id='game-shop-close';
@@ -105,19 +111,24 @@ export function openShopJokerPicker(options:ShopJokerPickerOptions,trigger?:HTML
  }
  function renderDetail(){
   if(!chosen)return;
+  dialog.dataset.mode='detail';resize();
   const joker=chosen,specs=specsFor(draft.catalogId);
+  const quote=calculatePrice();
   panel.className='shop-joker-panel shop-joker-detail';panel.id='shop-joker-detail';
-  const closeButton=button('Cerrar','shop-joker-close',close);closeButton.id='game-shop-close';
+  const closeButton=button('×','shop-joker-close',close);closeButton.id='game-shop-close';closeButton.setAttribute('aria-label','Cerrar ficha');
   const portrait=element('div','','shop-joker-portrait shop-joker-art');portrait.dataset.jokerEdition=draft.edition;portrait.append(jokerArt(joker.id,joker.names.es));
-  const info=element('div','','shop-joker-info'),name=element('h2',joker.names.es),description=element('p',joker.localization.es.description.replace(/\((?:Actualmente|Currently)[^)]*\)/gi,'').trim(),'shop-joker-description');
-  const current=element('p','','shop-joker-current');
+  const info=element('div','','shop-joker-info'),name=element('h2',joker.names.es),description=element('p',joker.localization.es.description.replace(/\((?:Actualmente|Currently)[^)]*\)/gi,'').replace('cualquierpaquete','cualquier paquete').trim(),'shop-joker-description');
+  const current=element('span','','shop-joker-current');
   const values=Object.entries(specs).map(([key,spec])=>{
    const fact=currentCounters()[key],amount=fact?.status==='known'?fact.value:undefined;
-   return amount===undefined?null:key==='x100'?`×${(amount/100).toLocaleString('es')}`:`${spec.label}: ${amount}`;
+   if(amount===undefined)return null;
+   if(key==='x100')return `Actualmente ×${(amount/100).toLocaleString('es')} Mult`;
+   if(key==='mult'||key==='greenMult')return `Actualmente +${amount} Mult`;
+   return `${spec.label}: ${amount}`;
   }).filter(Boolean);
-  current.textContent=values.join(' · ');current.hidden=!values.length;
+  current.textContent='('+values.join(' · ')+')';current.hidden=!values.length;description.append(current);
   const rarity=element('span',rarityNames[joker.rarity]??'','shop-joker-rarity');rarity.dataset.rarity=String(joker.rarity);
-  info.append(name,description,current,rarity);
+  info.append(name,description,rarity);
   const tools=element('div','','shop-joker-tools');
   const slot=(id:string,label:string,selected:boolean,action:()=>void)=>{
    const node=button('+','shop-joker-slot',action);node.id=id;node.setAttribute('aria-label',label);node.setAttribute('aria-expanded',String(modifier===id.replace('shop-joker-','')));node.dataset.selected=String(selected);tools.append(node);return node;
@@ -127,18 +138,21 @@ export function openShopJokerPicker(options:ShopJokerPickerOptions,trigger?:HTML
   const stickerButton=slot('shop-joker-stickers','Pegatinas'+(draft.stickers.length?' · '+draft.stickers.map(id=>stickerNames[id]??id).join(', '):''),draft.stickers.length>0,()=>openModifier('stickers'));
   stickerButton.title='Pegatinas';if(draft.stickers.length)stickerButton.textContent=draft.stickers.includes('unknown')?'?':'✓';
   if(Object.keys(specs).length){const pencil=slot('shop-joker-counters','Editar valores actuales',!!draft.counters,()=>openModifier('counters'));pencil.textContent='✎';pencil.title='Valores actuales';}
-  const priceLabel=element('label','Precio ($)','shop-joker-price');price=element('input');price.id='game-shop-price';price.type='number';price.min='0';price.step='1';price.inputMode='numeric';price.placeholder='Desconocido';price.value=draft.price===null?'':String(draft.price);priceLabel.append(price);
+  const priceLabel=element('div','','shop-joker-price'),price=element('output',draft.price===null?'$—':'$'+draft.price);
+  price.id='game-shop-price';price.setAttribute('aria-label','Precio calculado');price.setAttribute('aria-live','polite');
+  priceLabel.append(element('span','Precio'),price);
   error=element('p','','shop-joker-error');error.id='game-shop-editor-error';error.setAttribute('role','alert');
-  const actions=element('div','','shop-joker-actions'),save=button('Guardar oferta','shop-joker-save',()=>{if(readPrice())finish(()=>options.save(structuredClone(draft)));});save.id='game-shop-save';save.disabled=!options.canWrite()||!!modifier;actions.append(save);
-  if(original&&options.buy){const buy=button('Compré','shop-joker-buy',()=>finish(()=>options.buy!()));buy.id='game-shop-buy';buy.disabled=!options.canWrite()||!unchanged()||!!modifier;actions.append(buy);price.oninput=()=>{if(readPrice())buy.disabled=!options.canWrite()||!unchanged()||!!modifier;};}
-  if(original&&options.remove){const remove=button('Quitar oferta','shop-joker-remove',()=>finish(()=>options.remove!()));remove.id='game-shop-remove';remove.disabled=!options.canWrite()||!!modifier;actions.append(remove);}
-  const back=button('Volver a comodines','shop-joker-back',()=>{if(readPrice())renderGallery();});back.id='shop-joker-back';
+  const actions=element('div','','shop-joker-actions'),save=button(original?'Guardar':'Añadir','shop-joker-save',()=>{calculatePrice();finish(()=>options.save(structuredClone(draft)));});save.id='game-shop-save';save.disabled=!options.canWrite()||!!modifier;actions.append(save);
+  if(original&&options.buy){const buy=button('Compré','shop-joker-buy',()=>finish(()=>options.buy!()));buy.id='game-shop-buy';buy.disabled=!options.canWrite()||!unchanged()||!!modifier;actions.append(buy);}
+  if(original&&options.remove){const remove=button('Quitar','shop-joker-remove',()=>finish(()=>options.remove!()));remove.id='game-shop-remove';remove.disabled=!options.canWrite()||!!modifier;actions.append(remove);}
+  const back=button('Comodines','shop-joker-back',renderGallery);back.id='shop-joker-back';
   panel.replaceChildren(closeButton,portrait,info,tools,priceLabel,error,actions,back);
+  if(draft.price===null&&quote.reason)showError(quote.reason);
   if(modifier)renderModifier();
-  else price.focus({preventScroll:true});
+  else save.focus({preventScroll:true});
  }
  function openModifier(kind:'edition'|'stickers'|'counters'){
-  if(!readPrice())return;modifier=kind;renderDetail();
+  modifier=kind;renderDetail();
  }
  function renderModifier(){
   if(!modifier)return;
@@ -181,6 +195,7 @@ export function openShopJokerPicker(options:ShopJokerPickerOptions,trigger?:HTML
   (kind==='edition'?edition:fields.values().next().value)?.focus({preventScroll:true});
  }
  dialog.addEventListener('cancel',event=>{if(modifier){event.preventDefault();modifier=null;renderDetail();}});
+ dialog.addEventListener('click',event=>{if(dialog.dataset.mode==='detail'&&(event.target===dialog||event.target===stage||event.target===panel))dialog.close();});
  dialog.addEventListener('close',()=>{
   window.removeEventListener('resize',resize);window.removeEventListener('hashchange',onRoute);dialog.remove();
   if(location.hash!==initialHash)return;

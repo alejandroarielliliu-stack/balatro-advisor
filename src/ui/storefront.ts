@@ -3,7 +3,9 @@ import type {JokerCollection,JokerReference} from '../catalog/collection.js';
 import type {PreviewRenderer} from './joker-bay.js';
 import type {GameState} from '../state/model.js';
 import {VOUCHER_CATALOG} from '../catalog/voucher-catalog.js';
-import {generationShopPrice} from '../rules/generation-jokers.js';
+import {quoteShopPrice} from '../rules/shop-pricing.js';
+import type {ShopPriceRequest} from '../rules/shop-pricing.js';
+import {normalizeShopSnapshot} from '../rules/shop-offer-prices.js';
 import {BOOSTER_CATALOG} from '../catalog/booster-catalog.js';
 import {inspectShopDecision} from '../advisor/decision.js';
 import type {ShopDecision,OperationStatus} from '../advisor/decision.js';
@@ -20,7 +22,6 @@ import {observedRerollQuote} from '../rules/reroll-quote.js';
 
 const el=<K extends keyof HTMLElementTagNameMap>(tag:K,text='',cl='')=>{const e=document.createElement(tag);e.textContent=text;e.className=cl;return e;};
 const known=<T>(value:T)=>({status:'known' as const,source:'manual' as const,value});
-const priceValue=(input:HTMLInputElement)=>input.value.trim()===''?null:Number(input.value);
 export interface ShopContext {
  state:()=>GameState;recordedState?:()=>GameState|undefined;ante:()=>number;changed?:()=>void;
  scenarios?:()=>AdvisorScenario[];
@@ -35,12 +36,12 @@ export interface ShopContext {
  undo?:()=>string|null;canUndo?:()=>boolean;status?:()=>string|null;
  controlsChanged?:()=>void;
 }
-interface ListedJoker {joker:JokerReference;offerId:string;sellId:string;price:number|null;edition:string;stickers:string[];counters?:ShopSnapshot['jokers'][number]['counters']}
+interface ListedJoker {joker:JokerReference;offerId:string;sellId:string;price:number|null;edition:string;stickers:string[];couponed?:boolean;counters?:ShopSnapshot['jokers'][number]['counters']}
 // Recorded joker/voucher/pack shelf; other cards and replacement choices remain hypothetical.
 const candidates:ListedJoker[]=[],voucherOffers:ShopSnapshot['vouchers']=[],packOffers:ShopSnapshot['packs']=[],otherOffers:NonNullable<ShopSnapshot['others']>=[];
 let rerollCost:number|null=null,binding:string|undefined,shelfBinding:string|undefined,mountId=0,shopId='mesa-shop';
 const catalogId=(joker:JokerReference)=>Object.keys(ALL_JOKER_FACTS).find(id=>ALL_JOKER_FACTS[id]!.artId===joker.id)??joker.id;
-export const readShopSnapshot=():ShopSnapshot=>({id:shopId,jokers:candidates.map(c=>({offerId:c.offerId,catalogId:catalogId(c.joker),price:c.price,edition:c.edition,stickers:[...c.stickers],...(c.counters?{counters:structuredClone(c.counters)}:{}),...(c.sellId?{replacementId:c.sellId}:{})})),vouchers:structuredClone(voucherOffers),packs:structuredClone(packOffers),others:structuredClone(otherOffers),rerollCost});
+export const readShopSnapshot=():ShopSnapshot=>({id:shopId,jokers:candidates.map(c=>({offerId:c.offerId,catalogId:catalogId(c.joker),price:c.price,edition:c.edition,stickers:[...c.stickers],...(c.couponed!==undefined?{couponed:c.couponed}:{}),...(c.counters?{counters:structuredClone(c.counters)}:{}),...(c.sellId?{replacementId:c.sellId}:{})})),vouchers:structuredClone(voucherOffers),packs:structuredClone(packOffers),others:structuredClone(otherOffers),rerollCost});
 let invalidate=()=>{},refreshControls=()=>{};let timer:ReturnType<typeof setTimeout>|undefined;
 export function invalidateCandidates(){invalidate();}
 /** Refresh a saved revision without replacing a dialog the user just opened. */
@@ -52,14 +53,28 @@ export function mountCandidates(host:HTMLElement,preview:PreviewRenderer,replace
  const loadingMessage='La tienda se está recuperando. Inténtalo de nuevo en un momento.';
  clearTimeout(timer);host.id='joker-candidates';host.className='candidate-panel storefront';
  host.addEventListener('click',e=>e.stopPropagation());host.addEventListener('input',e=>e.stopPropagation());host.addEventListener('change',e=>e.stopPropagation());
- // A price edit must never submit the real-state form through implicit Enter.
+ // Editing a name must never submit the real-state form through implicit Enter.
  host.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target instanceof HTMLInputElement)e.preventDefault();});
  const changed=()=>context?.changed?.();
  const restoreExtras=(state:GameState|undefined)=>{
   rerollCost=state?observedRerollQuote(state):null;
   const shop=state?.schemaVersion==='0.2'&&state.observed.shop.status==='known'?state.observed.shop.value:undefined;
   voucherOffers.splice(0,voucherOffers.length,...(shop?.voucherOffers??[]).filter(v=>VOUCHER_CATALOG.some(entry=>entry.id===v.catalogId)).map(v=>({offerId:v.offerId,catalogId:v.catalogId,price:v.price.status==='known'?v.price.value:null})));
-  packOffers.splice(0,packOffers.length,...(shop?.packOffers??[]).flatMap(o=>{const p=BOOSTER_CATALOG.find(p=>p.id===o.catalogId);return p?[{offerId:o.offerId,family:p.family,size:p.size,price:o.price.status==='known'?o.price.value:null}]:[];}));extrasHydrated=!!state;
+  packOffers.splice(0,packOffers.length,...(shop?.packOffers??[]).flatMap(o=>{const p=BOOSTER_CATALOG.find(p=>p.id===o.catalogId);return p?[{offerId:o.offerId,family:p.family,size:p.size,price:o.price.status==='known'?o.price.value:null,...(o.couponed!==undefined?{couponed:o.couponed}:{})}]:[];}));extrasHydrated=!!state;
+ };
+ const calculatePrice=(request:ShopPriceRequest):{price:number|null;reason:string}=>{
+  try{if(context){const quote=quoteShopPrice(context.state(),request);return {price:quote.price.status==='known'?quote.price.value:null,reason:quote.price.status==='unknown'?quote.price.reason:quote.breakdown.join(' ')};}}catch{/* Missing context leaves the quote unknown. */}
+  return {price:null,reason:'Completa los datos de la partida para calcular el precio.'};
+ };
+ const repriceCache=(state?:GameState)=>{
+  try{
+   const current=state??context?.state();if(!current)throw Error();
+   const shelf=normalizeShopSnapshot(current,readShopSnapshot()).snapshot;
+   for(const c of candidates){const offer=shelf.jokers.find(o=>o.offerId===c.offerId);if(offer){c.price=offer.price;if(offer.couponed===undefined)delete c.couponed;else c.couponed=offer.couponed;}}
+   for(const offer of voucherOffers)offer.price=shelf.vouchers.find(o=>o.offerId===offer.offerId)?.price??null;
+   for(const offer of packOffers){const quoted=shelf.packs.find(o=>o.offerId===offer.offerId);if(quoted){offer.price=quoted.price;if(quoted.couponed===undefined)delete offer.couponed;else offer.couponed=quoted.couponed;}}
+   for(const offer of otherOffers)offer.price=calculatePrice({kind:offer.kind,catalogId:offer.name}).price;
+  }catch{for(const offer of [...candidates,...voucherOffers,...packOffers,...otherOffers])offer.price=null;}
  };
  candidates.length=0;voucherOffers.length=0;packOffers.length=0;shopId='mesa-shop';
  try{const state=context?.recordedState?.()??context?.state(),id=state?.runId,nextShop=state?.observed.shop.status==='known'?state.observed.shop.value.shopId:undefined;
@@ -75,7 +90,7 @@ export function mountCandidates(host:HTMLElement,preview:PreviewRenderer,replace
  const refreshUndo=()=>{undo.hidden=!context?.undo;localDisabled(undo,!context?.canUndo?.());context?.controlsChanged?.();};
  undo.onclick=()=>{const error=context?.undo?.()??null;if(error)showStatus(error,true);refreshUndo();};headingTools.append(undo);refreshUndo();
  // A failed observation restores the cache. Opening details and evaluating never call this.
- const observe=(mutate:()=>void,scope:'all'|'voucher'|'pack'='all'):string|null=>{if(!(scope!=='all'?extrasHydrated:hydrated)){showStatus(loadingMessage,true);return loadingMessage;}const before=candidates.map(c=>({item:c,values:{...c,stickers:[...c.stickers]}})),beforeVouchers=structuredClone(voucherOffers),beforePacks=structuredClone(packOffers);mutate();let error:string|null=null;try{error=context?.observe?.(readShopSnapshot(),scope)??null;}catch{error='No se pudieron guardar las ofertas. Se conserva la versión anterior.';}if(error){for(const previous of before)Object.assign(previous.item,previous.values);candidates.splice(0,candidates.length,...before.map(previous=>previous.item));voucherOffers.splice(0,voucherOffers.length,...beforeVouchers);packOffers.splice(0,packOffers.length,...beforePacks);showStatus(error,true);return error;}showStatus(context?.observe?'Ofertas guardadas.':null);changed();refreshUndo();return null;};
+ const observe=(mutate:()=>void,scope:'all'|'voucher'|'pack'='all'):string|null=>{if(!(scope!=='all'?extrasHydrated:hydrated)){showStatus(loadingMessage,true);return loadingMessage;}const before=candidates.map(c=>({item:c,values:{...c,stickers:[...c.stickers]}})),beforeVouchers=structuredClone(voucherOffers),beforePacks=structuredClone(packOffers);mutate();repriceCache();let error:string|null=null;try{error=context?.observe?.(readShopSnapshot(),scope)??null;}catch{error='No se pudieron guardar las ofertas. Se conserva la versión anterior.';}if(error){for(const previous of before)Object.assign(previous.item,previous.values);candidates.splice(0,candidates.length,...before.map(previous=>previous.item));voucherOffers.splice(0,voucherOffers.length,...beforeVouchers);packOffers.splice(0,packOffers.length,...beforePacks);showStatus(error,true);return error;}showStatus(context?.observe?'Ofertas guardadas.':null);changed();refreshUndo();return null;};
  const search=el('button','＋ Comodín','store-search');search.type='button';search.id='store-joker-add';search.setAttribute('aria-label','Buscar comodín');search.onclick=()=>{const input=document.getElementById('bay-search') as HTMLInputElement|null;if(!input)return;const catalogue=input.closest('details');if(catalogue)catalogue.open=true;input.scrollIntoView({block:'center',behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth'});input.focus({preventScroll:true});};
  const suggestion=el('button','Registra las ofertas','shop-recommendation');suggestion.type='button';suggestion.id='shop-recommendation';suggestion.setAttribute('aria-haspopup','dialog');
  const layout=el('div','','store-layout'),controls=el('div','','store-controls'),cards=el('div','','store-card-well');controls.append(search);
@@ -160,7 +175,7 @@ export function mountCandidates(host:HTMLElement,preview:PreviewRenderer,replace
   suggestion.disabled=!hasOffers;
   try{
    if(!context)throw Error('Completa los datos de la partida para comparar.');
-   const state=context.state(),shopPlan=currentShopPlan(state);
+   const state=context.state(),shopPlan=currentShopPlan(state);repriceCache(state);
    hasOffers=hasOffers||!!shopPlan;suggestion.disabled=!hasOffers;
    rerollCost=observedRerollQuote(state);
    const shelf=snapshot();let scenarios:AdvisorScenario[]|undefined;scenarioError='';
@@ -183,17 +198,31 @@ export function mountCandidates(host:HTMLElement,preview:PreviewRenderer,replace
   renderAdviceStrip(hasOffers);if(adviceDialog.open)renderAdvice();
  };
  suggestion.onclick=()=>{refreshAdvice();renderAdvice();adviceDialog.showModal();};
- const numeric=(value:number|null,id:string)=>{const label=el('label','Precio que ves ($)'),input=el('input');input.type='number';input.min='0';input.step='1';input.value=String(value??'');input.id=id;label.htmlFor=id;label.append(input);return {label,input};};
+ const calculatedPrice=(id:string)=>{const label=el('label','Precio calculado'),output=el('output','','store-calculated-price');output.id=id;output.setAttribute('aria-label','Precio calculado');output.setAttribute('aria-live','polite');label.htmlFor=id;label.append(output);const update=(amount:number|null,reason='')=>{output.value=`$${amount??'—'}`;output.title=reason;};update(null);return {label,output,update};};
 
  const editExtra=(kind:'voucher'|'pack'|'other',offerId?:string)=>{
-  const old=kind==='voucher'?voucherOffers.find(o=>o.offerId===offerId):kind==='pack'?packOffers.find(o=>o.offerId===offerId):otherOffers.find(o=>o.offerId===offerId);
+  const old=kind==='voucher'?voucherOffers.find(o=>o.offerId===offerId):kind==='pack'?packOffers.find(o=>o.offerId===offerId):otherOffers.find(o=>o.offerId===offerId),draftId=offerId??crypto.randomUUID();
   editor.replaceChildren();const head=el('div','','section-title'),close=el('button','Cerrar','secondary');close.type='button';close.onclick=()=>editor.close();head.append(el('h2',kind==='voucher'?'Vale en la tienda':kind==='pack'?'Sobre en la tienda':'Otro artículo'),close);editor.append(head);
   const select=el('select');select.id='store-item-id';select.setAttribute('aria-label',kind==='voucher'?'Vale ofertado':'Sobre ofertado');const empty=el('option','Seleccionar');empty.value='';select.append(empty);
   if(kind==='voucher')for(const v of VOUCHER_CATALOG){const o=el('option',v.name);o.value=v.id;select.append(o);}if(kind==='pack')for(const p of BOOSTER_CATALOG){const o=el('option',p.name);o.value=p.id;select.append(o);}
   const type=el('select');type.id='store-item-kind';type.setAttribute('aria-label','Tipo de artículo');for(const [id,name] of [['tarot','Tarot'],['planet','Planeta'],['spectral','Espectral'],['playing_card','Carta de juego']]){const o=el('option',name);o.value=id!;type.append(o);}
   const name=el('input');name.id='store-item-name';name.placeholder='Nombre que aparece';name.setAttribute('aria-label','Nombre del artículo');
   if(kind==='other'){const other=old as NonNullable<ShopSnapshot['others']>[number]|undefined;type.value=other?.kind??'tarot';name.value=other?.name??'';editor.append(type,name);}else{if(old&&'catalogId'in old)select.value=old.catalogId;else if(old&&'family'in old)select.value=old.family+'-'+old.size;editor.append(select);}
-  const price=numeric(old?.price??null,'store-item-price'),description=el('p','','muted');description.id='store-item-description';editor.append(description,price.label);
+  const price=calculatedPrice('store-item-price'),description=el('p','','muted');description.id='store-item-description';editor.append(description,price.label);
+  let calculatedAmount:number|null=null,calculatedCoupon:boolean|undefined;
+  const updatePrice=()=>{
+   const selectedId=kind==='other'?name.value.trim():select.value,request:ShopPriceRequest={kind:kind==='other'?type.value as ShopPriceRequest['kind']:kind,catalogId:selectedId};
+   const quote=selectedId?calculatePrice(request):{price:null,reason:'Selecciona el artículo para calcular su precio.'};calculatedAmount=quote.price;calculatedCoupon=undefined;
+   if(kind==='pack'&&selectedId){
+    const pack=BOOSTER_CATALOG.find(p=>p.id===selectedId),previous=old&&'family'in old?old:undefined;
+    if(pack){
+     const draft=readShopSnapshot(),offer={offerId:draftId,family:pack.family,size:pack.size,price:quote.price,...(previous?.family===pack.family&&previous.size===pack.size&&previous.couponed!==undefined?{couponed:previous.couponed}:{})};
+     draft.packs=draft.packs.filter(p=>p.offerId!==draftId);draft.packs.push(offer);
+     try{if(context){const normalized=normalizeShopSnapshot(context.state(),draft).snapshot.packs.find(p=>p.offerId===draftId);if(normalized){calculatedAmount=normalized.price;calculatedCoupon=normalized.couponed;}}}catch{/* Keep the quote unknown when the state cannot be read. */}
+    }
+   }
+   price.update(calculatedAmount,calculatedCoupon?'La etiqueta deja esta oferta gratis.':quote.reason);
+  };
   const updateDescription=()=>{const v=VOUCHER_CATALOG.find(v=>v.id===select.value),p=BOOSTER_CATALOG.find(p=>p.id===select.value);description.textContent=kind==='voucher'?v?.description??'':kind==='pack'&&p?`${p.offered} cartas · elige ${p.choose}. Contenido desconocido antes de abrir.`:'Efecto sin valoración automática en esta entrega.';};
   editor.append(el('p',kind!=='other'?'Guardar la oferta no compra el artículo. Confirma solo lo que hiciste en Balatro.':'Solo consulta en esta sesión; no registra compras de estos artículos.','muted'));
   const error=el('p','','error');error.id='store-item-error';error.setAttribute('role','status');
@@ -201,31 +230,31 @@ export function mountCandidates(host:HTMLElement,preview:PreviewRenderer,replace
   const confirmed=write(el('button',kind==='pack'?'Abrí el sobre':'Compré'));confirmed.type='button';if(kind==='pack')confirmed.dataset.packConfirm=offerId??'';else confirmed.dataset.voucherConfirm=offerId??'';
   const confirmationNote=el('p','','muted'),consequences=el('div');confirmationNote.id='voucher-confirm-note';confirmed.setAttribute('aria-describedby',confirmationNote.id);
   const refreshConfirm=()=>{
-   if(kind==='other')return;refreshAdvice();
+   updatePrice();if(kind==='other')return;refreshAdvice();
    const probe=(kind==='pack'?decision?.packActions:decision?.voucherActions)?.find(v=>v.optionId===offerId);
    const oldId=old&&('catalogId'in old?old.catalogId:'family'in old?old.family+'-'+old.size:undefined);
-   const saved=!!old&&select.value===oldId&&priceValue(price.input)===old.price;
+   const saved=!!old&&select.value===oldId&&calculatedAmount===old.price;
    const reason=!saved?'Guarda la oferta antes de confirmar la compra.':context?.status?.()??(!(kind==='pack'?context?.confirmPack:context?.confirmVoucher)?'La confirmación no está disponible.':probe?.confirmation!=='explicit_confirmation_required'?(probe?.errors.map(e=>e.message).join(' ')||'Revisa los datos de esta oferta.'):null);
    localDisabled(confirmed,!!reason);confirmationNote.textContent=reason??'Compra provisional por inspección del ejecutable; falta contraste en partida.';
    consequences.replaceChildren();if(probe?.consequences&&saved)consequences.append(renderImmediateConsequences(probe.consequences));context?.controlsChanged?.();
   };
   refreshExtraConfirmation=refreshConfirm;
-  select.onchange=()=>{const pack=BOOSTER_CATALOG.find(p=>p.id===select.value);let amount=pack?.basePrice;try{if(pack&&context)amount=generationShopPrice(context.state(),pack.family==='celestial'?'celestial_pack':'other_pack',pack.basePrice) as typeof amount;}catch{/* The observed price can still be transcribed explicitly. */}price.input.value=kind==='voucher'?'10':String(amount??'');updateDescription();refreshConfirm();};price.input.oninput=refreshConfirm;updateDescription();
-  save.onclick=()=>{const amount=priceValue(price.input);if(amount!==null&&(!Number.isSafeInteger(amount)||amount<0)){error.textContent='Introduce un precio entero no negativo o déjalo desconocido.';return;}const id=offerId??crypto.randomUUID();
+  select.onchange=()=>{updateDescription();refreshConfirm();};type.onchange=refreshConfirm;name.oninput=refreshConfirm;updateDescription();updatePrice();
+  save.onclick=()=>{updatePrice();const amount=calculatedAmount,id=draftId;
    if(kind==='voucher'){
     if(!VOUCHER_CATALOG.some(v=>v.id===select.value)){error.textContent='Elige el vale.';return;}
     const failure=observe(()=>{const index=voucherOffers.findIndex(o=>o.offerId===id),offer={offerId:id,catalogId:select.value,price:amount};if(index<0)voucherOffers.push(offer);else voucherOffers[index]=offer;},'voucher');
     if(failure){error.textContent=failure;refreshConfirm();return;}
-   }else if(kind==='pack'){const p=BOOSTER_CATALOG.find(p=>p.id===select.value);if(!p){error.textContent='Elige el sobre.';return;}const failure=observe(()=>{const index=packOffers.findIndex(o=>o.offerId===id),offer={offerId:id,family:p.family,size:p.size,price:amount};if(index<0)packOffers.push(offer);else packOffers[index]=offer;},'pack');if(failure){error.textContent=failure;refreshConfirm();return;}}
+   }else if(kind==='pack'){const p=BOOSTER_CATALOG.find(p=>p.id===select.value);if(!p){error.textContent='Elige el sobre.';return;}const failure=observe(()=>{const index=packOffers.findIndex(o=>o.offerId===id),offer={offerId:id,family:p.family,size:p.size,price:amount,...(calculatedCoupon!==undefined?{couponed:calculatedCoupon}:{})};if(index<0)packOffers.push(offer);else packOffers[index]=offer;},'pack');if(failure){error.textContent=failure;refreshConfirm();return;}}
    else{if(!name.value.trim()){error.textContent='Introduce el nombre.';return;}const index=otherOffers.findIndex(o=>o.offerId===id),offer={offerId:id,kind:type.value as NonNullable<ShopSnapshot['others']>[number]['kind'],name:name.value.trim(),price:amount};if(index<0)otherOffers.push(offer);else otherOffers[index]=offer;}
    editor.close();if(kind==='other'){showStatus('Otras cartas: solo consulta en esta sesión.');changed();}renderExtras();refreshAdvice();context?.controlsChanged?.();
   };
   confirmed.onclick=()=>{const failure=(kind==='pack'?context?.confirmPack:context?.confirmVoucher)?.(offerId!)??null;if(failure)error.textContent=failure;refreshUndo();};
-  editor.append(error);if(kind!=='other'){select.dataset.write='';price.input.dataset.write='';save.dataset.write='';const actions=el('div','','toolbar');actions.append(save,confirmed);editor.append(consequences,confirmationNote,actions);refreshConfirm();}else editor.append(save);
+  editor.append(error);if(kind!=='other'){select.dataset.write='';save.dataset.write='';const actions=el('div','','toolbar');actions.append(save,confirmed);editor.append(consequences,confirmationNote,actions);refreshConfirm();}else editor.append(save);
   editor.showModal();context?.controlsChanged?.();
  };
  const renderExtras=()=>{
-  extras.replaceChildren();otherShelf.replaceChildren();grid.querySelectorAll('.store-extra-tile[data-store-kind="other"],.candidate-placeholder').forEach(e=>e.remove());const voucherWell=el('div','','store-voucher-well'),packWell=el('div','','store-pack-well'),voucherShelf=el('div','','store-extra-shelf'),packShelf=el('div','','store-extra-shelf');voucherWell.append(el('h3','Vale','store-well-label'),voucherShelf);packWell.append(el('h3','Sobres','store-well-label'),packShelf);extras.append(voucherWell,packWell);if(otherOffers.length)extras.append(el('small','Otras cartas: consulta temporal en esta sesión.','muted store-persistence-note'));
+  repriceCache();extras.replaceChildren();otherShelf.replaceChildren();grid.querySelectorAll('.store-extra-tile[data-store-kind="other"],.candidate-placeholder').forEach(e=>e.remove());const voucherWell=el('div','','store-voucher-well'),packWell=el('div','','store-pack-well'),voucherShelf=el('div','','store-extra-shelf'),packShelf=el('div','','store-extra-shelf');voucherWell.append(el('h3','Vale','store-well-label'),voucherShelf);packWell.append(el('h3','Sobres','store-well-label'),packShelf);extras.append(voucherWell,packWell);if(otherOffers.length)extras.append(el('small','Otras cartas: consulta temporal en esta sesión.','muted store-persistence-note'));
   const listed:[string,string,number|null,HTMLElement,()=>void,()=>void][]=[];
   for(const o of voucherOffers){const v=VOUCHER_CATALOG.find(v=>v.id===o.catalogId),art=el('span','','voucher-art '+o.catalogId);art.setAttribute('aria-label',v?.name??o.catalogId);listed.push([o.offerId,'voucher',o.price,art,()=>editExtra('voucher',o.offerId),()=>{observe(()=>{voucherOffers.splice(voucherOffers.indexOf(o),1);},'voucher');}]);}
   for(const o of packOffers){const p=BOOSTER_CATALOG.find(p=>p.family===o.family&&p.size===o.size),art=el('span','','booster-art pack-'+o.family+'-'+o.size);art.setAttribute('aria-label',p?.name??'Sobre');listed.push([o.offerId,'pack',o.price,art,()=>editExtra('pack',o.offerId),()=>{observe(()=>{packOffers.splice(packOffers.indexOf(o),1);},'pack');}]);}
@@ -235,21 +264,20 @@ export function mountCandidates(host:HTMLElement,preview:PreviewRenderer,replace
   for(const [kind,label,id,shelf,min] of [['voucher','＋ Vale','store-voucher-add',voucherShelf,1],['pack','＋ Sobre','store-pack-add',packShelf,2],['other','＋ Otra carta','store-other-add',otherShelf,0]] as const){const b=el('button',label,'store-add-offer');b.type='button';if(kind!=='other')b.dataset.write='';b.id=id;b.onclick=()=>editExtra(kind);shelf.append(b);if(kind!=='other')for(let i=shelf.querySelectorAll('.store-extra-tile').length+1;i<min;i++){const slot=el('button',label,'store-add-offer store-empty-offer');slot.type='button';slot.onclick=()=>editExtra(kind);shelf.append(slot);}}
  };
  const render=(calculate:boolean)=>{
-  if(calculate)clearTimeout(timer);grid.replaceChildren();confirmationRefreshers.clear();
+  if(calculate)clearTimeout(timer);repriceCache();grid.replaceChildren();confirmationRefreshers.clear();
   for(const c of candidates){const card=el('article','','candidate-card');card.dataset.candidate=c.joker.id;card.dataset.offerId=c.offerId;const hero=el('div','','candidate-hero'),info=el('div','','candidate-info'),cost=el('small',`$${c.price??'?'}`,'store-joker-price');info.append(el('h4',c.joker.names.es),cost);hero.append(jokerArt(c.joker.id,c.joker.names.es),info);
    const select=el('select');select.setAttribute('aria-label','Reemplazo para '+c.joker.names.es);const empty=el('option','Comprar sin vender');empty.value='';select.append(empty);for(const r of replacements()){const o=el('option','Vender '+r.name);o.value=r.id;select.append(o);}if(host.isConnected&&!replacements().some(r=>r.id===c.sellId))c.sellId='';select.value=c.sellId;
    const remove=write(el('button','×','candidate-remove'));remove.type='button';remove.setAttribute('aria-label','Quitar candidato');remove.title='Quitar oferta';remove.onclick=()=>{observe(()=>candidates.splice(candidates.indexOf(c),1));render(true);};
    const details=el('dialog','','candidate-dialog');details.setAttribute('aria-label',c.joker.names.es);const close=el('button','Cerrar','secondary');close.type='button';close.onclick=()=>details.close();const head=el('div','','section-title');head.append(el('h2',c.joker.names.es),close);const detailHero=el('div','','candidate-detail-hero'),detailArt=el('span','','candidate-detail-art');detailArt.append(jokerArt(c.joker.id,c.joker.names.es));detailHero.append(detailArt,el('p',c.joker.localization.es.description));
-   const price=numeric(c.price,'store-price-'+c.offerId),edition=el('select');price.input.dataset.write='';edition.dataset.write='';edition.id='store-edition-'+c.offerId;edition.setAttribute('aria-label','Edición de la oferta');for(const [id,label] of [['base','Base'],['foil','Laminada'],['holographic','Holográfica'],['polychrome','Policroma'],['negative','Negativa'],['unknown','Desconocida']]){const o=el('option',label);o.value=id!;edition.append(o);}edition.value=c.edition;const resultHost=el('div');
+   const price=calculatedPrice('store-price-'+c.offerId),edition=el('select');edition.dataset.write='';edition.id='store-edition-'+c.offerId;edition.setAttribute('aria-label','Edición de la oferta');for(const [id,label] of [['base','Base'],['foil','Laminada'],['holographic','Holográfica'],['polychrome','Policroma'],['negative','Negativa'],['unknown','Desconocida']]){const o=el('option',label);o.value=id!;edition.append(o);}edition.value=c.edition;const resultHost=el('div');
    const confirmed=write(el('button',c.sellId?'Vendí y compré':'Compré'));confirmed.type='button';confirmed.dataset.shopConfirm=c.offerId;const confirmNote=el('small','','muted');confirmNote.id='shop-confirm-note-'+c.offerId;confirmNote.setAttribute('role','status');confirmed.setAttribute('aria-describedby',confirmNote.id);
    const refreshConfirm=()=>{confirmed.textContent=c.sellId?'Vendí y compré':'Compré';const reason=context?.status?.();localDisabled(confirmed,!context?.confirm||!!reason);confirmNote.textContent=reason??'Registra solo si ya lo hiciste en el juego.';context?.controlsChanged?.();};
    confirmed.onclick=()=>{const error=context?.confirm?.(c.offerId,c.sellId)??null;if(error){showStatus(error,true);confirmNote.textContent=error;}refreshUndo();};
-   const renderLocal=()=>{cost.textContent=`$${c.price??'?'}`;info.querySelector('.fit-score')?.remove();const offer={price:c.price===null?{status:'unknown' as const,reason:'Precio sin transcribir.'}:known(c.price),edition:c.edition==='unknown'?{status:'unknown' as const,reason:'Edición sin transcribir.'}:known(c.edition),...(c.counters?{counters:structuredClone(c.counters)}:{}),stickers:c.stickers.includes('unknown')?{status:'unknown' as const,reason:'Pegatinas sin transcribir.'}:known(c.stickers)};const result=calculate?preview(c.joker,c.sellId,undefined,offer):el('p','Calculando…','candidate-pending');card.dataset.previewStatus=calculate?result.dataset.previewStatus??'unavailable':'updating';resultHost.replaceChildren(result);if(result.dataset.fitLabel){const badge=el('strong',result.dataset.fitLabel,'fit-score '+(result.dataset.fitTone??'unknown'));badge.title=result.dataset.fitReason??'';info.append(badge);card.dataset.fitLabel=result.dataset.fitLabel;}};
+   const renderLocal=()=>{repriceCache();price.update(c.price);cost.textContent=`$${c.price??'?'}`;info.querySelector('.fit-score')?.remove();const offer={price:c.price===null?{status:'unknown' as const,reason:'Precio sin transcribir.'}:known(c.price),edition:c.edition==='unknown'?{status:'unknown' as const,reason:'Edición sin transcribir.'}:known(c.edition),...(c.counters?{counters:structuredClone(c.counters)}:{}),...(c.couponed===undefined?{}:{couponed:c.couponed}),stickers:c.stickers.includes('unknown')?{status:'unknown' as const,reason:'Pegatinas sin transcribir.'}:known(c.stickers)};const result=calculate?preview(c.joker,c.sellId,undefined,offer):el('p','Calculando…','candidate-pending');card.dataset.previewStatus=calculate?result.dataset.previewStatus??'unavailable':'updating';resultHost.replaceChildren(result);if(result.dataset.fitLabel){const badge=el('strong',result.dataset.fitLabel,'fit-score '+(result.dataset.fitTone??'unknown'));badge.title=result.dataset.fitReason??'';info.append(badge);card.dataset.fitLabel=result.dataset.fitLabel;}};
    confirmationRefreshers.add(()=>{calculate=true;renderLocal();refreshConfirm();});
    const recalculate=()=>{calculate=true;renderLocal();refreshAdvice();refreshConfirm();};
    const editError=el('p','','error');editError.setAttribute('role','status');
    // Persist on committed changes, never on each keystroke. Keep this dialog and focus intact.
-   price.input.onchange=()=>{const amount=priceValue(price.input);if(amount!==null&&(!Number.isSafeInteger(amount)||amount<0)){const error='Introduce un precio entero no negativo o déjalo desconocido.';showStatus(error,true);editError.textContent=error;price.input.value=String(c.price??'');return;}const previous=c.price;const error=observe(()=>{c.price=amount;});if(error)c.price=previous;editError.textContent=error??'';price.input.value=String(c.price??'');recalculate();};
    edition.onchange=()=>{const previous=c.edition;const error=observe(()=>{c.edition=edition.value;});if(error)c.edition=previous;editError.textContent=error??'';edition.value=c.edition;recalculate();};
    select.onchange=()=>{c.sellId=select.value;recalculate();};details.append(head,detailHero,price.label,edition,editError,select,resultHost,confirmed,confirmNote);renderLocal();refreshConfirm();hero.tabIndex=0;hero.setAttribute('role','button');hero.setAttribute('aria-label','Ver '+c.joker.names.es);hero.setAttribute('aria-haspopup','dialog');
    const open=()=>{clearTimeout(timer);calculate=true;select.replaceChildren(empty);for(const r of replacements()){const o=el('option','Vender '+r.name);o.value=r.id;select.append(o);}if(c.sellId&&!replacements().some(r=>r.id===c.sellId))c.sellId='';select.value=c.sellId;renderLocal();refreshAdvice();refreshConfirm();details.showModal();};
@@ -274,7 +302,7 @@ export function mountCandidates(host:HTMLElement,preview:PreviewRenderer,replace
    const artId=ALL_JOKER_FACTS[offer.catalogId]?.artId??offer.catalogId,joker=catalog.jokers.find(j=>j.id===artId);
    if(!joker){unmapped++;continue;}
    const counters=currentOffers.find(item=>item.offerId===offer.offerId)?.counters;
-   restoredOffers.push({joker,offerId:offer.offerId,sellId:replacementByOffer.get(offer.offerId)??'',price:offer.price.status==='known'?offer.price.value:null,edition:offer.edition.status==='known'?offer.edition.value:'unknown',stickers:offer.stickers.status==='known'?[...offer.stickers.value]:['unknown'],...(counters?{counters:structuredClone(counters)}:{})});
+   restoredOffers.push({joker,offerId:offer.offerId,sellId:replacementByOffer.get(offer.offerId)??'',price:offer.price.status==='known'?offer.price.value:null,edition:offer.edition.status==='known'?offer.edition.value:'unknown',stickers:offer.stickers.status==='known'?[...offer.stickers.value]:['unknown'],...(counters?{counters:structuredClone(counters)}:{}),...(currentOffers.find(item=>item.offerId===offer.offerId)?.couponed===undefined?{}:{couponed:currentOffers.find(item=>item.offerId===offer.offerId)!.couponed!})});
   }
   candidates.splice(0,candidates.length,...restoredOffers);render(true);if(unmapped)showStatus(`${unmapped} ofertas sin referencia visual compatible. Conserva sus datos en el registro.`,true);
  }).catch(()=>{if(mounted===mountId)showStatus('No se pudo cargar el catálogo de comodines. Los vales y sobres se consultan por separado; recarga para reintentar el catálogo.',true);});

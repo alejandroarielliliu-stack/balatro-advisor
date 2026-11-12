@@ -9,6 +9,7 @@ import type {Consumable,EffectBonus,EffectChoice,FullEventInput,FullJokerContext
 import {handPatterns} from './hand-patterns.js';
 import {booleanChance,requireChoice} from './effect-choices.js';
 import {levelUp} from './random-jokers.js';
+import {quoteShopPrice} from './shop-pricing.js';
 
 export const generationRule='jokers.generation';
 const HANDS=Object.keys(HAND_BASES) as HandId[];
@@ -140,7 +141,7 @@ export function generationEvent(input:FullEventInput,effective?:readonly JokerIn
     // Negative already increased jokerSlots when acquired; do not exclude it twice.
     const slots=need(input.state.observed.resources.jokerSlots,'$jokerSlots'),occupied=jokers.length;if(occupied>=slots)break;
     const result=choice(input,j.instanceId+':riff_raff:'+n,'joker');if(!result||typeof result!=='object'||!('counters'in result)||!('sellValue'in result)||!('catalogId'in result)||!('stickers'in result))fail('$choices','invalid_outcome','Riff-Raff requiere un comodín común explícito.');const created=structuredClone(result as JokerInstance);
-    if(jokers.some(x=>x.instanceId===created.instanceId)||ALL_JOKER_FACTS[created.catalogId]?.rarity!==1||need(created.edition,'$edition')!=='base'||need(created.stickers,'$stickers').length)fail('$choices','invalid_outcome','Riff-Raff solo genera comunes base con ID nuevo.');jokers.push(created);trace(input,'Riff-Raff · comodín creado',{created:created.instanceId,catalogId:created.catalogId});
+    if(jokers.some(x=>x.instanceId===created.instanceId)||ALL_JOKER_FACTS[created.catalogId]?.rarity!==1||need(created.edition,'$edition')!=='base'||need(created.stickers,'$stickers').length)fail('$choices','invalid_outcome','Riff-Raff solo genera comunes base con ID nuevo.');created.sellValue=quoteShopPrice(input.state,{kind:'joker',catalogId:created.catalogId,edition:'base',stickers:[]}).sellValue;jokers.push(created);trace(input,'Riff-Raff · comodín creado',{created:created.instanceId,catalogId:created.catalogId});
    }
    if(j.catalogId==='chaos'){const ctx=context(input.state);delete ctx.visibleRerollCost;ctx.freeRerolls=valueFact(jokers.filter(x=>x.catalogId==='chaos').length);trace(input,'Chaos · rerolls gratis de tienda',{count:need(ctx.freeRerolls,'$freeRerolls')});}
   }
@@ -165,7 +166,11 @@ export function generationEvent(input:FullEventInput,effective?:readonly JokerIn
 /** Called while the sold joker is still known, before removal. */
 export function generationSellingSelf(input:FullEventInput,sold:JokerInstance):void{
  if(sold.catalogId==='diet_cola'){const ctx=context(input.state);if(!ctx.tags)fail('$.observed.jokerContext.tags','unknown_data','Falta lista actual de tags.');ctx.tags=valueFact([...need(ctx.tags,'$tags'),'tag_double']);trace(input,'Diet Cola · Double Tag',{instanceId:sold.instanceId,tag:'tag_double'});}
- if(sold.catalogId==='invisible'&&counter(sold,'rounds')>=2){const candidates=physical(input.state).filter(j=>j.instanceId!==sold.instanceId);if(!candidates.length)return;const target=choice(input,sold.instanceId+':invisible','target');if(typeof target!=='string')fail('$choices','invalid_outcome','Invisible requiere ID del comodín copiado.');const source=candidates.find(j=>j.instanceId===target);if(!source)fail('$choices','invalid_target','No existe el comodín elegido.');const copy=structuredClone(source);copy.instanceId=newId(input.state,sold.instanceId+':copy:'+source.instanceId);if(need(copy.edition,'$edition')==='negative')copy.edition=valueFact('base');if(copy.catalogId==='invisible')copy.counters.rounds=valueFact(0);physical(input.state).push(copy);trace(input,'Invisible Joker · copia',{source:source.instanceId,created:copy.instanceId});}
+ if(sold.catalogId==='invisible'&&counter(sold,'rounds')>=2){const candidates=physical(input.state).filter(j=>j.instanceId!==sold.instanceId);if(!candidates.length)return;const target=choice(input,sold.instanceId+':invisible','target');if(typeof target!=='string')fail('$choices','invalid_outcome','Invisible requiere ID del comodín copiado.');const source=candidates.find(j=>j.instanceId===target);if(!source)fail('$choices','invalid_target','No existe el comodín elegido.');const copy=structuredClone(source);copy.instanceId=newId(input.state,sold.instanceId+':copy:'+source.instanceId);if(need(copy.edition,'$edition')==='negative'){
+  copy.edition=valueFact('base');
+  const extra=copy.counters.extraSell?need(copy.counters.extraSell,'$copy.counters.extraSell'):0;
+  copy.sellValue=quoteShopPrice(input.state,{kind:'joker',catalogId:copy.catalogId,edition:'base',stickers:need(copy.stickers,'$copy.stickers'),extraSell:extra}).sellValue;
+ }if(copy.catalogId==='invisible')copy.counters.rounds=valueFact(0);physical(input.state).push(copy);trace(input,'Invisible Joker · copia',{source:source.instanceId,created:copy.instanceId});}
 }
 
 /** Base cashout bonus; root must place this beside Golden rather than after interest. */

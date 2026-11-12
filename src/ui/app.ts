@@ -37,6 +37,7 @@ import type {ConfirmedRecord} from '../storage/confirmed-store.js';
 import {createShopSessionStore} from '../storage/shop-session.js';
 import type {ShopOffer} from '../storage/shop-session.js';
 import type {ShopSnapshot} from '../advisor/shop-context.js';
+import {normalizeShopSnapshot} from '../rules/shop-offer-prices.js';
 import {observedRerollQuote} from '../rules/reroll-quote.js';
 import {createDraft} from '../state/model.js';
 import type {GameState,Fact,Result,Issue,JokerInstance} from '../state/model.js';
@@ -434,21 +435,28 @@ function renderRecord(){
     if(!canWrite())return $('message').textContent??'No se pudo guardar.';
     if((snapshot.vouchers.length||snapshot.packs.length)&&record?.state.schemaVersion!=='0.2')return 'Registrar vales o sobres requiere una partida 0.2. Migra explícitamente la partida desde Registro o crea una nueva compatible.';
     try{
-      const previous=value(record?.state.observed.shop),previousOffers=previous?.cardOffers??[];
+      const previous=value(record?.state.observed.shop),previousOffers:ShopOffer[]=previous?.cardOffers??[];
       const previousVouchers=record?.state.schemaVersion==='0.2'&&record.state.observed.shop.status==='known'?record.state.observed.shop.value.voucherOffers??[]:[];
-      const voucherOffers=scope==='pack'?structuredClone(previousVouchers):snapshot.vouchers.map(offer=>{const old=previousVouchers.find(v=>v.offerId===offer.offerId);return {offerId:offer.offerId,catalogId:offer.catalogId,price:offer.price===null?(old?.price.status==='unknown'?structuredClone(old.price):unknown()):old?.price.status==='known'&&old.price.value===offer.price?structuredClone(old.price):known(offer.price)};});
-      voucherOffers.push(...previousVouchers.filter(o=>!VOUCHER_CATALOG.some(v=>v.id===o.catalogId)&&!voucherOffers.some(v=>v.offerId===o.offerId)).map(o=>structuredClone(o)));
       const previousPacks=record?.state.schemaVersion==='0.2'&&record.state.observed.shop.status==='known'?record.state.observed.shop.value.packOffers??[]:[];
-      const packOffers=scope==='voucher'?structuredClone(previousPacks):snapshot.packs.map(offer=>{const old=previousPacks.find(p=>p.offerId===offer.offerId);return {offerId:offer.offerId,catalogId:offer.family+'-'+offer.size,price:offer.price===null?(old?.price.status==='unknown'?structuredClone(old.price):unknown()):old?.price.status==='known'&&old.price.value===offer.price?structuredClone(old.price):known(offer.price)};});
+      // Untouched shelves come from the record, never from another open draft.
+      snapshot=structuredClone(snapshot);
+      if(scope!=='all')snapshot.jokers=previousOffers.filter(offer=>offer.kind==='joker').map(offer=>({offerId:offer.offerId,catalogId:offer.catalogId,price:value(offer.price)??null,edition:value(offer.edition)??'unknown',stickers:value(offer.stickers)??['unknown'],...('counters'in offer&&offer.counters?{counters:structuredClone(offer.counters)}:{})}));
+      if(scope==='pack')snapshot.vouchers=previousVouchers.map(offer=>({offerId:offer.offerId,catalogId:offer.catalogId,price:value(offer.price)??null}));
+      if(scope==='voucher')snapshot.packs=previousPacks.flatMap(offer=>{const pack=BOOSTER_CATALOG.find(item=>item.id===offer.catalogId);return pack?[{offerId:offer.offerId,family:pack.family,size:pack.size,price:value(offer.price)??null}]:[];});
+      const pricing=normalizeShopSnapshot(record?.state??liveState(),snapshot);snapshot=pricing.snapshot;
+      const voucherOffers=snapshot.vouchers.map(offer=>{const old=previousVouchers.find(v=>v.offerId===offer.offerId);return {offerId:offer.offerId,catalogId:offer.catalogId,price:offer.price===null?(old?.price.status==='unknown'?structuredClone(old.price):unknown()):old?.price.status==='known'&&old.price.value===offer.price?structuredClone(old.price):known(offer.price)};});
+      voucherOffers.push(...previousVouchers.filter(o=>!VOUCHER_CATALOG.some(v=>v.id===o.catalogId)&&!voucherOffers.some(v=>v.offerId===o.offerId)).map(o=>structuredClone(o)));
+
+      const packOffers=snapshot.packs.map(offer=>{const old=previousPacks.find(p=>p.offerId===offer.offerId);return {offerId:offer.offerId,catalogId:offer.family+'-'+offer.size,...(offer.couponed===undefined?{}:{couponed:offer.couponed}),price:offer.price===null?(old?.price.status==='unknown'?structuredClone(old.price):unknown()):old?.price.status==='known'&&old.price.value===offer.price?structuredClone(old.price):known(offer.price)};});
       packOffers.push(...previousPacks.filter(o=>!BOOSTER_CATALOG.some(p=>p.id===o.catalogId)&&!packOffers.some(p=>p.offerId===o.offerId)).map(o=>structuredClone(o)));
-      const offers:ShopOffer[]=scope!=='all'?structuredClone(previousOffers):snapshot.jokers.map(offer=>{
+      const offers:ShopOffer[]=snapshot.jokers.map(offer=>{
         const old=previousOffers.find(o=>o.offerId===offer.offerId);
         const catalogId=ALL_JOKER_FACTS[offer.catalogId]?offer.catalogId:Object.keys(ALL_JOKER_FACTS).find(id=>ALL_JOKER_FACTS[id]!.artId===offer.catalogId)??offer.catalogId;
         return {offerId:offer.offerId,catalogId,label:names[catalogId]??old?.label??catalogId,kind:'joker',
           price:offer.price===null?(old?.price.status==='unknown'?structuredClone(old.price):unknown()):known(offer.price),
           edition:offer.edition==='unknown'?(old?.edition.status==='unknown'?structuredClone(old.edition):unknown()):known(offer.edition??'base'),
           stickers:offer.stickers.includes('unknown')?(old?.stickers.status==='unknown'?structuredClone(old.stickers):unknown()):old?.stickers.status==='known'&&JSON.stringify(old.stickers.value)===JSON.stringify(offer.stickers)?structuredClone(old.stickers):known(offer.stickers??[]),
-          ...(offer.counters?{counters:structuredClone(offer.counters)}:{})};
+          ...(offer.counters?{counters:structuredClone(offer.counters)}:{}),...(record?.state.schemaVersion==='0.1'||offer.couponed===undefined?{}:{couponed:offer.couponed})};
       });
       // Unsupported/unrenderable observations are never silently discarded by
       // an editor that can only display the known catalogue.
@@ -460,7 +468,7 @@ function renderRecord(){
         const initial=liveState();
         initial.observed.shop=known({shopId:uuid(),cardOffers:offers,ignoredOtherOffers:['Otras cartas: solo consulta de esta sesión.']});
         saved=store.initialize(initial);
-      }else saved=shopSession.observeJokerOffers({confirmationId:uuid(),confirmed:true,expected:analysisBinding(record.state),updatedAt:now(),shopId:previous?.shopId??uuid(),offers,...(record.state.schemaVersion==='0.2'?{voucherOffers,packOffers}:{})});
+      }else saved=shopSession.observeJokerOffers({confirmationId:uuid(),confirmed:true,expected:analysisBinding(record.state),updatedAt:now(),shopId:previous?.shopId??uuid(),offers,...(record.state.schemaVersion==='0.2'?{voucherOffers,packOffers,pricingTags:pricing.pricingTags,consumedPricingTags:pricing.consumedPricingTags}:{})});
       if(!saved.ok){problem(saved.errors);return saved.errors.map(e=>e.message).join(' ');}
       record=saved.value;Object.assign(workingBase,structuredClone(record.state));
       try{seenRaw=localStorage.getItem(CONFIRMED_STORAGE_KEY);}catch{loadFailed=true;}
@@ -746,7 +754,7 @@ const handButton=button('Calcular manos del mazo y candidatos',()=>{
   }handResults.append(section);
  }
  const selected=readShopSnapshot().jokers;
- if(selected.length)void fetch('./web/assets/jokers/catalog.json').then(r=>r.json()).then((catalog:{jokers:JokerReference[]})=>{if(request!==handRequest)return;for(const candidate of selected){const j=catalog.jokers.find(j=>j.id===candidate.catalogId||j.engineId===candidate.catalogId);if(j){const offer={...(candidate.counters?{counters:structuredClone(candidate.counters)}:{}),price:candidate.price===null?unknown():known(candidate.price),edition:known(candidate.edition),stickers:known(candidate.stickers)};const section=node('section');section.append(node('h3',j.names.es),renderHandPreview(j,candidate.replacementId??'',state,scenarios,offer));handResults.append(section);}}}).catch(()=>{if(request===handRequest)handResults.append(node('p','No se pudo cargar el catálogo para comparar las ofertas.','error'));});
+ if(selected.length)void fetch('./web/assets/jokers/catalog.json').then(r=>r.json()).then((catalog:{jokers:JokerReference[]})=>{if(request!==handRequest)return;for(const candidate of selected){const j=catalog.jokers.find(j=>j.id===candidate.catalogId||j.engineId===candidate.catalogId);if(j){const offer={...(candidate.couponed===undefined?{}:{couponed:candidate.couponed}),...(candidate.counters?{counters:structuredClone(candidate.counters)}:{}),price:candidate.price===null?unknown():known(candidate.price),edition:known(candidate.edition),stickers:known(candidate.stickers)};const section=node('section');section.append(node('h3',j.names.es),renderHandPreview(j,candidate.replacementId??'',state,scenarios,offer));handResults.append(section);}}}).catch(()=>{if(request===handRequest)handResults.append(node('p','No se pudo cargar el catálogo para comparar las ofertas.','error'));});
 });handButton.id='calculate-hands';$('live-plans').append(handButton);
 const runStartBridge=createRunStartBridge({
   context:()=>({record,raw:seenRaw,writable:lock.owned,dirty,loadFailed}),
@@ -850,7 +858,7 @@ const blindScreen=mountBlindScreen({
     const previous=value(state.observed.shop),context=shopQuoteContext(state,price,true);
     const jokers=structuredClone(state.observed.jokers),flash=jokers.status==='known'&&jokers.value.some(joker=>joker.catalogId==='flash');
     if(jokers.status==='known')for(const joker of jokers.value)if(joker.catalogId==='flash')for(const key of Object.keys(joker.counters))joker.counters[key]=unknown();
-    return commit(()=>store.correct({confirmationId:uuid(),confirmed:true,expected:analysisBinding(state),updatedAt:now(),patch:{money:known(money),jokerContext:known(context),...(flash?{jokers}:{}),shop:known({...(previous??{shopId:uuid()}),cardOffers:[],ignoredOtherOffers:['Cartas de la renovación pendientes de transcribir.']})},reason:'Renovación observada: saldo y precio transcritos; cartas nuevas pendientes, sin generar ofertas ni simular gastos.'}));
+    return commit(()=>store.correct({confirmationId:uuid(),confirmed:true,expected:analysisBinding(state),updatedAt:now(),patch:{money:known(money),jokerContext:known(context),...(flash?{jokers}:{}),shop:known({...(previous??{shopId:uuid()}),cardOffers:[],...(state.schemaVersion==='0.2'?{pricingTags:(state.observed.shop.status==='known'?state.observed.shop.value.pricingTags??[]:[]).filter(id=>id!=='tag_coupon')}:{}),ignoredOtherOffers:['Cartas de la renovación pendientes de transcribir.']})},reason:'Renovación observada: saldo y precio transcritos; cartas nuevas pendientes, sin generar ofertas ni simular gastos.'}));
    });
   },
   details:()=>{location.hash='table';$('joker-candidates')?.scrollIntoView({block:'start'});}

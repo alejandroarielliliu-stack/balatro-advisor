@@ -67,7 +67,7 @@ export function stateInput(input: unknown, use: (id:string)=>void = ()=>{}, allo
   if(observed.jokers.status==='known'&&observed.jokers.value.some(j=>advancedJoker(j.catalogId)))use('jokers.context');
   return state;
 }
-export function inventory(state: GameState): JokerInstance[] {
+export function inventory(state: GameState,shopModifiers=false): JokerInstance[] {
   const jokers = need(state.observed.jokers, '$.observed.jokers');
   const slots = need(state.observed.resources.jokerSlots, '$.observed.resources.jokerSlots');
   const negatives=jokers.filter(j=>need(j.edition,'$.jokers.edition')==='negative').length;
@@ -77,13 +77,14 @@ export function inventory(state: GameState): JokerInstance[] {
     if (!jokerDefinition(j.catalogId)) fail('$.observed.jokers.' + j.instanceId, 'unsupported_joker', `Comodín no implementado: ${j.catalogId}.`);
     
     seen.add(j.catalogId);
-    plain(j.edition, j.stickers, '$.observed.jokers.' + j.instanceId);
+    plain(j.edition, j.stickers, '$.observed.jokers.' + j.instanceId,shopModifiers);
     if (Object.keys(j.counters).some(key => !(key === 'greenMult' && j.catalogId === 'green_joker') && key!=='extraSell' && !Object.hasOwn(counterSpecs(j.catalogId),key))) fail('$.observed.jokers.' + j.instanceId + '.counters', 'unsupported_counter', 'Contador no implementado.');
   }
   return jokers;
 }
-export function plain(edition: Fact<string>, stickers: Fact<string[]>, path: string): void {
-  if (!['base','foil','holographic','polychrome','negative'].includes(need(edition, path + '.edition')) || need(stickers, path + '.stickers').some(s=>s!=='eternal')) fail(path, 'unsupported_modifier', 'Ediciones y stickers fuera del alcance.');
+export function plain(edition: Fact<string>, stickers: Fact<string[]>, path: string,shopModifiers=false): void {
+  const allowed=shopModifiers?['eternal','perishable','rental']:['eternal'];
+  if (!['base','foil','holographic','polychrome','negative'].includes(need(edition, path + '.edition')) || need(stickers, path + '.stickers').some(s=>!allowed.includes(s))) fail(path, 'unsupported_modifier', 'Ediciones y stickers fuera del alcance.');
 }
 export function greenValue(joker: JokerInstance): number {
   const value = joker.counters.greenMult;

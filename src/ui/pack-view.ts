@@ -1,3 +1,4 @@
+import {quoteShopPrice} from '../rules/shop-pricing.js';
 import type {Fact,GameState,JokerInstance} from '../state/model.js';
 import type {PackAction,PackEntry} from '../state/pack-contract.js';
 import {applyPackAction} from '../rules/pack-shop.js';
@@ -80,7 +81,7 @@ export function renderPackView(host:HTMLElement,options:PackViewOptions){
     let current:JokerInstance|undefined,readFields:(()=>JokerInstance)|undefined;
     const refresh=()=>{
      preview.replaceChildren();fields.replaceChildren();readFields=undefined;current=undefined;if(!choice.value)return;
-     const j=oldJoker?.catalogId===choice.value&&value(oldJoker.edition)===edition.value?structuredClone(oldJoker):freshJokerInstance(choice.value,instanceId,edition.value);current=j;
+     const j=oldJoker?.catalogId===choice.value&&value(oldJoker.edition)===edition.value?structuredClone(oldJoker):freshJokerInstance(choice.value,instanceId,edition.value);if(!oldJoker||oldJoker.catalogId!==choice.value||value(oldJoker.edition)!==edition.value)j.sellValue=quoteShopPrice(state,{kind:'joker',catalogId:j.catalogId,edition:edition.value,stickers:[]}).sellValue;current=j;
      preview.append(jokerArt(ALL_JOKER_FACTS[choice.value]!.artId,ALL_JOKER_FACTS[choice.value]!.name));
      const sale=el('input');sale.type='number';sale.min='0';sale.step='1';sale.value=String(value(j.sellValue)??'');sale.setAttribute('aria-label','Valor de venta '+(index+1));const saleLabel=el('label','Venta ($)');saleLabel.append(sale);fields.append(saleLabel);
      const counters=Object.entries(j.counters).map(([key,fact])=>{const input=el('input');input.type='number';input.step='1';input.value=String(value(fact)??'');input.setAttribute('aria-label',key+' '+(index+1));const l=el('label',counterSpecs(j.catalogId)[key]?.label??key);l.append(input);fields.append(l);return {key,input,fact};});

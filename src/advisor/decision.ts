@@ -54,7 +54,7 @@ export function operationStatus(errors:readonly Issue[],evidence?:AnalysisGate):
 }
 function matchesRecordedOffer(state:GameState,snapshot:ShopSnapshot,offerId:string){
  const manual=snapshot.jokers.find(o=>o.offerId===offerId),recorded=value(state.observed.shop)?.cardOffers.find(o=>o.offerId===offerId);
- return snapshot.id===value(state.observed.shop)?.shopId&&!!manual&&!!recorded&&recorded.kind==='joker'&&manual.catalogId===recorded.catalogId&&manual.price===value(recorded.price)&&manual.edition===value(recorded.edition)&&equal(manual.stickers,value(recorded.stickers))&&equal(manual.counters??{},'counters'in recorded?recorded.counters??{}:{});
+ return snapshot.id===value(state.observed.shop)?.shopId&&!!manual&&!!recorded&&recorded.kind==='joker'&&manual.catalogId===recorded.catalogId&&manual.price===value(recorded.price)&&manual.edition===value(recorded.edition)&&equal(manual.stickers,value(recorded.stickers))&&equal(manual.counters??{},'counters'in recorded?recorded.counters??{}:{})&&(manual.couponed??false)===('couponed'in recorded&&recorded.couponed===true);
 }
 /** One report, independent operation probes. No formula, policy, persistence or phase conversion here. */
 export function inspectShopDecision(input:unknown,snapshotInput:unknown,options:DecisionOptions={}):Result<ShopDecision>{
@@ -89,7 +89,7 @@ export function inspectShopDecision(input:unknown,snapshotInput:unknown,options:
  });
  const packActions:PackCapability[]=shop.packs.map(offer=>{
   const action:Extract<PackAction,{type:'buy_pack'}>={type:'buy_pack',offerId:offer.offerId},recorded=state.schemaVersion==='0.2'&&state.observed.shop.status==='known'?state.observed.shop.value.packOffers?.find(p=>p.offerId===offer.offerId):undefined;
-  const mismatch=shop.id!==value(state.observed.shop)?.shopId||!recorded||recorded.catalogId!==offer.family+'-'+offer.size||(value(recorded.price)??null)!==offer.price;
+  const mismatch=shop.id!==value(state.observed.shop)?.shopId||!recorded||recorded.catalogId!==offer.family+'-'+offer.size||(value(recorded.price)??null)!==offer.price||(recorded.couponed??false)!==(offer.couponed??false);
   const result=mismatch?null:applyPackAction(structuredClone(state),action,{expectedRevision:state.revision,updatedAt:state.updatedAt},{requireObserved});
   const errors:Issue[]=mismatch?[{path:'$.observed.shop',code:'unrecorded_offer',message:'El sobre no coincide con una oferta guardada. Registra identidad y precio antes de validar su apertura.'}]:result&&!result.ok?result.errors:[];
   return {id:'pack:'+offer.offerId,optionId:offer.offerId,action,status:operationStatus(errors,result?.evidence),errors,evidence:result?.evidence??null,trace:result?.ok?result.trace:[],moneyAfter:result?.ok?value(result.value.state.observed.money)??null:null,confirmation:result?.ok?'explicit_confirmation_required':'unavailable',confirmationErrors:errors,consequences:result?.ok?immediateConsequences(state,result.value.state):null};

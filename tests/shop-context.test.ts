@@ -85,8 +85,10 @@ test('quick fit observed offer: uses actual edition and sticker, without replaci
  const state=fixture(25);
  const foil=evaluateJokerFit(state,'joker',{ante:1,purchase:true,offer:{price:known(4),edition:known('foil'),stickers:known(['eternal'])}});
  assert.equal(foil.purchase.status,'legal');assert.equal(foil.purchase.moneyAfter,21);
- const rental=evaluateJokerFit(state,'joker',{ante:1,purchase:true,offer:{price:known(2),edition:known('base'),stickers:known(['rental'])}});
- assert.equal(rental.purchase.status,'unknown');assert.ok(rental.purchase.errors.some(e=>e.code==='unsupported_modifier'));
+ const rental=evaluateJokerFit(state,'joker',{ante:1,purchase:true,offer:{price:known(1),edition:known('base'),stickers:known(['rental'])}});
+ assert.equal(rental.purchase.status,'legal');assert.equal(rental.purchase.moneyAfter,24);assert.equal(rental.purchase.netCost,1);
+ const incorrectRental=evaluateJokerFit(state,'joker',{ante:1,purchase:true,offer:{price:known(2),edition:known('base'),stickers:known(['rental'])}});
+ assert.equal(incorrectRental.purchase.status,'unknown');assert.ok(incorrectRental.purchase.errors.some(e=>e.code==='unsupported_price'));
  const legacy=evaluateJokerFit(state,'joker',{ante:1,purchase:true});
  assert.equal(legacy.purchase.status,'legal');assert.equal(legacy.purchase.moneyAfter,23);
 });
@@ -158,19 +160,20 @@ test('shop context: voucher prerequisites and already acquired offers are checke
  const existing=option(state,snapshot,'owned');assert.match(existing.reasons.join(' '),/ya está adquirido/);assert.equal(existing.resourceChanges,undefined);
 });
 
-test('shop context: all 32 voucher descriptions are evaluated, exactly 10 effects have resource projections',()=>{
+test('shop context: all 32 voucher descriptions are evaluated, exactly 12 integrated effects have projections',()=>{
  let projections=0;
  for(const voucher of VOUCHER_CATALOG){
   const state=fixture(70),snapshot=shop();
   state.observed.outOfScope=known({vouchers:[...voucher.requires],consumables:[],pendingTags:[],otherModifiers:[]});
   const totals=voucherResources('blue',voucher.requires);state.observed.resources.handsPerRound=known(totals.hands);state.observed.resources.discardsPerRound=known(totals.discards);state.observed.resources.handSize=known(totals.handSize);state.observed.resources.jokerSlots=known(totals.jokerSlots);
-  snapshot.vouchers=[{offerId:voucher.id,catalogId:voucher.id,price:10}];
+  const price=voucher.id==='v_liquidation'?7:10;
+  snapshot.vouchers=[{offerId:voucher.id,catalogId:voucher.id,price}];
   const evaluated=option(state,snapshot,voucher.id);
-  assert.equal(evaluated.title,voucher.name);assert.equal(evaluated.moneyAfter,60);assert.equal(evaluated.fit,undefined);
+  assert.equal(evaluated.title,voucher.name);assert.equal(evaluated.moneyAfter,70-price);assert.equal(evaluated.fit,undefined);
   if(evaluated.resourceChanges){projections++;assert.equal(evaluated.coverage,'modeled');}
   else {assert.equal(evaluated.coverage,'limited');assert.match(evaluated.limitations.join(' '),/sin integración/);}
  }
- assert.equal(projections,10);
+ assert.equal(projections,12);
 });
 
 test('shop context: Seed Money changes a cap without creating cash and Green cannot receive interest',()=>{
@@ -191,7 +194,7 @@ test('shop context: a free observed interest voucher keeps its cap projection wi
  assert.equal(belowBand.options.find(o=>o.id==='seed')?.resourceChanges?.interestCap,10);
  // floor(30/5)=6: Seed permits an extra dollar only at a future eligible cashout.
  assert.deepEqual(firstBand.recommendation.offerIds,['seed']);assert.equal(firstBand.recommendation.status,'abstain');
- assert.match(firstBand.options.find(o=>o.id==='seed')!.limitations.join(' '),/precio base/);
+ assert.match(firstBand.options.find(o=>o.id==='seed')!.limitations.join(' '),/precio calculado/);
  assert.equal(firstBand.options.find(o=>o.id==='seed')?.moneyAfter,30);
  assert.deepEqual(firstBand.options.find(o=>o.id==='seed')?.resourceChanges,{interestCap:10});
  assert.equal(at30.observed.money.status==='known'&&at30.observed.money.value,30);

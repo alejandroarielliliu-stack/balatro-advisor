@@ -62,5 +62,5 @@ test('unknown shop is not a known empty shop and requests only its visible offer
 });
 test('a supported current-format voucher uses actual H2 price, and advice is a reserve tradeoff',()=>{
  const s=state(40),shop=snapshot();shop.vouchers=[{offerId:'seed',catalogId:'v_seed_money',price:10}];const before=structuredClone(s),r=evaluateShopContext(s,shop);assert.equal(r.options[1]!.coverage,'modeled');assert.deepEqual(r.recommendation.offerIds,['hold','seed']);assert.deepEqual([r.options[1]!.economics!.interest.before,r.options[1]!.economics!.interest.after],[5,6]);assert.deepEqual(s,before);
- shop.vouchers[0]!.price=0;const unsupported=evaluateShopContext(s,shop);assert.equal(unsupported.recommendation.status,'abstain');assert.equal(unsupported.options[1]!.coverage,'limited');assert.match(unsupported.options[1]!.limitations.join(' '),/precio base/);
+ shop.vouchers[0]!.price=0;const unsupported=evaluateShopContext(s,shop);assert.equal(unsupported.recommendation.status,'abstain');assert.equal(unsupported.options[1]!.coverage,'limited');assert.match(unsupported.options[1]!.limitations.join(' '),/precio calculado/);
 });

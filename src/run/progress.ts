@@ -8,6 +8,7 @@ import {counterSpecs} from '../catalog/joker-counters.js';
 import {HISTORY_TARGET_KEYS} from '../catalog/history-jokers.js';
 import {observationCounterSpecs} from '../state/observations.js';
 import type {Trace} from '../rules/core.js';
+import {PRICE_TAGS,pricingTagsForShop,tagsAfterObservedSkip} from '../rules/price-tags.js';
 
 const refSchema=object({ante:integer(1,8),kind:enumeration('small','big','boss')});
 export const progressBlindSchema=object({ante:integer(1,8),kind:enumeration('small','big','boss'),bossId:fact(text()),target:fact(integer(1)),reward:fact(integer(0))});
@@ -96,7 +97,9 @@ function invalidateDynamic(state:GameStateV02,scope:'gap'|'selection'|'round'|'s
     const ctx=context.value;
     const renewalFields=['rerollCost','freeRerolls','visibleRerollCost'] as const;
     const fields=scope==='shop_entry'?renewalFields:scope==='shop'?[...renewalFields,...(inventory.status==='known'&&inventory.value.some(j=>j.catalogId==='perkeo')?['consumables' as const]:[])] as const:dynamicContext;
-    for(const field of fields)if(ctx[field]&&!(field==='tags'&&ctx.tags?.status==='known'&&ctx.tags.value.length===0)&&!(field==='grosMichelExtinct'&&ctx.grosMichelExtinct?.status==='known'&&ctx.grosMichelExtinct.value===true))ctx[field]=unknown(reason) as never;
+    const preservePriceQueue=scope!=='gap'&&ctx.tags?.status==='known'&&(ctx.tags.value.length===0||ctx.tags.value.some(id=>PRICE_TAGS.has(id)||id==='tag_double'));
+    if(preservePriceQueue&&ctx.tags?.status==='known')ctx.tags.value=ctx.tags.value.filter(id=>!(scope==='selection'&&tagDefinition(id)?.trigger==='round_start_bonus')&&!(scope==='round'&&state.observed.nextBlind.status==='known'&&state.observed.nextBlind.value.kind==='boss'&&id==='tag_investment'));
+    for(const field of fields)if(ctx[field]&&!(field==='tags'&&preservePriceQueue)&&!(field==='grosMichelExtinct'&&ctx.grosMichelExtinct?.status==='known'&&ctx.grosMichelExtinct.value===true))ctx[field]=unknown(reason) as never;
     if(scope==='round'||scope==='gap')for(const field of ['handCounts','roundHandCounts'] as const)if(ctx[field])for(const key of Object.keys(ctx[field]))ctx[field][key]=unknown(reason);
   }
   // A saved debuff boolean cannot express "unknown". Retaining it would apply an old boss to a new blind.
@@ -133,6 +136,12 @@ function enterShopAfterCashout(state:GameStateV02,proposed:BlindInfo|undefined,l
   state.observed.nextBlind=known(structuredClone(proposed??successor));
   if(state.phaseData.blind.value.kind==='boss')state.observed.visibleBoss=unknown('El jefe del nuevo ante todavía no se registró.');
   state.observed.shop=unknown('Registra las ofertas de esta nueva tienda; no se reutilizan las anteriores.');
+  const pricingTags=pricingTagsForShop(state);
+  if(pricingTags.length){
+    state.observed.shop=known({shopId:`shop:${state.runId}:${state.revision+1}`,cardOffers:[],ignoredOtherOffers:['Cartas de tienda pendientes de registrar.'],pricingTags});
+    const tags=state.observed.jokerContext?.status==='known'?state.observed.jokerContext.value.tags:undefined;
+    if(tags?.status==='known'&&pricingTags.includes('tag_coupon')){const index=tags.value.indexOf('tag_coupon');if(index>=0)tags.value.splice(index,1);}
+  }
   const next:GameStateV02={...state,phase:'shop',phaseData:{origin:structuredClone(state.phaseData.blind)}};
   invalidateDynamic(next,'shop_entry',limitations);
   return {ok:true,value:next};
@@ -177,7 +186,7 @@ export function applyRunProgress(input:unknown,commandInput:unknown,options:Prog
     if(state.phase!=='blind_select')return issue('wrong_phase','Solo puedes registrar un salto desde la selección de ciega.');
     const current=requireBlind();if(!current.ok)return current;
     if(current.value.kind==='boss')return issue('illegal_skip','La ciega jefe no se puede saltar.');
-    const tag=state.phaseData.skipTag;
+    const acquiredTags=tagsAfterObservedSkip(state),tag=state.phaseData.skipTag;
     if(tag.status==='known'&&!tagDefinition(tag.value))return issue('unsupported_tag','Registra una etiqueta compatible o declárala desconocida antes del salto.');
     // A Boss Tag or an unobserved reward can replace the visible boss. Never retain it as current.
     if(tag.status==='unknown'||tag.value==='tag_boss')state.observed.visibleBoss=unknown('Confirma el jefe después de los efectos del salto.');
@@ -191,7 +200,7 @@ export function applyRunProgress(input:unknown,commandInput:unknown,options:Prog
     state.observed.jokerContext=known(ctx);
     const skipped=ctx.blindsSkipped;
     ctx.blindsSkipped=skipped?.status==='known'?known(skipped.value+1):unknown('No se conoce el total previo de ciegas saltadas.');
-    ctx.tags=command.tags??unknown('Confirma las etiquetas pendientes después del salto; no se ejecutaron ni duplicaron sus efectos.');
+    ctx.tags=command.tags??acquiredTags;
     next={...state,phase:'blind_select',phaseData:{skipTag:unknown('Transcribe la etiqueta de la nueva ciega.')}};
     limitations.push('Salto declarado después de resolver sus efectos y volver a selección; no se generaron cartas, sobres, dinero ni duplicados. No equivale a una ronda ganada ni acredita que saltar fuera mejor.');
   }else if(command.type==='locate'){
