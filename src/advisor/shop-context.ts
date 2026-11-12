@@ -309,7 +309,7 @@ export function evaluateShopContext(input:GameState,snapshotInput:ShopSnapshot,o
  const tradeoffs=assessed.filter(a=>a.eligible&&a.tradeoff).map(a=>a.option);
  const noVisibleOffers=shop.jokers.length+shop.vouchers.length+shop.packs.length+(shop.others?.length??0)===0;
  if(noVisibleOffers&&state.observed.shop.status==='unknown'){
-  output.recommendation={status:'abstain',title:'Indica las ofertas visibles y sus precios',offerIds:[],reasons:['La tienda actual es desconocida; no equivale a una tienda vacía. Para compararla bastan los artículos visibles y sus precios; no hace falta transcribir las 52 cartas.']};
+  output.recommendation={status:'abstain',title:'Añade las ofertas visibles',offerIds:[],reasons:['La tienda actual es desconocida; no equivale a una tienda vacía. Registra los artículos visibles y sus efectos para calcular los precios y comparar.']};
  }else if(unscored.length&&!candidates.length){
   output.recommendation={status:'abstain',title:'Falta valorar las otras cartas visibles',offerIds:[...candidates,...unscored].map(o=>o.id),reasons:['Hay ofertas manuales sin efecto evaluado que pueden cambiar la elección. Registra su identidad y objetivos antes de preferir una compra.']};
  }else if(tradeoffs.length){

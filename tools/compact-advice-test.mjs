@@ -15,13 +15,13 @@ const key='balatro-advisor.confirmed.v1',dir='docs/evidencia/ux01';await mkdir(d
 const known=value=>({status:'known',source:'manual',value});
 const unknown=reason=>({status:'unknown',reason});
 const owned=(catalogId,instanceId,sellValue,counters={})=>({catalogId,instanceId,sellValue:known(sellValue),edition:known('base'),stickers:known([]),counters});
-function fixture({money=12,jokers=[owned('joker','owned-joker',1)],catalogId='abstract_joker',price=4,stickers=[]}={}){
+function fixture({money=12,jokers=[owned('joker','owned-joker',1)],catalogId='abstract_joker',price=4,edition='base',stickers=[],couponed}={}){
  const created=createNewRun({runId:'synthetic-ux01-browser',updatedAt:'2026-10-18T23:00:00Z',deckId:'blue',profileConfirmed:true});assert.equal(created.ok,true);
  const state=created.value;state.phase='shop';state.phaseData={origin:known({ante:3,kind:'boss'})};
  state.observed.money=known(money);state.observed.jokers=known(structuredClone(jokers));
  state.observed.lastCleared=known({ante:3,kind:'boss'});
  state.observed.nextBlind=known({ante:4,kind:'small',bossId:known('none'),target:known(5000),reward:known(3)});
- state.observed.shop=known({shopId:'ux01-browser-shop',cardOffers:[{offerId:'visible-joker',catalogId,label:catalogId,kind:'joker',price:price===null?unknown('Precio visible sin transcribir'):known(price),edition:known('base'),stickers:known(stickers)}],voucherOffers:[],packOffers:[],ignoredOtherOffers:[]});
+ state.observed.shop=known({shopId:'ux01-browser-shop',cardOffers:[{offerId:'visible-joker',catalogId,label:catalogId,kind:'joker',price:price===null?unknown('Precio visible sin transcribir'):known(price),edition:edition===null?unknown('Edición visible sin transcribir'):known(edition),stickers:known(stickers),...(couponed===undefined?{}:{couponed})}],voucherOffers:[],packOffers:[],ignoredOtherOffers:[]});
  state.assumptions.probes=[];state.assumptions.roundPlans=[];
  return {schemaVersion:'confirmed-2',initialState:structuredClone(state),state,history:[]};
 }
@@ -118,11 +118,12 @@ try{
  assert.equal(replacementOption.fit.purchase.netCost,0);assert.equal(replacementOption.moneyAfter,12);await unchanged(r,before,count);
  pass('replacement-sacrifice-is-visible-before-details',{status:'tie',sacrificed:'Popcorn remaining mult4',netCost:0,moneyAfter:12,recordWrites:0},{status:replacementDecision.context.recommendation.status,sacrifice:await r.locator('#shop-advice-sacrifice').innerText(),netCost:replacementOption.fit.purchase.netCost,moneyAfter:replacementOption.moneyAfter,recordWrites:0});await replacement.context.close();
 
- // Missing price and unsupported Perishable modifier remain visible on the
- // first answer. Neither is hidden exclusively behind a coverage disclosure.
+ // An unknown edition and a synthetic unsupported sticker remain visible on the
+ // first answer. The unsupported offer is already couponed, so its known $0
+ // price cannot mask the separate modifier blocker as a missing-price question.
  for(const [id,input,expected] of [
-  ['unknown-price',fixture({price:null}),/precio/i],
-  ['unsupported-modifier',fixture({stickers:['perishable']}),/pegatin|sticker|modific|fuera.*alcance|cobertura/i]
+  ['unknown-price',fixture({price:null,edition:null}),/precio/i],
+  ['unsupported-modifier',fixture({price:0,stickers:['synthetic_unsupported_sticker'],couponed:true}),/pegatin|sticker|modific|fuera.*alcance|cobertura/i]
  ]){
   const sample=await session(input),page=sample.page;before=await raw(page);count=await writes(page);await open(page);
   const pending=page.locator('#shop-advice-pending');assert.equal(await pending.isVisible(),true,id+' visible limitation');assert.match(await pending.innerText(),expected);

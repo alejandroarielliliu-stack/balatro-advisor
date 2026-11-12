@@ -71,7 +71,7 @@ function pending(decision:ShopDecision,selected:ShopOption[],capabilities:Capabi
  const missing=relevant.find(c=>c.status==='missing_data');
  if(missing){
   const option=decision.context.options.find(o=>o.id===missing.optionId);
-  if(option?.price===null)return withConditions(`Indica el precio actual de ${option.title}.`);
+  if(option?.price===null)return withConditions(option.kind==='reroll'?`Indica el precio actual de ${option.title}.`:`Completa los efectos de ${option.title} para calcular su precio.`);
   const question=decision.questions.find(q=>q.operationIds.includes(missing.id));
   return withConditions(question?.message??missing.errors.map(e=>e.message).join(' '));
  }

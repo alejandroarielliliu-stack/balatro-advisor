@@ -39,9 +39,9 @@ test('UX01: distinct purchases keep recommendation order and no arbitrarily pref
  const f=fixture();f.snapshot.jokers=[offer('stuntman',7,'chips'),offer('joker',2,'mult')];const d=inspect(f),s=buildShopAdviceSummary(d);
  assert.equal(s.status,'tie');assert.deepEqual(s.choices.map(c=>c.id),d.context.recommendation.offerIds);assert.deepEqual(s.choices.map(c=>c.moneyAfter),[18,23]);assert.match(s.benefit!,/no demuestra una ganadora/);assert.doesNotMatch(s.benefit!,/\+4/);
 });
-test('UX01: unknown current price prompts for that price without inventing cost or a benefit',()=>{
+test('UX01: unknown current price requests its calculation data without inventing cost or a benefit',()=>{
  const f=fixture();f.snapshot.jokers=[offer('joker',null)];const s=buildShopAdviceSummary(inspect(f));
- assert.equal(s.status,'abstain');assert.equal(s.benefit,null);assert.equal(s.sacrifice,null);assert.equal(s.choices[0]!.price,null);assert.match(s.pending!,/precio actual/);
+ assert.equal(s.status,'abstain');assert.equal(s.benefit,null);assert.equal(s.sacrifice,null);assert.equal(s.choices[0]!.price,null);assert.match(s.pending!,/calcular su precio/);
 });
 test('UX01: unsupported observed discount remains a visible blocker, not a successful cheap purchase',()=>{
  const f=fixture();f.snapshot.jokers=[offer('joker',1)];const s=buildShopAdviceSummary(inspect(f));

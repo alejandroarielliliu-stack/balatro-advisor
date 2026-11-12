@@ -21,7 +21,8 @@ const modules=[
  'dist/src/advisor/decision.js','dist/src/advisor/quick-fit.js','dist/src/advisor/composition.js','dist/src/advisor/composition-signals.js',
  'dist/src/rules/shop.js','dist/src/rules/fixed-main-mult.js','dist/src/rules/scoring.js','dist/src/rules/economy.js',
  'dist/src/rules/engine-evidence.js','dist/src/storage/confirmed-record.js','dist/src/storage/confirmed-store.js',
- 'dist/src/state/model.js','dist/src/state/validation.js'
+ 'dist/src/state/model.js','dist/src/state/validation.js',
+ 'dist/src/rules/shop-pricing.js','dist/src/rules/shop-offer-prices.js','dist/src/rules/price-tags.js'
 ];
 const report={date:new Date().toISOString(),mode:remote?'public':'local',url:origin.href,commit:process.env.DEC02_COMMIT??null,workflow:process.env.DEC02_WORKFLOW??null,
  environment:'Chrome isolated profiles; desktop and mobile390 emulation',gameObservation:false,physicalAndroid:false,
@@ -88,9 +89,11 @@ try{
  const savings=await session(at('DEC02-02').state),v=savings.page;before=await raw(v);count=await writes(v);await open(v);decision=await inspect(v);assert.deepEqual(decision.context.recommendation.offerIds,['hold']);assert.equal(decision.context.options.find(o=>o.id==='seed').moneyAfter,10);assert.deepEqual([decision.context.options.find(o=>o.id==='seed').economics.interest.before,decision.context.options.find(o=>o.id==='seed').economics.interest.after],[4,2]);assert.match(await v.locator('#shop-advice-benefit').innerText(),/\$20/);assert.match(await v.locator('#shop-advice-benefit').innerText(),/\$10.*no aprovecha el tope/);await v.locator('#shop-advice-alternatives > summary').click();assert.match(await row(v,'seed').innerText(),/futur|inversión|saldo cre/i);await unchanged(v,before,count);await savings.context.close();
  pass('prepared-purchase-and-unused-interest-cap-keep-distinct-conditions',{prepared:'summit',summitBalance:15,save:'hold',seedBalance:10,conditionalInterest:[4,2],writes:0},{prepared:'summit',summitBalance:15,save:decision.context.recommendation.offerIds,seedBalance:10,conditionalInterest:[4,2],writes:0});
 
+ // An unidentified edition makes the automatic price unknown. Merely omitting
+ // a historical price no longer does: the base price can be calculated.
  // Unknown price and strict evidence do not enter the eligible comparison;
  // an unaffordable expensive alternative does not become a selected purchase.
- const missing=structuredClone(at('DEC02-05').state);missing.observed.shop.value.cardOffers[0].price={status:'unknown',reason:'Precio sin registrar.'};
+ const missing=structuredClone(at('DEC02-05').state);missing.observed.shop.value.cardOffers[0].price={status:'unknown',reason:'Precio sin calcular: falta confirmar la edición.'};missing.observed.shop.value.cardOffers[0].edition={status:'unknown',reason:'Edición sin registrar.'};
  const limitation=await session(missing),l=limitation.page;before=await raw(l);count=await writes(l);decision=await inspect(l);assert.ok(!decision.context.recommendation.offerIds.includes('joker'));assert.equal(decision.context.options.find(o=>o.id==='joker').price,null);assert.deepEqual(decision.context.comparisons,[]);const strict=await inspect(l,{requireObserved:true});assert.equal(strict.context.recommendation.status,'abstain');assert.ok(strict.actions.every(action=>action.status==='pending_evidence'||action.status==='missing_data'));await unchanged(l,before,count);await limitation.context.close();
  const poor=structuredClone(at('DEC02-05').state);poor.observed.money=known(1);const illegal=await session(poor),il=illegal.page;before=await raw(il);count=await writes(il);decision=await inspect(il);assert.deepEqual(decision.context.recommendation.offerIds,['hold']);assert.deepEqual(decision.context.comparisons,[]);assert.ok(decision.actions.filter(action=>action.optionId!=='hold').every(action=>action.status==='illegal'));await unchanged(il,before,count);await illegal.context.close();
  pass('price-evidence-and-legality-gates-precede-preference',{unknownPrice:null,strict:'abstain',insufficientMoney:'hold',comparisonWithoutLegalData:false},{unknownPrice:null,strict:strict.context.recommendation.status,insufficientMoney:decision.context.recommendation.offerIds,comparisonWithoutLegalData:false});

@@ -10,6 +10,7 @@ import {currentShopPlan} from './shop-plan-view.js';
 import {observedRerollQuote} from '../rules/reroll-quote.js';
 import {openShopJokerPicker} from './shop-joker-picker.js';
 import {normalizeShopSnapshot} from '../rules/shop-offer-prices.js';
+import {quoteShopPrice} from '../rules/shop-pricing.js';
 
 const el=<K extends keyof HTMLElementTagNameMap>(tag:K,text='',className='')=>{const e=document.createElement(tag);e.textContent=text;e.className=className;return e;};
 const value=<T>(fact:Fact<T>|undefined)=>fact?.status==='known'?fact.value:undefined;
@@ -68,7 +69,7 @@ export function mountGameShop(stage:HTMLElement,options:GameShopOptions){
    openShopJokerPicker({
     ...(existing?{offer:{...structuredClone(existing),price:recorded?value(recorded.price)??null:existing.price}}:{}),
     canWrite:()=>writable,
-    quote:item=>{const changed=structuredClone(shelf),index=changed.jokers.findIndex(previous=>previous.offerId===item.offerId);if(index<0)changed.jokers.push(item);else changed.jokers[index]=item;return {price:normalizeShopSnapshot(state!,changed).snapshot.jokers.find(offer=>offer.offerId===item.offerId)!.price};},
+    quote:item=>{const changed=structuredClone(shelf),index=changed.jokers.findIndex(previous=>previous.offerId===item.offerId);if(index<0)changed.jokers.push(item);else changed.jokers[index]=item;const offer=normalizeShopSnapshot(state!,changed).snapshot.jokers.find(offer=>offer.offerId===item.offerId)!;const quote=quoteShopPrice(state!,{kind:'joker',catalogId:offer.catalogId,edition:offer.edition,stickers:offer.stickers,couponed:offer.couponed??false});return {price:offer.price,...(quote.price.status==='unknown'?{reason:quote.price.reason}:{})};},
     save:item=>{
      const changed=structuredClone(shelf),index=changed.jokers.findIndex(previous=>previous.offerId===item.offerId);
      if(index<0)changed.jokers.push(item);else changed.jokers[index]=item;
