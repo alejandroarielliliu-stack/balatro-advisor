@@ -16,7 +16,7 @@ export const FIT_POLICY=FIT_INDEX_POLICY.id;
 export const FIT_AXES={stage:4,readiness:3,integration:3} as const;
 /** Editorial bands of known deck composition, never probabilities of draws. */
 export const FIT_MATERIAL_BANDS={moderate:1/4,strong:1/2} as const;
-export interface FitOptions {ante?:number;instanceId?:string;purchase?:boolean;replacementId?:string;intendedHand?:string;requireObserved?:boolean;offer?:{price:Fact<number>;edition:Fact<string>;stickers:Fact<string[]>}}
+export interface FitOptions {ante?:number;instanceId?:string;purchase?:boolean;replacementId?:string;intendedHand?:string;requireObserved?:boolean;offer?:{price:Fact<number>;edition:Fact<string>;stickers:Fact<string[]>;counters?:Record<string,Fact<number>>}}
 export interface FitSignal {id:string;kind:'fact'|'heuristic'|'potential'|'conflict';text:string}
 export interface QuickFit {
  id:string;instanceId?:string;policy:string;score:number|null;range:[number,number|null]|null;
@@ -201,7 +201,7 @@ export function projectJokerPurchase(state:GameState,id:string,options:FitOption
  const none:QuickFit['purchase']={status:'not-requested',errors:[],limitations:[]};if(!options.purchase)return none;
  const definition=jokerDefinition(id);if(!definition)return {status:'unknown',errors:[],limitations:['La transacción de este efecto queda fuera de H2.']};
  const copy=structuredClone(state);let instanceId='hypothetical:quick-fit';while(v(copy.observed.jokers)?.some(j=>j.instanceId===instanceId))instanceId='_'+instanceId;
- copy.observed.shop=k({shopId:'hypothetical:quick-fit',cardOffers:[{offerId:'quick-fit',catalogId:id,label:ALL_JOKER_FACTS[id]!.name,kind:'joker',price:structuredClone(options.offer?.price??k(definition.price)),edition:structuredClone(options.offer?.edition??k('base')),stickers:structuredClone(options.offer?.stickers??k([]))}],ignoredOtherOffers:[]});
+ copy.observed.shop=k({shopId:'hypothetical:quick-fit',cardOffers:[{offerId:'quick-fit',catalogId:id,label:ALL_JOKER_FACTS[id]!.name,kind:'joker',price:structuredClone(options.offer?.price??k(definition.price)),edition:structuredClone(options.offer?.edition??k('base')),stickers:structuredClone(options.offer?.stickers??k([])),...(options.offer?.counters?{counters:structuredClone(options.offer.counters)}:{})}],ignoredOtherOffers:[]});
  const result=applyShopAction(copy,options.replacementId?{type:'replace',sellInstanceId:options.replacementId,offerId:'quick-fit',instanceId}:{type:'buy',offerId:'quick-fit',instanceId},{expectedRevision:copy.revision,updatedAt:copy.updatedAt},{requireObserved:!!options.requireObserved});
  const limits=result.evidence.limitations.map(item=>item.message);
  if(!result.ok)return {status:result.errors.some(e=>['insufficient_money','no_slots','eternal_joker','missing_joker'].includes(e.code))?'illegal':'unknown',errors:result.errors,limitations:limits};
@@ -229,13 +229,18 @@ export function evaluateJokerFit(input:GameState,catalogId:string,options:FitOpt
  if(options.replacementId&&!options.purchase){result.purchase.status='unknown';result.limitations.push('Un reemplazo requiere solicitar la compra y validar la secuencia venta→compra con H2.');return result;}
  if(options.instanceId&&!instance){result.limitations.push('La instancia poseída no existe o el inventario es desconocido.');return result;}
  if(instance&&engineId(instance.catalogId)!==key){result.limitations.push('La instancia poseída no corresponde al comodín solicitado.');return result;}
+ const offered=options.purchase&&options.offer?.counters?{
+  instanceId:'offered-fit',catalogId:key,edition:structuredClone(options.offer.edition),stickers:structuredClone(options.offer.stickers),sellValue:k(0),
+  counters:{...(key==='green_joker'?{greenMult:k(0)}:initialCounters(key)),...structuredClone(options.offer.counters)}
+ }:undefined;
+ const fittedInstance=instance??offered;
  const ante=options.ante??v(state.observed.nextBlind)?.ante;
  const index=ante===undefined||!Number.isInteger(ante)||ante<1||ante>8?-1:ante<=2?0:ante<=5?1:2;
  result.stage=index===0?'early':index===1?'middle':index===2?'late':'unknown';
  const {projectedState,...purchase}=projectJokerPurchase(state,key,options);result.purchase=purchase;
  const effective=structuredClone(state);if(options.replacementId&&owned)effective.observed.jokers=k(owned.filter(j=>j.instanceId!==options.replacementId));
  if(projectedState){effective.observed.money=structuredClone(projectedState.observed.money);effective.observed.resources=structuredClone(projectedState.observed.resources);effective.observed.deck=structuredClone(projectedState.observed.deck);}
- const p=preparation(effective,profile,instance,options);result.readiness=p.status;if(p.signal)result.signals.push(p.signal);
+ const p=preparation(effective,profile,fittedInstance,options);result.readiness=p.status;if(p.signal)result.signals.push(p.signal);
  let stage=stageValue(ante,profile.stage),integration=owned===undefined?null:1;
  if(stage!==null&&p.materialRatio!==undefined&&p.materialRatio<FIT_INDEX_POLICY.scarceRatio&&!profile.growth){
   const cap=scarceStageCap(p.materialRatio);stage=Math.min(stage,cap);result.signals.push({id:'scarce-material',kind:'heuristic',text:`${p.reason} Poco material: limita el aporte de etapa a ${indexRound(cap*FIT_INDEX_POLICY.unitsPerBand)} de índice hasta preparar la construcción.`});
@@ -265,7 +270,7 @@ export function evaluateJokerFit(input:GameState,catalogId:string,options:FitOpt
  }
  result.axes=[{key:'stage',value:stage,max:4,reason:index<0?'Indica un ante entre1 y8.':`Ante ${ante}; perfil interpolado entre los anclajes 1, 4 y 8. ${profile.detail}`},{key:'readiness',value:p.value,max:3,reason:p.reason},{key:'integration',value:integration,max:3,reason:integration===null?'Falta inventario o balance de puntuación para valorar la integración.':integration===0?'Conflicto identificado.':integration===3?'Relación potencial con soporte documentado.':integration===2?'Añade una función ausente del inventario.':'Función presente, sin relación específica demostrada.'}];
  result.signals.unshift({id:'preparation',kind:p.status==='ready'?'fact':p.status==='unavailable'?'conflict':'potential',text:p.reason});
- result.magnitude=magnitude(profile,key,instance);
+ result.magnitude=magnitude(profile,key,fittedInstance);
  if(p.status==='unavailable')result.magnitude={bonus:0,reason:'Condición no disponible: el aporte registrado no elimina este bloqueo.'};
  const lower=result.axes.reduce((sum,a)=>sum+(a.value??0)*FIT_INDEX_POLICY.unitsPerBand,0)+(result.magnitude.bonus??0);
  const upper=result.magnitude.bonus===null?null:result.axes.reduce((sum,a)=>sum+(a.value??a.max)*FIT_INDEX_POLICY.unitsPerBand,0)+result.magnitude.bonus;

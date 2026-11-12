@@ -5,7 +5,7 @@ import type {BlindDecision} from '../advisor/blind-decision.js';
 import type {ShopDecision} from '../advisor/decision.js';
 import type {Result} from '../state/model.js';
 import {tagDefinition} from '../catalog/tags.js';
-import {guideBlindChoice} from '../advisor/blind-guidance.js';
+import {BLIND_GUIDANCE_POLICY,guideBlindChoice} from '../advisor/blind-guidance.js';
 import type {BlindGuidance,BlindGuidanceOptions} from '../advisor/blind-guidance.js';
 const el=<K extends keyof HTMLElementTagNameMap>(tag:K,text='',cl='')=>{const e=document.createElement(tag);e.textContent=text;e.className=cl;return e;};
 const amount=(n:number|null)=>n===null?'Sin dato':'$'+n;
@@ -37,13 +37,34 @@ function route(host:HTMLElement,title:string,decision:Result<ShopDecision>|null)
  }
  host.append(section);
 }
+export function compactBlindGuidance(guidance:BlindGuidance):{title:string;reason:string}{
+ const {preferred,ruleId}=guidance.recommendation,rules=BLIND_GUIDANCE_POLICY.rules;
+ if(preferred==='skip'){
+  const reference=guidance.cashflowReference;
+  const best=reference?.rows.reduce((maximum,row)=>Math.max(maximum,row.earned),0);
+  return {title:'Salta',reason:reference&&best!==undefined?`Economía te da $${reference.skipImmediateIncome-best} más y puedes seguir sin tienda.`:'Aprovecha la etiqueta y sigue a la próxima ciega.'};
+ }
+ if(preferred==='play'){
+  if(ruleId===rules.boss)return {title:'Juega',reason:'La ciega jefe es obligatoria.'};
+  if(ruleId===rules.shopNeeded)return {title:'Juega',reason:'Necesitas la tienda para reforzarte.'};
+  if(ruleId===rules.cashThreshold){
+   const hands=guidance.cashflowReference?.minimumHandsToMatchSkip;
+   return {title:'Juega',reason:hands? `Con ${hands} ${hands===1?'mano sobrante':'manos sobrantes'}, igualas o mejoras el salto y conservas la tienda.`:'Si ganas, igualas o mejoras el salto y conservas la tienda.'};
+  }
+  return {title:'Juega',reason:'Si ganas, cobras y visitas la tienda.'};
+ }
+ if(ruleId===rules.rewardTradeoff)return guidance.askNextBlindPlan
+  ?{title:'¿Puedes saltar?',reason:'El salto da más dinero, pero pierdes esta tienda.'}
+  :{title:'Compara',reason:`Al saltar, cambias cobro y tienda por ${guidance.tag.name}.`};
+ if(ruleId===rules.risk)return {title:'Valora el salto',reason:'Vas justo. Comprueba que puedes superar la siguiente.'};
+ if(ruleId===rules.queue)return {title:'Revisa las etiquetas',reason:'Las etiquetas pendientes pueden cambiar el premio.'};
+ if(ruleId===rules.persistent)return {title:'Revisa tus Jokers',reason:'Sus efectos pueden cambiar si conviene saltar.'};
+ return {title:'Faltan datos',reason:'Completa los datos de esta ciega.'};
+}
 export function renderBlindGuidance(guidance:BlindGuidance):HTMLElement{
  const host=el('section','','blind-guidance');host.id='blind-guidance';host.dataset.status=guidance.recommendation.status;host.dataset.preferred=guidance.recommendation.preferred??'none';host.dataset.rule=guidance.recommendation.ruleId;
- host.append(el('small','Orientación · heurística'),el('h3',guidance.recommendation.title),el('p',guidance.recommendation.reason));
- if(guidance.tag.profile)host.append(el('p',guidance.tag.name+' · '+guidance.tag.profile.benefit,'blind-tag-benefit'));
- else if(guidance.recommendation.status!=='abstain')host.append(el('p','El beneficio de esta etiqueta sigue sin valorar y podría cambiar el consejo.','muted'));
- const condition=guidance.conditions.find(c=>c.includes('capacidad de superar'));
- if(condition)host.append(el('p',condition,'muted'));
+ const summary=compactBlindGuidance(guidance);
+ host.append(el('h3',summary.title),el('p',summary.reason));
  const detail=el('details');detail.append(el('summary','Motivos y condiciones'));
  for(const [label,items]of [['A favor y contexto',guidance.reasons],['Sacrificios',guidance.sacrifices],['Condiciones',guidance.conditions],['Límites',guidance.limitations]] as const){
   if(!items.length)continue;detail.append(el('h4',label));for(const text of items)detail.append(el('p',text));

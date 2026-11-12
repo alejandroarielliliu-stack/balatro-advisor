@@ -35,12 +35,12 @@ export interface ShopContext {
  undo?:()=>string|null;canUndo?:()=>boolean;status?:()=>string|null;
  controlsChanged?:()=>void;
 }
-interface ListedJoker {joker:JokerReference;offerId:string;sellId:string;price:number|null;edition:string;stickers:string[]}
+interface ListedJoker {joker:JokerReference;offerId:string;sellId:string;price:number|null;edition:string;stickers:string[];counters?:ShopSnapshot['jokers'][number]['counters']}
 // Recorded joker/voucher/pack shelf; other cards and replacement choices remain hypothetical.
 const candidates:ListedJoker[]=[],voucherOffers:ShopSnapshot['vouchers']=[],packOffers:ShopSnapshot['packs']=[],otherOffers:NonNullable<ShopSnapshot['others']>=[];
 let rerollCost:number|null=null,binding:string|undefined,shelfBinding:string|undefined,mountId=0,shopId='mesa-shop';
 const catalogId=(joker:JokerReference)=>Object.keys(ALL_JOKER_FACTS).find(id=>ALL_JOKER_FACTS[id]!.artId===joker.id)??joker.id;
-export const readShopSnapshot=():ShopSnapshot=>({id:shopId,jokers:candidates.map(c=>({offerId:c.offerId,catalogId:catalogId(c.joker),price:c.price,edition:c.edition,stickers:[...c.stickers],...(c.sellId?{replacementId:c.sellId}:{})})),vouchers:structuredClone(voucherOffers),packs:structuredClone(packOffers),others:structuredClone(otherOffers),rerollCost});
+export const readShopSnapshot=():ShopSnapshot=>({id:shopId,jokers:candidates.map(c=>({offerId:c.offerId,catalogId:catalogId(c.joker),price:c.price,edition:c.edition,stickers:[...c.stickers],...(c.counters?{counters:structuredClone(c.counters)}:{}),...(c.sellId?{replacementId:c.sellId}:{})})),vouchers:structuredClone(voucherOffers),packs:structuredClone(packOffers),others:structuredClone(otherOffers),rerollCost});
 let invalidate=()=>{},refreshControls=()=>{};let timer:ReturnType<typeof setTimeout>|undefined;
 export function invalidateCandidates(){invalidate();}
 /** Refresh a saved revision without replacing a dialog the user just opened. */
@@ -244,7 +244,7 @@ export function mountCandidates(host:HTMLElement,preview:PreviewRenderer,replace
    const confirmed=write(el('button',c.sellId?'Vendí y compré':'Compré'));confirmed.type='button';confirmed.dataset.shopConfirm=c.offerId;const confirmNote=el('small','','muted');confirmNote.id='shop-confirm-note-'+c.offerId;confirmNote.setAttribute('role','status');confirmed.setAttribute('aria-describedby',confirmNote.id);
    const refreshConfirm=()=>{confirmed.textContent=c.sellId?'Vendí y compré':'Compré';const reason=context?.status?.();localDisabled(confirmed,!context?.confirm||!!reason);confirmNote.textContent=reason??'Registra solo si ya lo hiciste en el juego.';context?.controlsChanged?.();};
    confirmed.onclick=()=>{const error=context?.confirm?.(c.offerId,c.sellId)??null;if(error){showStatus(error,true);confirmNote.textContent=error;}refreshUndo();};
-   const renderLocal=()=>{cost.textContent=`$${c.price??'?'}`;info.querySelector('.fit-score')?.remove();const offer={price:c.price===null?{status:'unknown' as const,reason:'Precio sin transcribir.'}:known(c.price),edition:c.edition==='unknown'?{status:'unknown' as const,reason:'Edición sin transcribir.'}:known(c.edition),stickers:c.stickers.includes('unknown')?{status:'unknown' as const,reason:'Pegatinas sin transcribir.'}:known(c.stickers)};const result=calculate?preview(c.joker,c.sellId,undefined,offer):el('p','Calculando…','candidate-pending');card.dataset.previewStatus=calculate?result.dataset.previewStatus??'unavailable':'updating';resultHost.replaceChildren(result);if(result.dataset.fitLabel){const badge=el('strong',result.dataset.fitLabel,'fit-score '+(result.dataset.fitTone??'unknown'));badge.title=result.dataset.fitReason??'';info.append(badge);card.dataset.fitLabel=result.dataset.fitLabel;}};
+   const renderLocal=()=>{cost.textContent=`$${c.price??'?'}`;info.querySelector('.fit-score')?.remove();const offer={price:c.price===null?{status:'unknown' as const,reason:'Precio sin transcribir.'}:known(c.price),edition:c.edition==='unknown'?{status:'unknown' as const,reason:'Edición sin transcribir.'}:known(c.edition),...(c.counters?{counters:structuredClone(c.counters)}:{}),stickers:c.stickers.includes('unknown')?{status:'unknown' as const,reason:'Pegatinas sin transcribir.'}:known(c.stickers)};const result=calculate?preview(c.joker,c.sellId,undefined,offer):el('p','Calculando…','candidate-pending');card.dataset.previewStatus=calculate?result.dataset.previewStatus??'unavailable':'updating';resultHost.replaceChildren(result);if(result.dataset.fitLabel){const badge=el('strong',result.dataset.fitLabel,'fit-score '+(result.dataset.fitTone??'unknown'));badge.title=result.dataset.fitReason??'';info.append(badge);card.dataset.fitLabel=result.dataset.fitLabel;}};
    confirmationRefreshers.add(()=>{calculate=true;renderLocal();refreshConfirm();});
    const recalculate=()=>{calculate=true;renderLocal();refreshAdvice();refreshConfirm();};
    const editError=el('p','','error');editError.setAttribute('role','status');
@@ -268,7 +268,14 @@ export function mountCandidates(host:HTMLElement,preview:PreviewRenderer,replace
   restoreExtras(state);
   hydrated=true;extrasHydrated=!!state;localDisabled(reset,false);if(status.textContent===loadingMessage)showStatus(null);if(shop?.status!=='known'){render(true);return;}
   const replacementByOffer=new Map(candidates.map(c=>[c.offerId,c.sellId]));shopId=shop.value.shopId;const restoredOffers:ListedJoker[]=[];let unmapped=0;
-  for(const offer of shop.value.cardOffers){if(offer.kind!=='joker')continue;const artId=ALL_JOKER_FACTS[offer.catalogId]?.artId??offer.catalogId,joker=catalog.jokers.find(j=>j.id===artId);if(!joker){unmapped++;continue;}restoredOffers.push({joker,offerId:offer.offerId,sellId:replacementByOffer.get(offer.offerId)??'',price:offer.price.status==='known'?offer.price.value:null,edition:offer.edition.status==='known'?offer.edition.value:'unknown',stickers:offer.stickers.status==='known'?[...offer.stickers.value]:['unknown']});}
+  const currentOffers=state?.schemaVersion==='0.2'&&state.observed.shop.status==='known'?state.observed.shop.value.cardOffers:[];
+  for(const offer of shop.value.cardOffers){
+   if(offer.kind!=='joker')continue;
+   const artId=ALL_JOKER_FACTS[offer.catalogId]?.artId??offer.catalogId,joker=catalog.jokers.find(j=>j.id===artId);
+   if(!joker){unmapped++;continue;}
+   const counters=currentOffers.find(item=>item.offerId===offer.offerId)?.counters;
+   restoredOffers.push({joker,offerId:offer.offerId,sellId:replacementByOffer.get(offer.offerId)??'',price:offer.price.status==='known'?offer.price.value:null,edition:offer.edition.status==='known'?offer.edition.value:'unknown',stickers:offer.stickers.status==='known'?[...offer.stickers.value]:['unknown'],...(counters?{counters:structuredClone(counters)}:{})});
+  }
   candidates.splice(0,candidates.length,...restoredOffers);render(true);if(unmapped)showStatus(`${unmapped} ofertas sin referencia visual compatible. Conserva sus datos en el registro.`,true);
  }).catch(()=>{if(mounted===mountId)showStatus('No se pudo cargar el catálogo de comodines. Los vales y sobres se consultan por separado; recarga para reintentar el catálogo.',true);});
  return (joker:JokerReference):string|null=>{if(candidates.length>=4)return 'Máximo 4 artículos de comodín. Quita una oferta para registrar otra.';const error=observe(()=>{candidates.push({joker,offerId:crypto.randomUUID(),sellId:'',price:joker.basePrice,edition:'base',stickers:[]});});render(true);return error;};

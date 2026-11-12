@@ -17,7 +17,7 @@ body[data-view="menu"] .app-header, body[data-view="menu"] #main { display: none
 .menu-version { position: absolute; right: max(24px, var(--app-safe-right)); top: max(18px, var(--app-safe-top)); color: #fff5ddce; font: 17px/1 'Balatro Pixel', monospace; text-shadow: 1px 2px #08222f; }
 .menu-title-stage { position: relative; display: grid; place-items: center; flex: 1; min-height: 0; width: 100%; padding: 30px 0 26px; }
 .menu-title-wrap { position: relative; text-align: center; transform: rotate(-3deg); padding: 24px 0 16px; }
-#menu-title { position: relative; margin: 0; font: 400 clamp(78px, calc(18 * var(--app-vw)), 246px)/.83 'Balatro Pixel', monospace; letter-spacing: -.055em; white-space: nowrap; filter: drop-shadow(0 5px 0 #142c36) drop-shadow(0 3px 0 #769ca5) drop-shadow(0 11px 0 #09222e) drop-shadow(0 16px 16px #0013209c); }
+#menu-title { position: relative; margin: 0; font: 400 clamp(90px, calc(24 * var(--app-vw)), 320px)/.83 'Balatro Pixel', monospace; letter-spacing: -.055em; white-space: nowrap; filter: drop-shadow(0 5px 0 #142c36) drop-shadow(0 3px 0 #769ca5) drop-shadow(0 11px 0 #09222e) drop-shadow(0 16px 16px #0013209c); }
 .menu-wordmark { display: inline-flex; align-items: baseline; }
 .menu-wordmark>span { display: inline-block; color: #fff9e4; -webkit-text-stroke: 1px #fffbe9; text-shadow: -3px -3px 0 #c2e4e2, 3px 4px 0 #6b9fae, 0 8px 0 #edf4dd; }
 .menu-wordmark>span:nth-child(1) { transform: rotate(-5deg) translateY(2px); }
@@ -27,13 +27,13 @@ body[data-view="menu"] .app-header, body[data-view="menu"] #main { display: none
 .menu-wordmark>span:nth-child(5) { transform: rotate(4deg) translateY(3px); }
 .menu-wordmark>span:nth-child(6) { transform: rotate(-5deg) translateY(-3px); }
 .menu-wordmark>span:nth-child(7) { transform: rotate(6deg) translateY(3px); }
-.menu-subtitle { position: relative; margin: 26px 0 0; padding-left: .4em; color: #ffda71; font: 400 clamp(24px, calc(3.2 * var(--app-vw)), 42px)/1 'Balatro Pixel', monospace; letter-spacing: .4em; text-shadow: 0 3px #2c3638, 2px 0 #2c3638, -2px 0 #2c3638; }
-.menu-emblem { position: absolute; left: 50%; top: -46px; transform: translateX(-50%) rotate(12deg); width: 62px; height: 84px; border: 4px solid #f2eddf; border-radius: 5px; background: #f7f0db; color: #d94b4d; box-shadow: 0 4px #6e848d, 0 9px #15313d, 0 12px 24px #061e2b80; font: 36px/72px Georgia, serif; }
+.menu-subtitle { position: relative; margin: 32px 0 0; padding-left: .4em; color: #ffda71; font: 400 clamp(26px, calc(3.8 * var(--app-vw)), 50px)/1 'Balatro Pixel', monospace; letter-spacing: .4em; text-shadow: 0 3px #2c3638, 2px 0 #2c3638, -2px 0 #2c3638; }
+.menu-emblem { position: absolute; left: 50%; top: -58px; transform: translateX(-50%) rotate(12deg); width: 76px; height: 104px; border: 4px solid #f2eddf; border-radius: 5px; background: #f7f0db; color: #d94b4d; box-shadow: 0 4px #6e848d, 0 9px #15313d, 0 12px 24px #061e2b80; font: 44px/92px Georgia, serif; }
 .menu-emblem::before, .menu-emblem::after { position: absolute; content: 'A'; font: 17px/1 'Balatro Pixel', monospace; }
 .menu-emblem::before { left: 4px; top: 3px; }
 .menu-emblem::after { right: 4px; bottom: 3px; transform: rotate(180deg); }
-.menu-actions { display: grid; align-self: center; grid-template-columns: 1.1fr .86fr 1.12fr; gap: 10px; flex: 0 0 auto; width: min(750px, 92%); margin: 0; padding: 12px 12px 17px; border: 3px solid #667d7f; border-bottom-color: #233c43; border-right-color: #344d53; border-radius: 13px; background: #344f57; box-shadow: 0 7px #10272e, 0 10px 0 #172d34, 0 18px 32px #03131f70; }
-.menu-actions .menu-button { display: grid; place-items: center; position: relative; min-height: 86px; min-width: 0; padding: 10px 12px; border: 3px solid #ffffff1a; border-radius: 9px; color: #fff9e7; text-decoration: none; font: 400 clamp(25px, calc(3.2 * var(--app-vw)), 43px)/1 'Balatro Pixel', monospace; text-shadow: 0 3px #00000024; box-shadow: 0 6px var(--button-shadow), inset 0 2px #ffffff20; background: var(--button-color); cursor: pointer; transition: transform 130ms ease, filter 130ms ease, box-shadow 130ms ease; }
+.menu-actions { display: grid; align-self: center; grid-template-columns: 1.1fr .86fr 1.12fr; gap: 12px; flex: 0 0 auto; width: min(960px, 92%); margin: 0; padding: 14px 14px 19px; border: 3px solid #667d7f; border-bottom-color: #233c43; border-right-color: #344d53; border-radius: 13px; background: #344f57; box-shadow: 0 7px #10272e, 0 10px 0 #172d34, 0 18px 32px #03131f70; }
+.menu-actions .menu-button { display: grid; place-items: center; position: relative; min-height: 104px; min-width: 0; padding: 12px 14px; border: 3px solid #ffffff1a; border-radius: 9px; color: #fff9e7; text-decoration: none; font: 400 clamp(28px, calc(3.8 * var(--app-vw)), 50px)/1 'Balatro Pixel', monospace; text-shadow: 0 3px #00000024; box-shadow: 0 6px var(--button-shadow), inset 0 2px #ffffff20; background: var(--button-color); cursor: pointer; transition: transform 130ms ease, filter 130ms ease, box-shadow 130ms ease; }
 .menu-play { --button-color: #009de9; --button-shadow: #065b91; }
 .menu-options { --button-color: #eca51b; --button-shadow: #9e6414; }
 .menu-collection { --button-color: #389c72; --button-shadow: #1b6149; }

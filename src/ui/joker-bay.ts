@@ -5,7 +5,7 @@ import type {Fact} from '../state/model.js';
 import {FIT_PROFILES} from '../advisor/fit-profiles.js';
 import {ALL_JOKER_FACTS} from '../catalog/all-joker-facts.js';
 const el=<K extends keyof HTMLElementTagNameMap>(tag:K,text='',cl='')=>{const n=document.createElement(tag);n.textContent=text;n.className=cl;return n;};
-export type PreviewRenderer=(joker:JokerReference,sellId:string,ownedId?:string,offer?:{price:Fact<number>;edition:Fact<string>;stickers:Fact<string[]>})=>HTMLElement;
+export type PreviewRenderer=(joker:JokerReference,sellId:string,ownedId?:string,offer?:{price:Fact<number>;edition:Fact<string>;stickers:Fact<string[]>;counters?:Record<string,Fact<number>>})=>HTMLElement;
 export type AddJoker=(joker:JokerReference)=>string|null;
 export interface OwnedSale {describe:(id:string)=>{price:number|null;blocked?:string};sell:(id:string)=>string|null;edit:(id:string)=>void}
 export function mountJokerBay(panel:HTMLElement,preview:PreviewRenderer,replacements:()=>{id:string;name:string}[],addJoker:AddJoker,addCandidate:AddJoker,ownedSale?:OwnedSale){

@@ -8,6 +8,7 @@ import {inspectShopDecision} from '../advisor/decision.js';
 import {buildShopAdviceSummary,comparedShopPurchase} from './shop-advice-summary.js';
 import {currentShopPlan} from './shop-plan-view.js';
 import {observedRerollQuote} from '../rules/reroll-quote.js';
+import {openShopJokerPicker} from './shop-joker-picker.js';
 
 const el=<K extends keyof HTMLElementTagNameMap>(tag:K,text='',className='')=>{const e=document.createElement(tag);e.textContent=text;e.className=className;return e;};
 const value=<T>(fact:Fact<T>|undefined)=>fact?.status==='known'?fact.value:undefined;
@@ -48,7 +49,10 @@ export function mountGameShop(stage:HTMLElement,options:GameShopOptions){
  editor.addEventListener('close',()=>{const target=returnOffer?section.querySelector<HTMLElement>(`[data-game-shop-offer="${CSS.escape(returnOffer)}"]`):section.querySelector<HTMLElement>(`[data-game-shop-kind="${returnKind}"][data-game-shop-empty="true"]`);(target??next).focus({preventScroll:true});});
  const readSnapshot=(current:GameState):ShopSnapshot=>{
   const shop=current.observed.shop.status==='known'?current.observed.shop.value:undefined,extras=current.schemaVersion==='0.2'&&current.observed.shop.status==='known'?current.observed.shop.value:undefined;
-  return {id:shop?.shopId??snapshot.id,jokers:(shop?.cardOffers??[]).filter(offer=>offer.kind==='joker').map(offer=>({offerId:offer.offerId,catalogId:offer.catalogId,price:value(offer.price)??null,edition:value(offer.edition)??'unknown',stickers:[...(value(offer.stickers)??['unknown'])]})),
+  return {id:shop?.shopId??snapshot.id,jokers:(shop?.cardOffers??[]).filter(offer=>offer.kind==='joker').map(offer=>{
+   const counters=extras?.cardOffers.find(item=>item.offerId===offer.offerId)?.counters;
+   return {offerId:offer.offerId,catalogId:offer.catalogId,price:value(offer.price)??null,edition:value(offer.edition)??'unknown',stickers:[...(value(offer.stickers)??['unknown'])],...(counters?{counters:structuredClone(counters)}:{})};
+  }),
    vouchers:(extras?.voucherOffers??[]).map(offer=>({offerId:offer.offerId,catalogId:offer.catalogId,price:value(offer.price)??null})),
    packs:(extras?.packOffers??[]).flatMap(offer=>{const definition=BOOSTER_CATALOG.find(pack=>pack.id===offer.catalogId);return definition?[{offerId:offer.offerId,family:definition.family,size:definition.size,price:value(offer.price)??null}]:[];}),
    rerollCost:observedRerollQuote(current)};
@@ -56,29 +60,41 @@ export function mountGameShop(stage:HTMLElement,options:GameShopOptions){
  function inspect(kind:Kind,offer?:JokerOffer|VoucherOffer|PackOffer){
   if(!state)return;
   const binding={runId:state.runId,revision:state.revision},shelf=structuredClone(snapshot),offerId=offer?.offerId??crypto.randomUUID();
+  if(kind==='joker'){
+   const existing=offer as JokerOffer|undefined,trigger=document.activeElement instanceof HTMLElement?document.activeElement:undefined;
+   openShopJokerPicker({
+    ...(existing?{offer:structuredClone(existing)}:{}),
+    canWrite:()=>writable,
+    save:item=>{
+     const changed=structuredClone(shelf),index=changed.jokers.findIndex(previous=>previous.offerId===item.offerId);
+     if(index<0)changed.jokers.push(item);else changed.jokers[index]=item;
+     return options.observe(changed,binding);
+    },
+    ...(existing?{
+     remove:()=>{const changed=structuredClone(shelf);changed.jokers=changed.jokers.filter(item=>item.offerId!==existing.offerId);return options.observe(changed,binding);},
+     buy:()=>options.confirm('joker',existing.offerId,binding)
+    }:{})
+   },trigger);
+   return;
+  }
   returnOffer=offer?.offerId??'';returnKind=kind;editor.replaceChildren();
-  const title=el('h2',kind==='joker'?'Comodín de la tienda':kind==='voucher'?'Vale de la tienda':'Sobre de la tienda');title.id='game-shop-editor-title';editor.setAttribute('aria-labelledby',title.id);
+  const title=el('h2',kind==='voucher'?'Vale de la tienda':'Sobre de la tienda');title.id='game-shop-editor-title';editor.setAttribute('aria-labelledby',title.id);
   const close=el('button','Cerrar','game-shop-editor-close');close.type='button';close.id='game-shop-close';close.onclick=()=>editor.close();
   const heading=el('div','','game-shop-editor-heading');heading.append(title,close);editor.append(heading);
-  const catalogLabel=el('label',kind==='joker'?'Comodín':kind==='voucher'?'Vale':'Sobre'),catalog=el('select');catalog.id='game-shop-catalog';catalog.setAttribute('aria-label',catalogLabel.textContent!);const empty=el('option','Seleccionar');empty.value='';catalog.append(empty);
-  const choices=kind==='joker'?Object.entries(ALL_JOKER_FACTS).map(([id,entry])=>({id,name:entry.name})):kind==='voucher'?VOUCHER_CATALOG:BOOSTER_CATALOG;
+  const catalogLabel=el('label',kind==='voucher'?'Vale':'Sobre'),catalog=el('select');catalog.id='game-shop-catalog';catalog.setAttribute('aria-label',catalogLabel.textContent!);const empty=el('option','Seleccionar');empty.value='';catalog.append(empty);
+  const choices=kind==='voucher'?VOUCHER_CATALOG:BOOSTER_CATALOG;
   for(const choice of choices){const option=el('option',choice.name);option.value=choice.id;catalog.append(option);}catalogLabel.append(catalog);editor.append(catalogLabel);
   catalog.value=offer?('catalogId'in offer?offer.catalogId:offer.family+'-'+offer.size):'';
   const priceLabel=el('label','Precio observado ($)'),price=el('input');price.id='game-shop-price';price.type='number';price.inputMode='numeric';price.step='1';price.min='0';price.value=offer?.price===null||!offer?'':String(offer.price);price.placeholder='Desconocido';priceLabel.append(price);editor.append(priceLabel);
-  const editionLabel=el('label','Edición'),edition=el('select');edition.id='game-shop-edition';edition.setAttribute('aria-label','Edición de la oferta');
-  for(const [id,name]of [['base','Base'],['foil','Laminada'],['holographic','Holográfica'],['polychrome','Policroma'],['negative','Negativa'],['unknown','Desconocida']]){const option=el('option',name);option.value=id!;edition.append(option);}edition.value=offer&&'edition'in offer?offer.edition:'base';editionLabel.append(edition);
-  const stickerBox=el('fieldset','','game-shop-stickers');stickerBox.append(el('legend','Pegatinas observadas'));const stickers=new Map<string,HTMLInputElement>();
-  for(const [id,name]of [['eternal','Eterno'],['perishable','Perecedero'],['rental','Alquiler'],['unknown','Desconocidas']]){const label=el('label'),input=el('input');input.type='checkbox';input.value=id!;input.checked=!!offer&&'stickers'in offer&&offer.stickers.includes(id!);label.append(input,el('span',name));stickerBox.append(label);stickers.set(id!,input);}
-  if(kind==='joker')editor.append(editionLabel,stickerBox);
   const note=el('p','Registrar una oferta no compra el artículo. Introduce lo que ves en Balatro.','game-shop-editor-note');
   const why=el('p','','game-shop-editor-note');why.hidden=true;
   const editorError=el('p','','game-shop-editor-error');editorError.id='game-shop-editor-error';editorError.setAttribute('role','alert');
   const actions=el('div','','game-shop-editor-actions'),save=el('button','Guardar oferta'),buy=el('button',kind==='pack'?'Abrir sobre':'Comprar'),remove=el('button','Quitar oferta','game-shop-editor-remove');
   save.id='game-shop-save';buy.id='game-shop-buy';remove.id='game-shop-remove';for(const button of [save,buy,remove])button.type='button';
-  const originalCatalog=catalog.value,originalPrice=price.value,originalEdition=edition.value,originalStickers=JSON.stringify([...stickers].filter(([,input])=>input.checked).map(([key])=>key));
+  const originalCatalog=catalog.value,originalPrice=price.value;
   const updateControls=()=>{
    save.disabled=!writable;remove.disabled=!writable||!offer;
-   const changed=catalog.value!==originalCatalog||price.value!==originalPrice||kind==='joker'&&(edition.value!==originalEdition||JSON.stringify([...stickers].filter(([,input])=>input.checked).map(([key])=>key))!==originalStickers);
+   const changed=catalog.value!==originalCatalog||price.value!==originalPrice;
    buy.disabled=!writable||!offer||changed;buy.title=changed?'Guarda la oferta antes de registrar su compra.':!offer?'Guarda primero la oferta.':'';
    why.hidden=changed||!preferred||preferred.offerId!==offerId||state?.revision!==binding.revision||state?.runId!==binding.runId;
    why.textContent=why.hidden?'':preferred!.reason;
@@ -89,12 +105,11 @@ export function mountGameShop(stage:HTMLElement,options:GameShopOptions){
    const amount=price.value.trim()===''?null:Number(price.value);if(amount!==null&&(!Number.isSafeInteger(amount)||amount<0)){editorError.textContent='Introduce un precio entero no negativo o déjalo desconocido.';price.focus();return;}
    if(!choices.some(choice=>choice.id===catalog.value)){editorError.textContent='Selecciona el artículo que ves en la tienda.';catalog.focus();return;}
    const changed=structuredClone(shelf);
-   if(kind==='joker'){const checked=[...stickers].filter(([,input])=>input.checked).map(([key])=>key);if(checked.includes('unknown')&&checked.length>1){editorError.textContent='Indica las pegatinas que conoces o marca Desconocidas.';return;}const item:JokerOffer={offerId,catalogId:catalog.value,price:amount,edition:edition.value,stickers:checked};const index=changed.jokers.findIndex(item=>item.offerId===offerId);if(index<0)changed.jokers.push(item);else changed.jokers[index]=item;}
-   else if(kind==='voucher'){const item:VoucherOffer={offerId,catalogId:catalog.value,price:amount},index=changed.vouchers.findIndex(item=>item.offerId===offerId);if(index<0)changed.vouchers.push(item);else changed.vouchers[index]=item;}
+   if(kind==='voucher'){const item:VoucherOffer={offerId,catalogId:catalog.value,price:amount},index=changed.vouchers.findIndex(item=>item.offerId===offerId);if(index<0)changed.vouchers.push(item);else changed.vouchers[index]=item;}
    else {const pack=BOOSTER_CATALOG.find(pack=>pack.id===catalog.value)!;const item:PackOffer={offerId,family:pack.family,size:pack.size,price:amount},index=changed.packs.findIndex(item=>item.offerId===offerId);if(index<0)changed.packs.push(item);else changed.packs[index]=item;}
    observe(changed);
   };
-  remove.onclick=()=>{const changed=structuredClone(shelf);if(kind==='joker')changed.jokers=changed.jokers.filter(item=>item.offerId!==offerId);else if(kind==='voucher')changed.vouchers=changed.vouchers.filter(item=>item.offerId!==offerId);else changed.packs=changed.packs.filter(item=>item.offerId!==offerId);observe(changed);};
+  remove.onclick=()=>{const changed=structuredClone(shelf);if(kind==='voucher')changed.vouchers=changed.vouchers.filter(item=>item.offerId!==offerId);else changed.packs=changed.packs.filter(item=>item.offerId!==offerId);observe(changed);};
   buy.onclick=()=>{const problem=options.confirm(kind,offerId,binding);if(problem){editorError.textContent=problem;return;}editor.close();};
   actions.append(save);if(offer)actions.append(buy,remove);editor.append(note,why,editorError,actions);updateControls();editor.showModal();catalog.focus({preventScroll:true});
  }
@@ -106,7 +121,10 @@ export function mountGameShop(stage:HTMLElement,options:GameShopOptions){
    if(kind==='joker'){const joker=offer as JokerOffer,definition=ALL_JOKER_FACTS[joker.catalogId];name=definition?.name??joker.catalogId;art=definition?jokerArt(engineArt[joker.catalogId]!,name):el('span','?','game-shop-unknown-art');}
    else if(kind==='voucher'){const item=offer as VoucherOffer;name=VOUCHER_CATALOG.find(entry=>entry.id===item.catalogId)?.name??item.catalogId;art=el('span','','voucher-art '+item.catalogId);art.setAttribute('role','img');art.setAttribute('aria-label',name);}
    else {const pack=offer as PackOffer;name=BOOSTER_CATALOG.find(entry=>entry.family===pack.family&&entry.size===pack.size)?.name??'Sobre';art=el('span','','booster-art pack-'+pack.family+'-'+pack.size);art.setAttribute('role','img');art.setAttribute('aria-label',name);}
-   const portrait=el('span','','game-shop-offer-art');portrait.append(art);const price=el('strong',offer.price===null?'$?':'$'+offer.price,'game-shop-price-tag');button.append(price,portrait);button.setAttribute('aria-label',`${name} · ${offer.price===null?'precio desconocido':'$'+offer.price}`);button.title=name;
+   const portrait=el('span','','game-shop-offer-art');
+   if(kind==='joker'){portrait.classList.add('shop-joker-art');portrait.dataset.jokerEdition=(offer as JokerOffer).edition;}
+   portrait.append(art);
+   const price=el('strong',offer.price===null?'$?':'$'+offer.price,'game-shop-price-tag');button.append(price,portrait);button.setAttribute('aria-label',`${name} · ${offer.price===null?'precio desconocido':'$'+offer.price}`);button.title=name;
    if(preferred?.offerId===offer.offerId){
     button.dataset.offerPreference=preferred.partial?'conditional':'compared';button.title=preferred.reason;
     button.setAttribute('aria-description','Comodín preferido entre las compras comparadas. '+preferred.reason);

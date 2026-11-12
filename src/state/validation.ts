@@ -3,6 +3,7 @@ import type { GameState, GameStateV01, GameStateV02 } from './model.js';
 import { MAX_STATE_BYTES, validateState as validateFrozenLegacyState } from './legacy-validation.js';
 import { checkJsonValue, isObject, issue } from './schema.js';
 import type { Result } from './schema.js';
+import {validateOfferCounters} from './offer-counters.js';
 
 export { MAX_STATE_BYTES } from './legacy-validation.js';
 
@@ -21,6 +22,7 @@ export function validateCurrentState(input: unknown): Result<GameStateV02> {
   if (!legacy.ok) return legacy;
 
   if(state.observed.shop.status==='known'){
+    for(const [index,offer]of state.observed.shop.value.cardOffers.entries())if(offer.counters)errors.push(...validateOfferCounters(offer.catalogId,offer.counters,`$.observed.shop.value.cardOffers[${index}].counters`));
     const ids=new Set(state.observed.shop.value.cardOffers.map(o=>o.offerId));
     for(const [i,offer]of (state.observed.shop.value.voucherOffers??[]).entries()){if(ids.has(offer.offerId))issue(errors,`$.observed.shop.value.voucherOffers[${i}].offerId`,'duplicate_id','La oferta de vale necesita un identificador único en esta tienda.');ids.add(offer.offerId);}
     for(const [i,offer]of (state.observed.shop.value.packOffers??[]).entries()){if(ids.has(offer.offerId))issue(errors,`$.observed.shop.value.packOffers[${i}].offerId`,'duplicate_id','La oferta de sobre necesita un identificador único en esta tienda.');ids.add(offer.offerId);}

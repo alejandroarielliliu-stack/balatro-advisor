@@ -5,6 +5,7 @@ import {parseState} from '../src/state/validation.js';
 import {comparisonDemoScenarios} from '../src/demo-scenarios.js';
 import {previewJoker} from '../src/evaluation/joker-preview.js';
 import {known,success} from './helpers.js';
+import {migrateState} from '../src/state/migration.js';
 const fixture=()=>comparisonDemoScenarios(success(parseState(readFileSync(new URL('../../examples/shop-purchase.json',import.meta.url),'utf8'))))[0]!;
 
 test('Oferta real en manos: un precio manual incompatible no se reemplaza por el base',()=>{
@@ -52,4 +53,14 @@ test('Vista catálogo: sin espacio requiere vender explícitamente y conserva or
  assert.equal(replace.legal,true);assert.equal(replace.action.type,'replace');
  assert.equal(replace.scenarios[0]!.calculation.netCost,4);
  assert.deepEqual(state,before);
+});
+test('Análisis conserva el Mult observado de la oferta y deja intacta la partida',()=>{
+ const source=fixture(),state=success(migrateState(source.state));state.observed.money=known(25);
+ const before=structuredClone(state),offer={price:known(4),edition:known('base'),stickers:known([] as string[]),counters:{greenMult:known(12)}};
+ const advice=success(previewJoker(state,'green_joker',[{role:'representative',plan:source.plan}],'',offer));
+ const candidate=advice.alternatives[1]!;
+ assert.equal(candidate.legal,true);
+ // Green12 grows on both plays:26×(2+13)+14×(2+14)=390+224=614.
+ assert.equal(candidate.scenarios[0]!.metrics!.score,614);
+ assert.deepEqual(state,before);assert.deepEqual(offer.counters.greenMult,known(12));
 });

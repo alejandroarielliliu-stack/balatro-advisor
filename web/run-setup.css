@@ -10,12 +10,12 @@
 }
 .run-setup-panel :is(button,input,a) {font-family:'Balatro Pixel',monospace}
 .run-setup-panel :is(button,a):focus-visible {outline:2px solid #fff2a3;outline-offset:2px}
-.run-setup-tabs {position:absolute;left:67px;right:67px;top:23px;display:grid;grid-template-columns:repeat(3,1fr);gap:7px}
+.run-setup-tabs {position:absolute;left:44px;right:44px;top:23px;display:grid;grid-template-columns:1.25fr 1fr .85fr;gap:7px}
 .run-setup-tabs > button,.setup-arrow {
   position:relative;border:0;border-radius:6px;min-width:0;min-height:0;padding:0 2px;
   background:#fc4c42;box-shadow:0 4px #202f33;color:white;font-size:20px;line-height:1;
 }
-.run-setup-tabs > button {height:34px}
+.run-setup-tabs > button {display:grid;place-items:center;height:34px;white-space:nowrap}
 .run-setup-tabs > button:first-child {font-size:18px}
 .run-setup-tabs > button:hover,.setup-arrow:hover {background:#ff6458}
 .run-setup-tabs > button[aria-selected=true]::before {

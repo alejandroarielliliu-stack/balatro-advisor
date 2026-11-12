@@ -34,7 +34,12 @@ try{
  const beforeAdvice=await raw(p);
  await p.locator('#blind-compare').click();await p.locator('#blind-risk').selectOption('tight');
  await p.locator('#dialog-accept').click();await p.locator('#confirmation').waitFor({state:'hidden'});
- assert.match(await p.locator('.blind-speech strong').innerText(),/riesgo/i);
+ assert.equal(await p.locator('.blind-speech strong').innerText(),'Valora el salto');
+ assert.equal(await p.locator('.blind-speech small').count(),0,'The brief advice has no orientation footer');
+ assert.equal(await p.locator('.blind-speech').getAttribute('title'),null,'Hovering does not open the removed wall of text');
+ assert.ok((await p.locator('.blind-speech p').innerText()).length<=120,'The advice stays short enough for the fixed speech bubble');
+ const titleColor=await p.locator('.blind-speech strong').evaluate(element=>getComputedStyle(element).color);
+ const [red,green]=titleColor.match(/[\d.]+/g).map(Number);assert.ok(red<green,'Advice headings use the dark speech color rather than red');
  assert.equal(await raw(p),beforeAdvice,'Comparing before selection never enters the blind or writes the player assessment');
  pass('preselection-risk-reaches-the-fixed-adviser-without-writing');
 

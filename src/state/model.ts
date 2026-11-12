@@ -2,7 +2,7 @@ import {packContextSchema,packOfferSchema} from './pack-contract.js';
 import type {PackOffer} from './pack-contract.js';
 import { gameStateSchema as legacyGameStateSchema } from './legacy-model.js';
 import type { GameState as LegacyGameState } from './legacy-model.js';
-import { array, enumeration, fact, integer, isObject, issue, object, text, union } from './schema.js';
+import { array, enumeration, fact, integer, isObject, issue, object, record, text, union } from './schema.js';
 import type { Infer, Schema, Fact } from './schema.js';
 
 export type { Fact, Issue, Result } from './schema.js';
@@ -39,7 +39,9 @@ type PhaseState = { [P in RunPhase]: { phase: P; phaseData: PhaseData[P] } }[Run
 export const voucherOfferSchema=object({offerId:text(),catalogId:text(),price:fact(integer(0))});
 export type VoucherOffer=Infer<typeof voucherOfferSchema>;
 type LegacyShop=Extract<GameStateV01['observed']['shop'],{status:'known'}>['value'];
-export type CurrentShop=LegacyShop & {voucherOffers?:VoucherOffer[];packOffers?:PackOffer[]};
+export const offerCountersSchema=record(fact(integer()));
+export type CurrentShopOffer=LegacyShop['cardOffers'][number] & {counters?:Record<string,Fact<number>>};
+export type CurrentShop=Omit<LegacyShop,'cardOffers'> & {cardOffers:CurrentShopOffer[];voucherOffers?:VoucherOffer[];packOffers?:PackOffer[]};
 export type GameStateV02 = Omit<GameStateV01, 'schemaVersion' | 'phase' | 'observed'> & {
   schemaVersion: '0.2';
   /** Manually supplied reference only; never an RNG input or inferred game data. */
@@ -60,6 +62,10 @@ export function legacyShape(value:Record<string,unknown>):Record<string,unknown>
   delete (base as Record<string,unknown>).blindTags;
  if(isObject(value.observed)&&isObject(value.observed.shop)&&value.observed.shop.status==='known'&&isObject(value.observed.shop.value)){
   const shop={...value.observed.shop.value};delete shop.voucherOffers;delete shop.packOffers;
+  if(Array.isArray(shop.cardOffers))shop.cardOffers=shop.cardOffers.map(offer=>{
+   if(!isObject(offer))return offer;
+   const copied={...offer};delete copied.counters;return copied;
+  });
   Object.assign(base,{observed:{...value.observed,shop:{...value.observed.shop,value:shop}}});
  }
  return base;
@@ -94,6 +100,11 @@ export const currentGameStateSchema: Schema<GameStateV02> = {
     }
     if(isObject(value.observed)&&isObject(value.observed.shop)&&value.observed.shop.status==='known'&&isObject(value.observed.shop.value)&&Object.hasOwn(value.observed.shop.value,'packOffers')){
       if(!array(packOfferSchema,100).check(value.observed.shop.value.packOffers,`${path}.observed.shop.value.packOffers`,errors))valid=false;
+    }
+    if(isObject(value.observed)&&isObject(value.observed.shop)&&value.observed.shop.status==='known'&&isObject(value.observed.shop.value)&&Array.isArray(value.observed.shop.value.cardOffers)){
+      for(const [index,offer]of value.observed.shop.value.cardOffers.entries()){
+        if(isObject(offer)&&Object.hasOwn(offer,'counters')&&!offerCountersSchema.check(offer.counters,`${path}.observed.shop.value.cardOffers[${index}].counters`,errors))valid=false;
+      }
     }
     const base=legacyShape(value);
     if (!legacyGameStateSchema.check(base, path, errors)) valid = false;

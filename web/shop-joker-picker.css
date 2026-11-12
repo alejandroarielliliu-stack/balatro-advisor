@@ -1,0 +1,74 @@
+dialog.shop-joker-picker {
+ position:fixed;inset:auto;left:50%;top:50%;transform:translate(-50%,-50%);margin:0;
+ width:var(--app-width);height:var(--app-height);max-width:none;max-height:none;padding:0;
+ border:0;overflow:hidden;background:transparent;color:#fff8e7;box-shadow:none;
+ font:24px/1 'Balatro Pixel',monospace;
+}
+.shop-joker-picker::backdrop {background:#132c349c}
+.shop-joker-stage {position:absolute;width:1280px;height:600px;left:50%;top:50%;transform:translate(-50%,-50%) scale(var(--shop-picker-scale,1));transform-origin:center}
+.shop-joker-panel {position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);border:4px solid #aebfc4;border-radius:12px;background:#354f57;box-shadow:inset 0 -5px #23383f,0 5px #6e848a,0 9px #172d3677;color:#fff8e7}
+.shop-joker-panel button,.shop-joker-panel input,.shop-joker-panel select {font-family:'Balatro Pixel',monospace}
+.shop-joker-panel button {min-width:0;min-height:0;border:0;cursor:pointer}
+.shop-joker-panel :is(button,input,select):focus-visible {outline:3px solid #ffe090;outline-offset:3px}
+.shop-joker-gallery {width:540px;height:560px;padding:13px}
+.shop-joker-heading {height:31px;display:flex;align-items:center;justify-content:space-between;gap:10px}
+.shop-joker-heading h2 {font:26px/1 'Balatro Pixel',monospace;margin:0}
+.shop-joker-close {background:#f74e44;color:white;border-radius:6px;padding:5px 10px;font-size:20px;line-height:1;box-shadow:0 3px #aa3431}
+.shop-joker-gallery input[type="search"] {height:30px;width:240px;flex:1;min-width:0;min-height:0;margin:0;padding:3px 9px;border:2px solid #8da1a0;border-radius:6px;background:#1c3338;color:#fff7e5;font:19px/1 'Balatro Pixel',monospace}
+.shop-joker-grid {height:362px;margin-top:12px;padding:8px;background:#1a2d32;border:3px solid #15282c;border-radius:10px;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));grid-template-rows:repeat(3,minmax(0,1fr));gap:7px 6px;align-items:center;justify-items:center;box-shadow:inset 0 3px #10252a}
+.shop-joker-card {position:relative;display:block;width:85px;height:112px;padding:0;background:none;box-shadow:none;transform:rotate(-2deg)}
+.shop-joker-card:nth-child(3n+2) {transform:rotate(2deg)}
+.shop-joker-card:nth-child(4n) {transform:rotate(3deg)}
+.shop-joker-card:hover {background:none;transform:translateY(-4px);filter:brightness(1.1)}
+.shop-joker-card>.joker-art {display:block;width:142px;height:190px;transform:scale(.59);transform-origin:top left;filter:drop-shadow(2px 3px #071e2680)}
+.shop-joker-pagination {height:42px;margin-top:10px;display:flex;align-items:center;justify-content:center;gap:7px}
+.shop-joker-arrow,.shop-joker-page {height:35px;display:grid;place-items:center;background:#ff4d44;box-shadow:0 4px #b63733;border-radius:7px;color:white;font:23px/1 'Balatro Pixel',monospace}
+.shop-joker-arrow {width:52px;font-size:30px}
+.shop-joker-arrow:disabled {opacity:.45;cursor:default}
+.shop-joker-page {width:210px}
+.shop-joker-back {height:36px;width:100%;margin-top:9px;padding:0 8px;background:#ffa500;box-shadow:0 4px #a96b00;border-radius:7px;color:#fff8e7;font-size:23px;line-height:1}
+.shop-joker-empty {grid-column:1/-1;align-self:center;font-size:22px}
+.shop-joker-loading {margin:35px;font-size:24px}
+.shop-joker-detail {width:600px;height:552px;background:transparent;border:0;box-shadow:none}
+.shop-joker-detail>.shop-joker-close {position:absolute;right:6px;top:0}
+.shop-joker-portrait {position:absolute;left:199px;top:3px;width:172px;height:230px;filter:drop-shadow(3px 5px #122e3180)}
+.shop-joker-portrait>.joker-art {display:block;width:142px;height:190px;transform:scale(1.21);transform-origin:top left}
+.shop-joker-art::after {content:'';position:absolute;inset:0;border-radius:7px;pointer-events:none}
+.shop-joker-art[data-joker-edition="foil"]::after {background:repeating-linear-gradient(125deg,#c4ddff 0 4px,#708bb833 5px 10px,#e2e9ff 11px 13px);opacity:.42;mix-blend-mode:screen}
+.shop-joker-art[data-joker-edition="holographic"]::after {background:repeating-conic-gradient(from 30deg,#ffa9e1 0 12%,#abddff 20%,#ffe8ad 34%,#b8b5fc 47%);opacity:.5;mix-blend-mode:hard-light}
+.shop-joker-art[data-joker-edition="polychrome"]::after {background:linear-gradient(125deg,#e2dd1b,#6dff24 25%,#38efff 45%,#a62bff 68%,#ed217f 90%);opacity:.56;mix-blend-mode:multiply}
+.shop-joker-art[data-joker-edition="negative"]>.joker-art {filter:invert(1)}
+.shop-joker-info {position:absolute;left:129px;top:247px;width:314px;height:208px;display:flex;flex-direction:column;padding:8px;border:4px solid #b5c5ca;border-radius:10px;background:#394d54;box-shadow:0 4px #1d3238;text-align:center}
+.shop-joker-info h2 {flex-shrink:0;margin:0 0 7px;font:28px/1.02 'Balatro Pixel',monospace;color:#fff8e7}
+.shop-joker-description {flex:1;min-height:0;overflow:auto;margin:0;padding:7px;border-radius:6px;background:#fcfcf7;color:#334a4e;font:19px/1.04 'Balatro Pixel',monospace;white-space:pre-line;text-wrap:balance}
+.shop-joker-current {flex-shrink:0;margin:5px 0 0;font:17px/1.05 'Balatro Pixel',monospace;color:#e4e9e2}
+.shop-joker-rarity {flex-shrink:0;align-self:center;display:inline-block;min-width:146px;margin-top:8px;padding:3px 12px;border-radius:5px;background:#009dfa;color:#fff;font:19px/1 'Balatro Pixel',monospace}
+.shop-joker-rarity[data-rarity="2"] {background:#31b88d}
+.shop-joker-rarity[data-rarity="3"] {background:#f14b45}
+.shop-joker-rarity[data-rarity="4"] {background:#9e67d1}
+.shop-joker-tools {position:absolute;left:451px;top:254px;display:flex;flex-direction:column;gap:10px}
+.shop-joker-slot {display:grid;place-items:center;width:42px;height:42px;padding:0;background:#233f3e;border:3px dashed #c0cebd!important;border-radius:7px;color:#fff8e9;box-shadow:0 3px #152d30;font:33px/1 'Balatro Pixel',monospace}
+.shop-joker-slot[data-selected="true"] {border-style:solid!important;background:#427460}
+.shop-joker-slot:hover {background:#4c6c5c}
+.shop-joker-price {position:absolute;left:385px;top:112px;display:flex;flex-direction:column;gap:6px;font:19px/1 'Balatro Pixel',monospace;color:#fff8e7}
+.shop-joker-price input {width:116px;height:37px;min-height:0;border:2px solid #f5cb70;border-radius:7px;background:#273e42;color:#f6ce75;text-align:center;font:24px/1 'Balatro Pixel',monospace;padding:4px}
+.shop-joker-price input::placeholder {font-size:17px;color:#d2d8c7}
+.shop-joker-actions {position:absolute;left:129px;top:465px;width:365px;display:flex;align-items:center;justify-content:center;gap:9px}
+.shop-joker-save,.shop-joker-buy,.shop-joker-remove,.shop-joker-cancel-modifier {border:0;border-radius:7px;padding:7px 12px;background:#009dfa;box-shadow:0 4px #075a84;color:#fff8e7;font:21px/1 'Balatro Pixel',monospace}
+.shop-joker-buy {background:#30b98c;box-shadow:0 4px #176f59}
+.shop-joker-remove {background:#da5148;box-shadow:0 4px #84362f;font-size:18px}
+.shop-joker-actions button:disabled {opacity:.45;cursor:default}
+.shop-joker-detail>.shop-joker-back {position:absolute;left:129px;top:505px;width:365px;margin:0}
+.shop-joker-error {color:#ffd3ad;font:18px/1.05 'Balatro Pixel',monospace;margin:0}
+.shop-joker-detail>.shop-joker-error {position:absolute;left:20px;right:20px;top:434px;max-height:28px;overflow:auto;text-align:center}
+.shop-joker-modifier {position:absolute;z-index:2;left:345px;top:189px;width:250px;max-height:305px;overflow:auto;padding:14px;border:3px solid #aebfc4;border-radius:9px;background:#2c444b;box-shadow:0 6px 22px #071d24bb}
+.shop-joker-modifier h3 {font:25px/1 'Balatro Pixel',monospace;margin:0 0 12px}
+.shop-joker-modifier>label {display:flex;flex-direction:column;gap:5px;margin:10px 0;font:19px/1 'Balatro Pixel',monospace}
+.shop-joker-modifier select,.shop-joker-modifier input[type="number"] {width:100%;height:36px;min-height:0;padding:4px 7px;border:2px solid #89a195;border-radius:6px;background:#193138;color:#fff6df;font:21px/1 'Balatro Pixel',monospace}
+.shop-joker-modifier .game-shop-stickers {display:flex;flex-direction:column;gap:12px;border:0;padding:0;margin:0}
+.shop-joker-modifier .game-shop-stickers label {display:flex;align-items:center;gap:8px;font:20px/1 'Balatro Pixel',monospace}
+.shop-joker-modifier .game-shop-stickers input {width:19px;height:19px;margin:0}
+.shop-joker-modifier-actions {display:flex;gap:8px;margin-top:14px}
+.shop-joker-cancel-modifier {background:#5d747b;box-shadow:0 4px #233b42}
+@media(prefers-reduced-motion:reduce) {.shop-joker-card {transition:none}}
+@media(orientation:portrait) {dialog.shop-joker-picker[open] {transform:translate(-50%,-50%) rotate(90deg)}}

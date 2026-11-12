@@ -54,7 +54,7 @@ export function operationStatus(errors:readonly Issue[],evidence?:AnalysisGate):
 }
 function matchesRecordedOffer(state:GameState,snapshot:ShopSnapshot,offerId:string){
  const manual=snapshot.jokers.find(o=>o.offerId===offerId),recorded=value(state.observed.shop)?.cardOffers.find(o=>o.offerId===offerId);
- return snapshot.id===value(state.observed.shop)?.shopId&&!!manual&&!!recorded&&recorded.kind==='joker'&&manual.catalogId===recorded.catalogId&&manual.price===value(recorded.price)&&manual.edition===value(recorded.edition)&&equal(manual.stickers,value(recorded.stickers));
+ return snapshot.id===value(state.observed.shop)?.shopId&&!!manual&&!!recorded&&recorded.kind==='joker'&&manual.catalogId===recorded.catalogId&&manual.price===value(recorded.price)&&manual.edition===value(recorded.edition)&&equal(manual.stickers,value(recorded.stickers))&&equal(manual.counters??{},'counters'in recorded?recorded.counters??{}:{});
 }
 /** One report, independent operation probes. No formula, policy, persistence or phase conversion here. */
 export function inspectShopDecision(input:unknown,snapshotInput:unknown,options:DecisionOptions={}):Result<ShopDecision>{

@@ -447,7 +447,8 @@ function renderRecord(){
         return {offerId:offer.offerId,catalogId,label:names[catalogId]??old?.label??catalogId,kind:'joker',
           price:offer.price===null?(old?.price.status==='unknown'?structuredClone(old.price):unknown()):known(offer.price),
           edition:offer.edition==='unknown'?(old?.edition.status==='unknown'?structuredClone(old.edition):unknown()):known(offer.edition??'base'),
-          stickers:offer.stickers.includes('unknown')?(old?.stickers.status==='unknown'?structuredClone(old.stickers):unknown()):old?.stickers.status==='known'&&JSON.stringify(old.stickers.value)===JSON.stringify(offer.stickers)?structuredClone(old.stickers):known(offer.stickers??[])};
+          stickers:offer.stickers.includes('unknown')?(old?.stickers.status==='unknown'?structuredClone(old.stickers):unknown()):old?.stickers.status==='known'&&JSON.stringify(old.stickers.value)===JSON.stringify(offer.stickers)?structuredClone(old.stickers):known(offer.stickers??[]),
+          ...(offer.counters?{counters:structuredClone(offer.counters)}:{})};
       });
       // Unsupported/unrenderable observations are never silently discarded by
       // an editor that can only display the known catalogue.
@@ -496,11 +497,11 @@ function renderRecord(){
    for(const row of rows){const id=row.querySelector<HTMLSelectElement>('select[id^="joker-"]')?.id.slice(6),fit=fits.find(f=>f.instanceId===id);row.dataset.instanceId=id??'';let badge=row.querySelector<HTMLElement>(':scope > .fit-badge');if(!badge){badge=node('span','','fit-badge');row.append(badge);}badge.replaceChildren(node('strong',fit?fitLabel(fit):'Revisa datos','fit-score'));badge.className='fit-badge '+(fit?fitTone(fit):'unknown');badge.title=fit?fitReason(fit):'Revisa los datos de la partida.';badge.setAttribute('aria-label',`Encaje ${fit?fitLabel(fit):'sin evaluar'}. ${fit?fitReason(fit):''}`);row.dataset.fitLabel=fit?fitLabel(fit):'';}
   };refreshOwnedFits();
 }
-function renderJokerPreview(j:JokerReference,sellId:string,ownedId?:string,offer?:{price:Fact<number>;edition:Fact<string>;stickers:Fact<string[]>}){
+function renderJokerPreview(j:JokerReference,sellId:string,ownedId?:string,offer?:{price:Fact<number>;edition:Fact<string>;stickers:Fact<string[]>;counters?:Record<string,Fact<number>>}){
  try{return renderQuickFit(evaluateJokerFit(liveState(true),j.id,{ante:Number($<HTMLInputElement>('ante').value),...(ownedId?{instanceId:ownedId}:{purchase:true}),...(sellId?{replacementId:sellId}:{}),...(offer?{offer}:{})}));}
  catch(e){const host=node('div');markPreview(host,'needs-data','Revisa datos');host.append(node('p',e instanceof Error?e.message:'Revisa los datos básicos.'));return host;}
 }
-function renderHandPreview(j:JokerReference,sellId:string,inputState?:GameState,inputScenarios?:AdvisorScenario[],offer?:{price:Fact<number>;edition:Fact<string>;stickers:Fact<string[]>}){
+function renderHandPreview(j:JokerReference,sellId:string,inputState?:GameState,inputScenarios?:AdvisorScenario[],offer?:{price:Fact<number>;edition:Fact<string>;stickers:Fact<string[]>;counters?:Record<string,Fact<number>>}){
  const host=node('div');
  if(!j.engineId){markPreview(host,'unsupported','Solo catálogo');host.append(node('p','Sin puntuación: efecto aún no implementado.'));return host;}
  let state:GameState;try{state=inputState??liveState();}catch(e){markPreview(host,'needs-data','Completa la partida');host.append(node('p',e instanceof Error?e.message:'Completa los datos de la partida.'));return host;}
@@ -745,7 +746,7 @@ const handButton=button('Calcular manos del mazo y candidatos',()=>{
   }handResults.append(section);
  }
  const selected=readShopSnapshot().jokers;
- if(selected.length)void fetch('./web/assets/jokers/catalog.json').then(r=>r.json()).then((catalog:{jokers:JokerReference[]})=>{if(request!==handRequest)return;for(const candidate of selected){const j=catalog.jokers.find(j=>j.id===candidate.catalogId||j.engineId===candidate.catalogId);if(j){const offer={price:candidate.price===null?unknown():known(candidate.price),edition:known(candidate.edition),stickers:known(candidate.stickers)};const section=node('section');section.append(node('h3',j.names.es),renderHandPreview(j,candidate.replacementId??'',state,scenarios,offer));handResults.append(section);}}}).catch(()=>{if(request===handRequest)handResults.append(node('p','No se pudo cargar el catálogo para comparar las ofertas.','error'));});
+ if(selected.length)void fetch('./web/assets/jokers/catalog.json').then(r=>r.json()).then((catalog:{jokers:JokerReference[]})=>{if(request!==handRequest)return;for(const candidate of selected){const j=catalog.jokers.find(j=>j.id===candidate.catalogId||j.engineId===candidate.catalogId);if(j){const offer={...(candidate.counters?{counters:structuredClone(candidate.counters)}:{}),price:candidate.price===null?unknown():known(candidate.price),edition:known(candidate.edition),stickers:known(candidate.stickers)};const section=node('section');section.append(node('h3',j.names.es),renderHandPreview(j,candidate.replacementId??'',state,scenarios,offer));handResults.append(section);}}}).catch(()=>{if(request===handRequest)handResults.append(node('p','No se pudo cargar el catálogo para comparar las ofertas.','error'));});
 });handButton.id='calculate-hands';$('live-plans').append(handButton);
 const runStartBridge=createRunStartBridge({
   context:()=>({record,raw:seenRaw,writable:lock.owned,dirty,loadFailed}),

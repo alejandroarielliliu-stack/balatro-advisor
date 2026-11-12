@@ -52,7 +52,9 @@ export function applyShopAction(input: unknown, action: ShopAction, mutation: Mu
         use('shop.prices');
         if (price !== editionPrice(offer.catalogId,need(offer.edition,'$.edition'))) fail('$action.offerId', 'unsupported_price', 'Precio distinto del catálogo base; no se reemplaza el precio observado.');
         if (before-price < -creditLimit(state)) fail('$action', 'insufficient_money', `Dinero insuficiente: ${before}, precio ${price}.`);
-        acquireObservedJoker(state,{...freshJokerInstance(offer.catalogId,step.instanceId,need(offer.edition,'$.offer.edition')),stickers:structuredClone(offer.stickers)},trace,use);
+        const created=freshJokerInstance(offer.catalogId,step.instanceId,need(offer.edition,'$.offer.edition'));
+        if('counters'in offer&&offer.counters)Object.assign(created.counters,structuredClone(offer.counters));
+        acquireObservedJoker(state,{...created,stickers:structuredClone(offer.stickers)},trace,use);
         shop.cardOffers.splice(index, 1);
         state.observed.money = valueFact(bankBalance(before - price));
         trace.push({ ruleId: 'shop.actions', label: 'Compra', values: { offerId: offer.offerId, before, spent: price, after: before - price, occupied: jokers.length, free: need(state.observed.resources.jokerSlots, '$.observed.resources.jokerSlots') - jokers.length } });

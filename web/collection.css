@@ -115,9 +115,10 @@ dialog.collection-overlay::backdrop { background: #334b4f8a; backdrop-filter: no
 .collection-panel[data-category="tag"] .tag-art { --tag-art-size: 38px; width: 38px; height: 38px; }
 .collection-panel[data-category="blind"] { width: 628px; height: 530px; }
 .collection-panel[data-category="blind"] .collection-well { display: flex; gap: 11px; bottom: 69px; padding: 7px; }
-.collection-blind-table { display: table; flex: 0 0 182px; width: 182px; height: 100%; table-layout: fixed; border-collapse: separate; border-spacing: 0; margin: 0; padding: 46px 9px 12px; border: 0; border-radius: 10px; background: #3c555e; color: #ffb321; font: 19px/1.01 'Balatro Pixel', monospace; }
+.collection-blind-table { display: table; flex: 0 0 182px; width: 182px; min-width: 0; height: 100%; table-layout: fixed; border-collapse: separate; border-spacing: 0; margin: 0; padding: 46px 9px 12px; border: 0; border-radius: 10px; overflow: hidden; background: #3c555e; background-clip: padding-box; color: #ffb321; font: 19px/1.01 'Balatro Pixel', monospace; }
 .collection-blind-table th, .collection-blind-table td { padding: 0 2px; border: 0; background: none; text-align: left; font: inherit; white-space: nowrap; }
 .collection-blind-table th { height: 25px; font-size: 20px; }
+.collection-blind-table th:first-child, .collection-blind-table td:first-child { width: 31px; }
 .collection-blind-table th:last-child, .collection-blind-table td:last-child { text-align: right; color: #ff5d68; }
 .collection-panel[data-category="blind"] .collection-grid { grid-template-columns: repeat(5, minmax(0, 1fr)); grid-template-rows: repeat(6, minmax(0, 1fr)); gap: 7px 6px; flex: 1; min-width: 0; }
 .collection-panel[data-category="blind"] .collection-item, .collection-panel[data-category="blind"] .collection-item-art { width: 58px; height: 58px; --collection-art-width: 58px; transform: none; }

@@ -22,12 +22,14 @@ import type {ShopOfferComparison} from './shop-comparison.js';
 import {guideShopPlan,shopPlanSchema} from './shop-plan.js';
 import type {AssessedShopOffer as Evaluated,ShopPlan} from './shop-plan.js';
 import {observedRerollQuote} from '../rules/reroll-quote.js';
+import {offerCountersSchema} from '../state/model.js';
+import {validateOfferCounters} from '../state/offer-counters.js';
 export type {ShopPlan} from './shop-plan.js';
 
 /** Visible manual offers. null is an unknown price, never a free offer. */
 export interface ShopSnapshot {
  id:string;
- jokers:{offerId:string;catalogId:string;price:number|null;edition:string;stickers:string[];replacementId?:string}[];
+ jokers:{offerId:string;catalogId:string;price:number|null;edition:string;stickers:string[];counters?:Record<string,Fact<number>>;replacementId?:string}[];
  vouchers:{offerId:string;catalogId:string;price:number|null}[];
  packs:{offerId:string;family:'arcana'|'celestial'|'standard'|'spectral'|'buffoon';size:'normal'|'jumbo'|'mega';price:number|null}[];
  rerollCost:number|null;
@@ -56,7 +58,7 @@ const key=(id:string)=>Object.hasOwn(ALL_JOKER_FACTS,id)?id:Object.keys(ALL_JOKE
 const nullablePrice:Schema<number|null>={check:(input,path,errors)=>input===null||integer(0).check(input,path,errors)};
 const snapshotSchema=object({
  id:text(),
- jokers:array(object({offerId:text(),catalogId:text(),price:nullablePrice,edition:text(),stickers:array(text(),100)},{replacementId:text()}),100),
+ jokers:array(object({offerId:text(),catalogId:text(),price:nullablePrice,edition:text(),stickers:array(text(),100)},{replacementId:text(),counters:offerCountersSchema}),100),
  vouchers:array(object({offerId:text(),catalogId:text(),price:nullablePrice}),100),
  packs:array(object({offerId:text(),family:enumeration('arcana','celestial','standard','spectral','buffoon'),size:enumeration('normal','jumbo','mega'),price:nullablePrice}),100),
  rerollCost:nullablePrice
@@ -66,6 +68,7 @@ export function validateShopSnapshot(input:unknown):Result<ShopSnapshot> {
  const errors=checkJsonValue(input);if(errors.length)return {ok:false,errors};
  if(!snapshotSchema.check(input,'$shop',errors))return {ok:false,errors};
  const snapshot=input as ShopSnapshot,seen=new Set(['hold','reroll']);
+ for(const [index,offer]of snapshot.jokers.entries())if(offer.counters)errors.push(...validateOfferCounters(offer.catalogId,offer.counters,`$shop.jokers[${index}].counters`));
  for(const field of ['jokers','vouchers','packs','others'] as const){
   for(const [index,offer] of (snapshot[field]??[]).entries()){
    if(seen.has(offer.offerId))errors.push({path:`$shop.${field}[${index}].offerId`,code:'duplicate_id',message:`ID de oferta repetido o reservado: ${offer.offerId}.`});
@@ -123,7 +126,7 @@ function evaluateJoker(state:GameState,offer:ShopSnapshot['jokers'][number],repo
  const owned=value(state.observed.jokers),sold=offer.replacementId?owned?.find(j=>j.instanceId===offer.replacementId):undefined;
  const peers=owned?.filter(j=>j.instanceId!==offer.replacementId),sale=offer.replacementId?value(sold?.sellValue)??null:0;
  const option:ShopOption={id:offer.offerId,kind:'joker',title:ALL_JOKER_FACTS[key(offer.catalogId)??'']?.name??offer.catalogId,...cost(state,offer.price,sale,peers),coverage:'unknown',reasons:[],limitations:[]};
- const opts={purchase:true,requireObserved,offer:{price:offer.price===null?unknown('Precio de oferta no transcrito'):known(offer.price),edition:known(offer.edition),stickers:known(offer.stickers)},...(ante===undefined?{}:{ante}),...(offer.replacementId?{replacementId:offer.replacementId}:{})};
+ const opts={purchase:true,requireObserved,offer:{price:offer.price===null?unknown('Precio de oferta no transcrito'):known(offer.price),edition:known(offer.edition),stickers:known(offer.stickers),...(offer.counters?{counters:structuredClone(offer.counters)}:{})},...(ante===undefined?{}:{ante}),...(offer.replacementId?{replacementId:offer.replacementId}:{})};
  let fit=evaluateJokerFit(state,offer.catalogId,opts);
  const replacementBlocked=!!offer.replacementId&&owned!==undefined&&(!sold||value(sold.stickers)?.includes('eternal')===true);
  const replacementUnknown=!!offer.replacementId&&(owned===undefined||!sold||value(sold.sellValue)===undefined||value(sold.stickers)===undefined||value(sold.edition)===undefined);

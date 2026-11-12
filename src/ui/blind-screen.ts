@@ -3,7 +3,7 @@ import {blindRequirement} from '../catalog/blinds.js';
 import {TAGS,tagDefinition} from '../catalog/tags.js';
 import {DECK_PROFILES} from '../catalog/decks.js';
 import {guideBlindChoice} from '../advisor/blind-guidance.js';
-import {currentBlindAnswers} from './blind-decision-view.js';
+import {compactBlindGuidance,currentBlindAnswers} from './blind-decision-view.js';
 import {jokerArt,engineArt} from './collection.js';
 import {deckArt} from './deck-art.js';
 import {blindArt,tagArt} from './blind-art.js';
@@ -39,7 +39,7 @@ export function mountBlindScreen(options:BlindScreenOptions){
  const applyMotion=()=>{let preference='system';try{preference=localStorage.getItem('balatro-advisor.menu-motion.v1')??'system';}catch{/* A visual preference does not block the table. */}background.setMotion(preference==='on'||preference==='system'&&!motion.matches);};
  motion.addEventListener('change',applyMotion);document.querySelector('#menu-settings')?.addEventListener('close',applyMotion);applyMotion();
  const side=el('aside','','blind-sidebar'),advisor=el('section','','blind-advisor'),avatar=el('div','','blind-advisor-avatar'),bubble=el('div','','blind-speech');
- avatar.append(jokerArt('j_joker','Comodín asesor'));const title=el('strong'),reason=el('p'),limit=el('small','Orientación · supervivencia sin evaluar');bubble.append(title,reason,limit);advisor.append(avatar,bubble);
+ avatar.append(jokerArt('j_joker','Comodín asesor'));const title=el('strong'),reason=el('p');bubble.append(title,reason);advisor.append(avatar,bubble);
  const compare=el('button','Comparar jugar o saltar','blind-compare');compare.type='button';compare.id='blind-compare';compare.hidden=true;compare.onclick=options.compareBlind;bubble.append(compare);
  const plan=el('button','Orientar mi compra','blind-compare');plan.type='button';plan.id='game-shop-plan';plan.hidden=true;plan.setAttribute('aria-haspopup','dialog');bubble.append(plan);
  plan.onclick=()=>openShopPlan({state:()=>options.snapshot().state!,quote:()=>{const state=options.snapshot().state;return state?observedRerollQuote(state):null;},observeQuote:options.shop.observeQuote,changed:refresh},plan);
@@ -95,7 +95,10 @@ export function mountBlindScreen(options:BlindScreenOptions){
   compare.hidden=!selecting||!current||current.kind==='boss';
   const guidance=guideBlindChoice(state,answers);
   compare.textContent=guidance.ok&&guidance.value.askNextBlindPlan&&answers?.nextBlindPlan==='unknown'?'Valorar la próxima ciega':'Comparar jugar o saltar';
-  title.textContent=settling?'Registra el cobro':guidance.ok?guidance.value.recommendation.title:'Revisa la partida';reason.textContent=settling?'Indica cuánto ganaste y los valores de los comodines que cambiaron.':guidance.ok?guidance.value.recommendation.reason:'Faltan datos para orientar esta decisión.';limit.textContent=guidance.ok&&guidance.value.askNextBlindPlan&&answers?.nextBlindPlan!=='unknown'?'Orientación · según tu plan':guidance.ok&&guidance.value.survival.status==='player_reported'?'Orientación · riesgo declarado':'Orientación · supervivencia sin evaluar';bubble.dataset.basis='heuristic';bubble.title=guidance.ok?[...guidance.value.conditions,...guidance.value.limitations].join('\n'):'';
+  const summary=guidance.ok?compactBlindGuidance(guidance.value):null;
+  title.textContent=settling?'Cobro':summary?.title??'Revisa la ciega';
+  reason.textContent=settling?'Introduce cuánto ganaste.':summary?.reason??'Registra los datos de esta ciega.';
+  bubble.dataset.basis='heuristic';
   hands.n.textContent=String(state.phase==='in_round'?value(state.phaseData.handsRemaining)??'—':settling?'—':value(state.observed.resources.handsPerRound)??'—');discards.n.textContent=String(state.phase==='in_round'?value(state.phaseData.discardsRemaining)??'—':settling?'—':value(state.observed.resources.discardsPerRound)??'—');money.n.textContent=value(state.observed.money)===undefined?'$—':'$'+value(state.observed.money);money.box.title=settling?'Último saldo registrado. Introduce el saldo actual al cobrar.':'';ante.n.textContent=(anteValue??'—')+'/8';
   const skipped=value(value(state.observed.jokerContext)?.blindsSkipped),roundRef=origin??current;round.n.textContent=roundRef&&skipped!==undefined?String(Math.max(0,(roundRef.ante-1)*3+({small:0,big:1,boss:2}[roundRef.kind])-skipped+(settling||origin?1:0))):'—';round.box.title='Ciegas anteriores menos saltos registrados, incluida la ronda actual al seleccionarla. Desconocido si falta el total de saltos.';
   tray.querySelectorAll('.blind-owned-card').forEach(e=>e.remove());const owned=value(state.observed.jokers);for(const j of owned??[]){const card=el('span','','blind-owned-card');card.append(jokerArt(engineArt[j.catalogId]??'j_joker',j.catalogId));tray.append(card);}jokerCount.textContent=(owned?.length??'—')+'/'+(value(state.observed.resources.jokerSlots)??'—');
@@ -104,10 +107,12 @@ export function mountBlindScreen(options:BlindScreenOptions){
   if(shopping){
    shop.refresh(state,writable,snapshot.dirty);
    const advice=shop.advice();
-   title.textContent=snapshot.dirty?'Termina la edición':advice?.title??'Registra las ofertas';
-   reason.textContent=advice?.planReason||[advice?.benefit,advice?.sacrifice].filter(Boolean).join(' ')||advice?.pending||(snapshot.dirty?'Guarda o corrige los cambios para actualizar el consejo.':'Introduce las ofertas para comparar las opciones de esta tienda.');
-   limit.textContent='Orientación · Ver análisis de tienda';
-   bubble.title=[advice?.pending,advice?.scope].filter(Boolean).join('\n');
+   const choice=advice?.status==='conditional'&&advice.choices.length===1?advice.choices[0]:null;
+   if(snapshot.dirty){title.textContent='Guarda los cambios';reason.textContent='Actualiza los datos para ver el consejo.';}
+   else if(choice?.id==='hold'){title.textContent='Ahorra';reason.textContent=choice.moneyAfter===null?'Conserva el dinero para otra tienda.':`Conserva $${choice.moneyAfter} para otra tienda.`;}
+   else if(choice?.id==='reroll'){title.textContent='Renueva';reason.textContent=`Cuesta $${choice.price} y quedarían $${choice.moneyAfter} para comprar.`;}
+   else if(choice){title.textContent='Compra '+choice.title;reason.textContent=choice.moneyAfter===null?'Encaja con tu equipo.':`Encaja con tu equipo. Te quedan $${choice.moneyAfter}.`;}
+   else {title.textContent=advice?.status==='tie'?'Compara las ofertas':'Registra las ofertas';reason.textContent=advice?.status==='tie'?'Elige el efecto que necesita tu equipo.':'Introduce las cartas y sus precios.';}
    bubble.scrollTop=0;
    if(picker.open)picker.close();
    if(snapshot.dirty)error.textContent='Termina la edición pendiente antes de registrar la tienda.';

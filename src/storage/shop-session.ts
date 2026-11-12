@@ -1,6 +1,6 @@
 import {packOfferSchema} from '../state/pack-contract.js';
 import type {PackOffer} from '../state/pack-contract.js';
-import type {GameState, Result,VoucherOffer} from '../state/model.js';
+import type {Result,VoucherOffer,CurrentShopOffer} from '../state/model.js';
 import {array, boolean, checkJsonValue, object, text} from '../state/schema.js';
 import type {Schema} from '../state/schema.js';
 import {voucherOfferSchema} from '../state/model.js';
@@ -11,8 +11,7 @@ import type {StoragePort} from './state-store.js';
 import type {EngineOptions} from '../rules/core.js';
 import {bindingSchema,equal,analysisBinding} from './confirmed-record.js';
 
-type Shop = Extract<GameState['observed']['shop'], {status:'known'}>['value'];
-export type ShopOffer = Shop['cardOffers'][number];
+export type ShopOffer = CurrentShopOffer;
 export interface ObserveJokerOffersRequest {
   confirmationId:string;
   confirmed:boolean;
