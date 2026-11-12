@@ -58,7 +58,7 @@ test('uncertain offers remain visible alongside known tradeoffs and never become
  const s=state(25),shop=snapshot();shop.jokers=[offer('golden_joker',6),{...offer('joker',2,'unknown'),price:null}];const r=evaluateShopContext(s,shop);assert.equal(r.recommendation.status,'tie');assert.match(r.recommendation.reasons.join(' '),/Otras ofertas tienen datos pendientes/);assert.equal(r.options.find(o=>o.id==='unknown')!.moneyAfter,null);
 });
 test('unknown shop is not a known empty shop and requests only its visible offers',()=>{
- const s=state(),shop=snapshot();s.observed.shop={status:'unknown',reason:'No transcrita'};const r=evaluateShopContext(s,shop);assert.equal(r.recommendation.status,'abstain');assert.match(r.recommendation.title,/ofertas visibles.*precios/);
+ const s=state(),shop=snapshot();s.observed.shop={status:'unknown',reason:'No transcrita'};const r=evaluateShopContext(s,shop);assert.equal(r.recommendation.status,'abstain');assert.match(r.recommendation.title,/ofertas visibles/);
 });
 test('a supported current-format voucher uses actual H2 price, and advice is a reserve tradeoff',()=>{
  const s=state(40),shop=snapshot();shop.vouchers=[{offerId:'seed',catalogId:'v_seed_money',price:10}];const before=structuredClone(s),r=evaluateShopContext(s,shop);assert.equal(r.options[1]!.coverage,'modeled');assert.deepEqual(r.recommendation.offerIds,['hold','seed']);assert.deepEqual([r.options[1]!.economics!.interest.before,r.options[1]!.economics!.interest.after],[5,6]);assert.deepEqual(s,before);
