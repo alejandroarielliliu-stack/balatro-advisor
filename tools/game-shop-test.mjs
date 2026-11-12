@@ -110,6 +110,7 @@ try{
  pass('cashout-opens-empty-shop-on-same-table-with-one-payment-and-red-edges');
 
  const beforeBrowse=await raw(p);await p.locator('[data-game-shop-kind="joker"][data-game-shop-empty="true"]').first().click();await p.locator('#shop-joker-picker').waitFor({state:'visible'});
+ await p.locator('[data-shop-joker]').first().waitFor({state:'visible'});
  assert.equal(await p.locator('[data-shop-joker]').count(),15,'Collection-style gallery has fifteen Jokers per page');
  await p.screenshot({path:dir+'/joker-gallery-desktop.png'});
  assert.match(await p.locator('#shop-joker-page').innerText(),/1\s*\/\s*10/);
