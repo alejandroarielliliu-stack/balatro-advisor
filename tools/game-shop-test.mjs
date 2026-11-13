@@ -42,11 +42,14 @@ try{
   await page.locator('#shop-joker-picker').waitFor({state:'visible'});
   await page.locator('#shop-joker-search').fill(catalogId);
   await page.locator(`[data-shop-joker="${catalogId}"]`).click();
-  await page.locator('#shop-joker-detail').waitFor({state:'visible'});
+  await page.locator('#shop-joker-picker').waitFor({state:'hidden'});
+  assert.equal(await page.locator('#shop-joker-detail:visible').count(),0,'Selecting a Joker adds its base offer without opening a detail');
  };
  const modifier=async(page,kind,change)=>{
   await page.locator('#shop-joker-'+kind).click();await change();
   await page.locator('#shop-joker-apply-modifier').click();
+  await page.locator('#shop-joker-detail').waitFor({state:'visible'});
+  await page.locator('#shop-joker-apply-modifier').waitFor({state:'hidden'});
  };
  const shopReady=async page=>{await page.waitForFunction(()=>document.body.dataset.view==='blind'&&document.querySelector('#blind-screen')?.dataset.mode==='shop');await page.locator('#game-shop').waitFor({state:'visible'});};
  const start=async page=>{await page.locator('#menu-play').click();await page.locator('#setup-deck-dots input[value="red"]').check();await page.locator('#setup-play').click();await page.waitForFunction(()=>document.body.dataset.view==='blind');};
@@ -59,15 +62,21 @@ try{
   return page.locator('.blind-advisor,.blind-advisor-avatar,.blind-speech').evaluateAll(logicalBounds);
  };
  const observe=async(page,kind,catalogId,price)=>{
+  const before=(await record(page)).state.observed.shop,existing=new Set(before.status==='known'?(kind==='joker'?before.value.cardOffers:kind==='voucher'?before.value.voucherOffers??[]:before.value.packOffers??[]).map(offer=>offer.offerId):[]);
   await page.locator(`[data-game-shop-kind="${kind}"][data-game-shop-empty="true"]`).first().click();
   if(kind==='joker')await selectJoker(page,catalogId);
-  else {await page.locator('#game-shop-editor').waitFor({state:'visible'});await page.locator('#game-shop-catalog').selectOption(catalogId);}
-  const editor=activeEditor(page);
-  assert.equal(await editor.locator('input#game-shop-price').count(),0,'Shop price is calculated rather than entered');
-  assert.match(await editor.locator('#game-shop-price').innerText(),new RegExp('\\$'+price+'(?:\\D|$)'),'Calculated shop price matches the game rule');
-  await editor.locator('#game-shop-save').click();await editor.waitFor({state:'hidden'});
+  else {
+   await page.locator('#game-shop-editor').waitFor({state:'visible'});await page.locator('#game-shop-catalog').selectOption(catalogId);
+   const editor=activeEditor(page);
+   assert.equal(await editor.locator('input#game-shop-price').count(),0,'Shop price is calculated rather than entered');
+   assert.match(await editor.locator('#game-shop-price').innerText(),new RegExp('\\$'+price+'(?:\\D|$)'),'Calculated shop price matches the game rule');
+   await editor.locator('#game-shop-save').click();await editor.waitFor({state:'hidden'});
+  }
   const shop=(await record(page)).state.observed.shop.value,list=kind==='joker'?shop.cardOffers:kind==='voucher'?shop.voucherOffers:shop.packOffers;
-  const offer=list.find(offer=>offer.catalogId===catalogId);assert.ok(offer,'Observed '+kind+' is stored in the real shop snapshot');return offer.offerId;
+  const offer=list.find(offer=>offer.catalogId===catalogId&&!existing.has(offer.offerId));assert.ok(offer,'Observed '+kind+' is stored in the real shop snapshot');
+  assert.equal(offer.price.value,price,'Saved price matches the calculated quote');
+  if(kind==='joker'){assert.equal(offer.edition.value,'base');assert.deepEqual(offer.stickers.value,[]);}
+  return offer.offerId;
  };
  const openOffer=async(page,id)=>{await page.locator(`[data-game-shop-offer="${id}"]`).click();await activeEditor(page).waitFor({state:'visible'});};
  const beginPurchase=async(page,id)=>{await openOffer(page,id);await activeEditor(page).locator('#game-shop-buy').click();await page.locator('#confirmation').waitFor({state:'visible'});};
@@ -118,32 +127,56 @@ try{
  await p.screenshot({path:dir+'/joker-gallery-desktop.png'});
  assert.match(await p.locator('#shop-joker-page').innerText(),/1\s*\/\s*10/);
  await p.locator('#shop-joker-next').click();assert.match(await p.locator('#shop-joker-page').innerText(),/2\s*\/\s*10/);
- await p.locator('#shop-joker-prev').click();await selectJoker(p,'joker');
- assert.equal(await activeEditor(p).locator('input#game-shop-price').count(),0,'The new Joker detail has no manual price field');
- assert.match(await activeEditor(p).locator('#game-shop-price').innerText(),/\$2(?:\D|$)/,'A plain Joker costs its base $2');
- const inlineGeometry=await p.evaluate(()=>Object.fromEntries(['.shop-joker-info','#game-shop','.blind-sidebar'].map(selector=>{const box=document.querySelector(selector).getBoundingClientRect();return [selector,{left:box.left,right:box.right,top:box.top,bottom:box.bottom}];})));
- const cardInfo=inlineGeometry['.shop-joker-info'],shopPanel=inlineGeometry['#game-shop'],sidebar=inlineGeometry['.blind-sidebar'];
- assert.ok(cardInfo&&shopPanel&&sidebar&&cardInfo.left>sidebar.right,'The card detail sits on the table beside the advisor');
- assert.ok(cardInfo.top<shopPanel.top&&cardInfo.bottom>shopPanel.top,'The card detail overlaps the upper edge of the shop like the game');
- assert.equal(await p.locator('#shop-joker-picker').evaluate(element=>getComputedStyle(element,'::backdrop').backdropFilter),'none','Inspecting a card keeps the table sharp');
- assert.equal(await p.locator('#shop-joker-counters').isVisible(),false,'A static Joker has no counter pencil');
- await activeEditor(p).locator('#game-shop-close').click();assert.equal(await raw(p),beforeBrowse,'Browsing or canceling an offer does not write');
- pass('collection-style-joker-gallery-and-card-detail-cancel-without-writing');
- const jokerId=await observe(p,'joker','joker',2),voucherId=await observe(p,'voucher','v_seed_money',10),packId=await observe(p,'pack','buffoon-normal',4);
+ await p.locator('#shop-joker-prev').click();
+ assert.equal(await raw(p),beforeBrowse,'Paging the gallery does not write');
+ await p.locator('#shop-joker-picker #game-shop-close').click();await p.locator('#shop-joker-picker').waitFor({state:'hidden'});
+ assert.equal(await raw(p),beforeBrowse,'Closing the gallery does not write');
+ const jokerId=await observe(p,'joker','joker',2),baseRecord=await record(p);
+ assert.equal(baseRecord.state.observed.shop.value.cardOffers.length,1,'Selecting once inserts exactly one base Joker');
+ assert.equal(baseRecord.state.observed.money.value,7);assert.equal(baseRecord.state.observed.jokers.value.length,0);
+ const offerTile=p.locator(`[data-game-shop-offer="${jokerId}"]`),beforeInspect=await raw(p),shellBeforeInspect=await shellBounds(p);
+ await p.locator('#game-shop-next').focus();await p.mouse.move(1900,30);await offerTile.hover();
+ await p.locator('.shop-joker-info:visible').waitFor();
+ assert.match(await p.locator('.shop-joker-info:visible').innerText(),/\+4\s+(?:mult|multi)/i,'Hover describes the actual shelf Joker');
+ assert.equal(await p.locator('#game-shop-buy:visible,.shop-joker-tools:visible').count(),0,'Hover only describes the card');
+ assert.equal(await raw(p),beforeInspect,'Hover never changes the recorded run');
+ await p.mouse.move(1900,30);await p.locator('.shop-joker-info:visible').waitFor({state:'hidden'});
+ await offerTile.focus();await p.locator('.shop-joker-info:visible').waitFor();assert.equal(await raw(p),beforeInspect,'Keyboard focus describes the offer without writing');
+ await p.locator('#game-shop-next').focus();await p.locator('.shop-joker-info:visible').waitFor({state:'hidden'});
+ const resting=await offerTile.locator('.game-shop-offer-art').boundingBox();await openOffer(p,jokerId);
+ const raised=await offerTile.locator('.game-shop-offer-art').boundingBox(),buyBox=await p.locator('#game-shop-buy').boundingBox();
+ assert.ok(resting&&raised&&raised.y<resting.y-5,'Click raises the actual Joker in its shelf');
+ assert.ok(Math.abs((raised.x+raised.width/2)-(resting.x+resting.width/2))<5,'The raised Joker remains in its own shelf slot');
+ assert.ok(buyBox&&buyBox.y>=raised.y+raised.height-2,'Buy appears below the raised Joker');
+ assert.equal(await p.locator('#shop-joker-detail .shop-joker-slot').count(),3,'Every Joker shows three effect controls');
+ assert.equal(await p.locator('#shop-joker-counters').isDisabled(),true,'A static Joker keeps its values control disabled');
+ assert.equal(await p.locator('#shop-joker-detail #game-shop-save,#shop-joker-detail #shop-joker-back').count(),0,'The old Añadir and Comodines actions are removed');
+ assert.equal(await p.locator('#shop-joker-picker').count(),0,'Shelf selection is inline rather than the gallery dialog');
+ assert.deepEqual(await shellBounds(p),shellBeforeInspect,'Selecting a card leaves sidebar and trays fixed');
+ assert.equal(await raw(p),beforeInspect,'Opening shelf controls does not spend or write');
+ await p.screenshot({path:dir+'/joker-selected-desktop.png'});
+ await activeEditor(p).locator('#game-shop-close').click();await p.locator('#shop-joker-detail').waitFor({state:'hidden'});
+ assert.equal(await raw(p),beforeInspect);
+ pass('gallery-adds-base-joker-and-shelf-hover-selection-raises-actual-card-without-purchase');
+ const voucherId=await observe(p,'voucher','v_seed_money',10),packId=await observe(p,'pack','buffoon-normal',4);
  const shelf=await record(p),shopId=shelf.state.observed.shop.value.shopId;assert.equal(shelf.state.observed.money.value,7,'Transcribing three offers spends nothing');assert.equal(shelf.state.observed.jokers.value.length,0);assert.equal(shelf.state.observed.shop.value.cardOffers[0].price.value,2);assert.equal(shelf.state.observed.shop.value.voucherOffers[0].price.value,10);assert.equal(shelf.state.observed.shop.value.packOffers[0].price.value,4);await p.screenshot({path:dir+'/desktop-observed.png'});
  pass('joker-voucher-and-pack-share-real-shop-snapshot-without-acquisition');
- await openOffer(p,jokerId);await modifier(p,'stickers',()=>p.locator('.game-shop-stickers input[value="unknown"]').check());await activeEditor(p).locator('#game-shop-save').click();await p.locator('#shop-joker-detail').waitFor({state:'hidden'});assert.equal((await record(p)).state.observed.shop.value.cardOffers[0].stickers.status,'unknown');
- await openOffer(p,jokerId);await modifier(p,'stickers',()=>p.locator('.game-shop-stickers input[value="unknown"]').uncheck());await activeEditor(p).locator('#game-shop-save').click();await p.locator('#shop-joker-detail').waitFor({state:'hidden'});assert.deepEqual((await record(p)).state.observed.shop.value.cardOffers[0].stickers.value,[]);assert.equal((await record(p)).state.observed.shop.value.packOffers[0].offerId,packId);
+ await openOffer(p,jokerId);await modifier(p,'stickers',()=>p.locator('.game-shop-stickers input[value="unknown"]').check());await activeEditor(p).locator('#game-shop-close').click();await p.locator('#shop-joker-detail').waitFor({state:'hidden'});assert.equal((await record(p)).state.observed.shop.value.cardOffers[0].stickers.status,'unknown');
+ await openOffer(p,jokerId);await modifier(p,'stickers',()=>p.locator('.game-shop-stickers input[value="unknown"]').uncheck());await activeEditor(p).locator('#game-shop-close').click();await p.locator('#shop-joker-detail').waitFor({state:'hidden'});assert.deepEqual((await record(p)).state.observed.shop.value.cardOffers[0].stickers.value,[]);assert.equal((await record(p)).state.observed.shop.value.packOffers[0].offerId,packId);
 
  const purchaseRaw=await raw(p);await beginPurchase(p,jokerId);assert.equal(await raw(p),purchaseRaw);await p.locator('#dialog-accept').click();assert.equal(await raw(p),purchaseRaw,'Purchases still require the performed-action confirmation');await p.locator('#dialog-cancel').click();
  await beginPurchase(p,jokerId);await confirmPurchase(p);await shopReady(p);const bought=await record(p);assert.equal(bought.state.observed.money.value,5);assert.equal(bought.state.observed.jokers.value.length,1);assert.equal(bought.state.observed.jokers.value[0].catalogId,'joker');assert.equal(bought.state.observed.shop.value.cardOffers.length,0);assert.equal(bought.history.at(-1).action.type,'buy');
  pass('existing-confirmation-records-one-real-joker-purchase');
 
- await p.locator('[data-game-shop-kind="joker"][data-game-shop-empty="true"]').first().click();await selectJoker(p,'green_joker');const beforeFailure=await raw(p);
- await p.evaluate(()=>window.__gameShopFail=true);await activeEditor(p).locator('#game-shop-save').click();assert.equal(await raw(p),beforeFailure);assert.equal(await p.locator('#shop-joker-detail').isVisible(),true);assert.match(await activeEditor(p).innerText(),/Green Joker|Comodín verde/i);assert.match(await activeEditor(p).locator('#game-shop-price').innerText(),/\$4(?:\D|$)/);
- assert.match(await activeEditor(p).innerText(),/guardar|almacen|espacio|fall/i);
- await p.evaluate(()=>window.__gameShopFail=false);await activeEditor(p).locator('#game-shop-save').click();await p.locator('#shop-joker-detail').waitFor({state:'hidden'});assert.equal((await record(p)).state.observed.shop.value.cardOffers[0].catalogId,'green_joker');
- pass('offer-storage-failure-keeps-record-and-editor-draft-for-retry');
+ const beforeFailure=await raw(p);await p.locator('[data-game-shop-kind="joker"][data-game-shop-empty="true"]').first().click();
+ await p.locator('#shop-joker-search').fill('green_joker');await p.evaluate(()=>window.__gameShopFail=true);
+ await p.locator('[data-shop-joker="green_joker"]').click();assert.equal(await raw(p),beforeFailure);
+ assert.equal(await p.locator('#shop-joker-picker').isVisible(),true,'Failed immediate save keeps the gallery available');
+ assert.match(await p.locator('#shop-joker-picker').innerText(),/guardar|almacen|espacio|fall/i);
+ await p.evaluate(()=>window.__gameShopFail=false);await selectJoker(p,'green_joker');
+ const retried=(await record(p)).state.observed.shop.value.cardOffers;
+ assert.equal(retried.length,1,'Retry creates just one offer');assert.equal(retried[0].catalogId,'green_joker');
+ pass('immediate-gallery-save-failure-keeps-record-and-allows-one-retry');
 
  const beforeReroll=await raw(p),rerollRecord=await record(p);await p.locator('#game-shop-reroll').click();await p.locator('#confirmation').waitFor({state:'visible'});assert.match(await p.locator('#dialog-title').innerText(),/renovaci/i);assert.equal(await raw(p),beforeReroll);await p.locator('#dialog-cancel').click();assert.equal(await raw(p),beforeReroll);
  await p.locator('#game-shop-reroll').click();await p.locator('#game-shop-reroll-done').check();await p.locator('#game-shop-reroll-money').fill('3');await p.locator('#game-shop-reroll-cost').fill('6');await p.locator('#dialog-accept').click();await p.locator('#confirmation').waitFor({state:'hidden'});
@@ -155,6 +188,44 @@ try{
  assert.equal(await p.locator('.blind-cards').evaluate(element=>getComputedStyle(element).animationName),'none','Reduced motion makes the next ciegas available without a rise');assert.equal(await p.locator('#game-shop').evaluate(element=>getComputedStyle(element).animationName),'none');
  pass('next-round-reuses-recorded-progression-without-repeating-payout');await main.context.close();
 
+ const duplicates=await session(desktop,shopFixture(),'reduce',false),du=duplicates.page;await continueRun(du);
+ const firstCopy=await observe(du,'joker','joker',2),secondCopy=await observe(du,'joker','joker',2);assert.notEqual(firstCopy,secondCopy);
+ await openOffer(du,secondCopy);await modifier(du,'edition',()=>du.locator('#game-shop-edition').selectOption('foil'));
+ let duplicateOffers=(await record(du)).state.observed.shop.value.cardOffers;
+ assert.equal(duplicateOffers.find(item=>item.offerId===firstCopy).edition.value,'base');assert.equal(duplicateOffers.find(item=>item.offerId===secondCopy).edition.value,'foil');
+ assert.equal((await record(du)).state.observed.money.value,25,'Editing a duplicate offer spends nothing');
+ await activeEditor(du).locator('#game-shop-close').click();await openOffer(du,secondCopy);await activeEditor(du).locator('#game-shop-remove').click();
+ await du.locator('#shop-joker-detail').waitFor({state:'hidden'});duplicateOffers=(await record(du)).state.observed.shop.value.cardOffers;
+ assert.deepEqual(duplicateOffers.map(item=>item.offerId),[firstCopy],'Removing a duplicate only removes its own shelf offer');
+ await duplicates.context.close();pass('duplicate-base-jokers-edit-and-remove-by-independent-offer-id');
+
+ const crowdedFixture=count=>{
+  const saved=JSON.parse(shopFixture()),known=value=>({status:'known',source:'manual',value});
+  const definitions=[['joker',2],['green_joker',4],['red_card',5],['golden_joker',6]];
+  const cardOffers=definitions.slice(0,count).map(([catalogId,price],index)=>({
+   offerId:'crowded-'+(index+1),catalogId,label:catalogId,kind:'joker',price:known(price),edition:known('base'),stickers:known([]),
+   ...(catalogId==='red_card'?{counters:{mult:known(3)}}:catalogId==='green_joker'?{counters:{greenMult:known(0)}}:{})
+  }));
+  for(const state of [saved.state,saved.initialState])state.observed.shop=known({shopId:'crowded-imported-shop',cardOffers:structuredClone(cardOffers),ignoredOtherOffers:[],voucherOffers:[],packOffers:[]});
+  return JSON.stringify(saved);
+ };
+ const triple=await session(desktop,crowdedFixture(3),'reduce',false),tr=triple.page;await continueRun(tr);
+ const tripleRaw=await raw(tr);await openOffer(tr,'crowded-3');await tr.locator('#shop-joker-counters').click();
+ assert.equal(await tr.locator('[data-counter="mult"]').inputValue(),'3','The third imported offer retains its observed counter');
+ const stageBox=await tr.locator('.blind-stage').boundingBox();assert.ok(stageBox);
+ for(const selector of ['.shop-joker-modifier','[data-counter="mult"]','#shop-joker-apply-modifier']){
+  const bounds=await tr.locator(selector).boundingBox();
+  assert.ok(bounds&&bounds.x>=stageBox.x-1&&bounds.y>=stageBox.y-1&&bounds.x+bounds.width<=stageBox.x+stageBox.width+1&&bounds.y+bounds.height<=stageBox.y+stageBox.height+1,'Third offer '+selector+' fits inside the desktop stage '+JSON.stringify({stageBox,bounds}));
+ }
+ await tr.screenshot({path:dir+'/joker-third-offer-desktop.png'});
+ await tr.locator('.shop-joker-cancel-modifier').click();await activeEditor(tr).locator('#game-shop-close').click();assert.equal(await raw(tr),tripleRaw,'Inspecting the third imported offer does not write');await triple.context.close();
+ const crowded=await session(desktop,crowdedFixture(4),'reduce',false),cr=crowded.page;await continueRun(cr);
+ assert.equal(await cr.locator('.game-shop-joker').count(),4);
+ const shelfScroll=await cr.locator('.game-shop-card-well').evaluate(element=>({overflowX:getComputedStyle(element).overflowX,scrollWidth:element.scrollWidth,clientWidth:element.clientWidth}));
+ assert.equal(shelfScroll.overflowX,'auto','Four wrapped imported Jokers keep the shelf horizontally scrollable');
+ assert.ok(shelfScroll.scrollWidth>shelfScroll.clientWidth,'Additional imported offers remain reachable through the shelf scroll area');
+ await crowded.context.close();pass('third-imported-joker-modifiers-fit-desktop-and-extra-wrapped-offers-scroll');
+
  const comparedSave=JSON.parse(shopFixture());
  for(const state of [comparedSave.state,comparedSave.initialState])state.observed.shop={status:'known',source:'manual',value:{shopId:'compared-offers',cardOffers:[],ignoredOtherOffers:[]}};
  const compared=await session(undefined,JSON.stringify(comparedSave)),q=compared.page;await continueRun(q);
@@ -165,7 +236,7 @@ try{
  assert.equal(await tile.getAttribute('data-offer-preference'),'conditional');
  assert.equal(await q.locator('[data-game-shop-kind="pack"][data-offer-preference]').count(),0);
  const beforeReason=await raw(q);await openOffer(q,plain);assert.match(await activeEditor(q).innerText(),/\+4\s+(?:mult|multi)/i,'The card detail shows the catalog effect');
- assert.equal(await raw(q),beforeReason);await modifier(q,'edition',()=>q.locator('#game-shop-edition').selectOption('unknown'));await activeEditor(q).locator('#game-shop-save').click();await q.locator('#shop-joker-detail').waitFor({state:'hidden'});
+ assert.equal(await raw(q),beforeReason);await modifier(q,'edition',()=>q.locator('#game-shop-edition').selectOption('unknown'));await activeEditor(q).locator('#game-shop-close').click();await q.locator('#shop-joker-detail').waitFor({state:'hidden'});
  assert.equal(await q.locator('[data-offer-preference]').count(),0,'An unknown edition removes the price comparison');
  pass('shop-mark-belongs-to-a-supported-comparison-and-expires-with-unknown-price-data');await compared.context.close();
 
@@ -221,31 +292,34 @@ try{
 
  const customized=await session(desktop,shopFixture(),'reduce',false),c=customized.page;await continueRun(c);
  await c.locator('[data-game-shop-kind="joker"][data-game-shop-empty="true"]').first().click();
- await selectJoker(c,'red_card');assert.match(await activeEditor(c).locator('#game-shop-price').innerText(),/\$5(?:\D|$)/);
+ await selectJoker(c,'red_card');const customOfferId=(await record(c)).state.observed.shop.value.cardOffers.find(item=>item.catalogId==='red_card').offerId;await openOffer(c,customOfferId);assert.match(await activeEditor(c).locator('#game-shop-price').innerText(),/\$5(?:\D|$)/);
  const beforeCustomize=await raw(c);
  assert.equal(await c.locator('#shop-joker-counters').isVisible(),true,'A changing Joker exposes its pencil');
  await modifier(c,'edition',()=>c.locator('#game-shop-edition').selectOption('negative'));
  assert.match(await activeEditor(c).locator('#game-shop-price').innerText(),/\$10(?:\D|$)/,'Negative adds the fixed $5 premium');
  await modifier(c,'stickers',()=>c.locator('.game-shop-stickers input[value="eternal"]').check());
  await modifier(c,'counters',()=>c.locator('[data-counter="mult"]').fill('9'));
- assert.equal(await raw(c),beforeCustomize,'Editing modifiers stays a local offer draft');
+ assert.notEqual(await raw(c),beforeCustomize,'Applying modifiers immediately updates the observed shelf offer');
  await c.screenshot({path:dir+'/joker-detail-desktop.png'});
- await activeEditor(c).locator('#game-shop-save').click();await c.locator('#shop-joker-detail').waitFor({state:'hidden'});
+ await activeEditor(c).locator('#game-shop-close').click();await c.locator('#shop-joker-detail').waitFor({state:'hidden'});
  let customizedState=await record(c),redOffer=customizedState.state.observed.shop.value.cardOffers.find(item=>item.catalogId==='red_card');
  assert.ok(redOffer);assert.equal(redOffer.edition.value,'negative');assert.deepEqual(redOffer.stickers.value,['eternal']);assert.equal(redOffer.counters.mult.value,9);
  assert.equal(customizedState.state.observed.money.value,25);assert.equal(customizedState.state.observed.jokers.value.length,0);
+ const latestHoverRaw=await raw(c);await c.locator('#game-shop-next').focus();await c.mouse.move(1900,30);await c.locator(`[data-game-shop-offer="${redOffer.offerId}"]`).hover();
+ await c.locator('.shop-joker-preview:visible').waitFor();assert.match(await c.locator('.shop-joker-preview .shop-joker-current').innerText(),/\+9\s+Mult/i,'Hover uses the current saved counter after Apply and close');
+ assert.equal(await raw(c),latestHoverRaw,'The updated preview remains read-only');await c.mouse.move(1900,30);
  const customizedRaw=await raw(c);await c.reload();await c.waitForFunction(()=>location.hash==='#menu');await continueRun(c);assert.equal(await raw(c),customizedRaw);
- await openOffer(c,redOffer.offerId);await c.locator('#shop-joker-counters').click();assert.equal(await c.locator('[data-counter="mult"]').inputValue(),'9');await c.locator('#shop-joker-apply-modifier').click();
- await activeEditor(c).locator('#game-shop-close').click();assert.equal(await raw(c),customizedRaw);
+ await openOffer(c,redOffer.offerId);await c.locator('#shop-joker-counters').click();assert.equal(await c.locator('[data-counter="mult"]').inputValue(),'9');await c.locator('.shop-joker-cancel-modifier').click();
+ await activeEditor(c).locator('#game-shop-close').click();assert.equal(await raw(c),customizedRaw,'Canceling a counter edit leaves the saved offer unchanged');
  const reader=await customized.context.newPage();reader.on('pageerror',error=>report.pageErrors.push(error.message));await reader.goto(origin);
  await reader.waitForFunction(()=>location.hash==='#menu'&&document.querySelector('#ownership')?.textContent.includes('Modo lectura'));
  await continueRun(reader);await openOffer(reader,redOffer.offerId);
- for(const id of ['game-shop-save','game-shop-buy','game-shop-remove'])assert.equal(await activeEditor(reader).locator('#'+id).isDisabled(),true,'Reader cannot '+id);
+ for(const id of ['shop-joker-edition','shop-joker-stickers','shop-joker-counters','game-shop-buy','game-shop-remove'])assert.equal(await activeEditor(reader).locator('#'+id).isDisabled(),true,'Reader cannot '+id);
  assert.equal(await raw(reader),customizedRaw);await activeEditor(reader).locator('#game-shop-close').click();await reader.close();
  await openOffer(c,redOffer.offerId);
  await modifier(c,'edition',()=>c.locator('#game-shop-edition').selectOption('base'));
  await modifier(c,'stickers',()=>c.locator('.game-shop-stickers input[value="eternal"]').uncheck());
- await activeEditor(c).locator('#game-shop-save').click();await c.locator('#shop-joker-detail').waitFor({state:'hidden'});
+ await activeEditor(c).locator('#game-shop-close').click();await c.locator('#shop-joker-detail').waitFor({state:'hidden'});
  await beginPurchase(c,redOffer.offerId);await confirmPurchase(c);
  customizedState=await record(c);assert.equal(customizedState.state.observed.money.value,20);
  assert.equal(customizedState.state.observed.jokers.value[0].counters.mult.value,9,'The acquired copy keeps the observed offer value');
@@ -254,7 +328,7 @@ try{
  const discountSave=JSON.parse(shopFixture());
  for(const state of [discountSave.state,discountSave.initialState])state.observed.outOfScope.value.vouchers=['v_clearance_sale'];
  const discounted=await session(desktop,JSON.stringify(discountSave),'reduce',false),d=discounted.page;await continueRun(d);
- await d.locator('[data-game-shop-kind="joker"][data-game-shop-empty="true"]').first().click();await selectJoker(d,'red_card');
+ await d.locator('[data-game-shop-kind="joker"][data-game-shop-empty="true"]').first().click();await selectJoker(d,'red_card');const discountOfferId=(await record(d)).state.observed.shop.value.cardOffers.find(item=>item.catalogId==='red_card').offerId;await openOffer(d,discountOfferId);
  const beforeDiscount=await raw(d);
  assert.match(await activeEditor(d).locator('#game-shop-price').innerText(),/\$4(?:\D|$)/,'Clearance uses the native +0.5 rounding before its 25% discount');
  await modifier(d,'edition',()=>d.locator('#game-shop-edition').selectOption('negative'));
@@ -262,8 +336,8 @@ try{
  await modifier(d,'stickers',()=>d.locator('.game-shop-stickers input[value="rental"]').check());
  assert.match(await activeEditor(d).locator('#game-shop-price').innerText(),/\$1(?:\D|$)/,'Rental overrides the edition and voucher price');
  await modifier(d,'stickers',()=>d.locator('.game-shop-stickers input[value="rental"]').uncheck());
- assert.equal(await raw(d),beforeDiscount,'Every calculated quote remains a draft until adding the offer');
- await activeEditor(d).locator('#game-shop-save').click();await d.locator('#shop-joker-detail').waitFor({state:'hidden'});
+ assert.notEqual(await raw(d),beforeDiscount,'Applied edition and sticker quotes persist without a separate save');
+ await activeEditor(d).locator('#game-shop-close').click();await d.locator('#shop-joker-detail').waitFor({state:'hidden'});
  const discountedOffer=(await record(d)).state.observed.shop.value.cardOffers.find(item=>item.catalogId==='red_card');assert.equal(discountedOffer.price.value,7);
  await beginPurchase(d,discountedOffer.offerId);await confirmPurchase(d);
  const paidDiscount=await record(d);assert.equal(paidDiscount.state.observed.money.value,18,'Buying uses the displayed calculated price');
@@ -271,14 +345,14 @@ try{
  await discounted.context.close();pass('calculated-joker-price-follows-edition-rental-and-owned-voucher-through-purchase');
 
  const outdated=await session(undefined,shopFixture()),o=outdated.page;await continueRun(o);
- const staleOffer=await observe(o,'joker','joker',2);await openOffer(o,staleOffer);await modifier(o,'edition',()=>o.locator('#game-shop-edition').selectOption('foil'));
+ const staleOffer=await observe(o,'joker','joker',2);await openOffer(o,staleOffer);await o.locator('#shop-joker-edition').click();await o.locator('#game-shop-edition').selectOption('foil');
  await o.evaluate(async()=>{
   const {createConfirmedStore,analysisBinding}=await import(new URL('dist/src/storage/confirmed-store.js',location.href).href);
   const store=createConfirmedStore(()=>localStorage),loaded=store.load();if(!loaded.ok||!loaded.value)throw Error('Missing fixture');
   const result=store.correct({confirmationId:'other-tab-correction',confirmed:true,expected:analysisBinding(loaded.value.state),updatedAt:'2026-11-11T13:00:00Z',patch:{money:{status:'known',source:'manual',value:24}},reason:'Observed balance corrected by another writer.'});
   if(!result.ok)throw Error(JSON.stringify(result.errors));
  });
- const corrected=await raw(o);await activeEditor(o).locator('#game-shop-save').click();
+ const corrected=await raw(o);await o.locator('#shop-joker-apply-modifier').click();
  assert.equal(await raw(o),corrected,'A stale card draft cannot replace a newer confirmed record');
  assert.equal((await record(o)).state.observed.shop.value.cardOffers.find(item=>item.offerId===staleOffer).price.value,2);
  await outdated.context.close();pass('stale-joker-detail-keeps-newer-record-and-original-offer');
@@ -315,13 +389,21 @@ try{
   const beforePicker=await raw(m);await m.locator('[data-game-shop-kind="joker"][data-game-shop-empty="true"]').first().click();await m.locator('#shop-joker-picker').waitFor({state:'visible'});
   assert.equal(await m.getByRole('dialog',{name:'Comodines de la tienda',exact:true}).isVisible(),true);
   assert.equal(await m.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
-  await selectJoker(m,'red_card');await m.locator('#shop-joker-counters').click();
+  await selectJoker(m,'red_card');assert.notEqual(await raw(m),beforePicker,'Choosing a Joker records the base offer on touch screens');
+  const mobileOffer=(await record(m)).state.observed.shop.value.cardOffers.find(item=>item.catalogId==='red_card'),beforeMobileInspect=await raw(m);await openOffer(m,mobileOffer.offerId);
+  assert.equal(await activeEditor(m).locator('.shop-joker-slot').count(),3);
+  const inlineStyle=await m.locator('#shop-joker-inline').evaluate(element=>{const style=getComputedStyle(element);return {transform:style.transform,position:style.position};});
+  assert.deepEqual(inlineStyle,{transform:'none',position:'absolute'},'Inline controls inherit the table orientation without rotating a second time');
+  const [mobileArt]=await m.locator(`[data-game-shop-offer="${mobileOffer.offerId}"] .game-shop-offer-art`).evaluateAll(logicalBounds),[mobileBuy]=await m.locator('#game-shop-buy').evaluateAll(logicalBounds);
+  assert.ok(mobileBuy.top>=mobileArt.bottom-2,'Buy stays below the selected card in table coordinates');
+  assert.ok(Math.abs((mobileBuy.left+mobileBuy.width/2)-(mobileArt.left+mobileArt.width/2))<=5,'Buy remains centered under the selected card after rotation');
+  await m.locator('#shop-joker-counters').click();
   assert.equal(await activeEditor(m).locator('input#game-shop-price').count(),0,'Mobile detail has no manual price input');
   assert.match(await activeEditor(m).locator('#game-shop-price').innerText(),/\$5(?:\D|$)/);
-  assert.equal(await m.locator('#shop-joker-detail').evaluate(element=>element.scrollWidth<=element.clientWidth+1),true,'Card detail does not overflow horizontally');
+  for(const selector of ['#shop-joker-detail','#shop-joker-apply-modifier']){const bounds=await m.locator(selector).boundingBox();assert.ok(bounds&&bounds.x>=-1&&bounds.y>=-1&&bounds.x+bounds.width<=viewport.width+1&&bounds.y+bounds.height<=viewport.height+1,selector+' fits the mobile viewport '+JSON.stringify({viewport,bounds}));}
   await m.screenshot({path:`${dir}/joker-detail-${viewport.width}x${viewport.height}.png`});
-  await m.locator('#shop-joker-apply-modifier').click();await activeEditor(m).locator('#game-shop-close').click();
-  assert.equal(await raw(m),beforePicker,'Mobile gallery and detail consultation do not write');await mobile.context.close();
+  await m.locator('.shop-joker-cancel-modifier').click();await activeEditor(m).locator('#game-shop-close').click();
+  assert.equal(await raw(m),beforeMobileInspect,'Mobile detail consultation and cancel do not write');await mobile.context.close();
  }
  pass('panels-transition-in-opposite-directions-with-stationary-shell-and-mobile-layout');
  assert.deepEqual(report.pageErrors,[]);report.status='passed';await writeFile(dir+'/report.json',JSON.stringify(report,null,2));console.log('PASS game shop: '+report.cases.length+' groups');

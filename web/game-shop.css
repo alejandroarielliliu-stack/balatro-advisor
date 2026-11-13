@@ -81,7 +81,7 @@
   .game-shop-details { right: 14px; bottom: 6px; font-size: 13px; }
   /* Extra recorded offers stay reachable on their own shelf. Keep their
      price labels inside the scrolling area. */
-  :is(.game-shop-card-well:has(.game-shop-offer:nth-child(4)),
+  :is(.game-shop-card-well:has(.game-shop-shelf>:nth-child(4)),
       .game-shop-voucher-well:has(.game-shop-offer:nth-child(3)),
       .game-shop-pack-well:has(.game-shop-offer:nth-child(3))) {
     overflow: auto hidden;

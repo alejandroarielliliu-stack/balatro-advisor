@@ -8,7 +8,7 @@ import {inspectShopDecision} from '../advisor/decision.js';
 import {buildShopAdviceSummary,comparedShopPurchase} from './shop-advice-summary.js';
 import {currentShopPlan} from './shop-plan-view.js';
 import {observedRerollQuote} from '../rules/reroll-quote.js';
-import {openShopJokerPicker} from './shop-joker-picker.js';
+import {openShopJokerPicker,previewShopJoker} from './shop-joker-picker.js';
 import {normalizeShopSnapshot} from '../rules/shop-offer-prices.js';
 import {quoteShopPrice} from '../rules/shop-pricing.js';
 
@@ -65,6 +65,7 @@ export function mountGameShop(stage:HTMLElement,options:GameShopOptions){
   const binding={runId:state.runId,revision:state.revision},shelf=structuredClone(snapshot),offerId=offer?.offerId??crypto.randomUUID();
   if(kind==='joker'){
    const existing=offer as JokerOffer|undefined,trigger=document.activeElement instanceof HTMLElement?document.activeElement:undefined;
+   section.querySelectorAll<HTMLElement>('.shop-joker-preview').forEach(node=>node.remove());
    const recorded=state.observed.shop.status==='known'?state.observed.shop.value.cardOffers.find(item=>item.offerId===existing?.offerId):undefined;
    openShopJokerPicker({
     ...(existing?{offer:{...structuredClone(existing),price:recorded?value(recorded.price)??null:existing.price}}:{}),
@@ -73,7 +74,12 @@ export function mountGameShop(stage:HTMLElement,options:GameShopOptions){
     save:item=>{
      const changed=structuredClone(shelf),index=changed.jokers.findIndex(previous=>previous.offerId===item.offerId);
      if(index<0)changed.jokers.push(item);else changed.jokers[index]=item;
-     return options.observe(changed,binding);
+     const problem=options.observe(changed,binding);
+     if(!problem&&existing)setTimeout(()=>{
+      const updated=snapshot.jokers.find(offer=>offer.offerId===item.offerId),target=section.querySelector<HTMLElement>(`[data-game-shop-offer="${CSS.escape(item.offerId)}"]`);
+      if(updated&&target&&state?.phase==='shop'){target.focus({preventScroll:true});inspect('joker',updated);}
+     },0);
+     return problem;
     },
     ...(existing?{
      remove:()=>{const changed=structuredClone(shelf);changed.jokers=changed.jokers.filter(item=>item.offerId!==existing.offerId);return options.observe(changed,binding);},
@@ -138,7 +144,16 @@ export function mountGameShop(stage:HTMLElement,options:GameShopOptions){
     const mark=el('span',preferred.partial?'?':'✓','game-shop-preferred-mark');mark.setAttribute('aria-hidden','true');button.append(mark);
    }
   }
-  button.onclick=()=>inspect(kind,offer);return button;
+  button.onclick=()=>inspect(kind,kind==='joker'&&offer?snapshot.jokers.find(item=>item.offerId===offer.offerId):offer);
+  if(kind==='joker'&&offer){
+   const wrapper=el('div','','game-shop-joker');wrapper.dataset.jokerOffer=offer.offerId;wrapper.append(button);
+   let stopPreview:(()=>void)|undefined;
+   const hide=()=>{stopPreview?.();stopPreview=undefined;};
+   const show=()=>{hide();const current=snapshot.jokers.find(item=>item.offerId===offer.offerId);if(current&&!document.getElementById('shop-joker-inline'))stopPreview=previewShopJoker(current,button);};
+   button.onpointerenter=event=>{if(event.pointerType!=='touch')show();};button.onpointerleave=hide;button.onfocus=show;button.onblur=hide;
+   return wrapper;
+  }
+  return button;
  };
  function refresh(current:GameState,canWrite:boolean,dirty:boolean){
   state=current;writable=canWrite&&current.phase==='shop';next.disabled=!writable;reroll.disabled=!writable;
@@ -158,8 +173,24 @@ export function mountGameShop(stage:HTMLElement,options:GameShopOptions){
    if(choice===id)button.setAttribute('aria-description',advice?.planReason??advice!.title);else button.removeAttribute('aria-description');
   }
   error.textContent='';rerollPrice.textContent=snapshot.rerollCost===null?'$—':'$'+snapshot.rerollCost;reroll.title=snapshot.rerollCost===null?'Coste de renovación sin registrar. Transcribe lo que ocurrió en Balatro.':'Registrar una renovación realizada en Balatro; coste observado $'+snapshot.rerollCost;
+  const selected=cardShelf.querySelector<HTMLElement>('.game-shop-joker.is-selected'),selectedId=selected?.dataset.jokerOffer;
+  if(selected&&!snapshot.jokers.some(offer=>offer.offerId===selectedId))(selected.querySelector('dialog') as HTMLDialogElement|null)?.close();
   cardShelf.replaceChildren();voucherShelf.replaceChildren();packShelf.replaceChildren();
-  for(const offer of snapshot.jokers)cardShelf.append(tile('joker',offer));for(let i=snapshot.jokers.length;i<2;i++)cardShelf.append(tile('joker'));
+  for(const offer of snapshot.jokers){
+   if(selected&&offer.offerId===selectedId){
+    const price=selected.querySelector('.game-shop-price-tag'),art=selected.querySelector<HTMLElement>('.shop-joker-art');
+    if(price)price.textContent=offer.price===null?'$?':'$'+offer.price;if(art)art.dataset.jokerEdition=offer.edition;
+    const button=selected.querySelector<HTMLElement>('.game-shop-offer')!;
+    button.removeAttribute('data-offer-preference');button.removeAttribute('aria-description');button.querySelector('.game-shop-preferred-mark')?.remove();
+    if(preferred?.offerId===offer.offerId){
+     button.dataset.offerPreference=preferred.partial?'conditional':'compared';button.title=preferred.reason;
+     button.setAttribute('aria-description','Comodín preferido entre las compras comparadas. '+preferred.reason);
+     button.append(el('span',preferred.partial?'?':'✓','game-shop-preferred-mark'));
+    }
+    cardShelf.append(selected);
+   }else cardShelf.append(tile('joker',offer));
+  }
+  for(let i=snapshot.jokers.length;i<2;i++)cardShelf.append(tile('joker'));
   for(const offer of snapshot.vouchers)voucherShelf.append(tile('voucher',offer));if(!snapshot.vouchers.length)voucherShelf.append(tile('voucher'));
   for(const offer of snapshot.packs)packShelf.append(tile('pack',offer));for(let i=snapshot.packs.length;i<2;i++)packShelf.append(tile('pack'));
   const origin=current.schemaVersion==='0.2'&&current.phase==='shop'?value(current.phaseData.origin):undefined;voucherCaption.textContent=(origin?'ANTE '+origin.ante+' · ':'')+'VALE';
