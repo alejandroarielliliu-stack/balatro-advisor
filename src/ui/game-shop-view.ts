@@ -143,7 +143,7 @@ export function mountGameShop(stage:HTMLElement,options:GameShopOptions){
    if(preferred?.offerId===offer.offerId){
     button.dataset.offerPreference=preferred.partial?'conditional':'compared';button.title=preferred.reason;
     button.setAttribute('aria-description','Comodín preferido entre las compras comparadas. '+preferred.reason);
-    const mark=el('span',preferred.partial?'?':'✓','game-shop-preferred-mark');mark.setAttribute('aria-hidden','true');button.append(mark);
+    if(!preferred.partial){const mark=el('span','✓','game-shop-preferred-mark');mark.setAttribute('aria-hidden','true');button.append(mark);}
    }
   }
   button.onclick=()=>inspect(kind,kind==='joker'&&offer?snapshot.jokers.find(item=>item.offerId===offer.offerId):offer);
@@ -189,7 +189,7 @@ export function mountGameShop(stage:HTMLElement,options:GameShopOptions){
     if(preferred?.offerId===offer.offerId){
      button.dataset.offerPreference=preferred.partial?'conditional':'compared';button.title=preferred.reason;
      button.setAttribute('aria-description','Comodín preferido entre las compras comparadas. '+preferred.reason);
-     button.append(el('span',preferred.partial?'?':'✓','game-shop-preferred-mark'));
+     if(!preferred.partial){const mark=el('span','✓','game-shop-preferred-mark');mark.setAttribute('aria-hidden','true');button.append(mark);}
     }
     cardShelf.append(selected);
    }else cardShelf.append(tile('joker',offer));

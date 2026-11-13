@@ -38,6 +38,14 @@ try{
  };
  const raw=page=>page.evaluate(k=>localStorage.getItem(k),key),record=async page=>JSON.parse(await raw(page));
  const activeEditor=page=>page.locator('#shop-joker-detail:visible,#game-shop-editor:visible');
+ const closeInline=async page=>{await page.keyboard.press('Escape');await page.locator('#shop-joker-detail').waitFor({state:'hidden'});};
+ const descriptionLayout=page=>page.locator('#shop-joker-detail .shop-joker-description').evaluate(description=>{
+  const info=description.closest('.shop-joker-info'),style=getComputedStyle(description),range=document.createRange();range.selectNodeContents(description);
+  const scale=description.getBoundingClientRect().height/description.offsetHeight;
+  return {whiteHeight:description.clientHeight,infoHeight:info.offsetHeight,textHeight:range.getBoundingClientRect().height/scale,padding:parseFloat(style.paddingTop)+parseFloat(style.paddingBottom),lineHeight:parseFloat(style.lineHeight),scrollHeight:description.scrollHeight};
+ });
+ const compactDescription=layout=>{assert.ok(layout.scrollHeight<=layout.whiteHeight+1,'Description content fits without clipping or scroll');assert.ok(layout.whiteHeight-layout.textHeight-layout.padding<=layout.lineHeight+2,'The white description box has no excess blank filler');};
+
  const selectJoker=async(page,catalogId)=>{
   await page.locator('#shop-joker-picker').waitFor({state:'visible'});
   await page.locator('#shop-joker-search').fill(catalogId);
@@ -156,19 +164,19 @@ try{
  assert.ok(buyBox&&buyBox.y>=raised.y+raised.height-2,'Buy appears below the raised Joker');
  assert.equal(await p.locator('#shop-joker-detail .shop-joker-slot').count(),3,'Every Joker shows three effect controls');
  assert.equal(await p.locator('#shop-joker-counters').isDisabled(),true,'A static Joker keeps its values control disabled');
- assert.equal(await p.locator('#shop-joker-detail #game-shop-save,#shop-joker-detail #shop-joker-back').count(),0,'The old Añadir and Comodines actions are removed');
+ assert.equal(await p.locator('#shop-joker-detail #game-shop-save,#shop-joker-detail #shop-joker-back,#shop-joker-detail #game-shop-close').count(),0,'The old Añadir, Comodines and redundant tiny close actions are removed');
  assert.equal(await p.locator('#shop-joker-picker').count(),0,'Shelf selection is inline rather than the gallery dialog');
  assert.deepEqual(await shellBounds(p),shellBeforeInspect,'Selecting a card leaves sidebar and trays fixed');
  assert.equal(await raw(p),beforeInspect,'Opening shelf controls does not spend or write');
  await p.screenshot({path:dir+'/joker-selected-desktop.png'});
- await activeEditor(p).locator('#game-shop-close').click();await p.locator('#shop-joker-detail').waitFor({state:'hidden'});
+ await closeInline(p);await p.locator('#shop-joker-detail').waitFor({state:'hidden'});
  assert.equal(await raw(p),beforeInspect);
  pass('gallery-adds-base-joker-and-shelf-hover-selection-raises-actual-card-without-purchase');
  const voucherId=await observe(p,'voucher','v_seed_money',10),packId=await observe(p,'pack','buffoon-normal',4);
  const shelf=await record(p),shopId=shelf.state.observed.shop.value.shopId;assert.equal(shelf.state.observed.money.value,7,'Transcribing three offers spends nothing');assert.equal(shelf.state.observed.jokers.value.length,0);assert.equal(shelf.state.observed.shop.value.cardOffers[0].price.value,2);assert.equal(shelf.state.observed.shop.value.voucherOffers[0].price.value,10);assert.equal(shelf.state.observed.shop.value.packOffers[0].price.value,4);await p.screenshot({path:dir+'/desktop-observed.png'});
  pass('joker-voucher-and-pack-share-real-shop-snapshot-without-acquisition');
- await openOffer(p,jokerId);await modifier(p,'stickers','unknown');await activeEditor(p).locator('#game-shop-close').click();await p.locator('#shop-joker-detail').waitFor({state:'hidden'});assert.equal((await record(p)).state.observed.shop.value.cardOffers[0].stickers.status,'unknown');
- await openOffer(p,jokerId);await modifier(p,'stickers','unknown');await activeEditor(p).locator('#game-shop-close').click();await p.locator('#shop-joker-detail').waitFor({state:'hidden'});assert.deepEqual((await record(p)).state.observed.shop.value.cardOffers[0].stickers.value,[]);assert.equal((await record(p)).state.observed.shop.value.packOffers[0].offerId,packId);
+ await openOffer(p,jokerId);await modifier(p,'stickers','unknown');await closeInline(p);await p.locator('#shop-joker-detail').waitFor({state:'hidden'});assert.equal((await record(p)).state.observed.shop.value.cardOffers[0].stickers.status,'unknown');
+ await openOffer(p,jokerId);await modifier(p,'stickers','unknown');await closeInline(p);await p.locator('#shop-joker-detail').waitFor({state:'hidden'});assert.deepEqual((await record(p)).state.observed.shop.value.cardOffers[0].stickers.value,[]);assert.equal((await record(p)).state.observed.shop.value.packOffers[0].offerId,packId);
 
  const purchaseRaw=await raw(p);await beginPurchase(p,jokerId);assert.equal(await raw(p),purchaseRaw);await p.locator('#dialog-accept').click();assert.equal(await raw(p),purchaseRaw,'Purchases still require the performed-action confirmation');await p.locator('#dialog-cancel').click();
  await beginPurchase(p,jokerId);await confirmPurchase(p);await shopReady(p);const bought=await record(p);assert.equal(bought.state.observed.money.value,5);assert.equal(bought.state.observed.jokers.value.length,1);assert.equal(bought.state.observed.jokers.value[0].catalogId,'joker');assert.equal(bought.state.observed.shop.value.cardOffers.length,0);assert.equal(bought.history.at(-1).action.type,'buy');
@@ -200,7 +208,7 @@ try{
  let duplicateOffers=(await record(du)).state.observed.shop.value.cardOffers;
  assert.equal(duplicateOffers.find(item=>item.offerId===firstCopy).edition.value,'base');assert.equal(duplicateOffers.find(item=>item.offerId===secondCopy).edition.value,'foil');
  assert.equal((await record(du)).state.observed.money.value,25,'Editing a duplicate offer spends nothing');
- await activeEditor(du).locator('#game-shop-close').click();await openOffer(du,secondCopy);await activeEditor(du).locator('#game-shop-remove').click();
+ await closeInline(du);await openOffer(du,secondCopy);await activeEditor(du).locator('#game-shop-remove').click();
  await du.locator('#shop-joker-detail').waitFor({state:'hidden'});duplicateOffers=(await record(du)).state.observed.shop.value.cardOffers;
  assert.deepEqual(duplicateOffers.map(item=>item.offerId),[firstCopy],'Removing a duplicate only removes its own shelf offer');
  await duplicates.context.close();pass('duplicate-base-jokers-edit-and-remove-by-independent-offer-id');
@@ -216,7 +224,11 @@ try{
   return JSON.stringify(saved);
  };
  const triple=await session(desktop,crowdedFixture(3),'reduce',false),tr=triple.page;await continueRun(tr);
- const tripleRaw=await raw(tr);await openOffer(tr,'crowded-3');await tr.locator('#shop-joker-counters').click();
+ const tripleRaw=await raw(tr);await openOffer(tr,'crowded-1');const shortDescription=await descriptionLayout(tr);compactDescription(shortDescription);await closeInline(tr);
+ await openOffer(tr,'crowded-3');const longDescription=await descriptionLayout(tr);compactDescription(longDescription);
+ assert.ok(longDescription.whiteHeight>shortDescription.whiteHeight+16,'A longer Joker description grows its white box to fit the text');
+ assert.ok(longDescription.infoHeight>shortDescription.infoHeight+16,'The surrounding info card shrinks or grows with its description');
+ await tr.locator('#shop-joker-counters').click();
  assert.equal(await tr.locator('[data-counter="mult"]').inputValue(),'3','The third imported offer retains its observed counter');
  const stageBox=await tr.locator('.blind-stage').boundingBox();assert.ok(stageBox);
  for(const selector of ['.shop-joker-modifier','[data-counter="mult"]','#shop-joker-apply-modifier']){
@@ -224,7 +236,7 @@ try{
   assert.ok(bounds&&bounds.x>=stageBox.x-1&&bounds.y>=stageBox.y-1&&bounds.x+bounds.width<=stageBox.x+stageBox.width+1&&bounds.y+bounds.height<=stageBox.y+stageBox.height+1,'Third offer '+selector+' fits inside the desktop stage '+JSON.stringify({stageBox,bounds}));
  }
  await tr.screenshot({path:dir+'/joker-third-offer-desktop.png'});
- await tr.locator('.shop-joker-cancel-modifier').click();await activeEditor(tr).locator('#game-shop-close').click();assert.equal(await raw(tr),tripleRaw,'Inspecting the third imported offer does not write');await triple.context.close();
+ await tr.locator('.shop-joker-cancel-modifier').click();await closeInline(tr);assert.equal(await raw(tr),tripleRaw,'Inspecting the third imported offer does not write');await triple.context.close();
  const crowded=await session(desktop,crowdedFixture(4),'reduce',false),cr=crowded.page;await continueRun(cr);
  assert.equal(await cr.locator('.game-shop-joker').count(),4);
  const shelfScroll=await cr.locator('.game-shop-card-well').evaluate(element=>({overflowX:getComputedStyle(element).overflowX,scrollWidth:element.scrollWidth,clientWidth:element.clientWidth}));
@@ -238,11 +250,13 @@ try{
  const plain=await observe(q,'joker','joker',2);await observe(q,'joker','abstract_joker',4);
  const tile=q.locator(`[data-game-shop-offer="${plain}"]`);
  assert.equal(await tile.getAttribute('data-offer-preference'),'compared');
+ assert.equal(await tile.locator('.game-shop-preferred-mark').innerText(),'✓','A complete comparison retains its verified check mark');
  await observe(q,'pack','buffoon-normal',4);
  assert.equal(await tile.getAttribute('data-offer-preference'),'conditional');
+ assert.equal(await q.locator('.game-shop-preferred-mark').count(),0,'Partial comparisons have no question-mark badge');
  assert.equal(await q.locator('[data-game-shop-kind="pack"][data-offer-preference]').count(),0);
  const beforeReason=await raw(q);await openOffer(q,plain);assert.match(await activeEditor(q).innerText(),/\+4\s+(?:mult|multi)/i,'The card detail shows the catalog effect');
- assert.equal(await raw(q),beforeReason);await modifier(q,'edition','unknown');await activeEditor(q).locator('#game-shop-close').click();await q.locator('#shop-joker-detail').waitFor({state:'hidden'});
+ assert.equal(await raw(q),beforeReason);await modifier(q,'edition','unknown');await closeInline(q);await q.locator('#shop-joker-detail').waitFor({state:'hidden'});
  assert.equal(await q.locator('[data-offer-preference]').count(),0,'An unknown edition removes the price comparison');
  pass('shop-mark-belongs-to-a-supported-comparison-and-expires-with-unknown-price-data');await compared.context.close();
 
@@ -316,7 +330,13 @@ try{
  await c.locator('[data-shop-edition="foil"]').click();assert.equal(await raw(c),beforeGalleryFailure,'Failed one-click selection does not change the record');assert.equal(await visualPicker(c).isVisible(),true,'Failed selection leaves its visual gallery available');
  await c.evaluate(()=>window.__gameShopFail=false);await c.locator('[data-shop-edition="foil"]').click();await visualPicker(c).waitFor({state:'hidden'});
  assert.equal((await record(c)).state.observed.shop.value.cardOffers.find(item=>item.offerId===customOfferId).edition.value,'foil','Retry saves the clicked edition directly');
- await modifier(c,'edition','base');
+ await modifier(c,'edition','foil');
+ assert.equal((await record(c)).state.observed.shop.value.cardOffers.find(item=>item.offerId===customOfferId).edition.value,'base','Clicking the active edition removes it');
+ assert.match(await activeEditor(c).locator('#game-shop-price').innerText(),/\$5(?:\D|$)/,'Removing the active foil edition restores the base price');
+ await modifier(c,'edition','unknown');assert.equal((await record(c)).state.observed.shop.value.cardOffers.find(item=>item.offerId===customOfferId).edition.status,'unknown');
+ await modifier(c,'edition','unknown');assert.equal((await record(c)).state.observed.shop.value.cardOffers.find(item=>item.offerId===customOfferId).edition.value,'base','Clicking active unknown edition restores known base');
+ assert.match(await activeEditor(c).locator('#game-shop-price').innerText(),/\$5(?:\D|$)/);
+
  await modifier(c,'stickers','rental');await modifier(c,'stickers','perishable');
  assert.deepEqual((await record(c)).state.observed.shop.value.cardOffers.find(item=>item.offerId===customOfferId).stickers.value.slice().sort(),['perishable','rental'],'One-click stickers preserve compatible existing stickers');
  await modifier(c,'stickers','unknown');assert.equal((await record(c)).state.observed.shop.value.cardOffers.find(item=>item.offerId===customOfferId).stickers.status,'unknown','Unknown is exclusive of known stickers');
@@ -332,9 +352,15 @@ try{
  await c.waitForFunction(()=>document.querySelector('.game-shop-offer-art>.joker-sticker-art[data-sticker="eternal"]')?.dataset.artStatus==='loaded');
  assert.equal(await c.locator('.game-shop-offer-art>.joker-sticker-art[data-sticker="eternal"]').count(),1,'Applied Eternal is rendered on the real shelf card');
  await modifier(c,'counters',()=>c.locator('[data-counter="mult"]').fill('9'));
+ await modifier(c,'edition','negative');
+ const removedEdition=(await record(c)).state.observed.shop.value.cardOffers.find(item=>item.offerId===customOfferId);
+ assert.equal(removedEdition.edition.value,'base');assert.deepEqual(removedEdition.stickers.value,['eternal']);assert.equal(removedEdition.counters.mult.value,9,'Removing an active edition preserves the observed counters');
+ assert.match(await activeEditor(c).locator('#game-shop-price').innerText(),/\$5(?:\D|$)/,'Removing Negative recalculates its price and preserves stickers');
+ await modifier(c,'edition','negative');assert.match(await activeEditor(c).locator('#game-shop-price').innerText(),/\$10(?:\D|$)/,'Clicking Negative again adds it back with its premium');
+
  assert.notEqual(await raw(c),beforeCustomize,'Applying modifiers immediately updates the observed shelf offer');
  await c.screenshot({path:dir+'/joker-detail-desktop.png'});
- await activeEditor(c).locator('#game-shop-close').click();await c.locator('#shop-joker-detail').waitFor({state:'hidden'});
+ await closeInline(c);await c.locator('#shop-joker-detail').waitFor({state:'hidden'});
  let customizedState=await record(c),redOffer=customizedState.state.observed.shop.value.cardOffers.find(item=>item.catalogId==='red_card');
  assert.ok(redOffer);assert.equal(redOffer.edition.value,'negative');assert.deepEqual(redOffer.stickers.value,['eternal']);assert.equal(redOffer.counters.mult.value,9);
  assert.equal(customizedState.state.observed.money.value,25);assert.equal(customizedState.state.observed.jokers.value.length,0);
@@ -343,17 +369,17 @@ try{
  assert.equal(await raw(c),latestHoverRaw,'The updated preview remains read-only');await c.mouse.move(1900,30);
  const customizedRaw=await raw(c);await c.reload();await c.waitForFunction(()=>location.hash==='#menu');await continueRun(c);assert.equal(await raw(c),customizedRaw);
  await openOffer(c,redOffer.offerId);await c.locator('#shop-joker-counters').click();assert.equal(await c.locator('[data-counter="mult"]').inputValue(),'9');await c.locator('.shop-joker-cancel-modifier').click();
- await activeEditor(c).locator('#game-shop-close').click();assert.equal(await raw(c),customizedRaw,'Canceling a counter edit leaves the saved offer unchanged');
+ await closeInline(c);assert.equal(await raw(c),customizedRaw,'Canceling a counter edit leaves the saved offer unchanged');
  const reader=await customized.context.newPage();reader.on('pageerror',error=>report.pageErrors.push(error.message));await reader.goto(origin);
  await reader.waitForFunction(()=>location.hash==='#menu'&&document.querySelector('#ownership')?.textContent.includes('Modo lectura'));
  await continueRun(reader);await openOffer(reader,redOffer.offerId);
  for(const id of ['shop-joker-edition','shop-joker-stickers','shop-joker-counters','game-shop-buy','game-shop-remove'])assert.equal(await activeEditor(reader).locator('#'+id).isDisabled(),true,'Reader cannot '+id);
- assert.equal(await raw(reader),customizedRaw);await activeEditor(reader).locator('#game-shop-close').click();await reader.close();
+ assert.equal(await raw(reader),customizedRaw);await closeInline(reader);await reader.close();
  await openOffer(c,redOffer.offerId);
  await modifier(c,'edition','base');
  await modifier(c,'stickers','eternal');
  assert.equal(await c.locator('.game-shop-offer-art>.joker-sticker-art').count(),0,'Toggling Eternal off clears its shelf artwork');
- await activeEditor(c).locator('#game-shop-close').click();await c.locator('#shop-joker-detail').waitFor({state:'hidden'});
+ await closeInline(c);await c.locator('#shop-joker-detail').waitFor({state:'hidden'});
  await beginPurchase(c,redOffer.offerId);await confirmPurchase(c);
  customizedState=await record(c);assert.equal(customizedState.state.observed.money.value,20);
  assert.equal(customizedState.state.observed.jokers.value[0].counters.mult.value,9,'The acquired copy keeps the observed offer value');
@@ -374,7 +400,7 @@ try{
  await modifier(d,'stickers','rental');
  assert.equal(await d.locator('.game-shop-offer-art>.joker-sticker-art').count(),0,'Toggling Rental off clears its shelf artwork');
  assert.notEqual(await raw(d),beforeDiscount,'Applied edition and sticker quotes persist without a separate save');
- await activeEditor(d).locator('#game-shop-close').click();await d.locator('#shop-joker-detail').waitFor({state:'hidden'});
+ await closeInline(d);await d.locator('#shop-joker-detail').waitFor({state:'hidden'});
  const discountedOffer=(await record(d)).state.observed.shop.value.cardOffers.find(item=>item.catalogId==='red_card');assert.equal(discountedOffer.price.value,7);
  await beginPurchase(d,discountedOffer.offerId);await confirmPurchase(d);
  const paidDiscount=await record(d);assert.equal(paidDiscount.state.observed.money.value,18,'Buying uses the displayed calculated price');
@@ -445,7 +471,7 @@ try{
   assert.match(await activeEditor(m).locator('#game-shop-price').innerText(),/\$5(?:\D|$)/);
   for(const selector of ['#shop-joker-detail','#shop-joker-apply-modifier']){const bounds=await m.locator(selector).boundingBox();assert.ok(bounds&&bounds.x>=-1&&bounds.y>=-1&&bounds.x+bounds.width<=viewport.width+1&&bounds.y+bounds.height<=viewport.height+1,selector+' fits the mobile viewport '+JSON.stringify({viewport,bounds}));}
   await m.screenshot({path:`${dir}/joker-detail-${viewport.width}x${viewport.height}.png`});
-  await m.locator('.shop-joker-cancel-modifier').click();await activeEditor(m).locator('#game-shop-close').click();
+  await m.locator('.shop-joker-cancel-modifier').click();await closeInline(m);
   assert.equal(await raw(m),beforeMobileInspect,'Mobile detail consultation and cancel do not write');await mobile.context.close();
  }
  pass('panels-transition-in-opposite-directions-with-stationary-shell-and-mobile-layout');

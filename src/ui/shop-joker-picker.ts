@@ -176,7 +176,7 @@ export function openShopJokerPicker(options:ShopJokerPickerOptions,trigger?:HTML
   if(original&&options.buy){const buy=button('Comprar','shop-joker-buy',()=>finish(()=>options.buy!()));buy.id='game-shop-buy';buy.disabled=!options.canWrite()||!unchanged()||!!modifier;actions.append(buy);}
   const remove=original&&options.remove?button('×','shop-joker-remove',()=>finish(()=>options.remove!())):null;
   if(remove){remove.id='game-shop-remove';remove.title='Quitar oferta de la tienda';remove.setAttribute('aria-label',remove.title);remove.disabled=!options.canWrite()||!!modifier;}
-  panel.replaceChildren(closeButton,info,tools,priceLabel,error,actions);if(!inline)panel.prepend(portrait);if(remove)panel.append(remove);
+  panel.replaceChildren(info,tools,priceLabel,error,actions);if(!inline)panel.prepend(closeButton,portrait);if(remove)panel.append(remove);
   if(draft.price===null&&quote.reason)showError(quote.reason);
   if(modifier)renderModifier();
   else trigger?.focus({preventScroll:true});
@@ -232,7 +232,7 @@ export function openShopJokerPicker(options:ShopJokerPickerOptions,trigger?:HTML
   const option=(id:string,name:string,art:HTMLElement,selected:boolean)=>{
    const card=button('','collection-item collection-card',()=>{
     const candidate=structuredClone(draft);
-    if(kind==='edition')candidate.edition=id;
+    if(kind==='edition')candidate.edition=draft.edition===id?'base':id;
     else candidate.stickers=id==='none'?[]:id==='unknown'?['unknown']:candidate.stickers.includes(id)?candidate.stickers.filter(sticker=>sticker!==id):[...candidate.stickers.filter(sticker=>sticker!=='unknown'),id];
     save(candidate);
    });
@@ -249,7 +249,7 @@ export function openShopJokerPicker(options:ShopJokerPickerOptions,trigger?:HTML
    }
   }
   const unknown=button(kind==='edition'?'Edición desconocida':'Pegatinas desconocidas','shop-modifier-unknown',()=>{
-   const candidate=structuredClone(draft);if(kind==='edition')candidate.edition='unknown';else candidate.stickers=draft.stickers.includes('unknown')?[]:['unknown'];save(candidate);
+   const candidate=structuredClone(draft);if(kind==='edition')candidate.edition=draft.edition==='unknown'?'base':'unknown';else candidate.stickers=draft.stickers.includes('unknown')?[]:['unknown'];save(candidate);
   });
   if(kind==='edition')unknown.dataset.shopEdition='unknown';else unknown.dataset.shopSticker='unknown';
   unknown.setAttribute('aria-pressed',String(kind==='edition'?draft.edition==='unknown':draft.stickers.includes('unknown')));unknown.disabled=!options.canWrite();

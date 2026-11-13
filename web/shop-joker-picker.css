@@ -41,9 +41,9 @@ dialog.shop-joker-picker {
 .shop-joker-art[data-joker-edition="holographic"]::after {background:repeating-conic-gradient(from 30deg,#ffa9e1 0 12%,#abddff 20%,#ffe8ad 34%,#b8b5fc 47%);opacity:.5;mix-blend-mode:hard-light}
 .shop-joker-art[data-joker-edition="polychrome"]::after {background:linear-gradient(125deg,#e2dd1b,#6dff24 25%,#38efff 45%,#a62bff 68%,#ed217f 90%);opacity:.56;mix-blend-mode:multiply}
 .shop-joker-art[data-joker-edition="negative"]>.joker-art {filter:invert(1)}
-.shop-joker-info {position:absolute;left:var(--info-left);top:158px;width:150px;height:126px;display:flex;flex-direction:column;padding:4px;border:3px solid #b5c5ca;border-radius:7px;background:#394d54;box-shadow:0 3px #1d3238;text-align:center}
+.shop-joker-info {position:absolute;left:var(--info-left);top:158px;width:150px;height:auto;display:flex;flex-direction:column;padding:4px;border:3px solid #b5c5ca;border-radius:7px;background:#394d54;box-shadow:0 3px #1d3238;text-align:center}
 .shop-joker-info h2 {flex-shrink:0;margin:0 0 4px;font:20px/1 'Balatro Pixel',monospace;color:#fff8e7}
-.shop-joker-description {flex:1;min-height:0;overflow:auto;margin:0;padding:3px;border-radius:4px;background:#fcfcf7;color:#334a4e;font:12px/1.05 'Balatro Pixel',monospace;white-space:pre-line;text-wrap:balance}
+.shop-joker-description {flex:0 0 auto;min-height:0;overflow:visible;margin:0;padding:5px 3px;border-radius:4px;background:#fcfcf7;color:#334a4e;font:12px/1.05 'Balatro Pixel',monospace;white-space:pre-line;text-wrap:balance}
 .shop-joker-current {display:block;margin:2px 0 0;font:11px/1.05 'Balatro Pixel',monospace;color:#8a9291}
 .shop-joker-current[hidden] {display:none}
 .shop-joker-rarity {flex-shrink:0;align-self:center;display:inline-block;min-width:86px;margin-top:4px;padding:1px 7px;border-radius:4px;background:#009dfa;color:#fff;font:15px/1 'Balatro Pixel',monospace}
@@ -84,11 +84,11 @@ dialog.shop-joker-picker {
 .game-shop-joker.is-selected>.game-shop-offer {filter:drop-shadow(0 6px 2px #0c202780)}
 .game-shop-joker.is-selected>.game-shop-offer>.game-shop-price-tag {visibility:hidden}
 .game-shop-card-well:not(:has(.game-shop-shelf>:nth-child(4))) {overflow:visible}
-.game-shop-joker>.shop-joker-preview {left:-164px;top:0;width:156px;height:126px;z-index:10;pointer-events:none}
+.game-shop-joker>.shop-joker-preview {left:-164px;top:0;width:156px;height:auto;z-index:10;pointer-events:none}
 dialog.shop-joker-inline[open] {position:absolute;inset:0;transform:none;width:100%;height:100%;max-width:none;max-height:none;margin:0;padding:0;border:0;overflow:visible;background:none;color:#fff8e7;box-shadow:none;pointer-events:none;font:24px/1 'Balatro Pixel',monospace}
 .shop-joker-inline .shop-joker-stage {inset:0;width:100%;height:100%;transform:none}
 .shop-joker-inline .shop-joker-detail {inset:0;width:100%;height:100%;transform:none}
-.shop-joker-inline .shop-joker-info {left:-164px;top:0;width:156px;height:126px;pointer-events:none}
+.shop-joker-inline .shop-joker-info {left:-164px;top:0;width:156px;height:auto;pointer-events:none}
 .shop-joker-inline .shop-joker-tools {left:calc(100% + 6px);top:0}
 .shop-joker-inline .shop-joker-slot:disabled {opacity:.4;cursor:default}
 .shop-joker-inline .shop-joker-close {left:calc(100% + 40px);top:0;width:19px;height:19px}
