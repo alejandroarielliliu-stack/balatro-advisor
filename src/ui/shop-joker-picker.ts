@@ -5,6 +5,8 @@ import {counterSpecs,initialCounters} from '../catalog/joker-counters.js';
 import type {CounterSpec} from '../catalog/joker-counters.js';
 import type {Fact} from '../state/model.js';
 import {jokerArt} from './collection.js';
+import {COLLECTION_EDITIONS,collectionArt} from './collection-data.js';
+import {jokerStickerArt} from './joker-sticker-art.js';
 
 export interface ShopJokerDraft {
  offerId:string;catalogId:string;price:number|null;edition:string;stickers:string[];
@@ -84,6 +86,7 @@ export function openShopJokerPicker(options:ShopJokerPickerOptions,trigger?:HTML
  let draft:ShopJokerDraft=original?structuredClone(original):{offerId:crypto.randomUUID(),catalogId:'',price:null,edition:'base',stickers:[]};
  let data:JokerCollection|null=null,page=0,query='',chosen:JokerReference|undefined,modifier:'edition'|'stickers'|'counters'|null=null;
  let error:HTMLElement|undefined;
+ let modifierPicker:HTMLDialogElement|undefined;
  const initialHash=location.hash;
  const resize=()=>{
   if(inline)return;
@@ -183,32 +186,20 @@ export function openShopJokerPicker(options:ShopJokerPickerOptions,trigger?:HTML
  }
  function renderModifier(){
   if(!modifier)return;
-  const kind=modifier,box=element('section','','shop-joker-modifier'),heading=element('h3',kind==='edition'?'Edición':kind==='stickers'?'Pegatinas':'Valores actuales');
+  if(modifier!=='counters'){renderModifierCollection(modifier);return;}
+  const box=element('section','','shop-joker-modifier'),heading=element('h3','Valores actuales');
   for(const node of panel.children)if(node instanceof HTMLElement&&!node.classList.contains('shop-joker-close'))node.inert=true;
   box.setAttribute('aria-label',heading.textContent!);box.append(heading);
-  const fields=new Map<string,HTMLInputElement>(),edition=element('select');edition.id='game-shop-edition';edition.setAttribute('aria-label','Edición de la oferta');
-  if(kind==='edition'){
-   for(const [id,name]of Object.entries(editions)){const option=element('option',name);option.value=id;edition.append(option);}edition.value=draft.edition;box.append(edition);
-  }else if(kind==='stickers'){
-   const stickers=element('div','','game-shop-stickers');
-   for(const [id,name]of Object.entries(stickerNames)){const label=element('label'),input=element('input');input.type='checkbox';input.value=id;input.checked=draft.stickers.includes(id);fields.set(id,input);label.append(input,element('span',name));stickers.append(label);}box.append(stickers);
-  }else{
+  const fields=new Map<string,HTMLInputElement>();
    for(const [key,spec]of Object.entries(specsFor(draft.catalogId))){
     const label=element('label',key==='x100'?'Multiplicador actual (×)':spec.label),input=element('input'),fact=currentCounters()[key],divisor=key==='x100'?100:1;
     input.type='number';input.dataset.counter=key;input.min=String(spec.min/divisor);if(spec.max!==undefined)input.max=String(spec.max/divisor);input.step=divisor===100?'0.01':'1';input.inputMode='decimal';input.placeholder='Desconocido';input.value=fact?.status==='known'?String(fact.value/divisor):'';input.setAttribute('aria-label',label.textContent!);label.append(input);fields.set(key,input);box.append(label);
    }
-  }
   const modifierError=element('p','','shop-joker-error');modifierError.setAttribute('role','alert');
   const modifierActions=element('div','','shop-joker-modifier-actions');
   const apply=button('Aplicar','shop-joker-save',()=>{
    if(!options.canWrite()){modifierError.textContent='Esta tienda está en modo lectura.';return;}
    const before=structuredClone(draft);
-   if(kind==='edition')draft.edition=edition.value;
-   else if(kind==='stickers'){
-    const checked=[...fields].filter(([,input])=>input.checked).map(([id])=>id);
-    if(checked.includes('unknown')&&checked.length>1){modifierError.textContent='Marca las pegatinas conocidas o Desconocidas.';return;}
-    draft.stickers=checked;
-   }else{
     const counters:Record<string,Fact<number>>={};
     for(const [key,input]of fields){
      if(!input.value.trim()){counters[key]={status:'unknown',reason:'Valor actual sin registrar.'};continue;}
@@ -217,17 +208,66 @@ export function openShopJokerPicker(options:ShopJokerPickerOptions,trigger?:HTML
      counters[key]={status:'known',source:'manual',value:rounded};
     }
     draft.counters=counters;
-   }
    calculatePrice();const problem=options.save(structuredClone(draft));
    if(problem){draft=before;modifierError.textContent=problem;return;}
    dialog.close();
   });apply.id='shop-joker-apply-modifier';
   modifierActions.append(apply,button('Cancelar','shop-joker-cancel-modifier',()=>{modifier=null;renderDetail();}));box.append(modifierError,modifierActions);panel.append(box);
-  (kind==='edition'?edition:fields.values().next().value)?.focus({preventScroll:true});
+  fields.values().next().value?.focus({preventScroll:true});
+ }
+ function renderModifierCollection(kind:'edition'|'stickers'){
+  for(const node of panel.children)if(node instanceof HTMLElement&&!node.classList.contains('shop-joker-close'))node.inert=true;
+  const picker=element('dialog','','collection-overlay shop-modifier-picker');picker.id='shop-joker-modifier-picker';modifierPicker=picker;
+  picker.setAttribute('aria-label',kind==='edition'?'Elegir edición':'Elegir pegatinas');
+  const stage=element('div','','collection-stage'),body=element('section','','collection-panel shop-modifier-panel');body.dataset.category=kind==='edition'?'edition':'stickers';
+  const title=element('h2',kind==='edition'?'Ediciones':'Pegatinas','shop-modifier-title');
+  const well=element('div','','collection-well'),grid=element('div','','collection-grid');well.append(grid);
+  const problem=element('p','','shop-modifier-error');problem.setAttribute('role','alert');
+  const save=(candidate:ShopJokerDraft)=>{
+   if(!options.canWrite()){problem.textContent='Esta tienda está en modo lectura.';return;}
+   const before=draft;draft=candidate;calculatePrice();const failure=options.save(structuredClone(draft));
+   if(failure){draft=before;problem.textContent=failure;return;}
+   modifier=null;picker.close();dialog.close();
+  };
+  const option=(id:string,name:string,art:HTMLElement,selected:boolean)=>{
+   const card=button('','collection-item collection-card',()=>{
+    const candidate=structuredClone(draft);
+    if(kind==='edition')candidate.edition=id;
+    else candidate.stickers=id==='none'?[]:id==='unknown'?['unknown']:candidate.stickers.includes(id)?candidate.stickers.filter(sticker=>sticker!==id):[...candidate.stickers.filter(sticker=>sticker!=='unknown'),id];
+    save(candidate);
+   });
+   if(kind==='edition')card.dataset.shopEdition=id;else card.dataset.shopSticker=id;
+   card.setAttribute('aria-label',name);card.setAttribute('aria-pressed',String(selected));card.title=name;card.disabled=!options.canWrite();
+   const portrait=element('span','','collection-item-art');portrait.append(art);card.append(portrait,element('span',name,'shop-modifier-label'));return card;
+  };
+  if(kind==='edition'){
+   for(const entry of COLLECTION_EDITIONS){const id=entry.edition==='holo'?'holographic':entry.edition!;grid.append(option(id,entry.name,collectionArt(entry),draft.edition===id));}
+  }else{
+   for(const id of ['none','eternal','perishable','rental']){
+    const art=collectionArt(COLLECTION_EDITIONS[0]!),sticker=jokerStickerArt(id),name=id==='none'?'Sin pegatinas':stickerNames[id]!;
+    const card=option(id,name,art,id==='none'?!draft.stickers.length:draft.stickers.includes(id));if(sticker)card.querySelector('.collection-item-art')!.append(sticker);grid.append(card);
+   }
+  }
+  const unknown=button(kind==='edition'?'Edición desconocida':'Pegatinas desconocidas','shop-modifier-unknown',()=>{
+   const candidate=structuredClone(draft);if(kind==='edition')candidate.edition='unknown';else candidate.stickers=draft.stickers.includes('unknown')?[]:['unknown'];save(candidate);
+  });
+  if(kind==='edition')unknown.dataset.shopEdition='unknown';else unknown.dataset.shopSticker='unknown';
+  unknown.setAttribute('aria-pressed',String(kind==='edition'?draft.edition==='unknown':draft.stickers.includes('unknown')));unknown.disabled=!options.canWrite();
+  const back=button('Volver','collection-back',()=>picker.close());back.id='shop-modifier-back';
+  body.append(title,well,unknown,problem,back);stage.append(body);picker.append(stage);
+  const resizePicker=()=>{const frame=document.getElementById('app-viewport');if(frame)stage.style.setProperty('--collection-scale',String(Math.min(frame.clientWidth/1280,frame.clientHeight/600)));};
+  picker.addEventListener('click',event=>{if(event.target===picker||event.target===stage)picker.close();});
+  picker.addEventListener('close',()=>{
+   window.removeEventListener('resize',resizePicker);picker.remove();if(modifierPicker===picker)modifierPicker=undefined;
+   if(dialog.open&&modifier===kind){modifier=null;renderDetail();panel.querySelector<HTMLElement>('#shop-joker-'+kind)?.focus({preventScroll:true});}
+  },{once:true});
+  (document.getElementById('app-shell')??document.body).append(picker);resizePicker();window.addEventListener('resize',resizePicker);picker.showModal();
+  grid.querySelector<HTMLElement>('[aria-pressed="true"]')?.focus({preventScroll:true});
  }
  dialog.addEventListener('cancel',event=>{if(modifier){event.preventDefault();modifier=null;renderDetail();}});
  dialog.addEventListener('click',event=>{if(dialog.dataset.mode==='detail'&&(event.target===dialog||event.target===stage||event.target===panel))dialog.close();});
  dialog.addEventListener('close',()=>{
+  modifierPicker?.close();
   window.removeEventListener('resize',resize);window.removeEventListener('hashchange',onRoute);document.removeEventListener('pointerdown',outside);document.removeEventListener('keydown',escape);dialog.remove();
   const wrapper=trigger?.closest('.game-shop-joker');if(!wrapper?.querySelector('dialog[open]'))wrapper?.classList.remove('is-selected');
   if(location.hash!==initialHash)return;
@@ -235,8 +275,8 @@ export function openShopJokerPicker(options:ShopJokerPickerOptions,trigger?:HTML
   const target=trigger?.isConnected?trigger:fallback;
   if(target?.getClientRects().length)target.focus({preventScroll:true});
  },{once:true});
- const outside=(event:PointerEvent)=>{if(inline&&!dialog.contains(event.target as Node)&&!trigger?.contains(event.target as Node))dialog.close();};
- const escape=(event:KeyboardEvent)=>{if(inline&&event.key==='Escape'){event.preventDefault();if(modifier){modifier=null;renderDetail();}else dialog.close();}};
+ const outside=(event:PointerEvent)=>{if(inline&&!modifierPicker?.open&&!dialog.contains(event.target as Node)&&!trigger?.contains(event.target as Node))dialog.close();};
+ const escape=(event:KeyboardEvent)=>{if(inline&&event.key==='Escape'&&!modifierPicker?.open){event.preventDefault();if(modifier){modifier=null;renderDetail();}else dialog.close();}};
  if(inline){trigger!.parentElement!.append(dialog);trigger!.closest('.game-shop-joker')?.classList.add('is-selected');dialog.show();document.addEventListener('pointerdown',outside);document.addEventListener('keydown',escape);}
  else {(document.getElementById('app-shell')??document.body).append(dialog);dialog.showModal();}
  resize();window.addEventListener('resize',resize);window.addEventListener('hashchange',onRoute);

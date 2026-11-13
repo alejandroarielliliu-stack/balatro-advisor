@@ -106,3 +106,19 @@ dialog.shop-joker-inline[open] {position:absolute;inset:0;transform:none;width:1
 .shop-joker-gallery>.shop-joker-error:not(:empty) {position:absolute;bottom:7px;left:15px;right:15px;padding:6px;background:#203b3d;border-radius:5px;font-size:17px}
 .blind-stage[data-layout="desktop"] .game-shop-joker {width:86px;height:115px}
 @media(prefers-reduced-motion:reduce) {.game-shop-joker {transition:none}}
+/* The same visual catalogue cards as Collection, with one-click application. */
+.collection-panel.shop-modifier-panel[data-category] {height:302px}
+.collection-panel.shop-modifier-panel[data-category="stickers"] {width:470px}
+.shop-modifier-panel>.collection-well {top:48px;bottom:78px}
+.shop-modifier-panel[data-category="stickers"] .collection-grid {grid-template-columns:repeat(4,minmax(0,1fr))}
+.shop-modifier-title {position:absolute;top:11px;left:18px;margin:0;font:25px/1 'Balatro Pixel',monospace}
+.shop-modifier-panel .collection-item {height:148px;display:flex;flex-direction:column;gap:6px;line-height:1}
+.shop-modifier-panel .collection-item[aria-pressed="true"] .collection-item-art {outline:3px solid #53d389;outline-offset:3px;border-radius:4px}
+.shop-modifier-panel .shop-modifier-label {font:15px/1 'Balatro Pixel',monospace;text-align:center;color:#fff8e7}
+.shop-modifier-panel .collection-item-art {flex-shrink:0}
+.collection-item-art>.joker-sticker-art {position:absolute;inset:0;--collection-art-width:100%;width:100%;height:100%;filter:none;pointer-events:none}
+.shop-modifier-unknown {position:absolute;right:17px;top:13px;min-height:0;padding:2px 5px;background:#263e45;color:#e3e8d8;border:0;border-radius:4px;font:15px/1 'Balatro Pixel',monospace;text-decoration:underline;cursor:pointer}
+.shop-modifier-unknown[aria-pressed="true"] {outline:2px solid #53d389}
+.shop-modifier-error {position:absolute;bottom:54px;left:18px;right:18px;margin:0;color:#ffd0ac;font:14px/1 'Balatro Pixel',monospace}
+.game-shop-offer-art.shop-joker-art {position:relative}
+.game-shop-offer-art>.joker-sticker-art {position:absolute;inset:0;--collection-art-width:100%;width:100%;height:100%;filter:none;pointer-events:none;z-index:2}

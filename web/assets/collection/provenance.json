@@ -12,6 +12,14 @@
       "sha256": "83de7eb06d21a9c87096c3bfc611222933fc3834524703718fd64e3d4486f282",
       "width": 1420,
       "height": 1140
+    },
+    {
+      "file": "stickers.png",
+      "source": "resources/textures/2x/stickers.png",
+      "bytes": 6738,
+      "sha256": "3430964397aafbd3aa203af87e25176bc9aca032e4cf85a3eae30a5c7962acc1",
+      "width": 710,
+      "height": 570
     }
   ],
   "copyright": "Balatro artwork and game text: LocalThunk / Playstack. Reference collection only.",

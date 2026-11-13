@@ -11,6 +11,7 @@ import {observedRerollQuote} from '../rules/reroll-quote.js';
 import {openShopJokerPicker,previewShopJoker} from './shop-joker-picker.js';
 import {normalizeShopSnapshot} from '../rules/shop-offer-prices.js';
 import {quoteShopPrice} from '../rules/shop-pricing.js';
+import {jokerStickerArt} from './joker-sticker-art.js';
 
 const el=<K extends keyof HTMLElementTagNameMap>(tag:K,text='',className='')=>{const e=document.createElement(tag);e.textContent=text;e.className=className;return e;};
 const value=<T>(fact:Fact<T>|undefined)=>fact?.status==='known'?fact.value:undefined;
@@ -137,6 +138,7 @@ export function mountGameShop(stage:HTMLElement,options:GameShopOptions){
    const portrait=el('span','','game-shop-offer-art');
    if(kind==='joker'){portrait.classList.add('shop-joker-art');portrait.dataset.jokerEdition=(offer as JokerOffer).edition;}
    portrait.append(art);
+   if(kind==='joker')for(const id of (offer as JokerOffer).stickers){const sticker=jokerStickerArt(id);if(sticker)portrait.append(sticker);}
    const price=el('strong',offer.price===null?'$?':'$'+offer.price,'game-shop-price-tag');button.append(price,portrait);button.setAttribute('aria-label',`${name} · ${offer.price===null?'precio desconocido':'$'+offer.price}`);button.title=name;
    if(preferred?.offerId===offer.offerId){
     button.dataset.offerPreference=preferred.partial?'conditional':'compared';button.title=preferred.reason;
@@ -180,6 +182,8 @@ export function mountGameShop(stage:HTMLElement,options:GameShopOptions){
    if(selected&&offer.offerId===selectedId){
     const price=selected.querySelector('.game-shop-price-tag'),art=selected.querySelector<HTMLElement>('.shop-joker-art');
     if(price)price.textContent=offer.price===null?'$?':'$'+offer.price;if(art)art.dataset.jokerEdition=offer.edition;
+    art?.querySelectorAll('.joker-sticker-art').forEach(node=>node.remove());
+    if(art)for(const id of offer.stickers){const sticker=jokerStickerArt(id);if(sticker)art.append(sticker);}
     const button=selected.querySelector<HTMLElement>('.game-shop-offer')!;
     button.removeAttribute('data-offer-preference');button.removeAttribute('aria-description');button.querySelector('.game-shop-preferred-mark')?.remove();
     if(preferred?.offerId===offer.offerId){
