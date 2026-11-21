@@ -67,8 +67,21 @@ try{
 
  const b=await session('DV-BLIND-03');before=await raw(b.p);count=await writes(b.p);assert.match(await b.p.locator('#run-blind-guidance').innerText(),/jugar|ronda/i);await b.p.locator('#run-compare-blind').click();assert.equal(await b.p.locator('#blind-guidance').getAttribute('data-status'),'conditional');assert.match(await b.p.locator('#blind-guidance').innerText(),/tienda/);assert.equal(await b.p.locator('.blind-plan').count(),0);
  await b.p.screenshot({path:dir+'/blind-desktop.png',fullPage:false});await b.p.setViewportSize({width:390,height:844});await noOverflow(b.p);await b.p.screenshot({path:dir+'/blind-390.png',fullPage:false});
- await b.p.locator('#blind-risk').selectOption('tight');assert.equal(await b.p.locator('#blind-guidance').getAttribute('data-preferred'),'none');assert.match(await b.p.locator('#blind-guidance').innerText(),/riesgo|justo/i);await b.p.locator('#blind-strict').check();assert.equal(await b.p.locator('#blind-guidance').getAttribute('data-status'),'abstain');await unchanged(b.p,before,count);await b.p.locator('#dialog-accept').click();await b.context.close();
+ await b.p.locator('#blind-risk').selectOption('tight');assert.equal(await b.p.locator('#blind-guidance').getAttribute('data-preferred'),'none');assert.match(await b.p.locator('#blind-guidance').innerText(),/riesgo|justo/i);await b.p.locator('#blind-strict').check();assert.equal(await b.p.locator('#blind-guidance').getAttribute('data-status'),'abstain');await unchanged(b.p,before,count);await b.p.locator('#dialog-accept').click();
  pass('qualitative-tag-without-executor-and-risk-strict-controls-never-write');
+ await b.p.locator('#run-journey-tools summary').click();await b.p.locator('#run-observe-tag').click();await b.p.locator('#progress-visible-tag').selectOption('tag_uncommon');await b.p.locator('#dialog-accept').click();await b.p.locator('#confirmation').waitFor({state:'hidden'});
+ assert.equal((await record(b.p)).state.phaseData.skipTag.value,'tag_uncommon');before=await raw(b.p);count=await writes(b.p);
+ await b.p.locator('#run-compare-blind').click();const automatic=b.p.locator('#blind-guidance');
+ assert.equal(await automatic.getAttribute('data-rule'),'BG-TAG-AUTO-PLAY');assert.equal(await automatic.locator('h3').innerText(),'Juega');assert.match(await automatic.innerText(),/etiqueta/i);
+ await b.p.locator('#blind-risk').selectOption('tight');assert.equal(await automatic.getAttribute('data-preferred'),'play');assert.equal(await automatic.locator('#blind-next-estimate').count(),0);
+ await unchanged(b.p,before,count);await b.p.locator('#dialog-accept').click();await b.context.close();
+ pass('listed-tag-recommends-playing-before-checking-risk-and-does-not-estimate-or-write');
+ const sampled=await session('DV-BLIND-02');before=await raw(sampled.p);count=await writes(sampled.p);
+ await sampled.p.locator('#run-compare-blind').click();const estimation=sampled.p.locator('#blind-next-estimate');
+ assert.equal(await sampled.p.locator('#blind-guidance').getAttribute('data-rule'),'BG-ESTIMATED-SKIP');assert.equal(await estimation.getAttribute('data-status'),'estimated');
+ assert.match(await estimation.innerText(),/meta 450.*puntos por mano disponible.*rondas simuladas/s);await unchanged(sampled.p,before,count);
+ await sampled.p.locator('#dialog-accept').click();await sampled.context.close();
+ pass('economy-skip-shows-sampled-next-blind-with-target-and-hand-budget');
  for(const width of [390,360]){
   const mobile=await session('DV-SHOP-02',{width,height:844});await shelf(mobile.p);before=await raw(mobile.p);count=await writes(mobile.p);await mobile.p.locator('#store-compare-options').click();await noOverflow(mobile.p);await mobile.p.screenshot({path:dir+`/shop-${width}.png`,fullPage:false});await open(mobile.p,'replace:abstract:owned-green');await noOverflow(mobile.p);await close(mobile.p);await unchanged(mobile.p,before,count);await mobile.context.close();
  }

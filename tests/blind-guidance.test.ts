@@ -4,10 +4,11 @@ import {readFileSync} from 'node:fs';
 import {createHash} from 'node:crypto';
 import type {GameStateV02} from '../src/state/model.js';
 import {guideBlindChoice,blindGuidanceIsCurrent} from '../src/advisor/blind-guidance.js';
-import type {BlindGuidanceOptions} from '../src/advisor/blind-guidance.js';
+import type {BlindGuidance,BlindGuidanceOptions} from '../src/advisor/blind-guidance.js';
 import {CONFIRMED_STORAGE_KEY,createConfirmedStore} from '../src/storage/confirmed-store.js';
 import {known,success,MemoryStorage} from './helpers.js';
 import {deckCards} from '../src/rules/core.js';
+import {AUTO_PLAY_BLIND_TAGS} from '../src/advisor/blind-tag-guidance.js';
 
 interface BlindCase {
  id:string;area:'blind';state:GameStateV02;options:BlindGuidanceOptions;
@@ -51,7 +52,7 @@ test('STR02a banco independiente conserva SHA, orden y once casos de ciega',()=>
 test('STR02a contratos congelados: orientación sin planes, evidencia honesta e inmutabilidad',()=>{
  for(const entry of cases){
   const input=structuredClone({state:entry.state,options:entry.options}),before=structuredClone(input),report=success(guideBlindChoice(input.state,input.options));
-  assert.equal(report.contract,'blind-guidance-1',entry.id);assert.equal(report.policyVersion,'blind-guidance-2',entry.id);assert.equal(report.basis,'heuristic');
+  assert.equal(report.contract,'blind-guidance-1',entry.id);assert.equal(report.policyVersion,'blind-guidance-3',entry.id);assert.equal(report.basis,'heuristic');
   assert.equal(report.projected,true);assert.equal(report.exhaustive,false);assert.equal(report.binding.runId,input.state.runId);assert.equal(report.binding.revision,input.state.revision);
   assert.ok(entry.behaviorOracle.allowedPreferred.includes(report.recommendation.preferred),entry.id);
   if(entry.behaviorOracle.automaticPlayForbidden)assert.notEqual(report.recommendation.preferred,'play',entry.id);
@@ -78,15 +79,17 @@ test('STR02a Economía4: umbral monetario1 con cobros literales3..7, sin predeci
  assert.deepEqual(report.survival,{status:'not_evaluated',risk:'unknown',source:null});assert.equal(report.askRisk,true);
 });
 
-test('STR02a Economía20: cobro27..31 no compensa automáticamente salto40',()=>{
+test('Economía20: el salto mejora todos los cobros y la próxima ciega se vence en las muestras',()=>{
  const entry=fixture('DV-BLIND-02'),report=success(guideBlindChoice(entry.state,entry.options)),cash=report.cashflowReference;assert.ok(cash);
  const oracle=entry.mechanicalOracles.cashoutIfWon;assert.ok(oracle);
  // Independent frozen amounts: original20, reward3, interest4, unused0..4.
  assert.deepEqual(oracle.earned,[7,8,9,10,11]);assert.deepEqual(oracle.balanceAfter,[27,28,29,30,31]);
  assert.equal(cash.skipImmediateIncome,20);assert.deepEqual(cash.rows.map(row=>row.earned),oracle.earned);assert.deepEqual(cash.rows.map(row=>row.balanceAfter),oracle.balanceAfter);
  assert.equal(cash.minimumHandsToMatchSkip,null);assert.equal(oracle.minimumRemainingHandsToMatchSkipIncome,null);
- assert.notEqual(report.recommendation.preferred,'play');assert.equal(report.recommendation.ruleId,'BG-REWARD-TRADEOFF');assert.match(report.recommendation.reason,/20.*inmediatos/);
- assert.ok(report.recommendation.reason.includes('$11'));assert.match(report.recommendation.title,/tienda/i);assert.equal(report.askNextBlindPlan,true);
+ assert.equal(report.recommendation.preferred,'skip');assert.equal(report.recommendation.ruleId,'BG-ESTIMATED-SKIP');assert.match(report.recommendation.reason,/\$20 ahora/);
+ const estimate=report.nextBlindEstimate;assert.ok(estimate?.status==='estimated');
+ assert.equal(estimate.target,450);assert.equal(estimate.reachedCount,estimate.sampleCount);
+ assert.ok(report.recommendation.reason.includes('$11'));assert.equal(report.askNextBlindPlan,false);
  assert.match(report.conditions.join(' '),/tienda.*no tienen precio/);assert.equal(report.survival.status,'not_evaluated');
 });
 
@@ -99,10 +102,13 @@ function guideEconomySmall(){
 }
 
 test('XII-067: Economy leaves $80 vs at most $52 on a one-hand win, but the next shop changes the choice',()=>{
- const state=guideEconomySmall(),before=structuredClone(state);
+ const state=guideEconomySmall();
+ state.observed.handBases={status:'unknown',reason:'Niveles de mano sin registrar.'};
+ const before=structuredClone(state);
  const undecided=success(guideBlindChoice(state)),ref=undecided.cashflowReference;assert.ok(ref);
  assert.equal(ref.skipImmediateIncome,40);assert.deepEqual(ref.rows.map(row=>row.balanceAfter),[48,49,50,51,52]);
  assert.equal(undecided.askNextBlindPlan,true);assert.equal(undecided.recommendation.preferred,null);
+ assert.equal(undecided.nextBlindEstimate?.status,'unavailable');
  assert.equal(success(guideBlindChoice(state,{risk:'comfortable'})).recommendation.preferred,null,'Confidence on the current blind does not answer readiness for the next one');
  const ready=success(guideBlindChoice(state,{nextBlindPlan:'ready'}));
  assert.equal(ready.recommendation.preferred,'skip');assert.equal(ready.recommendation.status,'conditional');
@@ -123,7 +129,7 @@ test('Economy skip stays within its cash, inventory, deck, queue and evidence co
  const golden=structuredClone(ordinary);
  golden.observed.jokers=known([{instanceId:'golden',catalogId:'golden_joker',edition:known('base'),stickers:known([]),sellValue:known(3),counters:{}}]);
  const cash=eligible(golden);
- assert.equal(cash.recommendation.preferred,'skip');assert.equal(cash.cashflowReference?.rows.at(-1)?.balanceAfter,56,'Includes Golden in the comparison');
+ assert.equal(cash.recommendation.ruleId,'BG-ESTIMATED-PLAY');assert.equal(cash.cashflowReference?.rows.at(-1)?.balanceAfter,56,'Includes Golden in the comparison');
  const grows=structuredClone(ordinary);
  grows.observed.jokers=known([{instanceId:'green',catalogId:'green_joker',edition:known('base'),stickers:known([]),sellValue:known(3),counters:{greenMult:known(2)}}]);
  const goldCard=structuredClone(ordinary),cards=deckCards(goldCard);
@@ -133,6 +139,52 @@ test('Economy skip stays within its cash, inventory, deck, queue and evidence co
  for(const state of casesToKeep){const result=eligible(state);assert.notEqual(result.recommendation.preferred,'skip',state.runId);assert.equal(result.askNextBlindPlan,false,state.runId);}
  assert.equal(success(guideBlindChoice(ordinary,{nextBlindPlan:'ready',requireObserved:true})).recommendation.status,'abstain');
  assert.equal(guideBlindChoice(ordinary,{nextBlindPlan:'always'} as never).ok,false);
+});
+
+test('las seis etiquetas de JUGAR resuelven sin inventario, dinero, cola ni cálculo',()=>{
+ const {state}=fixture('DV-BLIND-02');
+ assert.equal(state.phase,'blind_select');if(state.phase!=='blind_select')throw Error('fixture');
+ state.observed.jokers={status:'unknown',reason:'Inventario sin transcribir.'};
+ state.observed.money={status:'unknown',reason:'Saldo sin transcribir.'};
+ state.observed.jokerContext={status:'unknown',reason:'Cola sin transcribir.'};
+ for(const tag of AUTO_PLAY_BLIND_TAGS){
+  state.phaseData.skipTag=known(tag);
+  const report:BlindGuidance=success(guideBlindChoice(state,{risk:'tight'}));
+  assert.equal(report.recommendation.ruleId,'BG-TAG-AUTO-PLAY',tag);
+  assert.equal(report.recommendation.preferred,'play',tag);
+  assert.equal(report.nextBlindEstimate,undefined,tag);
+  assert.equal(report.askRisk,false);
+ }
+});
+
+test('Cupón en la primera pequeña recomienda saltar solo con una estimación favorable',()=>{
+ const {state}=fixture('DV-BLIND-02');
+ if(state.phase!=='blind_select')throw Error('fixture');
+ state.phaseData.skipTag=known('tag_coupon');
+ const before=structuredClone(state),report=success(guideBlindChoice(state));
+ assert.equal(report.recommendation.ruleId,'BG-ESTIMATED-SKIP');
+ assert.match(report.recommendation.reason,/próxima tienda, tras superar la ciega grande/);
+ assert.notEqual(success(guideBlindChoice(state,{nextBlindPlan:'need_shop'})).recommendation.preferred,'skip');
+ assert.deepEqual(state,before);
+ state.observed.deck={status:'unknown',reason:'Mazo sin transcribir.'};
+ const unavailable=success(guideBlindChoice(state));
+ assert.equal(unavailable.recommendation.preferred,null);
+ assert.equal(unavailable.nextBlindEstimate?.status,'unavailable');
+});
+
+test('Inversión antes del jefe no recomienda el salto con una media favorable y muestras que pierden',()=>{
+ const {state}=fixture('DV-BLIND-02');
+ if(state.phase!=='blind_select'||state.observed.nextBlind.status!=='known')throw Error('fixture');
+ state.phaseData.skipTag=known('tag_investment');
+ state.observed.nextBlind.value.kind='big';
+ state.observed.nextBlind.value.target=known(450);
+ state.observed.visibleBoss=known({ante:1,kind:'boss',bossId:known('the_psychic'),target:known(600),reward:known(5)});
+ const report=success(guideBlindChoice(state)),estimate=report.nextBlindEstimate;
+ assert.ok(estimate?.status==='estimated');
+ assert.ok(estimate.estimatedPoints>=estimate.target);
+ assert.ok(estimate.reachedCount<estimate.sampleCount);
+ assert.equal(report.recommendation.preferred,null);
+ assert.match(report.recommendation.reason,/al cobrar la victoria/);
 });
 
 test('STR02a D6 pendiente permite orientación útil sin ejecutar efecto ni tratarlo como cero',()=>{

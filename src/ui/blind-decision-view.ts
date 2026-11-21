@@ -10,6 +10,7 @@ import type {BlindGuidance,BlindGuidanceOptions} from '../advisor/blind-guidance
 const el=<K extends keyof HTMLElementTagNameMap>(tag:K,text='',cl='')=>{const e=document.createElement(tag);e.textContent=text;e.className=cl;return e;};
 const amount=(n:number|null)=>n===null?'Sin dato':'$'+n;
 const signed=(n:number)=>n>0?'+'+n:String(n);
+const points=new Intl.NumberFormat('es',{maximumFractionDigits:2});
 // These answers describe one observed decision. Opening another revision or
 // reloading the document starts the comparison with both answers unknown.
 type BlindAnswers=Required<Pick<BlindGuidanceOptions,'risk'|'nextBlindPlan'>>;
@@ -39,6 +40,13 @@ function route(host:HTMLElement,title:string,decision:Result<ShopDecision>|null)
 }
 export function compactBlindGuidance(guidance:BlindGuidance):{title:string;reason:string}{
  const {preferred,ruleId}=guidance.recommendation,rules=BLIND_GUIDANCE_POLICY.rules;
+ const estimate=guidance.nextBlindEstimate;
+ if(ruleId===rules.autoPlay)return {title:'Juega',reason:'Esta etiqueta tiene recomendación directa de jugar.'};
+ if(estimate?.status==='estimated'&&ruleId===rules.estimatedSkip)return {title:'Salta',reason:`La estimación alcanza los ${points.format(estimate.target)} puntos de la siguiente ciega.`};
+ if(estimate?.status==='estimated'&&ruleId===rules.estimatedPlay)return {title:'Juega',reason:'La estimación tras saltar no da una base suficiente para superar la siguiente ciega.'};
+ if(ruleId===rules.tagContext)return preferred==='play'
+  ?{title:'Juega',reason:'Conserva el cobro y la tienda de esta ciega.'}
+  :{title:'Compara',reason:'Revisa cuándo puedes aprovechar el efecto de esta etiqueta.'};
  if(preferred==='skip'){
   const reference=guidance.cashflowReference;
   const best=reference?.rows.reduce((maximum,row)=>Math.max(maximum,row.earned),0);
@@ -64,15 +72,32 @@ export function compactBlindGuidance(guidance:BlindGuidance):{title:string;reaso
 export function renderBlindGuidance(guidance:BlindGuidance):HTMLElement{
  const host=el('section','','blind-guidance');host.id='blind-guidance';host.dataset.status=guidance.recommendation.status;host.dataset.preferred=guidance.recommendation.preferred??'none';host.dataset.rule=guidance.recommendation.ruleId;
  const summary=compactBlindGuidance(guidance);
- host.append(el('h3',summary.title),el('p',summary.reason));
+ const rules=BLIND_GUIDANCE_POLICY.rules,rule=guidance.recommendation.ruleId;
+ const fullReason=rule===rules.autoPlay||rule===rules.estimatedSkip||rule===rules.estimatedPlay||rule===rules.tagContext;
+ host.append(el('h3',summary.title),el('p',fullReason?guidance.recommendation.reason:summary.reason));
  const detail=el('details');detail.append(el('summary','Motivos y condiciones'));
+ const estimate=guidance.nextBlindEstimate;
+ if(estimate){
+  const panel=el('section');panel.id='blind-next-estimate';panel.dataset.status=estimate.status;
+  panel.append(el('h4','Siguiente ciega tras saltar'));
+  if(estimate.status==='estimated'){
+   panel.append(
+    el('p',`${points.format(estimate.estimatedPoints)} puntos estimados · meta ${points.format(estimate.target)}.`),
+    el('p',`${points.format(estimate.pointsPerHand)} puntos por mano disponible · ${estimate.hands} ${estimate.hands===1?'mano en total':'manos en total'}.`),
+    el('p',`Se alcanzó la meta en ${estimate.reachedCount} de ${estimate.sampleCount} rondas simuladas.`));
+   host.append(panel);
+  }else{
+   panel.append(el('p',estimate.reason));
+   detail.append(panel);
+  }
+ }
  for(const [label,items]of [['A favor y contexto',guidance.reasons],['Sacrificios',guidance.sacrifices],['Condiciones',guidance.conditions],['Límites',guidance.limitations]] as const){
   if(!items.length)continue;detail.append(el('h4',label));for(const text of items)detail.append(el('p',text));
  }
  if(guidance.cashflowReference){const ref=guidance.cashflowReference;detail.append(el('h4','Cobro condicionado · sin predecir manos'),el('small',`Ingreso inmediato al saltar: $${ref.skipImmediateIncome}`));for(const row of ref.rows)detail.append(el('small',`${row.handsRemaining} manos sobrantes → cobro $${row.earned} → saldo $${row.balanceAfter}`));for(const text of ref.assumptions)detail.append(el('small',text));}
  host.append(detail);return host;
 }
-export function renderBlindDecision(report:BlindDecision,state:GameState,guidance?:BlindGuidance):HTMLElement{
+export function renderBlindDecision(report:BlindDecision,state:GameState,guidance?:BlindGuidance,explicitPlans=false):HTMLElement{
  const host=el('div','','blind-comparison');host.id='blind-comparison-result';host.dataset.recommendation=report.recommendation.status;
  const blind=state.observed.nextBlind.status==='known'?state.observed.nextBlind.value:null;
  const tag=state.schemaVersion==='0.2'&&state.phase==='blind_select'&&state.phaseData.skipTag.status==='known'?state.phaseData.skipTag.value:null;
@@ -82,6 +107,7 @@ export function renderBlindDecision(report:BlindDecision,state:GameState,guidanc
  if(single?.moneyAfterPlay!==null&&single?.moneyAfterPlay!==undefined)play.insertBefore(el('strong',amount(state.observed.money.status==='known'?state.observed.money.value:null)+' → '+amount(single.moneyAfterPlay),'blind-balance'),play.children[1]??null);
  skip.append(el('h3','Saltar'));
  if(report.skip.ok){const s=report.skip.value;skip.append(el('strong',amount(s.moneyBefore)+' → '+amount(s.moneyAfter),'blind-balance'),el('small',`Ingreso inmediato ${amount(s.immediateIncome)} · sin cobro de ronda ni tienda.`));if(s.deferredIncome)skip.append(el('p',`$${s.deferredIncome.dollars} pendientes: ${s.deferredIncome.condition}`));}
+ else if(guidance&&!explicitPlans&&report.skip.errors.every(e=>e.code==='unsupported_tag'&&e.path==='$.phaseData.skipTag'))skip.append(el('small','Esta etiqueta se valora en la orientación de arriba.'));
  else for(const e of report.skip.errors)skip.append(el('p',e.message,'error'));
  grid.append(play,skip);if(guidance)host.append(renderBlindGuidance(guidance));host.append(grid);
  if(!guidance||report.recommendation.status!=='abstain')host.append(el('p','Comparación calculada: '+report.recommendation.reason,'notice'));
@@ -124,7 +150,7 @@ export function blindComparisonButton(options:BlindViewOptions):HTMLButtonElemen
    const scenarios=scope.value==='none'?undefined:options.scenarios();
    if(scopesNeedPlan(scope.value)&&!scenarios?.length){result.append(el('p','Añade jugadas en Análisis y declara sus cartas y robos.','error'));return;}
    const report=compareBlindChoices(state,{requireObserved:strict.checked,...(scope.value==='play'?{playScenarios:scenarios!}:scope.value==='skip'?{afterSkipScenarios:scenarios!}:{})});
-   if(report.ok)result.append(renderBlindDecision(report.value,state,guidance.ok?guidance.value:undefined));else{if(guidance.ok)result.append(renderBlindGuidance(guidance.value));for(const e of report.errors)result.append(el('p',e.message,'error'));}
+   if(report.ok)result.append(renderBlindDecision(report.value,state,guidance.ok?guidance.value:undefined,scopesNeedPlan(scope.value)));else{if(guidance.ok)result.append(renderBlindGuidance(guidance.value));for(const e of report.errors)result.append(el('p',e.message,'error'));}
   }catch(e){planLabel.hidden=true;nextPlan.disabled=true;result.append(el('p',e instanceof Error?e.message:'Revisa los datos.','error'));}};
   scope.onchange=()=>calculate();strict.onchange=()=>calculate();risk.onchange=nextPlan.onchange=()=>calculate(true);
   const link=el('a','Editar jugadas en Análisis →');link.href='#evaluation';link.onclick=()=>document.querySelector<HTMLDialogElement>('#confirmation')?.close();body.append(link);

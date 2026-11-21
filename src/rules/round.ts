@@ -107,11 +107,12 @@ function heldEndRound(round:RoundState,trace:Trace[],use:(id:string)=>void){
  }
 }
 
-export function beginRound(input:unknown,initialHand:string[],options:EngineOptions={},choices:readonly EffectChoice[]=[]){
+export function beginRound(input:unknown,initialHand:string[],options:EngineOptions & {enteringFromShop?:boolean}={},choices:readonly EffectChoice[]=[]){
  return run<RoundState>(['round.resources','base.configuration','blind.effects'],options,(trace,use)=>{
   const game=stateInput(input,use),r=resources(game),checkedChoices=choicesInput(choices),generatedLocations:Record<string,'hand'|'deck'>={};inventory(game);initializeLegacyContext(game);
   const event:FullEventInput={state:game,stage:'end_shop',cards:[],choices:checkedChoices,generatedLocations,trace,use};
-  generationEvent(event,effectiveJokers(inventory(game)));resetRoundHistory(game);
+  if(options.enteringFromShop!==false)generationEvent(event,effectiveJokers(inventory(game)));
+  resetRoundHistory(game);
   let handsLeft=r.hands,discardsLeft=blindInfo(game).boss==='the_water'?0:r.discards;
   event.stage='select_blind';
   for(const actorId of inventory(game).map(j=>j.instanceId)){

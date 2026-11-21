@@ -1,4 +1,4 @@
-import type {Fact,GameState,Result,Issue} from '../state/model.js';
+import type {Fact,GameState,GameStateV02,Result,Issue} from '../state/model.js';
 import {validateState} from '../state/validation.js';
 import {boolean,checkJsonValue,enumeration,isObject,object} from '../state/schema.js';
 import {analysisBinding,canonical,equal} from '../storage/confirmed-record.js';
@@ -7,18 +7,25 @@ import {ENGINE_RULESET,GAME_VERSION} from '../catalog/initial.js';
 import {deckDefinition} from '../catalog/decks.js';
 import {currentDeckCards} from '../state/deck-material.js';
 import {bossDefinition} from '../catalog/bosses.js';
+import {blindRequirement} from '../catalog/blinds.js';
 import {tagDefinition} from '../catalog/tags.js';
 import {tagStrategyProfile} from '../catalog/tag-strategy.js';
 import type {TagStrategyProfile} from '../catalog/tag-strategy.js';
 import {projectSkipBlind,selectionScenarioState} from '../rules/tags.js';
 import {projectCashout} from '../rules/economy.js';
+import {valueFact} from '../rules/core.js';
+import {nextBlindAfter} from '../run/progress.js';
 import {BLIND_POLICY} from './blind-decision.js';
+import {assessBlindTag,isAutomaticPlayTag} from './blind-tag-guidance.js';
+import {estimateBlindSurvival} from './next-blind-survival.js';
+import type {BlindSurvivalEstimate} from './next-blind-survival.js';
 
-export const BLIND_GUIDANCE_POLICY={version:'blind-guidance-2',rules:{
+export const BLIND_GUIDANCE_POLICY={version:'blind-guidance-3',rules:{
  opportunity:'BG-ROUND-AND-SHOP',cashThreshold:'BG-CASH-THRESHOLD',rewardTradeoff:'BG-REWARD-TRADEOFF',
  risk:'BG-DECLARED-RISK',persistent:'BG-PERSISTENT-TRADEOFF',queue:'BG-TAG-QUEUE',
  strict:'BG-STRICT-EVIDENCE',compatibility:'BG-COMPATIBILITY',boss:'BG-BOSS-NO-SKIP',
- economySkip:'BG-ECONOMY-SKIP',shopNeeded:'BG-NEED-NEXT-SHOP'
+ economySkip:'BG-ECONOMY-SKIP',shopNeeded:'BG-NEED-NEXT-SHOP',autoPlay:'BG-TAG-AUTO-PLAY',
+ estimatedSkip:'BG-ESTIMATED-SKIP',estimatedPlay:'BG-ESTIMATED-PLAY',tagContext:'BG-TAG-CONTEXT'
 }} as const;
 export type BlindRisk='comfortable'|'tight'|'unknown';
 export type NextBlindPlan='unknown'|'ready'|'need_shop';
@@ -38,6 +45,7 @@ export interface BlindGuidance {
  reasons:string[];sacrifices:string[];conditions:string[];limitations:string[];
  tag:{id:string|null;name:string;profile:TagStrategyProfile|null};
  survival:{status:'not_evaluated'|'player_reported';risk:BlindRisk;source:'player_declaration'|null};
+ nextBlindEstimate?:BlindSurvivalEstimate;
  cashflowReference:BlindCashflowReference|null;
  askRisk:boolean;askNextBlindPlan:boolean;projected:true;exhaustive:false;
  evidence:{status:'provisional';verification:'static_inspection_and_heuristic';source:string;observedInGame:false};
@@ -99,8 +107,53 @@ function cashflowReference(state:Extract<GameState,{schemaVersion:'0.2'}>):Blind
   assumptions:['Superar la ciega actual.','El saldo no cambia durante la ronda; se conservan los otros datos usados por el cobro.','Cada fila declara sus manos sobrantes; no predice cuántas sobrarán.','La comparación acaba en el cobro o en el ingreso inmediato del salto; la tienda y los efectos futuros no tienen precio.'],provisional:true};
 }
 
-/** Independent qualitative orientation. An unavailable skip projection limits
- * the projection, not the opportunity-cost reasoning. No persistence or scoring. */
+// Only rewards with a known state before the next blind can enter this estimator.
+// Later shop rewards do not become a predicted Joker, Voucher or pack.
+function afterSkipForScoring(state:GameStateV02,tagId:string):GameStateV02|string {
+ const context=value(state.observed.jokerContext),queue=value(context?.tags);
+ if(queue===null)return 'Confirma las etiquetas pendientes para estimar la siguiente ciega.';
+ if(queue.includes('tag_double'))return 'Una etiqueta doble pendiente puede cambiar el premio del salto.';
+ if(tagId==='tag_economy'||tagId==='tag_investment'){
+  const projection=projectSkipBlind(state);
+  return projection.ok?selectionScenarioState(projection.value.state):projection.errors[0]?.message??'Falta resolver el efecto del salto.';
+ }
+ const tag=tagDefinition(tagId);
+ if(!tag||!['store_joker_create','store_joker_modify','voucher_add','shop_final_pass','shop_start'].includes(tag.trigger)){
+  return 'El salto puede cambiar la próxima ronda, la composición o el dinero. Su efecto previo a la ciega todavía no está resuelto.';
+ }
+ const current=value(state.observed.nextBlind),deckId=value(state.observed.deckId);
+ const next=current?nextBlindAfter(state,current):null;
+ const boss=value(next?.bossId);
+ if(!next||boss===null||deckId===null)return 'Registra la próxima ciega y, si es un jefe, su identidad.';
+ const requirement=blindRequirement(next.ante,next.kind,boss,deckId);
+ if(!requirement.ok)return requirement.error.message;
+ const projected=selectionScenarioState(state);
+ if(next.target.status==='unknown')next.target=valueFact(requirement.target);
+ if(next.reward.status==='unknown')next.reward=valueFact(requirement.reward);
+ projected.observed.nextBlind=valueFact(next);
+ const projectedContext=value(projected.observed.jokerContext);
+ const skips=value(projectedContext?.blindsSkipped);
+ if(projectedContext&&skips!==null)projectedContext.blindsSkipped=valueFact(skips+1);
+ return projected;
+}
+
+// The sidebar and its dialog may request the same estimate at one revision.
+let recentEstimate:{token:string;estimate:BlindSurvivalEstimate}|undefined;
+function sampledNextBlind(state:GameStateV02,tagId:string,stateToken:string):BlindSurvivalEstimate {
+ if(recentEstimate?.token===stateToken)return {...recentEstimate.estimate};
+ const projected=afterSkipForScoring(state,tagId);
+ const estimate:BlindSurvivalEstimate=typeof projected==='string'?{status:'unavailable',reason:projected}:estimateBlindSurvival(projected);
+ recentEstimate={token:stateToken,estimate};
+ return {...estimate};
+}
+
+function earlySkipReason(tagId:string,blind:{ante:number;kind:string}):string|null {
+ if(tagId==='tag_coupon'&&blind.ante===1&&blind.kind==='small')return 'Cupón hace gratuitas las cartas y los sobres iniciales de la próxima tienda, tras superar la ciega grande.';
+ if(tagId==='tag_investment'&&blind.ante<=2&&blind.kind==='big')return 'Inversión paga $25 al vencer al jefe inmediato. Ese dinero llega después de ganar.';
+ return null;
+}
+
+/** Read-only advice. A sampled round is a model with concrete assumptions, not a confirmed run. */
 export function guideBlindChoice(input:unknown,options:BlindGuidanceOptions={}):Result<BlindGuidance> {
  const checked=validateState(input);if(!checked.ok)return checked;
  const parsed=parsedOptions(options);if(!parsed.ok)return parsed;
@@ -115,7 +168,7 @@ export function guideBlindChoice(input:unknown,options:BlindGuidanceOptions={}):
   tag:{id:tagId,name:tagId?tagDefinition(tagId)?.name??tagId:'Etiqueta sin registrar',profile},
   survival:{status:settings.risk==='unknown'?'not_evaluated':'player_reported',risk:settings.risk,source:settings.risk==='unknown'?null:'player_declaration'},
   cashflowReference:null,askRisk:false,askNextBlindPlan:false,projected:true,exhaustive:false,
-  evidence:{status:'provisional',verification:'static_inspection_and_heuristic',source:'docs/evidencia/str02-etiquetas.md',observedInGame:false}};
+  evidence:{status:'provisional',verification:'static_inspection_and_heuristic',source:'docs/decisiones-visibles.md',observedInGame:false}};
  const recommend=(status:BlindGuidance['recommendation']['status'],preferred:BlindGuidance['recommendation']['preferred'],ruleId:string,title:string,reason:string)=>{result.recommendation={status,preferred,ruleId,title,reason};};
  if(state.rulesetId!==ENGINE_RULESET||value(state.observed.gameVersion)!==GAME_VERSION||value(state.observed.gamePlatform)!=='pc-steam'||value(state.observed.modsPresent)!==false||value(state.observed.stakeId)!=='white'||!deckDefinition(value(state.observed.deckId)??'')||!blind||blind.ante<1||blind.ante>8){
   recommend('abstain',null,policy.compatibility,'Revisa el contexto de la ciega','Falta un contexto compatible de versión, baraja, dificultad o ciega; no se presupone su equivalencia.');return {ok:true,value:result};
@@ -124,18 +177,31 @@ export function guideBlindChoice(input:unknown,options:BlindGuidanceOptions={}):
  if(blind.kind==='boss'){
   recommend('conditional','play',policy.boss,'La ciega jefe se juega','La Jefe no admite salto; esta orientación no demuestra que puedas superarla.');result.sacrifices=[];return {ok:true,value:result};
  }
+ if(isAutomaticPlayTag(tagId)){
+  recommend('conditional','play',policy.autoPlay,'Juega esta ciega',`${result.tag.name} está en la lista de JUGAR automático.`);
+  result.survival={status:'not_evaluated',risk:'unknown',source:null};
+  return {ok:true,value:result};
+ }
  const money=value(state.observed.money),reward=value(blind.reward),deck=value(state.observed.deckId),jokers=value(state.observed.jokers),context=value(state.observed.jokerContext),queue=value(context?.tags);
+ const tagAssessment=tagId?assessBlindTag(state,tagId):null;
+ if(tagId)result.nextBlindEstimate=sampledNextBlind(state,tagId,result.stateToken);
+ const estimate=result.nextBlindEstimate;
+ if(estimate?.status==='estimated'){
+  result.limitations=result.limitations.filter(message=>!message.startsWith('No se puntúan manos'));
+  result.limitations.push('La estimación usa rondas de ejemplo con el mazo registrado y una forma fija de jugar. No conoce los robos de tu partida.');
+ }
  result.reasons.push(`Ante ${blind.ante} · ${blind.kind==='small'?'ciega pequeña':'ciega grande'}: conservar una ronda mantiene la visita ordinaria a tienda.`);
  if(reward!==null)result.reasons.push(`Premio registrado $${reward}, solo si superas esta ciega; no es el cobro total.`);
  if(money!==null)result.reasons.push(`Saldo actual $${money}; no se da por disponible ninguna recompensa futura.`);
  if(deck==='green')result.reasons.push('La baraja verde no cobra intereses; sus manos y descartes sobrantes influyen en el cobro.');
  if(profile){result.reasons.push(result.tag.name+': '+profile.benefit);result.conditions.push(...profile.conditions);if(profile.execution==='not_implemented')result.limitations.push('El beneficio se conoce cualitativamente; su efecto no se ejecuta ni se concede en el motor de esta consulta.');}
- else {
+ else if(!tagAssessment){
   result.conditions.push(`El beneficio de ${result.tag.name} no está valorado; podría invertir esta orientación inicial. No se considera cero.`);
   result.recommendation.reason=tagId
    ?`Jugar conserva el cobro y la visita a tienda si ganas. Falta valorar el efecto de ${result.tag.name} para aconsejar el salto.`
    :'Si ganas, cobras y visitas la tienda. Indica la etiqueta en la ciega para comparar qué recibirías al saltar.';
  }
+ if(tagAssessment)result.conditions.push(...tagAssessment.conditions);
  if(settings.risk==='comfortable')result.conditions.push('Has indicado que la sueles superar; es tu valoración declarada, no una certificación del motor.');
  if(jokers?.some(joker=>joker.catalogId==='green_joker'))result.reasons.push('Green Joker puede desarrollarse al jugar manos y reducirse al descartar; no se presupone qué acciones harás ni cuánto crecerá.');
  if(profile?.id==='tag_economy'){
@@ -169,8 +235,17 @@ export function guideBlindChoice(input:unknown,options:BlindGuidanceOptions={}):
    recommend('tradeoff',null,policy.rewardTradeoff,'Economía ofrece un intercambio','Faltan datos para comparar el ingreso de Economía con el cobro. Al saltar también pierdes esta tienda.');
    result.limitations.push('Sin referencia numérica de cobro: no se han resuelto los cambios de selección/ronda o los datos que podrían alterar sus ingresos.');
   }
- }else if(profile&&['tag_investment','tag_coupon','tag_double'].includes(profile.id)){
-  recommend('tradeoff',null,policy.rewardTradeoff,'Compara la recompensa con otra ronda',`${result.tag.name} aporta un beneficio condicionado que podría compensar el salto. Jugar conserva cobro y tienda; no se les asigna un precio común.`);
+ }else if(tagAssessment){
+  if(profile?.id==='tag_investment'||profile?.id==='tag_coupon'){
+   recommend('tradeoff',null,policy.rewardTradeoff,'Compara la recompensa con otra ronda',tagAssessment.reason);
+  }else if(profile?.id==='tag_d_six'){
+   result.recommendation.reason=tagAssessment.reason;
+  }else{
+   recommend('tradeoff',null,policy.tagContext,'Valora la recompensa',tagAssessment.reason);
+  }
+ }
+ if(tagAssessment?.preferPlay&&queue?.length===0&&jokers?.every(joker=>!temporary[joker.catalogId]&&joker.catalogId!=='throwback'&&value(joker.stickers)?.length===0)){
+  recommend('conditional','play',policy.tagContext,'Juega esta ciega',tagAssessment.reason);
  }
  const changing=jokers?.filter(joker=>temporary[joker.catalogId]||value(joker.stickers)?.some(sticker=>sticker==='perishable'||sticker==='rental'))??[];
  if(jokers===null||jokers.some(joker=>joker.stickers.status==='unknown')){
@@ -185,6 +260,27 @@ export function guideBlindChoice(input:unknown,options:BlindGuidanceOptions={}):
  if(queue===null||queue.includes('tag_double')){
   result.conditions.push(queue===null?'La cola de etiquetas no está confirmada; no se presupone vacía.':'Una Double pendiente puede duplicar la recompensa de salto. Su efecto no se simula aquí.');
   recommend('tradeoff',null,policy.queue,'Revisa las etiquetas pendientes','La cola puede cambiar la recompensa de saltar; las oportunidades de jugar siguen visibles, pero no se ignora esa condición.');
+ }
+ // In the first rollout, only early guaranteed terms and an enumerated cash
+ // advantage nominate a skip. The sample never prices unknown shop inventory.
+ const ref=result.cashflowReference;
+ const bestEarned=ref?Math.max(...ref.rows.map(row=>row.earned)):null;
+ const cashAdvantage=tagId==='tag_economy'&&ref&&bestEarned!==null&&ref.skipImmediateIncome>bestEarned&&economySkipLimit(state)===null
+  ?`Economía da $${ref.skipImmediateIncome} ahora frente a un cobro de hasta $${bestEarned} si ganas con los supuestos indicados.`:null;
+ const skipReason=cashAdvantage??(tagId?earlySkipReason(tagId,blind):null);
+ const stableInputs=queue?.length===0&&jokers?.every(joker=>
+  (BLIND_POLICY.cashEligibleJokers as readonly string[]).includes(joker.catalogId)&&joker.catalogId!=='green_joker'&&value(joker.stickers)?.length===0);
+ if(skipReason&&stableInputs&&estimate?.status==='estimated'){
+  if(estimate.estimatedPoints<estimate.target){
+   recommend('conditional','play',policy.estimatedPlay,'Juega para prepararte',`La proyección de ${Math.floor(estimate.estimatedPoints).toLocaleString('es')} puntos queda por debajo de los ${estimate.target.toLocaleString('es')} que pide la siguiente ciega. Conserva la opción de mejorar en la tienda.`);
+   result.askNextBlindPlan=false;
+  }else if(estimate.reachedCount===estimate.sampleCount&&settings.nextBlindPlan!=='need_shop'){
+   recommend('conditional','skip',policy.estimatedSkip,'Me inclino por saltar',`${skipReason} La siguiente ciega se superó en todas las rondas de ejemplo con la composición actual.`);
+   result.conditions.push('La tienda y los efectos que ganarías jugando siguen siendo un coste del salto.');
+   result.askNextBlindPlan=false;
+  }else if(result.recommendation.preferred==='skip'){
+   recommend('tradeoff',null,policy.rewardTradeoff,'Compara la siguiente ciega','Algunas rondas de ejemplo no llegan a la meta. La estimación deja abierta la decisión.');
+  }
  }
  if(settings.risk==='tight'){
   result.conditions.push('Has indicado que vas justo; es una valoración declarada del jugador.','Saltar evita esta ronda, pero no demuestra que la siguiente ciega sea viable.');
