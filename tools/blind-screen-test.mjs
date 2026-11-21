@@ -59,17 +59,19 @@ try{
  await p.locator('#blind-select-small').click();await p.locator('#round-cashout').waitFor();assert.equal(await p.locator('#confirmation').isVisible(),false);assert.equal((await record(p)).state.phase,'in_round');assert.equal((await record(p)).state.observed.money.value,4);assert.equal(await p.locator('#round-cashout-amount').inputValue(),'');assert.equal(await p.locator('#blind-round').innerText(),'1');
  pass('select-opens-cashout-without-granting-a-win-or-income');await main.context.close();
 
- // XII-067: resumed Blue/White Small at ante 2, $40 and a visible Economy tag.
+ // Without recorded hand levels, Economy keeps the player-declared fallback.
  const guideRun=createNewRun({runId:'guide-xii-067',updatedAt:'2026-11-10T12:00:00Z',deckId:'blue',profileConfirmed:true});
  assert.equal(guideRun.ok,true);const economy=guideRun.value;
  const observed=value=>({status:'known',source:'manual',value});
  economy.observed.money=observed(40);economy.observed.nextBlind.value.ante=2;economy.observed.nextBlind.value.target=observed(800);
+ economy.observed.handBases={status:'unknown',reason:'Niveles de mano sin registrar.'};
  economy.phaseData.skipTag=observed('tag_economy');
  const economySave=JSON.stringify({schemaVersion:'confirmed-2',initialState:economy,state:economy,history:[]});
  const compared=await session(undefined,economySave),q=compared.page;
  await q.locator('#menu-play').click();await q.locator('#setup-tab-continue').click();await q.locator('#setup-play').click();
  await q.locator('#blind-compare').click();const plan=q.locator('#blind-next-plan'),detail=q.locator('#blind-guidance');
  assert.equal(await plan.inputValue(),'unknown');assert.equal(await detail.getAttribute('data-preferred'),'none');
+ assert.equal(await detail.locator('#blind-next-estimate').getAttribute('data-status'),'unavailable');
  await plan.selectOption('ready');assert.equal(await detail.getAttribute('data-preferred'),'skip');
  const skipTitle=await detail.locator('h3').innerText();await q.locator('#dialog-accept').click();await q.locator('#confirmation').waitFor({state:'hidden'});
  assert.equal(await q.locator('.blind-speech strong').innerText(),skipTitle);assert.equal(await q.locator('#blind-money').innerText(),'$40');
