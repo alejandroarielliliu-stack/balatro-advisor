@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {createNewRun} from '../src/run/start.js';
-import {applyRunProgress} from '../src/run/progress.js';
+import {applyRunProgress,observedOrbitalHand} from '../src/run/progress.js';
 import type {RunProgressCommand} from '../src/run/progress.js';
 import type {GameStateV02} from '../src/state/model.js';
 import {legacyShape} from '../src/state/model.js';
@@ -47,6 +47,42 @@ test('Big observation survives played Small, cashout and shop; applies only on B
   if(state.phase!=='blind_select')assert.fail('Selection required');
   assert.deepEqual(state.phaseData.skipTag,known('tag_rare'));
   assert.deepEqual(state.observed.money,known(9));
+});
+
+test('Orbital target is recorded atomically and stays with the observed blind',()=>{
+  const initial=start();
+  assert.equal(observedOrbitalHand(initial),undefined);
+  const small={ante:1,kind:'small'} as const,big={ante:1,kind:'big'} as const;
+  const memory=new MemoryStorage(),store=createConfirmedStore(()=>memory);
+  success(store.initialize(initial));
+  const saved=success(store.progress({confirmationId:'orbital-big',confirmed:true,expected:analysisBinding(initial),updatedAt:time,
+    command:{type:'observe_skip_tag',blind:big,tag:known('tag_orbital'),orbitalHand:known('straight')},inventory:{unchanged:true}}));
+  assert.equal(saved.history.length,1);
+  assert.deepEqual(success(store.load()),saved);
+  assert.ok(saved.state.schemaVersion==='0.2');
+  assert.deepEqual(saved.state.blindTags,[{...big,tag:known('tag_orbital'),orbitalHand:known('straight')}]);
+  assert.equal(observedOrbitalHand(saved.state),undefined);
+  assert.equal(observedOrbitalHand(saved.state,big),'straight');
+  let state=apply(saved.state,{type:'observe_skip_tag',tag:known('tag_orbital'),orbitalHand:known('pair')});
+  assert.equal(observedOrbitalHand(state),'pair');
+  assert.equal(observedOrbitalHand(state,big),'straight');
+  state=apply(state,{type:'skip_blind',atNextSelection:true});
+  assert.equal(observedOrbitalHand(state),'straight');
+  assert.equal(observedOrbitalHand(state,small),undefined);
+  state=apply(state,{type:'observe_skip_tag',tag:known('tag_coupon')});
+  assert.equal(observedOrbitalHand(state),undefined);
+  assert.deepEqual(state.blindTags?.find(entry=>entry.kind==='big'),{...big,tag:known('tag_coupon')});
+});
+
+test('Orbital without a known target and legacy observations do not infer a hand',()=>{
+  const initial=start();
+  const orb={type:'observe_skip_tag',tag:known('tag_orbital')} as const;
+  assert.equal(observedOrbitalHand(apply(initial,orb)),undefined);
+  assert.equal(observedOrbitalHand(apply(initial,{...orb,orbitalHand:unknown})),undefined);
+  const options={expectedRevision:initial.revision,updatedAt:time,inventory:{unchanged:true} as const};
+  assert.equal(applyRunProgress(initial,{...orb,orbitalHand:known('bad-hand')},options).ok,false);
+  assert.equal(applyRunProgress(initial,{...orb,tag:known('tag_coupon'),orbitalHand:known('pair')},options).ok,false);
+  assert.equal(validateCurrentState({...initial,blindTags:[{ante:1,kind:'small',tag:known('tag_coupon'),orbitalHand:known('pair')}]}).ok,false);
 });
 
 test('changing future observation to unknown cannot clear current tag; repeated edits upsert one slot',()=>{

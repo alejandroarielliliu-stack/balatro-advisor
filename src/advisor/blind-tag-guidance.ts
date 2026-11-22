@@ -1,153 +1,151 @@
-import {bossDefinition} from '../catalog/bosses.js';
-import {HAND_BASES} from '../catalog/initial.js';
 import {TAG_EFFECTS} from '../catalog/tag-effects.js';
 import {tagDefinition} from '../catalog/tags.js';
 import type {TagId} from '../catalog/tags.js';
+import {HAND_NAMES} from '../catalog/initial.js';
+import {observedOrbitalHand} from '../run/progress.js';
+import type {BlindInfo} from '../run/progress.js';
 import type {Fact,GameStateV02} from '../state/model.js';
+import {assessSkipBudget} from './skip-tag-budget.js';
+import {assessBossMatchup,assessBossScore,inferPrimaryHand} from './skip-tag-strategy.js';
+import type {BlindSurvivalEstimate} from './next-blind-survival.js';
 
-/** v0.11: these recommendations depend only on the recorded tag's identity. */
-export const AUTO_PLAY_BLIND_TAGS: ReadonlySet<TagId> = new Set<TagId>([
-  'tag_uncommon', 'tag_meteor', 'tag_skip', 'tag_standard', 'tag_double', 'tag_garbage'
-]);
+const fixedPlayReasons:Readonly<Partial<Record<TagId,string>>>={
+ tag_foil:'Juega y conserva la tienda. La etiqueta laminada solo añade fichas a un joker futuro.',
+ tag_polychrome:'Juega y conserva la tienda. La edición polícroma llega con un joker futuro.',
+ tag_handy:'Handy solo aporta dinero. Juega para cobrar y visitar la tienda.',
+ tag_rare:'El joker raro llegará en otra tienda y su efecto es incierto. Juega esta ciega.',
+ tag_meteor:'Los planetas del sobre son inciertos. Juega para cobrar y elegir qué comprar.',
+ tag_juggle:'Las tres cartas extra duran una ronda. Juega para conservar la tienda.',
+ tag_standard:'Juega para cobrar y ver la tienda. El salto solo da un sobre de cartas.',
+ tag_charm:'Juega para cobrar y ver la tienda. El contenido del sobre de tarot es incierto.'
+};
 
-export function isAutomaticPlayTag(tagId: string | null): boolean {
-  const tag = tagId === null ? undefined : tagDefinition(tagId);
-  return tag !== undefined && AUTO_PLAY_BLIND_TAGS.has(tag.id);
+/** Speed and Garbage keep their previous automatic play rule. */
+export const AUTO_PLAY_BLIND_TAGS:ReadonlySet<TagId>=new Set(['tag_skip','tag_garbage']);
+
+export function isAutomaticPlayTag(tagId:string|null):boolean {
+ const definition=tagId?tagDefinition(tagId):undefined;
+ return definition!==undefined&&AUTO_PLAY_BLIND_TAGS.has(definition.id);
 }
 
-export interface BlindTagAssessment {
-  reason: string;
-  conditions: string[];
-  /** The reward itself cannot contribute in this case. Composition and queue are checked by the caller. */
-  preferPlay: boolean;
+export interface ConfiguredSkipTagDecision {
+ skip:boolean;
+ reason:string;
+ bossEstimate?:BlindSurvivalEstimate;
 }
 
-const value = <T>(fact: Fact<T> | undefined): T | null => fact?.status === 'known' ? fact.value : null;
-const handIds = Object.keys(HAND_BASES);
-const shopTags: ReadonlySet<TagId> = new Set<TagId>([
-  'tag_rare', 'tag_negative', 'tag_foil', 'tag_holo', 'tag_polychrome',
-  'tag_voucher', 'tag_coupon', 'tag_d_six'
-]);
+const value=<T>(fact:Fact<T>|undefined):T|null=>fact?.status==='known'?fact.value:null;
+const play=(reason:string):ConfiguredSkipTagDecision=>({skip:false,reason});
+const skip=(reason:string):ConfiguredSkipTagDecision=>({skip:true,reason});
+const early=(blind:BlindInfo)=>blind.ante===1||blind.ante===2&&blind.kind==='small';
+const timingUnknown='Registra el ante y la ciega para saber si la etiqueta está en su ventana de salto.';
 
-const compare = (reason: string, ...conditions: string[]): BlindTagAssessment =>
-  ({reason, conditions, preferPlay: false});
-const play = (reason: string, ...conditions: string[]): BlindTagAssessment =>
-  ({reason, conditions, preferPlay: true});
-
-function recordedHandsPlayed(state: GameStateV02): number | null {
-  const counts = value(state.observed.jokerContext)?.handCounts;
-  if (!counts) return null;
-  const total = handIds.reduce<number | null>((sum, id) => {
-    const count = value(counts[id]);
-    return sum === null || count === null ? null : sum + count;
-  }, 0);
-  return total !== null && Number.isSafeInteger(total) ? total : null;
+function decideDouble(state:GameStateV02,blind:BlindInfo|null):ConfiguredSkipTagDecision {
+ if(value(state.observed.deckId)!=='anaglyph')return play('Double exige otro salto. Conserva el cobro y la tienda.');
+ const tags=value(value(state.observed.jokerContext)?.tags);
+ if(tags===null)return play('Confirma tus etiquetas dobles antes de decidir si te conviene acumular otra.');
+ // Only plan around a reward already visible, and do not presume a future roll.
+ const upcoming=blind?.kind==='small'?state.blindTags?.find(tag=>tag.ante===blind.ante&&tag.kind==='big'):undefined;
+ const nextTag=value(upcoming?.tag);
+ const doubles=tags.filter(tag=>tag==='tag_double').length;
+ if(nextTag==='tag_negative'&&doubles===1&&blind&&blind.ante<8){
+  return skip('Pasas a dos Double Tags para la Negativa visible en la siguiente ciega.');
+ }
+ if(upcoming&&nextTag==='tag_orbital'){
+  const orbital=observedOrbitalHand(state,upcoming);
+  if(orbital&&inferPrimaryHand(state)===orbital)return skip(`Otra etiqueta doble añade tres niveles de ${HAND_NAMES[orbital]} con la Orbital visible.`);
+ }
+ return play('Anaglifo gana una Double al vencer al jefe. Conserva la tienda hasta ver cómo aprovechar otra.');
 }
 
-/** Compare the observed reward with the lost round. Future shops, pack contents and
- * candidate Jokers remain unknown. An assessment neither executes effects nor picks a skip. */
-export function assessBlindTag(state: GameStateV02, tagId: string): BlindTagAssessment | null {
-  const tag = tagDefinition(tagId);
-  const blind = value(state.observed.nextBlind);
-  if (!tag || state.phase !== 'blind_select' || !blind || blind.kind === 'boss' || AUTO_PLAY_BLIND_TAGS.has(tag.id)) return null;
+/** User policy. No next-blind simulation or risk override for rules that only
+ * depend on a tag, a recorded ante, or the number of Double Tags. */
+export function decideConfiguredSkipTag(state:GameStateV02,blind:BlindInfo|null,tagId:string|null):ConfiguredSkipTagDecision|null {
+ if(!tagId||blind?.kind==='boss')return null;
+ const tag=tagDefinition(tagId);
+ if(!tag)return null;
+ const fixed=Object.hasOwn(fixedPlayReasons,tag.id)?fixedPlayReasons[tag.id]:undefined;
+ if(fixed)return play(fixed);
 
-  if (blind.ante === 8 && blind.kind === 'big') {
-    if (shopTags.has(tag.id)) {
-      return play('La etiqueta afecta una tienda posterior al jefe final; no puede ayudarte a superar ese jefe.');
-    }
-    if (tag.id === TAG_EFFECTS.investment.id) {
-      return play(`Los $${TAG_EFFECTS.investment.dollars} de Inversión se cobran después de vencer al jefe final.`);
-    }
+ switch(tag.id){
+  case 'tag_coupon':
+   if(!blind)return play(timingUnknown);
+   return blind.ante<=2?skip('El Cupón hace gratis las cartas y los sobres iniciales de la próxima tienda.')
+    :play('El Cupón se reserva para los antes 1 y 2. Juega para conservar esta tienda.');
+  case 'tag_buffoon':
+   if(!blind)return play(timingUnknown);
+   return early(blind)?skip('El Mega Bufón ofrece jokers para reforzarte antes de la siguiente ciega.')
+    :play('Ya pasó la Pequeña del ante 2. Conserva el cobro y busca jokers en la tienda.');
+  case 'tag_top_up':
+   if(!blind)return play(timingUnknown);
+   return early(blind)?skip('Top-up puede dar hasta dos jokers comunes antes de la siguiente ciega.')
+    :play('Ya pasó la Pequeña del ante 2. Juega para cobrar y visitar la tienda.');
+  case 'tag_uncommon':
+   if(!blind)return play(timingUnknown);
+   return blind.ante===1&&blind.kind==='small'?skip('Un joker inusual gratis en la próxima tienda puede arrancar tu partida.')
+    :play('Solo se salta por Uncommon en la Pequeña del ante 1. Conserva esta tienda.');
+  case 'tag_investment':
+  case 'tag_holo': {
+   if(!blind)return play(timingUnknown);
+   const investment=tag.id==='tag_investment';
+   if(!early(blind))return play(`La ventana de ${investment?'Inversión':'Holográfica'} termina en la Pequeña del ante 2. Conserva esta tienda.`);
+   const boss=assessBossScore(state);
+   const decision=boss.status==='unknown'
+    ?play(investment?`${boss.reason} Inversión paga $${TAG_EFFECTS.investment.dollars} al vencer al jefe.`:boss.reason):investment
+    ?boss.status==='sufficient'?skip(`Tu puntuación alcanza para el jefe. Si lo vences, cobras $${TAG_EFFECTS.investment.dollars}.`)
+     :play(`Tu puntuación queda corta para el jefe. Refuérzate antes de buscar los $${TAG_EFFECTS.investment.dollars}.`)
+    :boss.status==='insufficient'?skip(blind.kind==='big'
+     ?'Te falta puntuación para el jefe. La edición de +10 multi llega en la tienda después del jefe.'
+     :'Te falta puntuación para el jefe. La edición holográfica aporta +10 multi en la próxima tienda.')
+     :play('Tu puntuación alcanza para el jefe. Juega para conservar el cobro y la tienda.');
+   return {...decision,...(boss.estimate?{bossEstimate:boss.estimate}:{})};
   }
-
-  const jokers = value(state.observed.jokers);
-  const slots = value(state.observed.resources.jokerSlots);
-  const openSlots = jokers === null || slots === null ? null : Math.max(0, slots - jokers.length);
-  const room = openSlots === null
-    ? 'Confirma tus espacios de comodín y qué carta podrías sustituir.'
-    : openSlots === 0
-      ? 'Tus espacios están llenos. Para adquirir un comodín sin edición negativa necesitas liberar un espacio.'
-      : `Tienes ${openSlots} ${openSlots === 1 ? 'espacio libre' : 'espacios libres'} ahora.`;
-  const money = value(state.observed.money);
-
-  switch (tag.id) {
-    case 'tag_rare':
-      return compare('Puede darte un comodín raro gratuito en la próxima tienda. Valora si una oportunidad de mayor rareza cubre lo que le falta a tu composición.',
-        room, 'El comodín concreto depende del grupo elegible; primero tienes que llegar a la tienda.');
-    case 'tag_negative':
-      return compare('El siguiente comodín básico elegible de tienda será gratuito y negativo. Puede añadir un efecto sin ocupar un espacio neto.',
-        'Valora si necesitas otro efecto. La etiqueta espera un comodín elegible y su identidad aún es desconocida.');
-    case 'tag_foil':
-      return compare('El siguiente comodín básico elegible será gratuito y laminado (+50 fichas). Valóralo si necesitas fichas para las primeras ciegas.',
-        room, 'Primero tienes que llegar a una tienda con un comodín elegible.');
-    case 'tag_holo':
-      return compare('El siguiente comodín básico elegible será gratuito y holográfico (+10 multi). Valóralo si necesitas multiplicador aditivo pronto.',
-        room, 'La identidad del comodín y la tienda en la que aparecerá siguen siendo desconocidas.');
-    case 'tag_polychrome':
-      return compare('El siguiente comodín básico elegible será gratuito y polícromo (×1,5 multi). Valóralo si ya puedes formar manos que aportan fichas y multi.',
-        room, 'La edición afecta un comodín elegible de una tienda posterior.');
-    case 'tag_investment':
-      return compare(`Inversión paga $${TAG_EFFECTS.investment.dollars} al cobrar la victoria contra el jefe. Puede financiar el siguiente ante, sobre todo al principio.`,
-        'Tienes que vencer al jefe con los recursos disponibles antes del cobro.');
-    case 'tag_voucher':
-      return compare('Añade un vale en la próxima tienda. Valóralo si buscas una mejora permanente que podrías pagar y aprovechar antes del objetivo.',
-        'El vale no es gratuito y su identidad no se conoce hasta ver las ofertas.');
-    case 'tag_boss': {
-      const visible = value(state.observed.visibleBoss);
-      const boss = visible?.kind === 'boss' && visible.ante === blind.ante ? value(visible.bossId) : null;
-      const name = boss ? bossDefinition(boss)?.name : undefined;
-      return compare(name
-        ? `La etiqueta cambia a ${name} por otro jefe. Valórala si su efecto bloquea tu jugada principal.`
-        : 'La etiqueta cambia el jefe de este ante. Registra el jefe visible para valorar si necesitas evitarlo.',
-      'El reemplazo es desconocido y también puede ser adverso.');
-    }
-    case 'tag_charm':
-      return compare('El Mega Arcano se abre al saltar. Valóralo si los tarots pueden mejorar tu mazo, financiar compras o darte un efecto útil antes de la próxima ciega.',
-        'Podrás elegir hasta dos cartas de cinco opciones; el contenido todavía es desconocido.');
-    case 'tag_buffoon':
-      return compare('El Mega Bufón se abre al saltar. Puede darte refuerzo antes de la próxima ciega, especialmente cuando todavía estás formando tu composición.',
-        room, 'Podrás elegir hasta dos comodines de cuatro opciones; el contenido todavía es desconocido.');
-    case 'tag_handy': {
-      const total = recordedHandsPlayed(state);
-      return total === null
-        ? compare('Handy paga $1 por mano jugada durante la partida. Comprueba el importe que muestra el juego y compáralo con el cobro y la tienda que perderías.',
-          'Falta parte del contador de manos. El pago es inmediato y no abre una tienda.')
-        : total === 0 ? play('Handy aportaría $0 según el historial completo de manos registrado.')
-          : compare(`Handy aportaría $${total} inmediatamente según el historial registrado. Valora si ese dinero compensa renunciar al cobro y la tienda.`,
-            'La cifra corresponde a una sola copia de la etiqueta.');
-    }
-    case 'tag_ethereal':
-      return compare('Abre un Sobre Espectral. Valóralo si puedes aprovechar una modificación fuerte del mazo o de la composición antes de la próxima ciega.',
-        'Es una elección entre dos cartas desconocidas; algunas pueden tener costes para el mazo o el saldo.');
-    case 'tag_coupon':
-      return compare('Las cartas y sobres iniciales de la próxima tienda serán gratuitos. El cupón puede ser especialmente útil al principio, cuando el presupuesto es menor.',
-        'Hay que llegar a esa tienda sin el refuerzo de la anterior. El cupón no cubre vales ni renovaciones.');
-    case 'tag_juggle':
-      return compare('Tendrás tres cartas más en la mano durante la próxima ronda. Valóralo si la dificultad está en formar tu jugada o retener cartas que dan puntuación.',
-        'El aumento es temporal. Se aplica a la próxima ronda jugada.');
-    case 'tag_d_six':
-      return compare('D6 abarata las renovaciones de la próxima tienda. Valórala si necesitas buscar una mejora y puedes guardar dinero para comprarla.',
-        'Sin otros modificadores, tres renovaciones cuestan $3 con D6 y $18 normalmente. Las cartas que saldrán siguen siendo desconocidas.');
-    case 'tag_top_up':
-      return openSlots === 0
-        ? play('Tus espacios están llenos. Top-up no puede añadir un comodín en el estado registrado.')
-        : compare(openSlots === null
-          ? 'Top-up puede crear hasta dos comodines comunes antes de la próxima ciega, si tienes espacio.'
-          : `Top-up aprovecharía ${Math.min(2, openSlots)} ${openSlots === 1 ? 'espacio libre' : 'espacios libres'} para crear comodines comunes antes de la próxima ciega.`,
-        'El resultado es aleatorio. Valóralo si necesitas refuerzo inmediato.',
-        ...(openSlots === null ? ['Confirma tus espacios e inventario de comodines.'] : []));
-    case 'tag_orbital':
-      return compare('Sube tres niveles la mano que figura en la etiqueta. Valórala si es una jugada que tu mazo puede formar con frecuencia o si puedes reorientar tu estrategia hacia ella.',
-        'La categoría concreta de la etiqueta todavía no forma parte de los datos registrados.');
-    case 'tag_economy': {
-      const total = money === null ? null : Math.min(TAG_EFFECTS.economy.cap, Math.max(0, money));
-      return total === null
-        ? compare('Economía aporta un ingreso inmediato ligado al saldo. Registra el saldo para compararlo con el cobro de jugar.',
-          'El dinero del salto no abre una tienda.')
-        : total === 0 ? play('Economía aportaría $0 con el saldo registrado.')
-          : compare(`Economía aportaría $${total} inmediatamente. Compáralo con el cobro al ganar y el valor de pasar por la tienda.`,
-            'La cifra corresponde a una sola copia de la etiqueta.');
-    }
+  case 'tag_voucher':
+  case 'tag_d_six':
+   return assessSkipBudget(state,tag.id);
+  case 'tag_orbital': {
+   const target=observedOrbitalHand(state),primary=inferPrimaryHand(state);
+   if(!target)return play('Registra qué mano sube Orbital para comprobar si le sirve a tu mazo.');
+   if(!primary)return play('Faltan jugadas o niveles que identifiquen tu mano principal. Conserva la tienda.');
+   if(primary===target)return skip(`Orbital sube tres niveles de ${HAND_NAMES[target]}, tu mano principal.`);
+   return play(`Orbital sube ${HAND_NAMES[target]}. Tu mano principal es ${HAND_NAMES[primary]}.`);
   }
-  return null;
+  case 'tag_boss': {
+   const matchup=assessBossMatchup(state);
+   return {skip:matchup.harmful===true,reason:matchup.reason};
+  }
+  case 'tag_negative': {
+   const tags=value(value(state.observed.jokerContext)?.tags);
+   if(tags===null)return play('Confirma cuántas Double Tags tienes acumuladas antes de saltar por Negativa.');
+   const doubles=tags.filter(tag=>tag==='tag_double').length;
+   return doubles>=2?skip(`Tienes ${doubles} Double Tags. Puedes multiplicar la recompensa de Negativa.`)
+    :play(`Tienes ${doubles} Double Tags. Negativa requiere al menos dos para recomendar el salto.`);
+  }
+  case 'tag_double':
+   return decideDouble(state,blind);
+  default:
+   return null;
+ }
+}
+
+/** Previous contextual behavior for the two remaining tags. */
+export function assessBlindTag(state:GameStateV02,tagId:string):{reason:string;conditions:string[];preferPlay:boolean}|null {
+ const blind=value(state.observed.nextBlind);
+ if(state.phase!=='blind_select'||!blind||blind.kind==='boss')return null;
+ if(tagId==='tag_ethereal')return {
+  reason:'Abre un Sobre Espectral. Valóralo si puedes aprovechar una modificación fuerte del mazo o de la composición antes de la próxima ciega.',
+  conditions:['Es una elección entre dos cartas desconocidas; algunas pueden tener costes para el mazo o el saldo.'],preferPlay:false
+ };
+ if(tagId!=='tag_economy')return null;
+ const money=value(state.observed.money);
+ const total=money===null?null:Math.min(TAG_EFFECTS.economy.cap,Math.max(0,money));
+ if(total===null)return {
+  reason:'Economía aporta un ingreso inmediato ligado al saldo. Registra el saldo para compararlo con el cobro de jugar.',
+  conditions:['El dinero del salto no abre una tienda.'],preferPlay:false
+ };
+ if(total===0)return {reason:'Economía aportaría $0 con el saldo registrado.',conditions:[],preferPlay:true};
+ return {
+  reason:`Economía aportaría $${total} inmediatamente. Compáralo con el cobro al ganar y el valor de pasar por la tienda.`,
+  conditions:['La cifra corresponde a una sola copia de la etiqueta.'],preferPlay:false
+ };
 }

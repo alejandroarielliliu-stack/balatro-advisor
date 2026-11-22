@@ -27,6 +27,11 @@ export const HAND_BASES = Object.freeze({
   straight: [30, 4], flush: [35, 4], full_house: [40, 4], four_kind: [60, 7], straight_flush: [100, 8], five_kind: [120, 12], flush_house: [140, 14], flush_five: [160, 16]
 } as const);
 export type HandId = keyof typeof HAND_BASES;
+export const HAND_NAMES:Readonly<Record<HandId,string>>={
+ high_card:'Carta alta',pair:'Pareja',two_pair:'Doble pareja',three_kind:'Trío',
+ straight:'Escalera',flush:'Color',full_house:'Full',four_kind:'Póquer',
+ straight_flush:'Escalera de color',five_kind:'Cinco iguales',flush_house:'Full de color',flush_five:'Cinco iguales de color'
+};
 export const RANKS = ['2','3','4','5','6','7','8','9','10','J','Q','K','A'] as const;
 export interface Card { instanceId: string; rank: typeof RANKS[number]; suit: 'S'|'H'|'D'|'C'; edition: string; enhancement: string; seal: string; extraChips: number;debuff?:boolean }
 export function standardDeck(): Card[] {

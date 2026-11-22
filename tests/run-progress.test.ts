@@ -3,6 +3,7 @@ import test from 'node:test';
 import {createUnknownState} from '../src/state/model.js';
 import type {GameStateV02,Result} from '../src/state/model.js';
 import {applyRunProgress,advanceBlindRef,nextBlindAfter} from '../src/run/progress.js';
+import {createNewRun} from '../src/run/start.js';
 import type {BlindInfo,RunProgressCommand,InventoryConfirmation} from '../src/run/progress.js';
 import {known,success} from './helpers.js';
 const time='2026-10-16T17:00:00Z';
@@ -123,6 +124,32 @@ test('RUN01b saldo de cobro sustituye al anterior, incluso negativo; importe de 
   const cashout=apply(apply(selection(),{type:'enter_round'}).state,{type:'report_result',outcome:'won'}).state;
   assert.equal(cashout.phase,'cashout');if(cashout.phase==='cashout')assert.equal(cashout.phaseData.amount.status,'unknown');
   const result=apply(cashout,{type:'collect_cashout',money:-3}).state;assert.deepEqual(result.observed.money,known(-3));
+});
+
+test('Anaglifo empieza sin tags y concede una Double por jefe confirmado, en ambos recorridos de cobro',()=>{
+  const start=success(createNewRun({runId:'anaglyph-observed',updatedAt:time,deckId:'anaglyph',profileConfirmed:true}));
+  const tags=(state:GameStateV02)=>state.observed.jokerContext?.status==='known'?state.observed.jokerContext.value.tags:undefined;
+  assert.deepEqual(tags(start),{status:'known',source:'confirmedPreset',value:[]});
+  const small=apply(start,{type:'enter_round'}).state;
+  assert.deepEqual(tags(apply(small,{type:'report_result',outcome:'won'}).state),tags(start));
+
+  const boss=structuredClone(start);boss.observed.nextBlind=known(blind('boss'));
+  const withInvestment=apply(boss,{type:'observe_tag_queue',tags:known(['tag_investment'])}).state;
+  const entered=apply(withInvestment,{type:'enter_round'}).state;
+  const reported=apply(entered,{type:'report_result',outcome:'won'}).state;
+  const expected={status:'known',source:'confirmedPreset',value:['tag_double']};
+  assert.deepEqual(tags(reported),expected);
+  assert.deepEqual(tags(apply(reported,{type:'collect_cashout',money:29}).state),expected);
+  assert.deepEqual(tags(apply(entered,{type:'record_cashout',amount:25,jokerUpdates:[]}).state),expected);
+  assert.deepEqual(tags(apply(reported,{type:'record_cashout',amount:25,jokerUpdates:[]}).state),expected);
+  const withDouble=apply(boss,{type:'observe_tag_queue',tags:known(['tag_double'])}).state;
+  assert.deepEqual(tags(apply(apply(withDouble,{type:'enter_round'}).state,{type:'report_result',outcome:'lost'}).state),known(['tag_double']));
+
+  const unknownQueue=apply(boss,{type:'observe_tag_queue',tags:unknown}).state;
+  assert.equal(tags(apply(apply(unknownQueue,{type:'enter_round'}).state,{type:'report_result',outcome:'won'}).state)?.status,'unknown');
+  const finalQueue=known(['tag_double','tag_double']);
+  const patched=apply(entered,{type:'report_result',outcome:'won'},{patch:{jokerContext:known({tags:finalQueue})}}).state;
+  assert.deepEqual(tags(patched),finalQueue);
 });
 
 test('RUN01b datos inválidos, fases ilegales, revisión antigua y nueva ciega incorrecta producen errores sin mutación',()=>{

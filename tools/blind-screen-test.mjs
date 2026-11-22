@@ -49,7 +49,7 @@ try{
  assert.equal(saved.state.observed.nextBlind.value.ante,1);assert.equal(saved.state.observed.nextBlind.value.kind,'small');assert.equal(saved.state.observed.visibleBoss.status,'unknown');
  const investmentSave=await raw(p),investmentReason=await p.locator('.blind-speech p').innerText();
  assert.equal(await p.locator('.blind-speech strong').innerText(),'Juega');
- assert.match(investmentReason,/\$25/);assert.match(investmentReason,/jefe/i);assert.match(investmentReason,/tienda/i);
+ assert.match(investmentReason,/\$25/);assert.match(investmentReason,/registra el jefe/i);
  assert.ok(investmentReason.length<=120,'The Investment advice fits in the brief speech bubble');
  await p.screenshot({path:dir+'/investment-advice.png'});
  await p.locator('#blind-compare').click();await p.locator('#dialog-accept').click();await p.locator('#confirmation').waitFor({state:'hidden'});
@@ -57,6 +57,15 @@ try{
  pass('small-blind-investment-with-unknown-boss-shows-play-and-short-reason');
  const before=await raw(p);await p.locator('[data-tag-slot=small]').click();await p.evaluate(()=>window.__blindFail=true);await p.locator('[data-tag-choice=tag_uncommon]').click();assert.equal(await raw(p),before);assert.equal(await p.locator('#blind-picker').isVisible(),true);assert.match(await p.locator('#blind-picker .error').innerText(),/guardar|almacenamiento/i);await p.evaluate(()=>window.__blindFail=false);await p.locator('[data-tag-choice=tag_uncommon]').click();await p.locator('#blind-picker').waitFor({state:'hidden'});assert.equal((await record(p)).state.phaseData.skipTag.value,'tag_uncommon');
  pass('current-and-upcoming-tags-stay-independent-atomic-save-failure-and-retry');
+ assert.equal(await p.locator('.blind-speech strong').innerText(),'Salta');
+
+ await p.locator('[data-tag-slot=big]').click();await p.locator('[data-tag-choice=tag_orbital]').click();
+ await p.locator('[data-orbital-hand=pair]').click();await p.locator('#blind-picker').waitFor({state:'hidden'});
+ saved=await record(p);assert.equal(saved.state.phaseData.skipTag.value,'tag_uncommon');
+ assert.equal(saved.state.blindTags.find(t=>t.kind==='big').orbitalHand.value,'pair');
+ assert.match(await p.locator('[data-tag-slot=big]').getAttribute('aria-label'),/pareja/i);
+ await tag(p,'big','tag_rare');
+ pass('orbital-records-the-target-and-leaves-current-advice-intact');
 
  await p.locator('#blind-boss-picker').click();await p.locator('[data-boss-choice=the_window]').click();await p.locator('#blind-picker').waitFor({state:'hidden'});saved=await record(p);assert.equal(saved.state.observed.visibleBoss.value.bossId.value,'the_window');assert.equal(saved.state.observed.visibleBoss.value.target.value,600);assert.equal(saved.state.observed.visibleBoss.value.reward.value,5);assert.equal(saved.state.observed.nextBlind.value.kind,'small');assert.equal(saved.state.observed.money.value,4);assert.match(await p.locator('[data-kind=boss] .blind-boss-effect').innerText(),/Diamantes/);
  await p.locator('[data-kind=boss] .blind-art[data-art-status=loaded]').waitFor();
@@ -68,6 +77,16 @@ try{
  // Selection records entry directly; the cash-out form does not yet grant a win or money.
  await p.locator('#blind-select-small').click();await p.locator('#round-cashout').waitFor();assert.equal(await p.locator('#confirmation').isVisible(),false);assert.equal((await record(p)).state.phase,'in_round');assert.equal((await record(p)).state.observed.money.value,4);assert.equal(await p.locator('#round-cashout-amount').inputValue(),'');assert.equal(await p.locator('#blind-round').innerText(),'1');
  pass('select-opens-cashout-without-granting-a-win-or-income');await main.context.close();
+
+ const orbital=await session(),o=orbital.page;await start(o,'checkered');
+ for(const [hand,expected] of [['pair','Juega'],['flush','Salta']]){
+  await o.locator('[data-tag-slot=small]').click();await o.locator('[data-tag-choice=tag_orbital]').click();
+  await o.locator(`[data-orbital-hand=${hand}]`).click();await o.locator('#blind-picker').waitFor({state:'hidden'});
+  assert.equal(await o.locator('.blind-speech strong').innerText(),expected);
+  assert.match(await o.locator('.blind-speech p').innerText(),/Color/);
+  assert.equal((await record(o)).state.observed.nextBlind.value.kind,'small');
+ }
+ await orbital.context.close();pass('orbital-matches-the-recorded-hand-to-checkered-composition');
 
  // Without recorded hand levels, Economy keeps the player-declared fallback.
  const guideRun=createNewRun({runId:'guide-xii-067',updatedAt:'2026-11-10T12:00:00Z',deckId:'blue',profileConfirmed:true});

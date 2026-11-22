@@ -12,9 +12,9 @@ export function getEngineRuleRegistry(): RuleRegistry {
   const registry = Object.fromEntries(entries.map(entry => [entry.id, entry]));
   registry['base.configuration']!.claim='Recursos White resueltos por condiciones de baraja (L03); saldo e inventario observados, nunca repuestos.';
   registry['version.compatibility']!.claim = 'Contrato 1.0.1o identificado por version.jkr del ejecutable instalado; comportamiento en partida aún sin contraste.';
-  for (const id of ['shop.actions', 'hand.classification', 'round.resources', 'round.cashout', 'deck.green', 'deck.plasma', 'jokers.simple']) {
+  for (const id of ['shop.actions', 'hand.classification', 'round.resources', 'round.cashout', 'deck.green', 'deck.plasma', 'deck.anaglyph', 'jokers.simple']) {
     registry[id] = { id, scope: ENGINE_RULESET, status: 'provisional', verification: 'documented',
-      claim: `Reglas de ${id} dentro del alcance integrado Azul/Roja/Amarilla/Verde/Negra/Pintada/Plasma/Abandonada/Cuadriculada/Errática, White Stake.`, evidenceIds: ['D04', 'L01', 'L03'],
+      claim: `Reglas de ${id} dentro del alcance integrado Azul/Roja/Amarilla/Verde/Negra/Pintada/Plasma/Abandonada/Cuadriculada/Errática/Anaglifo, White Stake.`, evidenceIds: ['D04', 'L01', 'L03'],
       limitation: 'Lectura estática y modelo documental; no prueba ejecutada en Balatro.' };
   }
   registry['jokers.simple']!.evidenceIds=['L01','L04'];

@@ -1,13 +1,13 @@
 import {CONSUMABLE_KINDS} from '../catalog/generation-jokers.js';
 import {consumableLabel as consumableName} from './consumable-labels.js';
-import {HAND_BASES} from '../catalog/initial.js';
+import {HAND_BASES,HAND_NAMES} from '../catalog/initial.js';
 import type {HandId} from '../catalog/initial.js';
 import type {Fact,GameState} from '../state/model.js';
 import type {Consumable,FullJokerContext} from '../rules/full-joker-contract.js';
 const node=<K extends keyof HTMLElementTagNameMap>(tag:K,text='',className='')=>{const e=document.createElement(tag);e.textContent=text;e.className=className;return e;};
 const known=<T>(value:T):Fact<T>=>({status:'known',value,source:'manual'});
 const unknown=(label:string)=>({status:'unknown' as const,reason:label+' todavía sin registrar.'});
-export const handNames:Record<HandId,string>={high_card:'Carta alta',pair:'Pareja',two_pair:'Doble pareja',three_kind:'Trío',straight:'Escalera',flush:'Color',full_house:'Full',four_kind:'Póquer',straight_flush:'Escalera de color',five_kind:'Cinco iguales',flush_house:'Full de color',flush_five:'Cinco iguales de color'};
+export const handNames=HAND_NAMES;
 const HANDS=Object.keys(HAND_BASES) as HandId[];
 function factValue<T>(fact:Fact<T>|undefined){return fact?.status==='known'?fact.value:undefined;}
 function number(input:HTMLInputElement,label:string){const n=Number(input.value);if(!Number.isSafeInteger(n)||n<0)throw new Error(label+': escribe un entero no negativo o déjalo vacío si es desconocido.');return n;}

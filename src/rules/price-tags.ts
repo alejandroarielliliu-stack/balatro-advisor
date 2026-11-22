@@ -1,8 +1,20 @@
 import type {Fact,GameState} from '../state/model.js';
 import {tagDefinition} from '../catalog/tags.js';
+import {deckDefinition} from '../catalog/decks.js';
 
 export const PRICE_TAGS=new Set(['tag_coupon','tag_uncommon','tag_rare','tag_negative','tag_foil','tag_holo','tag_polychrome']);
 const known=(value:string[]):Fact<string[]>=>({status:'known',source:'confirmedPreset',value});
+
+/** The caller has already established a boss win. Never recover an unknown queue from a reward. */
+export function grantBossDefeatTag(state:GameState):number {
+ const deck=state.observed.deckId,context=state.observed.jokerContext;
+ if(deck.status!=='known'||context?.status!=='known'||context.value.tags?.status!=='known')return 0;
+ const grant=deckDefinition(deck.value)?.conditions.find(condition=>condition.when==='boss_defeated');
+ if(!grant)return 0;
+ context.value.tags=known([...context.value.tags.value,...Array<string>(grant.count).fill(grant.id)]);
+ return grant.count;
+}
+
 /** Only the queue is advanced here. Money, cards and pack contents remain observed. */
 export function tagsAfterObservedSkip(state:GameState):Fact<string[]> {
  const previous=state.observed.jokerContext?.status==='known'?state.observed.jokerContext.value.tags:undefined;

@@ -1,6 +1,7 @@
 import type {GameState,Fact} from '../state/model.js';
 import {blindRequirement} from '../catalog/blinds.js';
 import {TAGS,tagDefinition} from '../catalog/tags.js';
+import type {HandId} from '../catalog/initial.js';
 import {DECK_PROFILES} from '../catalog/decks.js';
 import {guideBlindChoice} from '../advisor/blind-guidance.js';
 import {compactBlindGuidance,currentBlindAnswers} from './blind-decision-view.js';
@@ -14,6 +15,8 @@ import type {RoundCashoutSubmission} from './round-cashout-view.js';
 import {mountGameShop} from './game-shop-view.js';
 import {currentShopPlan,openShopPlan} from './shop-plan-view.js';
 import {observedRerollQuote} from '../rules/reroll-quote.js';
+import {observedOrbitalHand} from '../run/progress.js';
+import {handNames} from './full-joker-data.js';
 
 const el=<K extends keyof HTMLElementTagNameMap>(tag:K,text='',className='')=>{const e=document.createElement(tag);e.textContent=text;e.className=className;return e;};
 const value=<T>(f:Fact<T>|undefined)=>f?.status==='known'?f.value:undefined;
@@ -22,7 +25,7 @@ type Kind=keyof typeof labels;
 type ObservationBinding=Pick<GameState,'runId'|'revision'>;
 export interface BlindScreenOptions {
  snapshot():{state:GameState|null;writable:boolean;dirty:boolean};
- observeTag(kind:'small'|'big',tag:string|null,binding:ObservationBinding):string|null;
+ observeTag(kind:'small'|'big',tag:string|null,binding:ObservationBinding,orbitalHand?:HandId):string|null;
  observeBoss(id:string,binding:ObservationBinding):string|null;
  select(binding:ObservationBinding):string|null;
  cashout(submission:RoundCashoutSubmission,binding:ObservationBinding):string|null;
@@ -59,14 +62,33 @@ export function mountBlindScreen(options:BlindScreenOptions){
  picker.addEventListener('click',e=>{if(e.target===picker){const r=picker.getBoundingClientRect();if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)picker.close();}});
  let returnFocus:HTMLElement|null=null,returnSelector='';picker.addEventListener('close',()=>{if(returnFocus?.isConnected)returnFocus.focus();else host.querySelector<HTMLElement>(returnSelector||'[data-tag-slot],#blind-boss-picker')?.focus();});
  function openPicker(kind:Kind,button:HTMLElement,state:GameState){
-  returnFocus=button;returnSelector=kind==='boss'?'#blind-boss-picker':`[data-tag-slot=${kind}]`;grid.replaceChildren();pickerError.textContent='';heading.textContent=kind==='boss'?'Jefe que aparece en tu partida':'Etiqueta de la ciega '+(kind==='small'?'pequeña':'grande');
+  const pickerTitle=kind==='boss'?'Jefe que aparece en tu partida':'Etiqueta de la ciega '+(kind==='small'?'pequeña':'grande');
+  returnFocus=button;returnSelector=kind==='boss'?'#blind-boss-picker':`[data-tag-slot=${kind}]`;grid.replaceChildren();pickerError.textContent='';heading.textContent=pickerTitle;close.onclick=()=>picker.close();
   const binding={runId:state.runId,revision:state.revision};
-  const choose=(id:string|null)=>{const problem=kind==='boss'?options.observeBoss(id??'',binding):options.observeTag(kind,id,binding);if(problem){pickerError.textContent=problem;return;}picker.close();refresh();};
+  const choose=(id:string|null,orbitalHand?:HandId)=>{const problem=kind==='boss'?options.observeBoss(id??'',binding):options.observeTag(kind,id,binding,orbitalHand);if(problem){pickerError.textContent=problem;return;}picker.close();refresh();};
   const reference=value(state.observed.nextBlind),eligible=(id:string)=>!!reference&&blindRequirement(reference.ante,'boss',id,value(state.observed.deckId)??'').ok;
   if(kind==='boss')for(const boss of [...BOSS_CATALOG].sort((a,b)=>Number(eligible(b.id))-Number(eligible(a.id)))){const b=el('button','','blind-picker-item boss-picker-item');b.type='button';b.dataset.bossChoice=boss.id;const text=el('span','','boss-picker-copy'),current=value(state.observed.nextBlind),required=current?blindRequirement(current.ante,'boss',boss.id,value(state.observed.deckId)??''):null;
    text.append(el('strong',boss.name),el('span',boss.description),el('small',`Objetivo ×${boss.multiplier} · premio $${boss.reward} · ${boss.showdown?'jefe final':`ante ${boss.minAnte}+`}`));if(required?.ok)text.append(el('small',`${required.target.toLocaleString('es')} fichas en este ante`));else if(required&&!required.ok){b.disabled=true;b.title=required.error.message;}
    b.append(blindArt(boss.artId,boss.name),text);b.onclick=()=>choose(boss.id);grid.append(b);}
-  else {const clear=el('button','Sin registrar','blind-picker-item');clear.type='button';clear.onclick=()=>choose(null);grid.append(clear);for(const tag of TAGS){const b=el('button','','blind-picker-item');b.type='button';b.dataset.tagChoice=tag.id;b.append(tagArt(tag.id,tag.name),el('span',tag.name));b.onclick=()=>choose(tag.id);grid.append(b);}}
+  else {
+   const renderOrbitalHands=()=>{
+    grid.replaceChildren();pickerError.textContent='';heading.textContent='Mano de la etiqueta orbital';close.onclick=renderTags;
+    const selected=reference?observedOrbitalHand(state,{ante:reference.ante,kind}):undefined;
+    const choice=(hand?:HandId)=>{
+     const b=el('button',hand?handNames[hand]:'Sin registrar','blind-picker-item');b.type='button';b.dataset.orbitalHand=hand??'unknown';
+     b.setAttribute('aria-pressed',String(hand===selected));b.onclick=()=>choose('tag_orbital',hand);grid.append(b);
+    };
+    for(const hand of Object.keys(handNames) as HandId[])choice(hand);
+    choice();heading.focus({preventScroll:true});picker.scrollTop=0;
+   };
+   const renderTags=()=>{
+    grid.replaceChildren();pickerError.textContent='';heading.textContent=pickerTitle;close.onclick=()=>picker.close();
+    const clear=el('button','Sin registrar','blind-picker-item');clear.type='button';clear.onclick=()=>choose(null);grid.append(clear);
+    for(const tag of TAGS){const b=el('button','','blind-picker-item');b.type='button';b.dataset.tagChoice=tag.id;b.append(tagArt(tag.id,tag.name),el('span',tag.name));b.onclick=tag.id==='tag_orbital'?renderOrbitalHands:()=>choose(tag.id);grid.append(b);}
+    if(picker.open)heading.focus({preventScroll:true});picker.scrollTop=0;
+   };
+   renderTags();
+  }
   picker.showModal();heading.focus({preventScroll:true});picker.scrollTop=0;
  }
  let rendered='',transitionTimer:ReturnType<typeof setTimeout>|undefined,blindTransitionTimer:ReturnType<typeof setTimeout>|undefined;
@@ -135,7 +157,10 @@ export function mountBlindScreen(options:BlindScreenOptions){
     const row=el('div','','blind-skip-row'),slot=el('button','','blind-tag-slot');slot.type='button';slot.dataset.tagSlot=kind;
     const saved=state.schemaVersion==='0.2'?state.blindTags?.find(t=>t.ante===anteValue&&t.kind===kind)?.tag:undefined;
     const tag=active&&state.schemaVersion==='0.2'&&state.phase==='blind_select'?value(state.phaseData.skipTag):value(saved);
-    slot.dataset.empty=String(!tag);slot.setAttribute('aria-label',tag?'Cambiar '+(tagDefinition(tag)?.name??tag):'Introducir etiqueta: '+labels[kind]);slot.title=tag?tagDefinition(tag)?.name??tag:'Introducir etiqueta';slot.disabled=!writable||past||!current;slot.append(tag?tagArt(tag,tagDefinition(tag)?.name??tag):el('span','','blind-pixel-plus'));slot.onclick=()=>openPicker(kind,slot,state);
+    const orbital=tag==='tag_orbital'&&anteValue!==undefined?observedOrbitalHand(state,{ante:anteValue,kind}):undefined;
+    const tagName=tag?tagDefinition(tag)?.name??tag:'';
+    const tagLabel=orbital?`${tagName} · ${handNames[orbital]}`:tagName;
+    slot.dataset.empty=String(!tag);slot.setAttribute('aria-label',tag?'Cambiar '+tagLabel:'Introducir etiqueta: '+labels[kind]);slot.title=tagLabel||'Introducir etiqueta';slot.disabled=!writable||past||!current;slot.append(tag?tagArt(tag,tagLabel):el('span','','blind-pixel-plus'));slot.onclick=()=>openPicker(kind,slot,state);
     const skip=el('button','Saltar ciega','blind-skip');skip.type='button';skip.id='blind-skip-'+kind;skip.disabled=!active||!writable;skip.title='Registrar un salto que ya realizaste en Balatro';skip.onclick=options.skip;row.append(slot,skip);card.append(el('div','o','blind-or'),row);
    }else {const next=el('div','','blind-up-ante');next.append(el('strong','Sube el ante'),el('span','Aumentan las ciegas'),el('span','Renueva las ciegas'));card.append(next);}
    cards.append(card);

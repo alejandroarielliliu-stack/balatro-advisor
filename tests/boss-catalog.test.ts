@@ -57,7 +57,7 @@ test('boss pool availability is separate from raw source min10/max10 and never e
 });
 
 test('numeric metadata for an unimplemented boss never silently enables exact scoring, even when disabled',()=>{
- assert.deepEqual(BOSS_CATALOG.filter(b=>implementedBossEffects(b.id)).map(b=>b.id).sort(),['the_psychic','the_water','the_wall','violet_vessel'].sort());
+ assert.deepEqual(BOSS_CATALOG.filter(b=>implementedBossEffects(b.id)).map(b=>b.id).sort(),['the_psychic','the_water','the_wall','violet_vessel','the_needle','the_manacle','the_flint'].sort());
  for(const disabled of [false,true]){
   const state=success(parseState(readFileSync('examples/shop-purchase.json','utf8')));
   state.observed.nextBlind=known({ante:1,kind:'boss',bossId:known('the_window'),target:known(600),reward:known(5)});

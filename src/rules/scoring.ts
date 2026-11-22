@@ -16,6 +16,7 @@ import type {ScoringContext} from './joker-context.js';
 import {simpleJoker} from '../catalog/simple-jokers.js';
 import {cardMatches,mainBonus,simpleRule} from './simple-jokers.js';
 import {deckDefinition} from '../catalog/decks.js';
+import {handCapacityForBoss} from '../catalog/blinds.js';
 import type { GameState,JokerInstance } from '../state/model.js';
 import { HAND_BASES, SCORING_EFFECTS as FX, cardChips, rankValue } from '../catalog/initial.js';
 import type { Card, HandId } from '../catalog/initial.js';
@@ -63,10 +64,11 @@ export function scoreInternal(original: GameState, input: HandInput, trace: Trac
   const needsHeld=jokers.some(j=>['mime','raised_fist','baron','shoot_the_moon','blackboard','reserved_parking'].includes(j.catalogId))||context.deck.some(c=>c.enhancement==='steel');
   const held=needsHeld?requireCards(context.held,'las cartas retenidas en mano'):context.held??[];
   if(context.deck.some(c=>c.enhancement==='steel'))use(contextRule);
-  const baseResources=resources(state),r={...baseResources,...historyRoundResources(jokers,baseResources.hands,baseResources.discards)},blind = blindInfo(state);
+  const baseResources=resources(state),blind=blindInfo(state);
+  const r={...baseResources,...historyRoundResources(jokers,blind.boss==='the_needle'?1:baseResources.hands,baseResources.discards)};
   if(input.roundInitialHands!==undefined){if(!Number.isSafeInteger(input.roundInitialHands)||input.roundInitialHands<1||input.roundInitialHands>1000)fail('$hand.roundInitialHands','invalid_resources','Manos iniciales de ronda incompatibles.');r.hands=input.roundInitialHands;}
   if(input.capacityOverflow!==undefined&&(!Number.isSafeInteger(input.capacityOverflow)||input.capacityOverflow<0||input.capacityOverflow>200))fail('$hand.capacityOverflow','invalid_resources','Exceso temporal de mano inválido.');
-  if(held.length>r.handSize-cards.length+(input.capacityOverflow??0)+(input.generatedHandIds?.filter(id=>held.some(c=>c.instanceId===id)||cards.some(c=>c.instanceId===id)).length??0))fail('$hand.heldCardIds','invalid_card_context','La mano retenida y las cartas jugadas superan el tamaño de mano.');
+  if(held.length>handCapacityForBoss(r.handSize,blind.boss)-cards.length+(input.capacityOverflow??0)+(input.generatedHandIds?.filter(id=>held.some(c=>c.instanceId===id)||cards.some(c=>c.instanceId===id)).length??0))fail('$hand.heldCardIds','invalid_card_context','La mano retenida y las cartas jugadas superan el tamaño de mano.');
   const maxDiscards=input.roundInitialDiscards??(blind.boss==='the_water'?0:r.discards);if(!Number.isSafeInteger(maxDiscards)||maxDiscards<0||maxDiscards>1000)fail('$hand.roundInitialDiscards','invalid_resources','Descartes de ronda incompatibles.');
   if (!Number.isSafeInteger(input.discardsRemaining) || input.discardsRemaining < 0 || input.discardsRemaining > maxDiscards) fail('$hand.discardsRemaining', 'invalid_discards', `Descartes restantes deben estar entre 0 y ${maxDiscards}.`);
   if (blind.boss === 'the_psychic' && cards.length !== 5) fail('$hand.cardIds', 'psychic_requires_five', 'The Psychic exige cinco cartas; manos inválidas no se evalúan en este alcance.');
@@ -98,6 +100,11 @@ export function scoreInternal(original: GameState, input: HandInput, trace: Trac
     const base = need(fact, '$.observed.handBases.values.' + hand);
     if (base.level < 1 || base.chips < 1 || base.mult < 1) fail('$.observed.handBases', 'invalid_base', 'Nivel, fichas y Mult deben ser positivos para puntuar.');
     chips = base.chips; mult = base.mult;
+  }
+  if(blind.boss==='the_flint'){
+    use('blind.effects');const beforeChips=chips,beforeMult=mult;
+    chips=Math.round(chips/2);mult=Math.max(1,Math.round(mult/2));
+    trace.push({ruleId:'blind.effects',label:'El pedernal reduce las bases',values:{beforeChips,beforeMult,chips,mult}});
   }
   trace.push({ ruleId: 'hand.classification', label: 'Categoría y base', values: { hand, chips, mult, played: cards.length, scored: scoring.length } });
   const greenAfter: Record<string, number> = Object.create(null) as Record<string, number>;

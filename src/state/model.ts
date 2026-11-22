@@ -4,6 +4,8 @@ import { gameStateSchema as legacyGameStateSchema } from './legacy-model.js';
 import type { GameState as LegacyGameState } from './legacy-model.js';
 import { array, boolean, enumeration, fact, integer, isObject, issue, object, record, text, union } from './schema.js';
 import type { Infer, Schema, Fact } from './schema.js';
+import {HAND_BASES} from '../catalog/initial.js';
+import type {HandId} from '../catalog/initial.js';
 
 export type { Fact, Issue, Result } from './schema.js';
 export type { JokerInstance, Probe } from './legacy-model.js';
@@ -16,7 +18,8 @@ export type GameStateLegacy = GameStateV01;
 const count = integer(0);
 const blindRef = object({ ante: integer(1), kind: enumeration('small', 'big', 'boss') });
 /** Visible skip rewards, keyed by their actual blind; observing one grants nothing. */
-export const blindTagObservationSchema=object({ante:integer(1,8),kind:enumeration('small','big'),tag:fact(text())});
+export const orbitalHandSchema=fact(enumeration(...Object.keys(HAND_BASES) as HandId[]));
+export const blindTagObservationSchema=object({ante:integer(1,8),kind:enumeration('small','big'),tag:fact(text())},{orbitalHand:orbitalHandSchema});
 export type BlindTagObservation=Infer<typeof blindTagObservationSchema>;
 
 /** These are recorded facts, not a rule engine, prediction or automatic transition. */
@@ -83,6 +86,9 @@ export const currentGameStateSchema: Schema<GameStateV02> = {
         for(const [index,entry]of (value.blindTags as BlindTagObservation[]).entries()){
           const key=`${entry.ante}:${entry.kind}`;
           if(seen.has(key)){issue(errors,`${path}.blindTags[${index}]`,'duplicate_blind','No repitas la etiqueta observada de una misma ciega.');valid=false;}
+          if(entry.orbitalHand&&(entry.tag.status!=='known'||entry.tag.value!=='tag_orbital')){
+            issue(errors,`${path}.blindTags[${index}].orbitalHand`,'invalid_orbital_target','Solo la etiqueta orbital tiene una mano objetivo.');valid=false;
+          }
           seen.add(key);
         }
       }

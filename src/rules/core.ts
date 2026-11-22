@@ -133,16 +133,28 @@ export function resources(state: GameState) {
   if (hands !== deck.hands || discards !== deck.discards || handSize !== deck.handSize) fail('$.observed.resources', 'unsupported_resources', `${deck.name}/White requiere bases ${deck.hands} manos, ${deck.discards} descartes, tamaño ${deck.handSize}; el jefe se aplica después.`);
   return { hands, discards, handSize };
 }
-export function blindInfo(state: GameState) {
+function recordedBlind(state: GameState, checkScoringSupport: boolean) {
   const blind = need(state.observed.nextBlind, '$.observed.nextBlind');
   const boss = need(blind.bossId, '$.observed.nextBlind.bossId');
-  if(blind.kind==='boss'&&!implementedBossEffects(boss))fail('$.observed.nextBlind.bossId','unsupported_blind','Jefe catalogado con objetivo y premio; sus efectos sobre las manos todavía no están implementados.');
+  if(checkScoringSupport&&blind.kind==='boss'&&!implementedBossEffects(boss))fail('$.observed.nextBlind.bossId','unsupported_blind','Jefe catalogado con objetivo y premio; sus efectos sobre las manos todavía no están implementados.');
   const expected=blindRequirement(blind.ante,blind.kind,boss,need(state.observed.deckId,'$.observed.deckId'));
   if(!expected.ok)fail(expected.error.path,expected.error.code,expected.error.message);
+  return {blind,boss,expected};
+}
+
+export function blindInfo(state: GameState) {
+  const {blind,boss,expected}=recordedBlind(state,true);
   const target = need(blind.target, '$.observed.nextBlind.target');
   if (target !== expected.target) fail('$.observed.nextBlind.target', 'target_mismatch', `Objetivo distinto del modelo: se esperaba ${expected.target}.`);
   // Reward is needed only by cashout, not by scoring.
   const effective=historyBoss(state);return {...blind,boss:effective.disabled?'none':boss,target:effective.target,expectedReward:expected.reward,disabled:effective.disabled,originalTarget:target};
+}
+
+/** Reward and economic effects of a future round, conditional on a victory. */
+export function nextRoundCashoutBlind(state: GameState) {
+  const {blind,boss,expected}=recordedBlind(state,false);
+  const disabled=blind.kind==='boss'&&need(state.observed.jokers,'$.observed.jokers').some(joker=>joker.catalogId==='chicot');
+  return {...blind,boss:disabled?'none':boss,expectedReward:expected.reward};
 }
 
 /** Fractional Mult is retained until the final score is floored, as in the game. */

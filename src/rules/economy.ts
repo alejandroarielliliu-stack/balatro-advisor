@@ -1,10 +1,11 @@
 import {investmentIncome} from './tags.js';
 import {bankBalance} from './economic-jokers.js';
 import {generationRoundIncome} from './generation-jokers.js';
+import {effectiveJokers} from './joker-context.js';
 import {interestCap} from '../catalog/economy-vouchers.js';
 import {deckDefinition} from '../catalog/decks.js';
 import type { GameState } from '../state/model.js';
-import { blindInfo, deckCards, fail, guardPendingTags, inventory, need, resources, run, safe, stateInput } from './core.js';
+import { blindInfo, deckCards, fail, guardPendingTags, inventory, need, nextRoundCashoutBlind, resources, run, safe, stateInput } from './core.js';
 import type { EngineOptions, Trace } from './core.js';
 
 export interface Cashout { balanceBefore: number; blindReward: number; unusedHands: number; unusedDiscards?: number; goldenIncome: number; tagIncome?:number; otherJokerIncome?:number; interest: number; earned: number; balanceAfter: number }
@@ -25,44 +26,48 @@ export function interestOnBalance(input: unknown, options: EngineOptions = {}) {
     use('interest.formula');const vouchers=need(state.observed.outOfScope,'$.observed.outOfScope').vouchers;if(vouchers.some(id=>['v_seed_money','v_money_tree'].includes(id)))use('vouchers.interest');const moons=inventory(state).filter(j=>j.catalogId==='to_the_moon').length;return interestInternal(balance,trace,interestCap(vouchers))*(1+moons);
   });
 }
-export function cashoutInternal(state: GameState, handsRemaining: number, won: boolean, trace: Trace[], use: (id: string) => void, discardsRemaining?: number,settings:{saved?:boolean;initialHands?:number;initialDiscards?:number;additionalJokerIncome?:number}={}): Cashout {
+export function cashoutInternal(state: GameState, handsRemaining: number, won: boolean, trace: Trace[], use: (id: string) => void, discardsRemaining?: number,settings:{saved?:boolean;initialHands?:number;initialDiscards?:number;additionalJokerIncome?:number;nextRound?:{preserveDiscards:boolean}}={}): Cashout {
   if(won)guardPendingTags(state,'cashout');
   const before = bankBalance(need(state.observed.money, '$.observed.money'));
   const bases=resources(state),r={...bases,hands:settings.initialHands??bases.hands,discards:settings.initialDiscards??bases.discards};
   if (!Number.isSafeInteger(handsRemaining) || handsRemaining < 0 || handsRemaining >= r.hands) fail('$round.handsRemaining', 'invalid_hands', `El cobro requiere entre 0 y ${r.hands-1} manos sobrantes tras jugar al menos una.`);
   if (!won) return { balanceBefore: before, blindReward: 0, unusedHands: 0, goldenIncome: 0, interest: 0, earned: 0, balanceAfter: before };
   use('blind.effects'); use('base.configuration');
-  const blind = blindInfo(state);
+  const blind = settings.nextRound?nextRoundCashoutBlind(state):blindInfo(state);
   if (blind.kind === 'boss' && blind.ante === 8) fail('$round', 'outside_goal', 'No se proyectan ingresos posteriores a ganar el ante 8.');
+  if (settings.nextRound && (blind.boss==='the_ox'||blind.boss==='the_tooth'))
+    fail('$.observed.nextBlind.bossId','unsupported_cashflow','El jefe puede cambiar el saldo durante la ronda.');
   const recordedReward=need(blind.reward,'$.observed.nextBlind.reward');const reward=settings.saved?0:recordedReward;
   if (recordedReward !== blind.expectedReward) fail('$.observed.nextBlind.reward', 'reward_mismatch', 'Recompensa distinta del catálogo base.');
   const income=deckDefinition(need(state.observed.deckId,'$.observed.deckId'))!.income;
+  const jokers=inventory(state);
+  const startsWithoutDiscards=blind.boss==='the_water'||settings.nextRound&&effectiveJokers(jokers).some(joker=>joker.catalogId==='burglar');
+  const maxDiscards=startsWithoutDiscards?0:r.discards;
+  const remainingDiscards=settings.nextRound?.preserveDiscards?maxDiscards:discardsRemaining;
   let unusedDiscards=0;
   if (!income.interest) {
     use('deck.green');
-    const maxDiscards=blind.boss==='the_water'?0:r.discards;
-    if (discardsRemaining===undefined) fail('$round.discardsRemaining','unknown_data','Verde necesita los descartes sobrantes para calcular el cobro.');
-    if (!Number.isSafeInteger(discardsRemaining) || discardsRemaining<0 || discardsRemaining>maxDiscards) fail('$round.discardsRemaining','invalid_discards','Descartes sobrantes incompatibles con la baraja y ciega.');
-    unusedDiscards=discardsRemaining*income.perDiscard;
+    if (remainingDiscards===undefined) fail('$round.discardsRemaining','unknown_data','Verde necesita los descartes sobrantes para calcular el cobro.');
+    if (!Number.isSafeInteger(remainingDiscards) || remainingDiscards<0 || remainingDiscards>maxDiscards) fail('$round.discardsRemaining','invalid_discards','Descartes sobrantes incompatibles con la baraja y ciega.');
+    unusedDiscards=remainingDiscards*income.perDiscard;
   } else {use('interest.timing');use('interest.formula');}
   let goldenIncome = 0;
-  for (const joker of inventory(state)) if (joker.catalogId === 'golden_joker') {
+  for (const joker of jokers) if (joker.catalogId === 'golden_joker') {
     use('golden_joker.effect'); goldenIncome += GOLDEN_ROUND_INCOME;
     trace.push({ ruleId: 'golden_joker.effect', label: 'Golden al cobro', values: { instanceId: joker.instanceId, dollars: GOLDEN_ROUND_INCOME } });
   }
   const vouchers=need(state.observed.outOfScope,'$.observed.outOfScope').vouchers;if(income.interest&&vouchers.some(id=>['v_seed_money','v_money_tree'].includes(id)))use('vouchers.interest');
   let otherJokerIncome=generationRoundIncome(state)+(settings.additionalJokerIncome??0);
-  for(const j of inventory(state)){
+  for(const j of jokers){
     let dollars=0;
     if(j.catalogId==='cloud_9')dollars=deckCards(state).filter(c=>c.rank==='9').length;
     if(j.catalogId==='delayed_grat'){
-      const max=blind.boss==='the_water'?0:r.discards;
-      if(!Number.isSafeInteger(discardsRemaining)||discardsRemaining!<0||discardsRemaining!>max)fail('$round.discardsRemaining','unknown_data','Delayed Gratification requiere los descartes restantes.');
-      if(discardsRemaining===max)dollars=2*discardsRemaining;
+      if(remainingDiscards===undefined||!Number.isSafeInteger(remainingDiscards)||remainingDiscards<0||remainingDiscards>maxDiscards)fail('$round.discardsRemaining','unknown_data','Delayed Gratification requiere los descartes restantes.');
+      if(remainingDiscards===maxDiscards)dollars=2*remainingDiscards;
     }
     otherJokerIncome+=dollars;if(dollars)trace.push({ruleId:'jokers.context',label:j.catalogId+' al cobro',values:{instanceId:j.instanceId,dollars}});
   }
-  const moons=inventory(state).filter(j=>j.catalogId==='to_the_moon').length;
+  const moons=jokers.filter(j=>j.catalogId==='to_the_moon').length;
   const baseInterest=income.interest?interestInternal(before,trace,interestCap(vouchers)):0;
   const interest=baseInterest*(1+moons);
   if(moons)trace.push({ruleId:'jokers.context',label:'To the Moon',values:{baseInterest,moons,interest}});
@@ -79,4 +84,10 @@ export function projectCashout(input: unknown, assumptions: { discardsRemaining?
     if (!assumptions || typeof assumptions.won !== 'boolean' || assumptions.noMoneyChangesDuringRound !== true) fail('$assumptions', 'unsupported_cashflow', 'Indica victoria/derrota y confirma que no cambia el dinero durante la ronda.');
     return cashoutInternal(stateInput(input,use), assumptions.handsRemaining, assumptions.won, trace, use, assumptions.discardsRemaining);
   });
+}
+
+/** Lower bound conditional on winning, with no other changes to the bank during play. */
+export function projectNextRoundCashout(input: unknown, preserveDiscards: boolean) {
+  return run<Cashout>(['round.cashout','round.resources'],{},(trace,use)=>
+    cashoutInternal(stateInput(input,use),0,true,trace,use,0,{nextRound:{preserveDiscards}}));
 }

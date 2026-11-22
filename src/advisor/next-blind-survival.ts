@@ -1,4 +1,5 @@
 import {HAND_BASES,cardChips} from '../catalog/initial.js';
+import {handCapacityForBoss} from '../catalog/blinds.js';
 import type {Card} from '../catalog/initial.js';
 import {blindInfo,deckCards,run} from '../rules/core.js';
 import {suitMatches} from '../rules/hand-patterns.js';
@@ -113,11 +114,15 @@ export function estimateBlindSurvival(state:GameStateV02):BlindSurvivalEstimate 
  const {handSize}=state.observed.resources;
  if(handSize.status!=='known')return unavailable('Registra el tamaño de mano para estimar la siguiente ciega.');
  if(handSize.value<1||handSize.value>maxHandSize)return unavailable(`La estimación admite tamaños de mano entre 1 y ${maxHandSize}.`);
+ const next=state.observed.nextBlind,jokers=state.observed.jokers;
+ const bossId=next.status==='known'&&next.value.bossId.status==='known'?next.value.bossId.value:'none';
+ const disablesBoss=jokers.status==='known'&&jokers.value.some(joker=>joker.catalogId==='chicot');
+ const initialSize=handCapacityForBoss(handSize.value,disablesBoss?'none':bossId);
  let target=0,hands=0,reachedCount=0,estimatedPoints=0;
  for(let trial=0;trial<samples;trial++){
   const order=shuffledDeck(cards,trial);
   // A skipped blind has no intervening shop; do not replay end-of-shop events.
-  const started=beginRound(state,order.slice(0,handSize.value),{enteringFromShop:false});
+  const started=beginRound(state,order.slice(0,initialSize),{enteringFromShop:false});
   if(!started.ok)return unavailable(started.errors[0]!.message);
   let round=started.value;
   const blind=blindInfo(round.game);
@@ -140,7 +145,8 @@ export function estimateBlindSurvival(state:GameStateV02):BlindSurvivalEstimate 
    const terminal=type==='play'&&(round.score+best.score>=target||round.handsLeft===1);
    const size=round.game.observed.resources.handSize;
    if(size.status!=='known')return unavailable(size.reason);
-   const draws=terminal?0:Math.max(0,Math.min(round.remaining.length,size.value-round.hand.length+cardIds.length));
+   const capacity=handCapacityForBoss(size.value,blindInfo(round.game).boss);
+   const draws=terminal?0:Math.max(0,Math.min(round.remaining.length,capacity-round.hand.length+cardIds.length));
    const remaining=new Set(round.remaining);
    const event:RoundEvent={type,cardIds,drawnCardIds:order.filter(id=>remaining.has(id)).slice(0,draws)};
    const applied=applyRoundEvent(round,event,{expectedRevision:round.game.revision,updatedAt:round.game.updatedAt});

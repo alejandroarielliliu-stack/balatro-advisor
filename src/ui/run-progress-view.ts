@@ -5,10 +5,12 @@ import {TAGS,tagDefinition} from '../catalog/tags.js';
 import type {GameState,Fact} from '../state/model.js';
 import type {ConfirmedRecord} from '../storage/confirmed-store.js';
 import type {RunProgressCommand,InventoryConfirmation,BlindInfo} from '../run/progress.js';
-import {nextBlindAfter,inventoryGroups} from '../run/progress.js';
+import {nextBlindAfter,inventoryGroups,observedOrbitalHand} from '../run/progress.js';
+import type {HandId} from '../catalog/initial.js';
 import {DECK_PROFILES,deckDefinition} from '../catalog/decks.js';
 import {blindRequirement} from '../catalog/blinds.js';
 import {tagsAfterObservedSkip} from '../rules/price-tags.js';
+import {handNames} from './full-joker-data.js';
 
 const el=<K extends keyof HTMLElementTagNameMap>(tag:K,text='',cl='')=>{const e=document.createElement(tag);e.textContent=text;e.className=cl;return e;};
 const value=<T>(f:Fact<T>|undefined)=>f?.status==='known'?f.value:undefined;
@@ -102,11 +104,20 @@ export function renderRunJourney(host:HTMLElement,options:JourneyOptions){
    };
    toolbar.append(blindComparisonButton({open:options.open,state:options.comparisonState??(()=>structuredClone(state)),scenarios:options.scenarios??(()=>[]),riskChanged:()=>{refreshHint();options.riskChanged?.();}}));
    refreshHint();host.append(hint);
-   const current=value(state.phaseData.skipTag);title.append(el('small',current?(tagDefinition(current)?.name??current):'Etiqueta de salto sin registrar','journey-tag'));
+   const current=value(state.phaseData.skipTag),orbitalHand=observedOrbitalHand(state);
+   const currentTagName=current?(tagDefinition(current)?.name??current):'Etiqueta de salto sin registrar';
+   title.append(el('small',orbitalHand?`${currentTagName} · ${handNames[orbitalHand]}`:currentTagName,'journey-tag'));
    action('run-observe-tag','Etiqueta visible',()=>{
     const body=el('div','','journey-dialog'),knownTag=check('progress-tag-known','Conozco la etiqueta visible');knownTag.input.checked=!!current;
     const tag=select('progress-visible-tag','Etiqueta',Object.fromEntries(TAGS.map(t=>[t.id,t.name])),current??TAGS[0]!.id);body.append(knownTag.wrap,tag.wrap);
-    open('Etiqueta de esta ciega',body,'Registrar etiqueta',()=>options.submit({type:'observe_skip_tag',tag:knownTag.input.checked?manual(tag.input.value):unknown()},{unchanged:true}));
+    const orbital=select('progress-orbital-hand','Mano de la etiqueta orbital',{'':'Sin registrar',...handNames},orbitalHand??'');body.append(orbital.wrap);
+    const updateOrbital=()=>{orbital.wrap.hidden=!knownTag.input.checked||tag.input.value!=='tag_orbital';};
+    knownTag.input.onchange=tag.input.onchange=updateOrbital;updateOrbital();
+    open('Etiqueta de esta ciega',body,'Registrar etiqueta',()=>{
+     const observation=knownTag.input.checked?manual(tag.input.value):unknown();
+     const hand=orbital.input.value as HandId|'';
+     return options.submit({type:'observe_skip_tag',tag:observation,...(!orbital.wrap.hidden?{orbitalHand:hand?manual(hand):unknown()}:{})},{unchanged:true});
+    });
    },false,true);
    action('run-skip-blind','Salté esta ciega',()=>{
     const body=el('div','','journey-dialog'),done=check('progress-skip-resolved','Ya resolví los efectos y estoy en la siguiente selección'),money=field('progress-money','Saldo actual ($) · opcional');

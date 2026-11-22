@@ -1,6 +1,8 @@
 import {consumeInvestments} from './tags.js';
+import {grantBossDefeatTag} from './price-tags.js';
 import {counterValue,updateCounter,decayJokers} from './joker-counters.js';
 import {SCORING_EFFECTS as FX} from '../catalog/initial.js';
+import {handCapacityForBoss} from '../catalog/blinds.js';
 import {jokerResourceDelta} from '../catalog/joker-resources.js';
 import {voucherResources} from '../catalog/vouchers.js';
 import {deckDefinition} from '../catalog/decks.js';
@@ -41,7 +43,7 @@ function checkRound(round:RoundState,use:(id:string)=>void):RoundState{
  if(new Set(round.generatedHandIds).size!==round.generatedHandIds.length||round.generatedHandIds.some(id=>!deck.some(c=>c.instanceId===id)))fail('$round.generatedHandIds','invalid_round','IDs de cartas generadas incoherentes.');
  const generatedHeld=round.generatedHandIds.filter(id=>round.hand.includes(id)).length;
  if(!Number.isSafeInteger(round.initialHands)||round.initialHands<1||round.initialHands>100||!Number.isSafeInteger(round.initialDiscards)||round.initialDiscards<0||round.initialDiscards>100
- ||!Number.isSafeInteger(round.capacityOverflow)||round.capacityOverflow<0||round.capacityOverflow>200||round.hand.length>r.handSize+generatedHeld+round.capacityOverflow||!Number.isSafeInteger(round.handsLeft)||round.handsLeft<0||round.handsLeft>round.initialHands||!Number.isSafeInteger(round.discardsLeft)||round.discardsLeft<0||round.discardsLeft>round.initialDiscards)fail('$round','invalid_resources','Recursos o tamaño de mano incoherentes.');
+ ||!Number.isSafeInteger(round.capacityOverflow)||round.capacityOverflow<0||round.capacityOverflow>200||round.hand.length>handCapacityForBoss(r.handSize,blind.boss)+generatedHeld+round.capacityOverflow||!Number.isSafeInteger(round.handsLeft)||round.handsLeft<0||round.handsLeft>round.initialHands||!Number.isSafeInteger(round.discardsLeft)||round.discardsLeft<0||round.discardsLeft>round.initialDiscards)fail('$round','invalid_resources','Recursos o tamaño de mano incoherentes.');
  safe(round.score,'$round.score');const expected=round.score>=blind.target?'won':round.handsLeft===0?'lost':'active';
  const rescued=round.status==='rescued'&&expected==='lost'&&!!round.rescuedBy&&round.score>=blind.target/4&&!inventory(game).some(j=>j.instanceId===round.rescuedBy);
  if(!['active','won','lost','rescued','settled'].includes(round.status)||round.status!=='settled'&&!rescued&&round.status!==expected)fail('$round.status','invalid_round','Estado de ronda incoherente con objetivo y manos.');
@@ -113,7 +115,8 @@ export function beginRound(input:unknown,initialHand:string[],options:EngineOpti
   const event:FullEventInput={state:game,stage:'end_shop',cards:[],choices:checkedChoices,generatedLocations,trace,use};
   if(options.enteringFromShop!==false)generationEvent(event,effectiveJokers(inventory(game)));
   resetRoundHistory(game);
-  let handsLeft=r.hands,discardsLeft=blindInfo(game).boss==='the_water'?0:r.discards;
+  const startingBoss=blindInfo(game).boss;
+  let handsLeft=startingBoss==='the_needle'?1:r.hands,discardsLeft=startingBoss==='the_water'?0:r.discards;
   event.stage='select_blind';
   for(const actorId of inventory(game).map(j=>j.instanceId)){
    const actor=inventory(game).find(j=>j.instanceId===actorId);if(!actor)continue;
@@ -124,9 +127,12 @@ export function beginRound(input:unknown,initialHand:string[],options:EngineOpti
    if(effective)generationEvent(event,[effective]);
    syncResourceBases(game);
    discardsLeft=Math.max(0,discardsLeft+need(game.observed.resources.discardsPerRound,'$.resources.discardsPerRound')-beforeDiscards);
-   if(!beforeDisabled&&blindInfo(game).disabled&&need(need(game.observed.nextBlind,'$.nextBlind').bossId,'$.bossId')==='the_water')discardsLeft+=r.discards;
+   if(!beforeDisabled&&blindInfo(game).disabled){
+    if(startingBoss==='the_water')discardsLeft+=r.discards;
+    if(startingBoss==='the_needle')handsLeft+=r.hands-1;
+   }
   }
-  const after=resources(game),blind=blindInfo(game),deck=deckCards(game),required=Math.min(after.handSize,deck.length),createdInHand=Object.keys(generatedLocations).filter(id=>generatedLocations[id]==='hand');
+  const after=resources(game),blind=blindInfo(game),deck=deckCards(game),required=Math.min(handCapacityForBoss(after.handSize,blind.boss),deck.length),createdInHand=Object.keys(generatedLocations).filter(id=>generatedLocations[id]==='hand');
   if(!Array.isArray(initialHand)||initialHand.length!==required||new Set(initialHand).size!==initialHand.length||initialHand.some(id=>!deck.some(c=>c.instanceId===id))||createdInHand.some(id=>!initialHand.includes(id)))fail('$initialHand','invalid_initial_hand',`Se necesitan ${required} cartas distintas del mazo tras los efectos de inicio, incluidas ${createdInHand.length} generadas en mano.`);
   trace.push({ruleId:'round.resources',label:'Inicio de ronda; recursos tras jefe y comodines',values:{hands:handsLeft,discards:discardsLeft,target:blind.target}});
   return{game,hand:[...initialHand],remaining:deck.filter(c=>!initialHand.includes(c.instanceId)).map(c=>c.instanceId),spent:[],handsLeft,discardsLeft,initialHands:handsLeft,initialDiscards:discardsLeft,generatedHandIds:createdInHand,capacityOverflow:0,score:0,status:'active'};
@@ -141,7 +147,9 @@ export function applyRoundEvent(input:RoundState,event:RoundEvent,mutation:Mutat
    const before=resources(round.game),oldBlind=blindInfo(round.game),sold=applyShopAction(round.game,{type:'sell',instanceId:event.instanceId,choices:choicesInput(event.choices??[])},mutation,{...options,activeBlind:true});
    if(!sold.ok){const e=sold.errors[0]!;fail(e.path,e.code,e.message);}trace.push(...sold.trace);round.game=sold.value.state;
    const after=resources(round.game),nextBlind=blindInfo(round.game),delta=after.discards-before.discards+(oldBlind.boss==='the_water'&&nextBlind.disabled?before.discards:0);
-   round.discardsLeft=Math.max(0,round.discardsLeft+delta);round.initialDiscards=Math.max(round.discardsLeft,round.initialDiscards+delta);round.capacityOverflow=Math.max(0,round.hand.length-after.handSize);
+   if(oldBlind.boss==='the_manacle'&&nextBlind.disabled&&round.remaining.length>0)fail('$event','unsupported_blind','Vender aquí roba una carta al desactivar El grillete. Ese robo no se proyecta en una venta.');
+   if(oldBlind.boss==='the_needle'&&nextBlind.disabled){round.handsLeft+=before.hands-1;round.initialHands+=before.hands-1;}
+   round.discardsLeft=Math.max(0,round.discardsLeft+delta);round.initialDiscards=Math.max(round.discardsLeft,round.initialDiscards+delta);round.capacityOverflow=Math.max(0,round.hand.length-handCapacityForBoss(after.handSize,nextBlind.boss));
    if(round.score>=nextBlind.target)round.status='won';
    return{round,handScore:null};
   }
@@ -178,8 +186,10 @@ export function applyRoundEvent(input:RoundState,event:RoundEvent,mutation:Mutat
     use('green.changes');const before=greenValue(joker),after=Math.max(0,before-FX.greenPerDiscard);joker.counters.greenMult=valueFact(after);trace.push({ruleId:'green.changes',label:'Un decremento por acción de descarte',values:{instanceId:joker.instanceId,discardedCards:event.cardIds.length,before,after}});
    }
   }
-  round.hand=round.hand.filter(id=>!event.cardIds.includes(id));round.spent.push(...event.cardIds.filter(id=>deckCards(round.game).some(c=>c.instanceId===id)));syncPartitions(round,generatedLocations);syncResourceBases(round.game);round.capacityOverflow=Math.max(0,round.hand.length-resources(round.game).handSize);
-  const count=round.status==='active'?Math.max(0,Math.min(resources(round.game).handSize-round.hand.length,round.remaining.length)):0;
+  round.hand=round.hand.filter(id=>!event.cardIds.includes(id));round.spent.push(...event.cardIds.filter(id=>deckCards(round.game).some(c=>c.instanceId===id)));syncPartitions(round,generatedLocations);syncResourceBases(round.game);
+  const capacity=handCapacityForBoss(resources(round.game).handSize,blindInfo(round.game).boss);
+  round.capacityOverflow=Math.max(0,round.hand.length-capacity);
+  const count=round.status==='active'?Math.max(0,Math.min(capacity-round.hand.length,round.remaining.length)):0;
   if(!Array.isArray(event.drawnCardIds)||event.drawnCardIds.length!==count||new Set(event.drawnCardIds).size!==count||event.drawnCardIds.some(id=>!round.remaining.includes(id)))fail('$event.drawnCardIds','invalid_draws',`Indica exactamente ${count} cartas distintas aún disponibles; no se generan robos.`);
   round.hand.push(...event.drawnCardIds);round.remaining=round.remaining.filter(id=>!event.drawnCardIds.includes(id));clearDestroyedLegacyReferences(round.game,trace);revise(round.game,mutation);
   trace.push({ruleId:'round.resources',label:'Recursos y acumulado',values:{handsLeft:round.handsLeft,discardsLeft:round.discardsLeft,score:round.score,status:round.status}});return{round,handScore};
@@ -194,6 +204,10 @@ export function finishRound(input:RoundState,mutation:Mutation,options:EngineOpt
   const history=historyEvent(hook);economicEvent(hook);generationEvent(hook,effectiveJokers(inventory(round.game)));randomEvent(hook);decayJokers(round.game,'round',trace);syncResourceBases(round.game);if(won)heldEndRound(round,trace,use);
   const cashout=goalReached?null:cashoutInternal(round.game,round.handsLeft,won,trace,use,round.discardsLeft,{saved:round.status==='rescued',initialHands:round.initialHands,initialDiscards:round.initialDiscards,additionalJokerIncome:history.cashoutBonus});
   if(cashout){round.game.observed.money=valueFact(cashout.balanceAfter);consumeInvestments(round.game,won,blind.kind==='boss');}
+  if(won&&blind.kind==='boss'){
+   const gained=grantBossDefeatTag(round.game);
+   if(gained){use('deck.anaglyph');trace.push({ruleId:'deck.anaglyph',label:'Anaglifo · Double Tag al vencer al jefe',values:{count:gained}});}
+  }
   if(won)round.game.observed.lastCleared=valueFact({ante:blind.ante,kind:blind.kind});
   round.game.observed.nextBlind={status:'unknown',reason:'Registrar la siguiente ciega; no se genera un jefe.'};round.game.observed.shop={status:'unknown',reason:'Registrar ofertas nuevas; la tienda anterior ya no es válida.'};
   if(round.game.schemaVersion==='0.2')round.game={...round.game,phase:'unknown',phaseData:{reason:'La ronda calculada terminó; la siguiente fase real no se registra mediante esta proyección.'}};

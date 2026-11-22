@@ -1,6 +1,7 @@
 import {tagDefinition} from '../catalog/tags.js';
 import type {Fact,GameState,GameStateV02,Result} from '../state/model.js';
-import {createUnknownState} from '../state/model.js';
+import {createUnknownState,orbitalHandSchema} from '../state/model.js';
+import type {HandId} from '../catalog/initial.js';
 import {validateCurrentState,validateState} from '../state/validation.js';
 import {array,boolean,checkJsonValue,enumeration,fact,integer,object,record as recordSchema,text,union} from '../state/schema.js';
 import type {Infer,Schema} from '../state/schema.js';
@@ -8,7 +9,7 @@ import {counterSpecs} from '../catalog/joker-counters.js';
 import {HISTORY_TARGET_KEYS} from '../catalog/history-jokers.js';
 import {observationCounterSpecs} from '../state/observations.js';
 import type {Trace} from '../rules/core.js';
-import {PRICE_TAGS,pricingTagsForShop,tagsAfterObservedSkip} from '../rules/price-tags.js';
+import {grantBossDefeatTag,PRICE_TAGS,pricingTagsForShop,tagsAfterObservedSkip} from '../rules/price-tags.js';
 
 const refSchema=object({ante:integer(1,8),kind:enumeration('small','big','boss')});
 export const progressBlindSchema=object({ante:integer(1,8),kind:enumeration('small','big','boss'),bossId:fact(text()),target:fact(integer(1)),reward:fact(integer(0))});
@@ -45,7 +46,7 @@ const recordCashoutCommandSchema=object({type:enumeration('record_cashout'),amou
 export type CashoutJokerUpdate=Infer<typeof cashoutJokerUpdateSchema>;
 export type RecordCashoutCommand=Infer<typeof recordCashoutCommandSchema>;
 export const runProgressCommandSchema=union(recordCashoutCommandSchema,union(cycleCommandSchema,union(
- object({type:enumeration('observe_skip_tag'),tag:fact(text())},{blind:object({ante:integer(1,8),kind:enumeration('small','big')})}),
+ object({type:enumeration('observe_skip_tag'),tag:fact(text())},{blind:object({ante:integer(1,8),kind:enumeration('small','big')}),orbitalHand:orbitalHandSchema}),
  union(object({type:enumeration('observe_tag_queue'),tags:fact(array(text(),100))}),
  object({type:enumeration('skip_blind'),atNextSelection:{check:(v,p,e)=>v===true||(e.push({path:p,code:'confirmation_required',message:'Confirma que resolviste los efectos del salto y estás en la siguiente selección.'}),false)} as Schema<true>},{money:integer(),nextBlind:progressBlindSchema,tags:fact(array(text(),100))})))));
 export type RunProgressCommand=Infer<typeof runProgressCommandSchema>;
@@ -56,6 +57,19 @@ const unknown=<T>(reason:string):Fact<T>=>({status:'unknown',reason});
 const issue=<T>(code:string,message:string,path='$progress'):Result<T>=>({ok:false,errors:[{path,code,message}]});
 const sameRef=(a:BlindRef,b:BlindRef)=>a.ante===b.ante&&a.kind===b.kind;
 const observedProgressLimitations=['El avance es declarado por el usuario; no verifica las reglas mediante una partida ni calcula efectos de manos omitidas.','El ciclo Small → Big → Boss y el final en ante 8 corresponden al alcance documentado, sin endless ni desafíos; no se infiere compatibilidad del perfil desconocido.'];
+
+/** Read the target of the visible Orbital reward, independent of other blinds. */
+export function observedOrbitalHand(state:GameState,blind?:BlindRef):HandId|undefined {
+  if(state.schemaVersion!=='0.2'||state.phase!=='blind_select')return undefined;
+  const current=state.observed.nextBlind;
+  if(current.status!=='known')return undefined;
+  const ref=blind??current.value;
+  if(ref.ante!==current.value.ante||ref.kind==='boss'||current.value.kind==='boss'||current.value.kind==='big'&&ref.kind==='small')return undefined;
+  if(sameRef(ref,current.value)&&(state.phaseData.skipTag.status!=='known'||state.phaseData.skipTag.value!=='tag_orbital'))return undefined;
+  const observation=state.blindTags?.find(entry=>sameRef(entry,ref));
+  if(observation?.tag.status!=='known'||observation.tag.value!=='tag_orbital')return undefined;
+  return observation.orbitalHand?.status==='known'?observation.orbitalHand.value:undefined;
+}
 
 /** Cycle order only. No tag effects, boss lottery, payout or scoring is performed. */
 export function advanceBlindRef(blind:BlindRef):BlindRef|null {
@@ -97,7 +111,8 @@ function invalidateDynamic(state:GameStateV02,scope:'gap'|'selection'|'round'|'s
     const ctx=context.value;
     const renewalFields=['rerollCost','freeRerolls','visibleRerollCost'] as const;
     const fields=scope==='shop_entry'?renewalFields:scope==='shop'?[...renewalFields,...(inventory.status==='known'&&inventory.value.some(j=>j.catalogId==='perkeo')?['consumables' as const]:[])] as const:dynamicContext;
-    const preservePriceQueue=scope!=='gap'&&ctx.tags?.status==='known'&&(ctx.tags.value.length===0||ctx.tags.value.some(id=>PRICE_TAGS.has(id)||id==='tag_double'));
+    const deck=state.observed.deckId;
+    const preservePriceQueue=scope!=='gap'&&ctx.tags?.status==='known'&&(ctx.tags.value.length===0||ctx.tags.value.some(id=>PRICE_TAGS.has(id)||id==='tag_double')||deck.status==='known'&&deck.value==='anaglyph'&&ctx.tags.value.every(id=>id==='tag_investment'));
     if(preservePriceQueue&&ctx.tags?.status==='known')ctx.tags.value=ctx.tags.value.filter(id=>!(scope==='selection'&&tagDefinition(id)?.trigger==='round_start_bonus')&&!(scope==='round'&&state.observed.nextBlind.status==='known'&&state.observed.nextBlind.value.kind==='boss'&&id==='tag_investment'));
     for(const field of fields)if(ctx[field]&&!(field==='tags'&&preservePriceQueue)&&!(field==='grosMichelExtinct'&&ctx.grosMichelExtinct?.status==='known'&&ctx.grosMichelExtinct.value===true))ctx[field]=unknown(reason) as never;
     if(scope==='round'||scope==='gap')for(const field of ['handCounts','roundHandCounts'] as const)if(ctx[field])for(const key of Object.keys(ctx[field]))ctx[field][key]=unknown(reason);
@@ -175,8 +190,10 @@ export function applyRunProgress(input:unknown,commandInput:unknown,options:Prog
     const ref=command.blind??{ante:blind.value.ante,kind:blind.value.kind};
     if(ref.ante!==blind.value.ante||blind.value.kind==='big'&&ref.kind==='small')
       return issue('wrong_blind','Registra la etiqueta de la ciega actual o de la siguiente ciega visible del mismo ante.');
+    if(command.orbitalHand&&(command.tag.status!=='known'||command.tag.value!=='tag_orbital'))
+      return issue('invalid_orbital_target','Solo la etiqueta orbital tiene una mano objetivo.','$command.orbitalHand');
     const retained=(state.blindTags??[]).filter(entry=>!sameRef(entry,ref));
-    state.blindTags=[...retained,{...ref,tag:structuredClone(command.tag)}];
+    state.blindTags=[...retained,{...ref,tag:structuredClone(command.tag),...(command.orbitalHand?{orbitalHand:command.orbitalHand}:{})}];
     if(sameRef(ref,blind.value))state.phaseData.skipTag=command.tag;
   }else if(command.type==='observe_tag_queue'){
     if(state.phase==='finished'||state.phase==='unknown')return issue('wrong_phase','Ubica una partida en curso antes de registrar sus etiquetas.');
@@ -230,6 +247,7 @@ export function applyRunProgress(input:unknown,commandInput:unknown,options:Prog
     }
     if(command.outcome==='won'){
       state.observed.lastCleared=known({ante:blind.value.ante,kind:blind.value.kind});
+      if(blind.value.kind==='boss')grantBossDefeatTag(state);
       if(blind.value.ante===8&&blind.value.kind==='boss')next={...state,phase:'finished',phaseData:{outcome:'won',reason:known('El usuario confirmó la victoria contra el jefe del ante 8.')}};
       else next={...state,phase:'cashout',phaseData:{blind:known({ante:blind.value.ante,kind:blind.value.kind}),amount:unknown('No se calcula el cobro a partir del resumen; registra el saldo final observado.')}};
     }else next={...state,phase:'finished',phaseData:{outcome:'lost',reason:known('El usuario confirmó que perdió la ronda. No se concedió premio.')}};

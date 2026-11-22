@@ -59,6 +59,24 @@ try{
  const saved=await raw(n);await n.reload();await n.waitForFunction(()=>location.hash==='#menu');assert.equal(await raw(n),saved);await setup(n);await n.locator('#setup-tab-continue').click();assert.match(await n.locator('#setup-summary').innerText(),/SYNTHETIC42/);assert.deepEqual(await n.locator('.setup-save-stats dd').allTextContents(),['0','1','$4','—']);assert.equal(await n.locator('#setup-summary .stake-art').getAttribute('data-stake'),'white');await start(n);assert.equal(await raw(n),saved);assert.equal(await writes(n),0);
  pass('direct-atomic-seeded-start-blind-screen-reload-and-continue',{startingMoney:4,hands:5,seed:'manual reference, not RNG'});await seeded.context.close();
 
+ const anaglyph=await session(),a=anaglyph.page;await setup(a);await deck(a,'anaglyph');await start(a);
+ const tagQueue=async()=> (await current(a)).state.observed.jokerContext.value.tags.value;
+ assert.equal((await current(a)).state.observed.deckId.value,'anaglyph');assert.deepEqual(await tagQueue(),[]);
+ await a.locator('#blind-boss-picker').click();await a.locator('[data-boss-choice=the_psychic]').click();
+ for(const kind of ['small','big','boss']){
+  await a.locator('#blind-select-'+kind).click();await a.locator('#round-cashout').waitFor();
+  assert.deepEqual(await tagQueue(),[],'Selecting a blind does not report a win');
+  const refresh=a.locator('#round-cashout-reload');if(await refresh.isVisible())await refresh.click();
+  await a.locator('#round-cashout-amount').fill('5');await a.locator('#round-cashout-submit').click();await a.locator('#game-shop').waitFor();
+  assert.deepEqual(await tagQueue(),kind==='boss'?['tag_double']:[]);
+  await a.locator('#game-shop-next').click();await a.waitForFunction(()=>document.querySelector('#blind-screen')?.dataset.mode==='select');
+ }
+ await a.locator('[data-tag-slot=big]').click();await a.locator('[data-tag-choice=tag_negative]').click();
+ await a.locator('[data-tag-slot=small]').click();await a.locator('[data-tag-choice=tag_double]').click();
+ assert.equal(await a.locator('.blind-speech strong').innerText(),'Salta');
+ assert.deepEqual(await tagQueue(),['tag_double'],'Advice does not acquire another Double Tag');
+ pass('anaglyph-start-earns-one-double-tag-at-the-boss-and-enables-double-advice');await anaglyph.context.close();
+
  const replacement=await session({saved:fixture}),r=replacement.page;await setup(r);await deck(r,'yellow');
  assert.equal(await r.locator('#setup-replace').count(),0);assert.equal(await r.locator('#setup-play').isEnabled(),true);
  await r.locator('#setup-back').click();await r.locator('#run-setup').waitFor({state:'hidden'});assert.equal(await raw(r),fixture);assert.equal(await writes(r),0);

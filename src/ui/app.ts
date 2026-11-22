@@ -30,7 +30,7 @@ import {previewJoker} from '../evaluation/joker-preview.js';
 import {contextRatings} from '../advisor/ratings.js';
 import type {JokerReference} from '../catalog/collection.js';
 import {mountDeckEditor} from './deck-editor.js';
-import {DECK_PROFILES,resolveDeck,deckDefinition} from '../catalog/decks.js';
+import {DECK_PROFILES,DECKS,resolveDeck,deckDefinition} from '../catalog/decks.js';
 import {mountCollection} from './collection.js';
 import {createConfirmedStore,CONFIRMED_STORAGE_KEY,analysisBinding,MAX_RECORD_BYTES,validateConfirmedRecord} from '../storage/confirmed-store.js';
 import type {ConfirmedRecord} from '../storage/confirmed-store.js';
@@ -207,7 +207,7 @@ function renderRecord(){
   const summary=$('summary');summary.replaceChildren();const host=$('state-form');host.hidden=false;host.replaceChildren();$('record-save')?.querySelector('.save-bar')?.remove();
   if(loadFailed){host.append(node('p','No se pudo cargar el registro. No se ha sobrescrito. Puedes importar una copia validada en «Copias».','error'));return;}
   readLiveState=null;refreshOwnedFits=()=>{};const s=record?.state;
-  const deckDisplay=$('active-deck');deckDisplay.textContent=s?(deckDefinition(value(s.observed.deckId)??'')?.name??`Baraja ${value(s.observed.deckId)??'desconocida'} · sin soporte`):'15 barajas · 10 con cálculo';
+  const deckDisplay=$('active-deck');deckDisplay.textContent=s?(deckDefinition(value(s.observed.deckId)??'')?.name??`Baraja ${value(s.observed.deckId)??'desconocida'} · sin soporte`):`${Object.keys(DECK_PROFILES).length} barajas · ${Object.keys(DECKS).length} con cálculo`;
   host.hidden=s?.phase==='open_pack';if(host.hidden)return;
   if(s && unsupportedForEditor(s)){
     const text=s.schemaVersion==='0.2'&&s.phase==='unknown'?`Fase sin registrar. ${s.phaseData.reason}`:s.phase==='finished'?'El registro completo queda disponible para exportar o corregir con Deshacer.':s.phase!=='shop'?'Los datos se conservan. Completa el recorrido desde los controles superiores.':'Copia fuera del formulario compatible. Se conserva íntegra; el análisis indicará sus límites.';
@@ -803,11 +803,11 @@ function observeShopQuote(price:number|null,binding:Pick<GameState,'runId'|'revi
 const blindScreen=mountBlindScreen({
  compareBlind:()=>$('run-compare-blind')?.click(),
  snapshot:()=>({state:record?structuredClone(record.state):null,writable:lock.owned&&!loadFailed,dirty}),
- observeTag:(kind,tag,binding)=>{
+ observeTag:(kind,tag,binding,orbitalHand)=>{
   if(!record||record.state.revision!==binding.revision||record.state.runId!==binding.runId)return 'La partida cambió. Abre de nuevo la etiqueta.';
   if(dirty||!lock.owned||loadFailed)return 'Termina la edición o recupera el control de escritura antes de registrar la etiqueta.';
   const current=value(record.state.observed.nextBlind);if(!current)return 'Falta registrar la ciega actual.';
-  return commit(()=>store.progress({confirmationId:uuid(),confirmed:true,expected:analysisBinding(record!.state),updatedAt:now(),command:{type:'observe_skip_tag',blind:{ante:current.ante,kind},tag:tag===null?unknown():known(tag)},inventory:{unchanged:true}}))?null:$('message').textContent||'No se pudo guardar la etiqueta.';
+  return commit(()=>store.progress({confirmationId:uuid(),confirmed:true,expected:analysisBinding(record!.state),updatedAt:now(),command:{type:'observe_skip_tag',blind:{ante:current.ante,kind},tag:tag===null?unknown():known(tag),...(tag==='tag_orbital'?{orbitalHand:orbitalHand===undefined?unknown():known(orbitalHand)}:{})},inventory:{unchanged:true}}))?null:$('message').textContent||'No se pudo guardar la etiqueta.';
  },
  observeBoss:(id,binding)=>{
   if(!record||record.state.revision!==binding.revision||record.state.runId!==binding.runId)return 'La partida cambió. Abre de nuevo el jefe.';

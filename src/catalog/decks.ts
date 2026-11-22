@@ -38,12 +38,12 @@ export const DECK_PROFILES = {
  checkered:{name:'Baraja cuadriculada',effect:'26 picas y 26 corazones iniciales.',conditions:[{when:'run_start',kind:'composition',mode:'red_black_suits'}],engine:true,limitation:'Requiere composición explícita con un identificador por copia.'},
  zodiac:{name:'Baraja del zodíaco',effect:'Inicia con Tarot Merchant, Planet Merchant y Overstock.',conditions:[grant('voucher','v_tarot_merchant'),grant('voucher','v_planet_merchant'),grant('voucher','v_overstock_norm')],engine:false,limitation:'Falta integrar vales y ofertas no comodín en H2.'},
  painted:{name:'Baraja pintada',effect:'+2 cartas en mano; −1 espacio de comodín.',conditions:[add('handSize',2),add('jokerSlots',-1)],engine:true,limitation:''},
- anaglyph:{name:'Baraja anaglifo',effect:'Gana un Double Tag después de cada jefe derrotado.',conditions:[{when:'boss_defeated',kind:'grant_tag',id:'tag_double',count:1}],engine:false,limitation:'Falta integrar adquisición y consumo de tags en H2.'},
+ anaglyph:{name:'Baraja anaglifo',effect:'Gana un Double Tag después de cada jefe derrotado.',conditions:[{when:'boss_defeated',kind:'grant_tag',id:'tag_double',count:1}],engine:true,limitation:'Confirma las etiquetas pendientes cuando no se conozca la cola anterior.'},
  plasma:{name:'Baraja de plasma',effect:'Equilibra fichas y Mult al final; objetivos de ciega ×2.',conditions:[{when:'blind_target',kind:'multiply',factor:2},{when:'final_scoring',kind:'floor_average'}],engine:true,limitation:''},
  erratic:{name:'Baraja errática',effect:'52 cartas con rango y palo aleatorios al iniciar.',conditions:[{when:'run_start',kind:'composition',mode:'random_rank_suit'}],engine:true,limitation:'Requiere registrar la composición real; no se genera sin semilla.'}
 } as const satisfies Record<string,Profile>;
 export type DeckId=keyof typeof DECK_PROFILES;
-export type SupportedDeck='blue'|'red'|'yellow'|'green'|'black'|'painted'|'plasma'|'abandoned'|'checkered'|'erratic';
+export type SupportedDeck={[Id in DeckId]:(typeof DECK_PROFILES)[Id]['engine'] extends true?Id:never}[DeckId];
 export function deckProfile(id:string):Profile|undefined{return Object.hasOwn(DECK_PROFILES,id)?DECK_PROFILES[id as DeckId]:undefined;}
 export function resolveDeck(id:string){
  const profile=deckProfile(id);if(!profile)throw new Error(`Baraja desconocida: ${id}`);
@@ -68,7 +68,7 @@ export function resolveDeck(id:string){
   evidence:{version:'1.0.1o-FULL',status:'provisional',kind:'local_source',source:'L03',observedInGame:false} as const};
 }
 /** Engine/editor API contains only integrated profiles. */
-export const DECKS=Object.fromEntries((['blue','red','yellow','green','black','painted','plasma','abandoned','checkered','erratic'] as const).map(id=>[id,resolveDeck(id)])) as Record<SupportedDeck,ReturnType<typeof resolveDeck>>;
+export const DECKS=Object.fromEntries((Object.keys(DECK_PROFILES) as DeckId[]).filter(id=>DECK_PROFILES[id].engine).map(id=>[id,resolveDeck(id)])) as Record<SupportedDeck,ReturnType<typeof resolveDeck>>;
 export function deckDefinition(id:string){return Object.hasOwn(DECKS,id)?DECKS[id as SupportedDeck]:undefined;}
 /** New-run template; no random generation or inference of the current deck. */
 export function startingComposition(id:string):{status:'known';cards:Card[]}|{status:'unknown';reason:string;count:52}{

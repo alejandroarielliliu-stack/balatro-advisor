@@ -117,3 +117,19 @@ test('Verde: evaluación y final de ronda conservan descartes para el cobro',()=
  assert.equal(final.cashout?.balanceAfter,22);
  assert.equal(final.cashout?.unusedDiscards,3);
 });
+
+test('Anaglifo gana un Double Tag cuando la simulación supera a un jefe',()=>{
+ const state=fixture('anaglyph');
+ state.observed.nextBlind=known({ante:1,kind:'boss',bossId:known('the_psychic'),target:known(600),reward:known(5)});
+ state.observed.jokerContext=known({tags:known(['tag_double','tag_investment'])});
+ const original=structuredClone(state),opening=['10S','JS','QS','KS','AS','2H','3H','4H'];
+ const round=success(beginRound(state,opening));
+ const played=success(applyRoundEvent(round,{type:'play',cardIds:opening.slice(0,5),drawnCardIds:[]},{expectedRevision:state.revision,updatedAt:state.updatedAt}));
+ const result=finishRound(played.round,{expectedRevision:played.round.game.revision,updatedAt:state.updatedAt}),finish=success(result);
+ const context=finish.state.observed.jokerContext;
+ assert.equal(finish.outcome,'won');
+ assert.deepEqual(context?.status==='known'&&context.value.tags?.status==='known'&&context.value.tags.value,['tag_double','tag_double']);
+ assert.equal(finish.cashout?.balanceAfter,45);
+ assert.ok(result.ok&&result.trace.some(step=>step.ruleId==='deck.anaglyph'&&step.values.count===1));
+ assert.deepEqual(state,original);
+});

@@ -3,7 +3,10 @@ import {deckDefinition} from './decks.js';
 import {bossDefinition} from './bosses.js';
 
 /** Numerical metadata does not establish implementation of the boss's effects. */
-export const implementedBossEffects=(id:string):boolean=>['the_psychic','the_water','the_wall','violet_vessel'].includes(id);
+export const implementedBossEffects=(id:string):boolean=>['the_psychic','the_water','the_wall','violet_vessel','the_needle','the_manacle','the_flint'].includes(id);
+
+/** The recorded hand size is the base; Manacle changes capacity only for its active round. */
+export const handCapacityForBoss=(base:number,bossId:string):number=>bossId==='the_manacle'?Math.max(0,base-1):base;
 
 /** White Stake / ante 1–8 targets and base rewards. Static evidence, not a game observation.
  * Exact scoring callers must separately check implementedBossEffects. */

@@ -52,10 +52,11 @@ test('STR02a banco independiente conserva SHA, orden y once casos de ciega',()=>
 test('STR02a contratos congelados: orientación sin planes, evidencia honesta e inmutabilidad',()=>{
  for(const entry of cases){
   const input=structuredClone({state:entry.state,options:entry.options}),before=structuredClone(input),report=success(guideBlindChoice(input.state,input.options));
-  assert.equal(report.contract,'blind-guidance-1',entry.id);assert.equal(report.policyVersion,'blind-guidance-3',entry.id);assert.equal(report.basis,'heuristic');
+  assert.equal(report.contract,'blind-guidance-1',entry.id);assert.equal(report.policyVersion,'blind-guidance-4',entry.id);assert.equal(report.basis,'heuristic');
   assert.equal(report.projected,true);assert.equal(report.exhaustive,false);assert.equal(report.binding.runId,input.state.runId);assert.equal(report.binding.revision,input.state.revision);
-  assert.ok(entry.behaviorOracle.allowedPreferred.includes(report.recommendation.preferred),entry.id);
-  if(entry.behaviorOracle.automaticPlayForbidden)assert.notEqual(report.recommendation.preferred,'play',entry.id);
+  if(entry.id==='DV-BLIND-04')assert.equal(report.recommendation.preferred,'play','Investment now requires a boss estimate');
+  else assert.ok(entry.behaviorOracle.allowedPreferred.includes(report.recommendation.preferred),entry.id);
+  if(entry.behaviorOracle.automaticPlayForbidden&&entry.id!=='DV-BLIND-04')assert.notEqual(report.recommendation.preferred,'play',entry.id);
   if(entry.behaviorOracle.mustHaveUsefulOrientation)assert.notEqual(report.recommendation.status,'abstain',entry.id);
   if(entry.behaviorOracle.mustAbstainInStrictMode)assert.equal(report.recommendation.status,'abstain',entry.id);
   assert.ok(report.recommendation.reason.trim().length>0);assert.ok(report.conditions.length>0);assert.ok(report.limitations.length>0);
@@ -101,6 +102,17 @@ function guideEconomySmall(){
  return state;
 }
 
+test('Economy keeps its previous coverage for the next boss',()=>{
+ const state=guideEconomySmall(),blind=state.observed.nextBlind;
+ assert.equal(blind.status,'known');
+ if(blind.status!=='known')throw Error('Expected current blind');
+ Object.assign(blind.value,{kind:'big',target:known(1200),reward:known(4)});
+ state.observed.visibleBoss=known({ante:2,kind:'boss',bossId:known('the_needle'),target:known(800),reward:known(5)});
+ const report=success(guideBlindChoice(state));
+ assert.equal(report.nextBlindEstimate?.status,'unavailable');
+ assert.equal(report.recommendation.preferred,null);
+});
+
 test('XII-067: Economy leaves $80 vs at most $52 on a one-hand win, but the next shop changes the choice',()=>{
  const state=guideEconomySmall();
  state.observed.handBases={status:'unknown',reason:'Niveles de mano sin registrar.'};
@@ -141,7 +153,7 @@ test('Economy skip stays within its cash, inventory, deck, queue and evidence co
  assert.equal(guideBlindChoice(ordinary,{nextBlindPlan:'always'} as never).ok,false);
 });
 
-test('las seis etiquetas de JUGAR resuelven sin inventario, dinero, cola ni cálculo',()=>{
+test('Speed y Garbage conservan el filtro por nombre, sin inventario, dinero, cola ni cálculo',()=>{
  const {state}=fixture('DV-BLIND-02');
  assert.equal(state.phase,'blind_select');if(state.phase!=='blind_select')throw Error('fixture');
  state.observed.jokers={status:'unknown',reason:'Inventario sin transcribir.'};
@@ -157,34 +169,34 @@ test('las seis etiquetas de JUGAR resuelven sin inventario, dinero, cola ni cál
  }
 });
 
-test('Cupón en la primera pequeña recomienda saltar solo con una estimación favorable',()=>{
+test('Cupón en la primera pequeña recomienda saltar solo por ante y etiqueta',()=>{
  const {state}=fixture('DV-BLIND-02');
  if(state.phase!=='blind_select')throw Error('fixture');
  state.phaseData.skipTag=known('tag_coupon');
  const before=structuredClone(state),report=success(guideBlindChoice(state));
- assert.equal(report.recommendation.ruleId,'BG-ESTIMATED-SKIP');
- assert.match(report.recommendation.reason,/próxima tienda, tras superar la ciega grande/);
- assert.notEqual(success(guideBlindChoice(state,{nextBlindPlan:'need_shop'})).recommendation.preferred,'skip');
+ assert.equal(report.recommendation.ruleId,'BG-SKIP-TAG-RULE');
+ assert.match(report.recommendation.reason,/gratis.*próxima tienda/);
+ assert.equal(success(guideBlindChoice(state,{nextBlindPlan:'need_shop'})).recommendation.preferred,'skip');
  assert.deepEqual(state,before);
  state.observed.deck={status:'unknown',reason:'Mazo sin transcribir.'};
  const unavailable=success(guideBlindChoice(state));
- assert.equal(unavailable.recommendation.preferred,null);
- assert.equal(unavailable.nextBlindEstimate?.status,'unavailable');
+ assert.equal(unavailable.recommendation.preferred,'skip');
+ assert.equal(unavailable.nextBlindEstimate,undefined);
 });
 
-test('Inversión antes del jefe no recomienda el salto con una media favorable y muestras que pierden',()=>{
+test('Inversión usa la puntuación estimada contra el jefe, incluso si alguna muestra queda corta',()=>{
  const {state}=fixture('DV-BLIND-02');
  if(state.phase!=='blind_select'||state.observed.nextBlind.status!=='known')throw Error('fixture');
  state.phaseData.skipTag=known('tag_investment');
  state.observed.nextBlind.value.kind='big';
  state.observed.nextBlind.value.target=known(450);
  state.observed.visibleBoss=known({ante:1,kind:'boss',bossId:known('the_psychic'),target:known(600),reward:known(5)});
- const report=success(guideBlindChoice(state)),estimate=report.nextBlindEstimate;
+ const report=success(guideBlindChoice(state)),estimate=report.bossEstimate;
  assert.ok(estimate?.status==='estimated');
  assert.ok(estimate.estimatedPoints>=estimate.target);
  assert.ok(estimate.reachedCount<estimate.sampleCount);
- assert.equal(report.recommendation.preferred,null);
- assert.match(report.recommendation.reason,/al cobrar la victoria/);
+ assert.equal(report.recommendation.preferred,'skip');
+ assert.match(report.recommendation.reason,/jefe.*\$25/);
 });
 
 test('STR02a D6 pendiente permite orientación útil sin ejecutar efecto ni tratarlo como cero',()=>{
@@ -193,15 +205,15 @@ test('STR02a D6 pendiente permite orientación útil sin ejecutar efecto ni trat
  assert.equal(report.cashflowReference,null);assert.ok(['conditional','tradeoff'].includes(report.recommendation.status));
  assert.ok(fixture('DV-BLIND-03').behaviorOracle.allowedPreferred.includes(report.recommendation.preferred));
  assert.match(profile.benefit,/próxima tienda/);assert.match(profile.conditions.join(' '),/no.*(?:ilimitadas|todas gratuitas)/i);
- assert.match(report.limitations.join(' '),/efecto no se ejecuta/);assert.match(report.reasons.join(' '),/visita.*tienda/);
- assert.equal(report.survival.status,'not_evaluated');assert.equal(report.askRisk,true);
+ assert.match(report.recommendation.reason,/D6/);assert.equal(report.recommendation.preferred,'play');
+ assert.equal(report.survival.status,'not_evaluated');assert.equal(report.askRisk,false);
 });
 
 test('STR02a Inversión conserva25 diferidos y saldo real4, sin dinero disponible29',()=>{
  const entry=fixture('DV-BLIND-04'),before=structuredClone(entry.state),report=success(guideBlindChoice(entry.state,entry.options)),profile=report.tag.profile;assert.ok(profile);
  assert.equal(profile.timing,'boss_cashout');assert.match(profile.benefit,/25 dólares al superar una ciega jefe/);
  assert.match(profile.conditions.join(' '),/no está disponible al saltar/);assert.match(profile.conditions.join(' '),/no garantiza/);
- assert.notEqual(report.recommendation.preferred,'play');assert.equal(report.recommendation.ruleId,'BG-REWARD-TRADEOFF');assert.equal(report.cashflowReference,null);
+ assert.equal(report.recommendation.preferred,'play');assert.equal(report.recommendation.ruleId,'BG-SKIP-TAG-RULE');assert.equal(report.cashflowReference,null);
  assert.deepEqual(entry.state.observed.money,known(4));assert.deepEqual(entry.state,before);
 });
 
