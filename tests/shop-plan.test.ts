@@ -43,6 +43,7 @@ test('paid search keeps purchase money available and rechecks on each new price'
 });
 test('unknown price and an unknown offer cannot justify paying for new stock',()=>{
  const f=fixture();f.snapshot.jokers=[offer('steel_joker',7)];f.snapshot.rerollCost=null;
+ f.state.observed.jokerContext=known({tags:known([]),visibleRerollCost:{status:'unknown',reason:'Precio pendiente en una tienda retomada.'}});
  const unknown=inspect(f,{need:'score',purchaseReserve:8});assert.equal(unknown.context.recommendation.status,'abstain');
  f.snapshot.rerollCost=5;f.snapshot.jokers.push({...offer('joker',2),price:null});
  assert.ok(!inspect(f,{need:'score',purchaseReserve:8}).context.recommendation.offerIds.includes('reroll'));

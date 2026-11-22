@@ -1,7 +1,7 @@
 import {packOfferSchema} from '../state/pack-contract.js';
 import type {PackOffer} from '../state/pack-contract.js';
 import type {Result,VoucherOffer,CurrentShopOffer} from '../state/model.js';
-import {array, boolean, checkJsonValue, enumeration, object, text} from '../state/schema.js';
+import {array, boolean, checkJsonValue, enumeration, object, text, union} from '../state/schema.js';
 import type {Schema} from '../state/schema.js';
 import {voucherOfferSchema} from '../state/model.js';
 import {validateState} from '../state/validation.js';
@@ -35,9 +35,10 @@ const offerList:Schema<unknown[]>={check(value,path,errors){
   errors.push({path,code:'array',message:'Las ofertas deben ser una lista.'});return false;
 }};
 const priceTag=enumeration('tag_coupon','tag_uncommon','tag_rare','tag_foil','tag_holo','tag_polychrome','tag_negative');
+const shopPriceTag=union(priceTag,enumeration('tag_d_six'));
 const observationSchema=object({confirmationId:text(),confirmed:boolean,
   expected:bindingSchema,updatedAt:text(),shopId:text(),offers:offerList
-},{ignoredOtherOffers:array(text()),voucherOffers:array(voucherOfferSchema,100),packOffers:array(packOfferSchema,100),pricingTags:array(priceTag,100),consumedPricingTags:array(priceTag,100)});
+},{ignoredOtherOffers:array(text()),voucherOffers:array(voucherOfferSchema,100),packOffers:array(packOfferSchema,100),pricingTags:array(shopPriceTag,100),consumedPricingTags:array(priceTag,100)});
 
 /**
  * The visual shop and H2 share the T09b journal, not a second storage document.

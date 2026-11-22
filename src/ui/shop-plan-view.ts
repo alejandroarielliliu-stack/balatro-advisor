@@ -35,13 +35,16 @@ export function openShopPlan(view:ShopPlanView,trigger?:HTMLElement):void {
  const toggleReserve=()=>{reserveLabel.hidden=!['score','economy'].includes(need.value);reserve.disabled=reserveLabel.hidden;};
  need.onchange=toggleReserve;toggleReserve();
  const quote=dollars('game-shop-quoted-cost',initialQuote,0);quote.placeholder='Desconocido';
+ const quoteField=label('Precio observado de renovar ($)',quote);
+ const adjustment=element('details');adjustment.id='shop-plan-reroll-adjustment';
+ if(initialQuote!==null)adjustment.append(element('summary',`Renovar $${initialQuote} · corregir precio`),quoteField);
  const complete=element('input');complete.type='checkbox';complete.id='shop-plan-complete';
  complete.checked=initial.observed.shop.status==='known'&&initial.observed.shop.value.ignoredOtherOffers.length===0;
  const completeLabel=label('Ya registré todas las cartas de esta tienda',complete);
  const error=element('p');error.className='game-shop-editor-error';error.setAttribute('role','alert');
  const submit=element('button','Ver consejo');submit.type='submit';submit.id='shop-plan-apply';
  const actions=element('div');actions.className='game-shop-editor-actions';actions.append(submit);
- form.append(label('¿Qué necesitas en esta tienda?',need),reserveLabel,label('Precio de renovar que ves ahora ($)',quote),completeLabel,error,actions);
+ form.append(label('¿Qué necesitas en esta tienda?',need),reserveLabel,initialQuote===null?quoteField:adjustment,completeLabel,error,actions);
  form.onsubmit=event=>{
   event.preventDefault();
   try{

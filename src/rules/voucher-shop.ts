@@ -10,6 +10,7 @@ import {fail,guardPendingTags,inventory,need,run,safe,stateInput,valueFact} from
 import type {EngineOptions,EngineResult} from './core.js';
 import type {Mutation,ShopChange} from './shop.js';
 import {quoteShopPrice,repriceShopOffers} from './shop-pricing.js';
+import {applyRerollVoucher,REROLL_VOUCHERS} from './reroll-quote.js';
 
 export interface VoucherPurchaseAction {type:'buy_voucher';offerId:string}
 export type VoucherPurchaseChange=Omit<ShopChange,'occupiedSlots'|'freeSlots'> & {occupiedSlots:number|null;freeSlots:number|null};
@@ -73,6 +74,7 @@ export function applyVoucherPurchase(input:unknown,action:VoucherPurchaseAction,
   if(effect.jokerSlots||roundField)use('vouchers.resources');
   if(offer.catalogId==='v_seed_money'||offer.catalogId==='v_money_tree')use('vouchers.interest');
 
+  if(REROLL_VOUCHERS.some(id=>id===offer.catalogId))applyRerollVoucher(state);
   owned.push(offer.catalogId);
   if(offer.catalogId==='v_clearance_sale'||offer.catalogId==='v_liquidation')repriceShopOffers(state);
   if(roundField)state.observed.resources[roundField]=valueFact(safe(roundBefore+1));

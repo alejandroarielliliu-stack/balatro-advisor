@@ -10,6 +10,8 @@ import {handPatterns} from './hand-patterns.js';
 import {booleanChance,requireChoice} from './effect-choices.js';
 import {levelUp} from './random-jokers.js';
 import {quoteShopPrice} from './shop-pricing.js';
+import {adjustChaosRerolls,observedRerollQuote,rerollContextAfterObservation} from './reroll-quote.js';
+import {bankBalance,creditLimit} from './economic-jokers.js';
 
 export const generationRule='jokers.generation';
 const HANDS=Object.keys(HAND_BASES) as HandId[];
@@ -170,18 +172,34 @@ export function generationSellingSelf(input:FullEventInput,sold:JokerInstance):v
   copy.edition=valueFact('base');
   const extra=copy.counters.extraSell?need(copy.counters.extraSell,'$copy.counters.extraSell'):0;
   copy.sellValue=quoteShopPrice(input.state,{kind:'joker',catalogId:copy.catalogId,edition:'base',stickers:need(copy.stickers,'$copy.stickers'),extraSell:extra}).sellValue;
- }if(copy.catalogId==='invisible')copy.counters.rounds=valueFact(0);physical(input.state).push(copy);trace(input,'Invisible Joker · copia',{source:source.instanceId,created:copy.instanceId});}
+ }if(copy.catalogId==='invisible')copy.counters.rounds=valueFact(0);generationShopInventoryChanged(input.state,copy,'add',input.trace,input.use);physical(input.state).push(copy);trace(input,'Invisible Joker · copia',{source:source.instanceId,created:copy.instanceId});}
 }
 
 /** Base cashout bonus; root must place this beside Golden rather than after interest. */
 export function generationRoundIncome(state:GameState):number{let n=0;for(const j of physical(state))if(j.catalogId==='satellite'){const fact=field(state,'planetsUsed');if(!fact)fail('$.observed.jokerContext.planetsUsed','unknown_data','Satellite requiere historial de planetas únicos.');n+=new Set(need(fact,'$planetsUsed')).size;}return n;}
 export function generationShopPrice(state:GameState,kind:'joker'|'tarot'|'planet'|'spectral'|'celestial_pack'|'other_pack',basePrice:number):number{return physical(state).some(j=>j.catalogId==='astronomer')&&(kind==='planet'||kind==='celestial_pack')?0:basePrice;}
 export function generationAllowsDuplicatePool(state:GameState):boolean{return physical(state).some(j=>j.catalogId==='ring_master');}
-export function generationRerollCost(state:GameState):number{const ctx=context(state);if(!ctx.freeRerolls||!ctx.rerollCost)fail('$.observed.jokerContext','unknown_data','Falta coste y rerolls gratis actuales.');return need(ctx.freeRerolls,'$freeRerolls')>0?0:need(ctx.rerollCost,'$rerollCost');}
-export function generationUseReroll(input:FullEventInput):void{const ctx=context(input.state),cost=generationRerollCost(input.state),money=need(input.state.observed.money,'$.observed.money');if(money<cost)fail('$money','insufficient_money','Dinero insuficiente para reroll.');input.state.observed.money=valueFact(money-cost);const free=need(ctx.freeRerolls!,'$freeRerolls');delete ctx.visibleRerollCost;if(free>0)ctx.freeRerolls=valueFact(free-1);else ctx.rerollCost=valueFact(cost+1);trace(input,'Reroll',{cost,moneyBefore:money,moneyAfter:money-cost});generationEvent({...input,stage:'reroll'});}
+export function generationRerollCost(state:GameState):number{
+ const cost=observedRerollQuote(state);
+ if(cost===null)fail('$.observed.jokerContext','unknown_data','Falta el coste de renovación de esta tienda.');
+ return cost;
+}
+export function generationUseReroll(input:FullEventInput):void{
+ const state=input.state,cost=generationRerollCost(state),money=need(state.observed.money,'$.observed.money');
+ const balance=bankBalance(money-cost);
+ if(cost>0&&balance<0&&balance < -creditLimit(state))fail('$money','insufficient_money','Dinero insuficiente para reroll.');
+ state.observed.jokerContext=valueFact(rerollContextAfterObservation(state));
+ state.observed.money=valueFact(balance);
+ trace(input,'Reroll',{cost,moneyBefore:money,moneyAfter:balance});
+ generationEvent({...input,stage:'reroll'});
+}
 
 /** Acquisition/removal changes free rerolls immediately, without resetting ones used. */
 export function generationShopInventoryChanged(state:GameState,joker:JokerInstance,change:'add'|'remove',traces:Trace[],use:(id:string)=>void):void{
- if(joker.catalogId!=='chaos')return;const ctx=context(state);if(!ctx.freeRerolls)fail('$.observed.jokerContext.freeRerolls','unknown_data','Faltan rerolls gratis actuales.');const before=need(ctx.freeRerolls,'$freeRerolls'),after=Math.max(0,before+(change==='add'?1:-1));delete ctx.visibleRerollCost;ctx.freeRerolls=valueFact(after);trace({state,trace:traces,use},'Chaos · inventario cambia',{change,before,after});
+ if(joker.catalogId!=='chaos')return;
+ const before=state.observed.jokerContext?.status==='known'?state.observed.jokerContext.value.freeRerolls:undefined;
+ adjustChaosRerolls(state,change);
+ const after=state.observed.jokerContext?.status==='known'?state.observed.jokerContext.value.freeRerolls:undefined;
+ trace({state,trace:traces,use},'Chaos · inventario cambia',{change,before:before?.status==='known'?before.value:'unknown',after:after?.status==='known'?after.value:'unknown'});
 }
 

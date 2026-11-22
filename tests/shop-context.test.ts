@@ -160,7 +160,7 @@ test('shop context: voucher prerequisites and already acquired offers are checke
  const existing=option(state,snapshot,'owned');assert.match(existing.reasons.join(' '),/ya está adquirido/);assert.equal(existing.resourceChanges,undefined);
 });
 
-test('shop context: all 32 voucher descriptions are evaluated, exactly 12 integrated effects have projections',()=>{
+test('shop context: all 32 voucher descriptions are evaluated, exactly 14 integrated effects have projections',()=>{
  let projections=0;
  for(const voucher of VOUCHER_CATALOG){
   const state=fixture(70),snapshot=shop();
@@ -170,10 +170,11 @@ test('shop context: all 32 voucher descriptions are evaluated, exactly 12 integr
   snapshot.vouchers=[{offerId:voucher.id,catalogId:voucher.id,price}];
   const evaluated=option(state,snapshot,voucher.id);
   assert.equal(evaluated.title,voucher.name);assert.equal(evaluated.moneyAfter,70-price);assert.equal(evaluated.fit,undefined);
+  if(voucher.id==='v_reroll_surplus'||voucher.id==='v_reroll_glut')assert.equal(evaluated.coverage,'modeled');
   if(evaluated.resourceChanges){projections++;assert.equal(evaluated.coverage,'modeled');}
   else {assert.equal(evaluated.coverage,'limited');assert.match(evaluated.limitations.join(' '),/sin integración/);}
  }
- assert.equal(projections,12);
+ assert.equal(projections,14);
 });
 
 test('shop context: Seed Money changes a cap without creating cash and Green cannot receive interest',()=>{

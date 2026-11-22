@@ -14,7 +14,40 @@ export const engineArt:Record<string,string>=Object.fromEntries(Object.entries(A
 type Category='joker'|'deck'|'voucher'|'tarot'|'planet'|'spectral'|'enhancement'|'seal'|'edition'|'pack'|'tag'|'blind';
 const names:Record<Category,string>={joker:'Comodines',deck:'Barajas',voucher:'Vales',tarot:'Cartas de tarot',planet:'Cartas de planeta',spectral:'Cartas espectrales',enhancement:'Cartas mejoradas',seal:'Sellos',edition:'Ediciones',pack:'Paquetes',tag:'Etiquetas',blind:'Ciegas'};
 const catalogues:Record<Exclude<Category,'joker'>,readonly CollectionEntry[]>={deck:COLLECTION_DECKS,voucher:COLLECTION_VOUCHERS,tarot:COLLECTION_TAROT,planet:COLLECTION_PLANETS,spectral:COLLECTION_SPECTRAL,enhancement:COLLECTION_ENHANCEMENTS,seal:COLLECTION_SEALS,edition:COLLECTION_EDITIONS,pack:COLLECTION_BOOSTERS,tag:COLLECTION_TAGS,blind:COLLECTION_BLINDS};
-const pageSizes:Partial<Record<Category,number>>={joker:15,tarot:11,spectral:9,voucher:8,pack:8,deck:1};
+const pageSizes:Partial<Record<Category,number>>={joker:15,tarot:11,spectral:9,deck:1};
+
+export function resizeCollectionStage(stage:HTMLElement){
+ const frame=document.getElementById('app-viewport');
+ if(frame)stage.style.setProperty('--collection-scale',String(Math.min(frame.clientWidth/1280,frame.clientHeight/600)));
+}
+
+function collectionCard(entry:CollectionEntry,select:(card:HTMLButtonElement)=>void){
+ const card=el('button','','collection-item collection-card'),portrait=el('span','','collection-item-art');
+ card.type='button';card.dataset.collectionItem=entry.id;card.setAttribute('aria-label',`${entry.name} · ${entry.nameEn}`);card.title=entry.name;
+ portrait.append(collectionArt(entry));card.append(portrait);card.onclick=()=>select(card);
+ return card;
+}
+
+/** The same voucher/pack pages support browsing and recording a shop offer. */
+export function collectionOfferGallery(panel:HTMLElement,kind:'voucher'|'pack',entries:readonly CollectionEntry[],select:(entry:CollectionEntry,card:HTMLButtonElement)=>void,prefix='collection',selected?:string){
+ panel.dataset.category=kind;
+ const well=el('div','','collection-well'),grid=el('div','','collection-grid');grid.id=prefix+'-grid';grid.dataset.category=kind;well.append(grid);
+ const pagination=el('div','','collection-pagination'),prev=el('button','‹','collection-arrow'),next=el('button','›','collection-arrow'),label=el('span','','collection-page');
+ prev.type=next.type='button';prev.id=prefix+'-prev';next.id=prefix+'-next';label.id=prefix+'-page';label.setAttribute('role','status');
+ prev.setAttribute('aria-label','Página anterior');next.setAttribute('aria-label','Página siguiente');pagination.append(prev,label,next);
+ const size=8,pages=Math.max(1,Math.ceil(entries.length/size));
+ let page=Math.max(0,Math.floor(entries.findIndex(entry=>entry.id===selected)/size));
+ function draw(){
+  grid.replaceChildren();panel.dataset.collectionPage=String(page+1);panel.dataset.collectionPages=String(pages);label.textContent=`Página ${page+1}/${pages}`;pagination.hidden=pages<=1;
+  for(const entry of entries.slice(page*size,(page+1)*size)){
+   const card=collectionCard(entry,card=>select(entry,card));
+   if(selected!==undefined)card.setAttribute('aria-current',String(entry.id===selected));
+   grid.append(card);
+  }
+ }
+ prev.onclick=()=>{page=(page+pages-1)%pages;draw();};next.onclick=()=>{page=(page+1)%pages;draw();};draw();
+ return {well,pagination,focus:()=> (grid.querySelector<HTMLElement>('[aria-current="true"]')??grid.querySelector<HTMLElement>('button'))?.focus({preventScroll:true})};
+}
 /** Read-only reference browser. Categories/pages are local UI state, never run data. */
 export function mountCollection(){
  const host=document.getElementById('collection-view') as HTMLDialogElement;
@@ -26,7 +59,7 @@ export function mountCollection(){
  let data:JokerCollection|null=null,pending:Promise<void>|null=null,category:Category|null=null,page=0,returnCategory:Category='joker';
  let detailTrigger:HTMLElement|null=null;
  for(const dialog of [jokerDialog,itemDialog,bossDialog])dialog.addEventListener('close',()=>{if(host.open&&detailTrigger?.isConnected)detailTrigger.focus({preventScroll:true});});
- const resize=()=>{const frame=document.getElementById('app-viewport');if(frame)stage.style.setProperty('--collection-scale',String(Math.min(frame.clientWidth/1280,frame.clientHeight/600)));};
+ const resize=()=>resizeCollectionStage(stage);
  window.addEventListener('resize',resize);if(typeof ResizeObserver!=='undefined')new ResizeObserver(resize).observe(document.getElementById('app-viewport')!);
  const button=(text:string,className:string,action:()=>void)=>{const b=el('button',text,className);b.type='button';b.onclick=action;return b;};
  const finishDetail=(dialog:HTMLDialogElement,title:string,art:HTMLElement,info:HTMLElement,trigger:HTMLElement)=>{
@@ -68,6 +101,10 @@ export function mountCollection(){
  function back(){if(category)renderHome();else location.hash='menu';}
  function renderCategory(id:Category){
   category=id;page=0;panel.dataset.category=id;panel.setAttribute('aria-label',names[id]);host.setAttribute('aria-label','Colección · '+names[id]);note.hidden=!['enhancement','seal','edition'].includes(id);note.textContent='Cada carta puede tener una mejora, una edición y un sello.';
+  if(id==='voucher'||id==='pack'){
+   const gallery=collectionOfferGallery(panel,id,catalogues[id],showItem);
+   panel.replaceChildren(gallery.well,gallery.pagination,backButton());gallery.focus();return;
+  }
   const well=el('div','','collection-well'),grid=el('div','','collection-grid');grid.id='collection-grid';well.append(grid);
   const pagination=el('div','','collection-pagination'),prev=button('‹','collection-arrow',()=>turn(-1)),next=button('›','collection-arrow',()=>turn(1)),label=el('span','','collection-page');prev.id='collection-prev';next.id='collection-next';prev.setAttribute('aria-label',id==='deck'?'Baraja anterior':'Página anterior');next.setAttribute('aria-label',id==='deck'?'Baraja siguiente':'Página siguiente');label.id='collection-page';label.setAttribute('role','status');pagination.append(prev,label,next);
   let filtered=data?.jokers??[];
@@ -81,9 +118,9 @@ export function mountCollection(){
    }else if(id==='deck'){
     const entry=COLLECTION_DECKS[page]!;const content=el('div','','collection-deck-content'),copy=el('div','','collection-deck-copy'),dots=el('div','','collection-deck-dots');content.dataset.collectionItem=entry.id;copy.append(el('h2',entry.name),el('p',entry.description));content.append(collectionArt(entry),copy);grid.append(content);for(const [i,deck] of COLLECTION_DECKS.entries()){const dot=el('span');dot.setAttribute('aria-label',deck.name);if(i===page)dot.setAttribute('aria-current','true');dots.append(dot);}panel.querySelector('.collection-deck-dots')?.remove();panel.append(dots);
    }else{
-    for(const entry of catalogues[id].slice(page*size,(page+1)*size)){const b=button('','collection-item collection-card',()=>showItem(entry,b));b.dataset.collectionItem=entry.id;b.setAttribute('aria-label',`${entry.name} · ${entry.nameEn}`);b.title=entry.name;
+    for(const entry of catalogues[id].slice(page*size,(page+1)*size)){const b=collectionCard(entry,card=>showItem(entry,card));
      if(id==='blind'){const boss=BOSS_CATALOG.find(item=>item.id===entry.id||item.artId===entry.id);if(boss){b.dataset.bossCatalogId=boss.id;b.classList.add('boss-catalogue-card');}}
-     const art=el('span','','collection-item-art');art.append(collectionArt(entry));b.append(art);grid.append(b);
+     grid.append(b);
     }
    }
   };

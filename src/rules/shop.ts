@@ -114,7 +114,7 @@ export function acquireObservedJoker(state:GameState,joker:JokerInstance,trace:T
  if(typeof joker.instanceId!=='string'||!joker.instanceId.trim()||joker.instanceId.length>200||jokers.some(j=>j.instanceId===joker.instanceId))fail('$joker.instanceId','invalid_id','La instancia adquirida necesita un ID nuevo y único.');
  if(need(joker.edition,'$joker.edition')!=='negative'&&jokers.length>=need(state.observed.resources.jokerSlots,'$.observed.resources.jokerSlots'))fail('$action','no_slots','No hay espacios; vende antes de elegir o comprar.');
  if(joker.catalogId==='green_joker')use('green.changes');
- const created=structuredClone(joker);jokers.push(created);adjustResources(state,created,1);generationShopInventoryChanged(state,created,'add',trace,use);
+ const created=structuredClone(joker);generationShopInventoryChanged(state,created,'add',trace,use);jokers.push(created);adjustResources(state,created,1);
  if(created.catalogId==='astronomer'){repriceShopOffers(state);use('jokers.generation');}
 }
 /** Shared physical sale: no phase switch, revision change or end-shop hook. */

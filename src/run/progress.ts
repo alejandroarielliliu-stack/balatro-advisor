@@ -10,6 +10,8 @@ import {HISTORY_TARGET_KEYS} from '../catalog/history-jokers.js';
 import {observationCounterSpecs} from '../state/observations.js';
 import type {Trace} from '../rules/core.js';
 import {grantBossDefeatTag,PRICE_TAGS,pricingTagsForShop,tagsAfterObservedSkip} from '../rules/price-tags.js';
+import {D6_TAG,initializeShopRerolls,observedRerollQuote,rerollContextAfterObservation} from '../rules/reroll-quote.js';
+import {creditLimit} from '../rules/economic-jokers.js';
 
 const refSchema=object({ante:integer(1,8),kind:enumeration('small','big','boss')});
 export const progressBlindSchema=object({ante:integer(1,8),kind:enumeration('small','big','boss'),bossId:fact(text()),target:fact(integer(1)),reward:fact(integer(0))});
@@ -43,12 +45,13 @@ const cycleCommandSchema=union(
       union(object({type:enumeration('leave_shop')},{nextBlind:progressBlindSchema}),object({type:enumeration('end_run'),reason:text(2000)})))));
 const cashoutJokerUpdateSchema=object({instanceId:text(),counters:recordSchema(fact(integer()))},{sellValue:fact(integer(0)),removed:boolean});
 const recordCashoutCommandSchema=object({type:enumeration('record_cashout'),amount:integer(0),jokerUpdates:array(cashoutJokerUpdateSchema,100)},{money:integer(),nextBlind:progressBlindSchema});
+const recordRerollCommandSchema=object({type:enumeration('record_reroll')},{money:integer(),nextPrice:integer(0)});
 export type CashoutJokerUpdate=Infer<typeof cashoutJokerUpdateSchema>;
 export type RecordCashoutCommand=Infer<typeof recordCashoutCommandSchema>;
-export const runProgressCommandSchema=union(recordCashoutCommandSchema,union(cycleCommandSchema,union(
+export const runProgressCommandSchema=union(recordRerollCommandSchema,union(recordCashoutCommandSchema,union(cycleCommandSchema,union(
  object({type:enumeration('observe_skip_tag'),tag:fact(text())},{blind:object({ante:integer(1,8),kind:enumeration('small','big')}),orbitalHand:orbitalHandSchema}),
  union(object({type:enumeration('observe_tag_queue'),tags:fact(array(text(),100))}),
- object({type:enumeration('skip_blind'),atNextSelection:{check:(v,p,e)=>v===true||(e.push({path:p,code:'confirmation_required',message:'Confirma que resolviste los efectos del salto y estás en la siguiente selección.'}),false)} as Schema<true>},{money:integer(),nextBlind:progressBlindSchema,tags:fact(array(text(),100))})))));
+ object({type:enumeration('skip_blind'),atNextSelection:{check:(v,p,e)=>v===true||(e.push({path:p,code:'confirmation_required',message:'Confirma que resolviste los efectos del salto y estás en la siguiente selección.'}),false)} as Schema<true>},{money:integer(),nextBlind:progressBlindSchema,tags:fact(array(text(),100))}))))));
 export type RunProgressCommand=Infer<typeof runProgressCommandSchema>;
 export interface ProgressOptions {expectedRevision:number;updatedAt:string;inventory:InventoryConfirmation}
 export interface ProgressResult {state:GameStateV02;trace:Trace[];limitations:string[]}
@@ -111,8 +114,7 @@ function invalidateDynamic(state:GameStateV02,scope:'gap'|'selection'|'round'|'s
     const ctx=context.value;
     const renewalFields=['rerollCost','freeRerolls','visibleRerollCost'] as const;
     const fields=scope==='shop_entry'?renewalFields:scope==='shop'?[...renewalFields,...(inventory.status==='known'&&inventory.value.some(j=>j.catalogId==='perkeo')?['consumables' as const]:[])] as const:dynamicContext;
-    const deck=state.observed.deckId;
-    const preservePriceQueue=scope!=='gap'&&ctx.tags?.status==='known'&&(ctx.tags.value.length===0||ctx.tags.value.some(id=>PRICE_TAGS.has(id)||id==='tag_double')||deck.status==='known'&&deck.value==='anaglyph'&&ctx.tags.value.every(id=>id==='tag_investment'));
+    const preservePriceQueue=scope!=='gap'&&ctx.tags?.status==='known'&&(ctx.tags.value.some(id=>PRICE_TAGS.has(id)||id===D6_TAG||id==='tag_double')||ctx.tags.value.every(id=>id==='tag_investment'));
     if(preservePriceQueue&&ctx.tags?.status==='known')ctx.tags.value=ctx.tags.value.filter(id=>!(scope==='selection'&&tagDefinition(id)?.trigger==='round_start_bonus')&&!(scope==='round'&&state.observed.nextBlind.status==='known'&&state.observed.nextBlind.value.kind==='boss'&&id==='tag_investment'));
     for(const field of fields)if(ctx[field]&&!(field==='tags'&&preservePriceQueue)&&!(field==='grosMichelExtinct'&&ctx.grosMichelExtinct?.status==='known'&&ctx.grosMichelExtinct.value===true))ctx[field]=unknown(reason) as never;
     if(scope==='round'||scope==='gap')for(const field of ['handCounts','roundHandCounts'] as const)if(ctx[field])for(const key of Object.keys(ctx[field]))ctx[field][key]=unknown(reason);
@@ -152,10 +154,13 @@ function enterShopAfterCashout(state:GameStateV02,proposed:BlindInfo|undefined,l
   if(state.phaseData.blind.value.kind==='boss')state.observed.visibleBoss=unknown('El jefe del nuevo ante todavía no se registró.');
   state.observed.shop=unknown('Registra las ofertas de esta nueva tienda; no se reutilizan las anteriores.');
   const pricingTags=pricingTagsForShop(state);
+  const tags=state.observed.jokerContext?.status==='known'?state.observed.jokerContext.value.tags:undefined;
+  if(tags?.status==='known'&&tags.value.includes(D6_TAG))pricingTags.push(D6_TAG);
   if(pricingTags.length){
     state.observed.shop=known({shopId:`shop:${state.runId}:${state.revision+1}`,cardOffers:[],ignoredOtherOffers:['Cartas de tienda pendientes de registrar.'],pricingTags});
-    const tags=state.observed.jokerContext?.status==='known'?state.observed.jokerContext.value.tags:undefined;
-    if(tags?.status==='known'&&pricingTags.includes('tag_coupon')){const index=tags.value.indexOf('tag_coupon');if(index>=0)tags.value.splice(index,1);}
+    if(tags?.status==='known')for(const id of ['tag_coupon',D6_TAG])if(pricingTags.includes(id)){
+      const index=tags.value.indexOf(id);if(index>=0)tags.value.splice(index,1);
+    }
   }
   const next:GameStateV02={...state,phase:'shop',phaseData:{origin:structuredClone(state.phaseData.blind)}};
   invalidateDynamic(next,'shop_entry',limitations);
@@ -253,6 +258,35 @@ export function applyRunProgress(input:unknown,commandInput:unknown,options:Prog
     }else next={...state,phase:'finished',phaseData:{outcome:'lost',reason:known('El usuario confirmó que perdió la ronda. No se concedió premio.')}};
   }else if(command.type==='collect_cashout'){
     const result=enterShopAfterCashout(state,command.nextBlind,limitations);if(!result.ok)return result;next=result.value;
+  }else if(command.type==='record_reroll'){
+    if(state.phase!=='shop')return issue('wrong_phase','Solo puedes renovar desde la tienda abierta.');
+    if(!('unchanged' in options.inventory))return issue('invalid_inventory','Registra los cambios del inventario por separado.');
+    const quote=observedRerollQuote(state),money=state.observed.money;
+    let finalMoney=command.money;
+    if(finalMoney===undefined){
+      if(quote===null||money.status!=='known')return issue('unknown_data','Introduce el saldo observado después de renovar.','$command.money');
+      finalMoney=money.value-quote;
+      if(!Number.isSafeInteger(finalMoney))return issue('numeric_range','El saldo después de renovar supera el rango de enteros seguros.','$command.money');
+      if(quote>0&&finalMoney<0){
+        const jokers=state.observed.jokers;
+        if(jokers.status!=='known')return issue('unknown_data','Introduce el saldo observado después de renovar.','$command.money');
+        if(finalMoney < -creditLimit(state))return issue('insufficient_money','Saldo insuficiente para renovar.','$command.money');
+      }
+    }
+    const context=rerollContextAfterObservation(state,command.nextPrice);
+    const shop=state.observed.shop.status==='known'?state.observed.shop.value:{shopId:`shop:${state.runId}:${state.revision+1}`};
+    state.observed.shop=known({
+      ...shop,cardOffers:[],ignoredOtherOffers:['Cartas de la renovación pendientes de transcribir.'],
+      ...('pricingTags' in shop&&shop.pricingTags?{pricingTags:shop.pricingTags.filter(tag=>tag!=='tag_coupon')}:{}),
+    });
+    state.observed.jokerContext=known(context);
+    state.observed.money=known(finalMoney);
+    if(state.observed.jokers.status==='known')for(const joker of state.observed.jokers.value)if(joker.catalogId==='flash'){
+      const counter=joker.counters.mult,stickers=joker.stickers;
+      joker.counters.mult=counter?.status==='known'&&stickers.status==='known'&&!stickers.value.includes('perishable')&&Number.isSafeInteger(counter.value+2)
+        ?known(counter.value+2):unknown('Falta el Mult de Flash después de la renovación.');
+    }
+    trace.push({ruleId:'run.observed.reroll',label:'Renovación confirmada de las ofertas de cartas',values:{spent:quote??'unknown',money:finalMoney,nextPrice:observedRerollQuote(state)??'unknown'}});
   }else if(command.type==='leave_shop'){
     if(state.phase!=='shop')return issue('wrong_phase','Solo puedes salir de una tienda abierta.');
     const upcoming=requireBlind();if(!upcoming.ok)return upcoming;const accepted=acceptBlind(command.nextBlind,upcoming.value);if(!accepted.ok)return accepted;
@@ -266,6 +300,7 @@ export function applyRunProgress(input:unknown,commandInput:unknown,options:Prog
   }
   const skipContext=command.type==='skip_blind'&&next.observed.jokerContext?.status==='known'?structuredClone({blindsSkipped:next.observed.jokerContext.value.blindsSkipped,tags:next.observed.jokerContext.value.tags}):undefined;
   applyInventory(next,options.inventory);
+  if(command.type==='collect_cashout')initializeShopRerolls(next);
   if(command.type==='observe_tag_queue'){
     const ctx=next.observed.jokerContext?.status==='known'?next.observed.jokerContext.value:{};
     ctx.tags=command.tags;next.observed.jokerContext=known(ctx);
@@ -345,6 +380,7 @@ function recordObservedCashout(state:GameStateV02,command:RecordCashoutCommand,o
     for(const [key,value]of Object.entries(update.counters))joker.counters[key]=structuredClone(value);
     if(update.sellValue)joker.sellValue=structuredClone(update.sellValue);
   }
+  if(next.phase==='shop')initializeShopRerolls(next);
   next.revision=state.revision+1;next.updatedAt=options.updatedAt;
   const validated=validateCurrentState(next);if(!validated.ok)return validated;
   trace.push({ruleId:'run.observed',label:'Resultado y cobro confirmados por el usuario',values:{command:command.type,from:state.phase,to:next.phase,revision:next.revision}});

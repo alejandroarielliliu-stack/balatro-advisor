@@ -53,6 +53,15 @@ try{
   await page.locator('#shop-joker-picker').waitFor({state:'hidden'});
   assert.equal(await page.locator('#shop-joker-detail:visible').count(),0,'Selecting a Joker adds its base offer without opening a detail');
  };
+ const catalogChoice=async(page,catalogId)=>{
+  const picker=page.locator('#shop-catalog-picker');await picker.waitFor({state:'visible'});
+  assert.equal(await picker.locator('select,#game-shop-save').count(),0,'Shelf selectors use the collection instead of a save form');
+  const pages=Number(await picker.locator('.collection-panel').getAttribute('data-collection-pages'));
+  const choice=picker.locator(`[data-collection-item="${catalogId}"]`);
+  for(let seen=1;seen<pages&&await choice.count()===0;seen++)await picker.locator('#shop-catalog-next').click();
+  await choice.locator('.collection-art[data-art-status="loaded"]').waitFor();
+  return choice;
+ };
  const modifier=async(page,kind,change)=>{
   await page.locator('#shop-joker-'+kind).click();
   if(kind==='counters'){
@@ -79,13 +88,7 @@ try{
   const before=(await record(page)).state.observed.shop,existing=new Set(before.status==='known'?(kind==='joker'?before.value.cardOffers:kind==='voucher'?before.value.voucherOffers??[]:before.value.packOffers??[]).map(offer=>offer.offerId):[]);
   await page.locator(`[data-game-shop-kind="${kind}"][data-game-shop-empty="true"]`).first().click();
   if(kind==='joker')await selectJoker(page,catalogId);
-  else {
-   await page.locator('#game-shop-editor').waitFor({state:'visible'});await page.locator('#game-shop-catalog').selectOption(catalogId);
-   const editor=activeEditor(page);
-   assert.equal(await editor.locator('input#game-shop-price').count(),0,'Shop price is calculated rather than entered');
-   assert.match(await editor.locator('#game-shop-price').innerText(),new RegExp('\\$'+price+'(?:\\D|$)'),'Calculated shop price matches the game rule');
-   await editor.locator('#game-shop-save').click();await editor.waitFor({state:'hidden'});
-  }
+  else {await (await catalogChoice(page,catalogId)).click();await page.locator('#shop-catalog-picker').waitFor({state:'hidden'});}
   const shop=(await record(page)).state.observed.shop.value,list=kind==='joker'?shop.cardOffers:kind==='voucher'?shop.voucherOffers:shop.packOffers;
   const offer=list.find(offer=>offer.catalogId===catalogId&&!existing.has(offer.offerId));assert.ok(offer,'Observed '+kind+' is stored in the real shop snapshot');
   assert.equal(offer.price.value,price,'Saved price matches the calculated quote');
@@ -175,6 +178,24 @@ try{
  const voucherId=await observe(p,'voucher','v_seed_money',10),packId=await observe(p,'pack','buffoon-normal',4);
  const shelf=await record(p),shopId=shelf.state.observed.shop.value.shopId;assert.equal(shelf.state.observed.money.value,7,'Transcribing three offers spends nothing');assert.equal(shelf.state.observed.jokers.value.length,0);assert.equal(shelf.state.observed.shop.value.cardOffers[0].price.value,2);assert.equal(shelf.state.observed.shop.value.voucherOffers[0].price.value,10);assert.equal(shelf.state.observed.shop.value.packOffers[0].price.value,4);await p.screenshot({path:dir+'/desktop-observed.png'});
  pass('joker-voucher-and-pack-share-real-shop-snapshot-without-acquisition');
+ const secondPack=await observe(p,'pack','celestial-jumbo',6);
+ const bothPacks=await raw(p);
+ await openOffer(p,secondPack);assert.equal(await activeEditor(p).locator('#game-shop-price').innerText(),'$6');
+ await p.locator('#game-shop-change').click();await p.locator('#shop-catalog-picker').waitFor({state:'visible'});
+ assert.equal(await p.locator('[data-collection-item="celestial-jumbo"]').getAttribute('aria-current'),'true');
+ await p.keyboard.press('Escape');await activeEditor(p).waitFor({state:'visible'});assert.equal(await raw(p),bothPacks,'Cancel returns to the original offer without writing');
+ await p.locator('#game-shop-change').click();const replacement=await catalogChoice(p,'spectral-mega');
+ await p.evaluate(()=>window.__gameShopFail=true);await replacement.click();
+ assert.equal(await raw(p),bothPacks);assert.equal(await p.locator('#shop-catalog-picker').isVisible(),true);
+ assert.match(await p.locator('#shop-catalog-picker [role="alert"]').innerText(),/guardar|almacen|quota|copia/i);
+ await p.evaluate(()=>window.__gameShopFail=false);await replacement.press('Enter');await p.locator('#shop-catalog-picker').waitFor({state:'hidden'});
+ const replacedPack=(await record(p)).state.observed.shop.value.packOffers;
+ assert.deepEqual(replacedPack.map(offer=>[offer.offerId,offer.catalogId,offer.price.value]),[[packId,'buffoon-normal',4],[secondPack,'spectral-mega',8]]);
+ assert.equal((await record(p)).state.observed.money.value,7);
+ await p.waitForFunction(id=>document.activeElement?.dataset.gameShopOffer===id,secondPack);
+ await openOffer(p,secondPack);await p.locator('#game-shop-remove').click();await activeEditor(p).waitFor({state:'hidden'});
+ assert.deepEqual((await record(p)).state.observed.shop.value.packOffers.map(item=>item.offerId),[packId]);
+ pass('collection-pack-edit-retains-the-second-offer-and-correct-price-without-acquisition');
  await openOffer(p,jokerId);await modifier(p,'stickers','unknown');await closeInline(p);await p.locator('#shop-joker-detail').waitFor({state:'hidden'});assert.equal((await record(p)).state.observed.shop.value.cardOffers[0].stickers.status,'unknown');
  await openOffer(p,jokerId);await modifier(p,'stickers','unknown');await closeInline(p);await p.locator('#shop-joker-detail').waitFor({state:'hidden'});assert.deepEqual((await record(p)).state.observed.shop.value.cardOffers[0].stickers.value,[]);assert.equal((await record(p)).state.observed.shop.value.packOffers[0].offerId,packId);
 
@@ -192,15 +213,49 @@ try{
  assert.equal(retried.length,1,'Retry creates just one offer');assert.equal(retried[0].catalogId,'green_joker');
  pass('immediate-gallery-save-failure-keeps-record-and-allows-one-retry');
 
- const beforeReroll=await raw(p),rerollRecord=await record(p);await p.locator('#game-shop-reroll').click();await p.locator('#confirmation').waitFor({state:'visible'});assert.match(await p.locator('#dialog-title').innerText(),/renovaci/i);assert.equal(await raw(p),beforeReroll);await p.locator('#dialog-cancel').click();assert.equal(await raw(p),beforeReroll);
- await p.locator('#game-shop-reroll').click();await p.locator('#game-shop-reroll-done').check();await p.locator('#game-shop-reroll-money').fill('3');await p.locator('#game-shop-reroll-cost').fill('6');await p.locator('#dialog-accept').click();await p.locator('#confirmation').waitFor({state:'hidden'});
- const rerolled=await record(p);assert.equal(rerolled.state.observed.money.value,3,'Reroll records the literal observed balance');assert.equal(rerolled.state.observed.shop.value.shopId,shopId);assert.equal(rerolled.state.observed.shop.value.cardOffers.length,0,'Untranscribed new joker offers are not generated');assert.deepEqual(rerolled.state.observed.shop.value.voucherOffers,rerollRecord.state.observed.shop.value.voucherOffers);assert.deepEqual(rerolled.state.observed.shop.value.packOffers,rerollRecord.state.observed.shop.value.packOffers);assert.equal(rerolled.state.observed.jokerContext.value.rerollCost.value,6);
- const reloadRaw=await raw(p);await p.reload();await p.waitForFunction(()=>location.hash==='#menu');assert.equal(await raw(p),reloadRaw);await continueRun(p);assert.equal(await raw(p),reloadRaw,'Continuing a saved shop is read-only');assert.equal((await record(p)).state.observed.money.value,3);
- pass('reroll-is-an-explicit-observation-and-shop-reload-does-not-pay-again');
+ const beforeReroll=await raw(p),rerollRecord=await record(p),renew=p.locator('#game-shop-reroll');
+ assert.equal(await renew.locator('b').innerText(),'$5');
+ await renew.click();await p.locator('#confirmation').waitFor({state:'visible'});
+ assert.match(await p.locator('#dialog-title').innerText(),/renovaci/i);
+ assert.match(await p.locator('#confirmation').innerText(),/Coste \$5 · saldo \$5 → \$0/);
+ assert.equal(await p.locator('#game-shop-reroll-money').isVisible(),false);
+ await p.locator('#dialog-accept').click();assert.equal(await raw(p),beforeReroll);
+ await p.locator('#dialog-cancel').click();assert.equal(await raw(p),beforeReroll);
+ await renew.click();await p.locator('#game-shop-reroll-done').check();await p.locator('#dialog-accept').click();await p.locator('#confirmation').waitFor({state:'hidden'});
+ const rerolled=await record(p);
+ assert.equal(rerolled.state.observed.money.value,0,'A $5 renewal charges exactly the quoted amount');
+ assert.equal(rerolled.history.at(-1).progress.command.type,'record_reroll');
+ assert.equal(rerolled.state.observed.shop.value.shopId,shopId);
+ assert.equal(rerolled.state.observed.shop.value.cardOffers.length,0,'Untranscribed new joker offers are not generated');
+ assert.deepEqual(rerolled.state.observed.shop.value.voucherOffers,rerollRecord.state.observed.shop.value.voucherOffers);
+ assert.deepEqual(rerolled.state.observed.shop.value.packOffers,rerollRecord.state.observed.shop.value.packOffers);
+ assert.equal(await renew.locator('b').innerText(),'$6');
+ const reloadRaw=await raw(p);await p.reload();await p.waitForFunction(()=>location.hash==='#menu');assert.equal(await raw(p),reloadRaw);await continueRun(p);assert.equal(await raw(p),reloadRaw,'Continuing a saved shop is read-only');assert.equal((await record(p)).state.observed.money.value,0);
+ assert.equal(await renew.locator('b').innerText(),'$6');
+ pass('reroll-calculates-price-and-balance-from-one-confirmation-and-persists-on-reload');
 
- const beforeNext=await record(p);await p.locator('#game-shop-next').click();await p.waitForFunction(()=>document.body.dataset.view==='blind'&&document.querySelector('#blind-screen')?.dataset.mode==='select');const next=await record(p);assert.equal(next.state.phase,'blind_select');assert.equal(next.state.observed.nextBlind.value.kind,'big');assert.equal(next.state.observed.money.value,3);assert.equal(next.state.revision,beforeNext.state.revision+1);assert.equal(next.history.at(-1).progress.command.type,'leave_shop');assert.equal(await p.locator('.blind-card').count(),3);assert.equal(await p.locator('#blind-select-big').isEnabled(),true);assert.equal(await p.locator('#game-shop').isVisible(),false);
+ const beforeNext=await record(p);await p.locator('#game-shop-next').click();await p.waitForFunction(()=>document.body.dataset.view==='blind'&&document.querySelector('#blind-screen')?.dataset.mode==='select');const next=await record(p);assert.equal(next.state.phase,'blind_select');assert.equal(next.state.observed.nextBlind.value.kind,'big');assert.equal(next.state.observed.money.value,0);assert.equal(next.state.revision,beforeNext.state.revision+1);assert.equal(next.history.at(-1).progress.command.type,'leave_shop');assert.equal(await p.locator('.blind-card').count(),3);assert.equal(await p.locator('#blind-select-big').isEnabled(),true);assert.equal(await p.locator('#game-shop').isVisible(),false);
  assert.equal(await p.locator('.blind-cards').evaluate(element=>getComputedStyle(element).animationName),'none','Reduced motion makes the next ciegas available without a rise');assert.equal(await p.locator('#game-shop').evaluate(element=>getComputedStyle(element).animationName),'none');
  pass('next-round-reuses-recorded-progression-without-repeating-payout');await main.context.close();
+
+ const prices=await session(desktop,shopFixture(),'reduce',false),rr=prices.page;await continueRun(rr);
+ const rrPrice=rr.locator('#game-shop-reroll b');
+ assert.equal(await rrPrice.innerText(),'$5');
+ const surplus=await observe(rr,'voucher','v_reroll_surplus',10);
+ await beginPurchase(rr,surplus);await confirmPurchase(rr);
+ assert.equal(await rrPrice.innerText(),'$3');
+ const chaos=await observe(rr,'joker','chaos',4);
+ await beginPurchase(rr,chaos);await confirmPurchase(rr);
+ assert.equal(await rrPrice.innerText(),'$0');
+ const initialBalance=(await record(rr)).state.observed.money.value;
+ for(const [nextPrice,after] of [['$3',initialBalance],['$4',initialBalance-3]]){
+  await rr.locator('#game-shop-reroll').click();
+  await rr.locator('#game-shop-reroll-done').check();
+  await rr.locator('#dialog-accept').click();await rr.locator('#confirmation').waitFor({state:'hidden'});
+  assert.equal(await rrPrice.innerText(),nextPrice);
+  assert.equal((await record(rr)).state.observed.money.value,after);
+ }
+ await prices.context.close();pass('reroll-surplus-and-chaos-change-the-calculated-price-and-only-paid-renewal-raises-it');
 
  const duplicates=await session(desktop,shopFixture(),'reduce',false),du=duplicates.page;await continueRun(du);
  const firstCopy=await observe(du,'joker','joker',2),secondCopy=await observe(du,'joker','joker',2);assert.notEqual(firstCopy,secondCopy);
@@ -268,7 +323,11 @@ try{
   await page.locator('#game-shop-plan').click();await page.locator('#shop-plan-dialog').waitFor({state:'visible'});
   await page.locator('#shop-plan-need').selectOption(need);
   if(['score','economy'].includes(need))await page.locator('#shop-plan-reserve').fill(reserve);
-  await page.locator('#game-shop-quoted-cost').fill(quote);
+  const quoteInput=page.locator('#game-shop-quoted-cost');
+  if(await quoteInput.inputValue()!==quote){
+   const adjustment=page.locator('#shop-plan-reroll-adjustment summary');if(await adjustment.count())await adjustment.click();
+   await quoteInput.fill(quote);
+  }
   await page.locator('#shop-plan-complete').setChecked(complete);
   await page.locator('#shop-plan-apply').click();await page.locator('#shop-plan-dialog').waitFor({state:'hidden'});
  };
@@ -294,7 +353,7 @@ try{
  assert.equal(await h.locator('#game-shop-reroll').getAttribute('data-advised-action'),'');
  const budget=await raw(h),budgetState=await record(h);
  assert.equal(budgetState.state.observed.money.value,25);assert.equal(budgetState.state.observed.shop.value.cardOffers.length,2);
- assert.equal(budgetState.state.observed.jokerContext.value.visibleRerollCost.value,5);
+ assert.equal(await h.locator('#game-shop-reroll b').innerText(),'$5');
  await plan(h,'score','24','5');assert.match(await h.locator('.blind-speech strong').innerText(),/Ahorra/);
  assert.equal(await raw(h),budget,'Only the search budget changed');
  await h.locator('#game-shop-details').click();await h.locator('#shop-recommendation').waitFor({state:'visible'});
@@ -449,7 +508,17 @@ try{
  await a.locator('#game-shop').waitFor({state:'hidden'});assert.equal(await a.locator('#game-shop').evaluate(element=>element.hidden||element.inert||getComputedStyle(element).pointerEvents==='none'),true,'The departed shop no longer accepts input');assert.equal(await a.locator('.blind-cards').isVisible(),true);assert.equal(await a.locator('#blind-select-big').isEnabled(),true);assert.equal(await a.locator('#blind-select-big').isVisible(),true);await animated.context.close();
  for(const viewport of [{width:844,height:390},{width:390,height:844},{width:568,height:320}]){
   const mobile=await session(viewport,shopFixture()),m=mobile.page;await continueRun(m);await geometry(m,viewport);await m.screenshot({path:`${dir}/mobile-${viewport.width}x${viewport.height}.png`});
-  const beforePicker=await raw(m);await m.locator('[data-game-shop-kind="joker"][data-game-shop-empty="true"]').first().click();await m.locator('#shop-joker-picker').waitFor({state:'visible'});
+  const beforePicker=await raw(m);
+  for(const [kind,id] of [['voucher','v_seed_money'],['pack','buffoon-normal']]){
+   await m.locator(`[data-game-shop-kind="${kind}"][data-game-shop-empty="true"]`).first().click();
+   const card=await catalogChoice(m,id),picker=m.locator('#shop-catalog-picker');
+   for(const control of [picker.locator('.collection-panel'),picker.locator('#shop-catalog-back'),card]){
+    const bounds=await control.boundingBox();assert.ok(bounds&&bounds.x>=-1&&bounds.y>=-1&&bounds.x+bounds.width<=viewport.width+1&&bounds.y+bounds.height<=viewport.height+1,'Visual '+kind+' selector fits '+JSON.stringify({viewport,bounds}));
+   }
+   await m.screenshot({path:`${dir}/catalog-${kind}-${viewport.width}x${viewport.height}.png`});
+   await picker.locator('#shop-catalog-back').click();await picker.waitFor({state:'hidden'});assert.equal(await raw(m),beforePicker);
+  }
+  await m.locator('[data-game-shop-kind="joker"][data-game-shop-empty="true"]').first().click();await m.locator('#shop-joker-picker').waitFor({state:'visible'});
   assert.equal(await m.getByRole('dialog',{name:'Comodines de la tienda',exact:true}).isVisible(),true);
   assert.equal(await m.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
   await selectJoker(m,'red_card');assert.notEqual(await raw(m),beforePicker,'Choosing a Joker records the base offer on touch screens');
