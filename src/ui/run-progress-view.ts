@@ -107,8 +107,8 @@ export function renderRunJourney(host:HTMLElement,options:JourneyOptions){
    const hint=el('p','','journey-blind-hint');hint.id='run-blind-guidance';hint.setAttribute('aria-live','polite');
    const adviceView=previousAdvice?.view??createBlindGuidanceView();
    const refreshHint=()=>{
-    if(location.hash!=='#table'||!hint.isConnected){adviceView.cancel();return;}
-    const {guidance,pending}=adviceView.read(state,currentBlindAnswers(state),refreshHint);
+    if(!hint.isConnected){adviceView.cancel();return;}
+    const {guidance,pending}=adviceView.read(state,currentBlindAnswers(state),refreshHint,location.hash==='#table');
     const summary=!pending&&guidance.ok?compactBlindGuidance(guidance.value):null;
     hint.setAttribute('aria-busy',String(pending));
     hint.textContent=pending?pendingBlindAdvice:summary?`${summary.title} · ${summary.reason}`:'';

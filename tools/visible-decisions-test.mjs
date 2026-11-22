@@ -65,7 +65,10 @@ try{
  const changed=await failed.p.evaluate(async k=>{const {createConfirmedStore,analysisBinding}=await import(new URL('dist/src/storage/confirmed-store.js',location.href));const r=JSON.parse(localStorage.getItem(k)),s=r.state;return createConfirmedStore(()=>localStorage).correct({confirmationId:'external-visible-revision',confirmed:true,expected:analysisBinding(s),updatedAt:s.updatedAt,patch:{money:{status:'known',source:'manual',value:19}},reason:'Synthetic external correction'});},key);assert.equal(changed.ok,true,JSON.stringify(changed));before=await raw(failed.p);await failed.p.locator('#dialog-accept').click();assert.equal(await raw(failed.p),before);assert.equal((await record(failed.p)).state.observed.jokers.value.length,2);await failed.context.close();
  pass('save-failure-and-stale-confirmation-preserve-real-record');
 
- const b=await session('DV-BLIND-03');before=await raw(b.p);count=await writes(b.p);assert.match(await b.p.locator('#run-blind-guidance').innerText(),/^Juega.*D6/);await b.p.locator('#run-compare-blind').click();assert.equal(await b.p.locator('#blind-guidance').getAttribute('data-status'),'conditional');assert.match(await b.p.locator('#blind-guidance').innerText(),/D6/);assert.equal(await b.p.locator('.blind-plan').count(),0);
+ const b=await session('DV-BLIND-03');before=await raw(b.p);count=await writes(b.p);
+ const d6Hint=b.p.locator('#run-blind-guidance');
+ assert.match(await d6Hint.innerText(),/^Juega.*D6/);assert.equal(await d6Hint.getAttribute('aria-busy'),'false');
+ await b.p.locator('#run-compare-blind').click();assert.equal(await b.p.locator('#blind-guidance').getAttribute('data-status'),'conditional');assert.match(await b.p.locator('#blind-guidance').innerText(),/D6/);assert.equal(await b.p.locator('.blind-plan').count(),0);
  await b.p.screenshot({path:dir+'/blind-desktop.png',fullPage:false});await b.p.setViewportSize({width:390,height:844});await noOverflow(b.p);await b.p.screenshot({path:dir+'/blind-390.png',fullPage:false});
  assert.equal(await b.p.locator('#blind-risk').isVisible(),false);await b.p.locator('#blind-strict').check();assert.equal(await b.p.locator('#blind-guidance').getAttribute('data-preferred'),'play');await unchanged(b.p,before,count);await b.p.locator('#dialog-accept').click();
  pass('d6-explicit-budget-advice-is-readonly');

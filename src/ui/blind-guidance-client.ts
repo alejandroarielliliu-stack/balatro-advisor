@@ -57,7 +57,7 @@ export function createBlindGuidanceView(){
  let generation=0;
  let release:(()=>void)|undefined;
  return {
-  read(state:GameState,options:BlindGuidanceOptions|undefined,refresh:()=>void){
+  read(state:GameState,options:BlindGuidanceOptions|undefined,refresh:()=>void,visible=true){
    const request=++generation,previous=release;
    release=undefined;
    let pending=false;
@@ -67,6 +67,7 @@ export function createBlindGuidanceView(){
      const key=scoringKey(input);
      const cached=completed.get(key);
      if(cached)return cached;
+     if(!visible){pending=true;return provisional;}
      const job=running.get(key)??start(key,input);
      if(!job)return unavailable;
      const listener=()=>{if(request===generation)refresh();};
