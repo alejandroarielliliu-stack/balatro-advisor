@@ -90,8 +90,14 @@ export function decideConfiguredSkipTag(state:GameStateV02,blind:BlindInfo|null,
    const investment=tag.id==='tag_investment';
    if(!early(blind))return play(`La ventana de ${investment?'Inversión':'Holográfica'} termina en la Pequeña del ante 2. Conserva esta tienda.`);
    const boss=assessBossScore(state);
-   const decision=boss.status==='unknown'
-    ?play(investment?`${boss.reason} Inversión paga $${TAG_EFFECTS.investment.dollars} al vencer al jefe.`:boss.reason):investment
+   if(boss.status==='unknown'){
+    const emptyJokers=value(state.observed.jokers)?.length===0;
+    return {
+     ...play(emptyJokers?'Cobra y busca tu primer comodín en la tienda.':'Aprovecha esta tienda para reforzarte antes del jefe.'),
+     ...(boss.estimate?{bossEstimate:boss.estimate}:{})
+    };
+   }
+   const decision=investment
     ?boss.status==='sufficient'?skip(`Tu puntuación alcanza para el jefe. Si lo vences, cobras $${TAG_EFFECTS.investment.dollars}.`)
      :play(`Tu puntuación queda corta para el jefe. Refuérzate antes de buscar los $${TAG_EFFECTS.investment.dollars}.`)
     :boss.status==='insufficient'?skip(blind.kind==='big'
