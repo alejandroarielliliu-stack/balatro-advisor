@@ -26,7 +26,7 @@ test('fixed tags and exact ante boundaries apply even when survival, queue and r
  run.observed.resources.jokerSlots=known(0);
  const forecast=(tag:string,ante:number,kind:'small'|'big')=>{
   setBlind(run,ante,kind,tag);
-  const before=structuredClone(run),report=success(guideBlindChoice(run,{risk:'tight',nextBlindPlan:'need_shop'}));
+  const before=structuredClone(run),report=success(guideBlindChoice(run,{risk:'tight',nextBlindPlan:'need_shop'},()=>{throw Error('La regla automática no calcula supervivencia');}));
   assert.equal(report.recommendation.ruleId,'BG-SKIP-TAG-RULE');
   assert.equal(report.nextBlindEstimate,undefined);
   assert.equal(report.bossEstimate,undefined);
@@ -73,6 +73,28 @@ test('Investment and Holographic use the registered boss and reverse their scori
  assert.equal(recommend(run).preferred,'play','unknown score is not a shortage');
  setBlind(run,2,'big','tag_holo');assert.equal(recommend(run).preferred,'play');
  setBlind(run,2,'big','tag_investment');assert.equal(recommend(run).preferred,'play');
+});
+
+test('the background estimate receives the registered boss only when it can affect the advice',()=>{
+ const run=state();
+ const boss={ante:1,kind:'boss' as const,bossId:known('the_psychic'),target:known(600),reward:known(5)};
+ run.observed.visibleBoss=known(boss);
+ setBlind(run,1,'small','tag_investment');
+ const report=success(guideBlindChoice(run,{},(projected,context)=>{
+  assert.equal(context,'boss');
+  assert.equal(projected.phase,'shop');
+  assert.equal(projected.observed.nextBlind.status,'known');
+  if(projected.observed.nextBlind.status==='known')assert.deepEqual(projected.observed.nextBlind.value,boss);
+  return {status:'estimated',target:600,hands:4,pointsPerHand:175,pointsPerPlayedHand:350,estimatedPoints:700,
+   medianPoints:700,p10Points:630,p90Points:790,sampleCount:32,reachedCount:32};
+ }));
+ assert.equal(report.recommendation.preferred,'skip');
+ assert.equal(report.bossEstimate?.status,'estimated');
+ setBlind(run,1,'small','tag_boss');
+ assert.equal(success(guideBlindChoice(run,{},()=>{throw Error('El Psíquico se evalúa por su efecto');})).recommendation.preferred,'play');
+ run.observed.visibleBoss=known({ante:1,kind:'boss',bossId:known('the_window'),target:known(600),reward:known(5)});
+ setBlind(run,1,'small','tag_holo');
+ assert.equal(success(guideBlindChoice(run,{},()=>{throw Error('El efecto queda fuera de cobertura');})).recommendation.preferred,'play');
 });
 
 test('Orbital uses the observed hand for this blind and the principal feasible hand',()=>{

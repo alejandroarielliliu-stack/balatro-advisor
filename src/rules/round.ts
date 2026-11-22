@@ -33,7 +33,7 @@ export interface RoundState {
  handsLeft:number;discardsLeft:number;initialHands:number;initialDiscards:number;generatedHandIds:string[];capacityOverflow:number;score:number;
  status:'active'|'won'|'lost'|'rescued'|'settled';rescuedBy?:string;lastHand?:HandId;
 }
-export type RoundEvent={type:'play'|'discard'|'sell_joker';cardIds:string[];drawnCardIds:string[];instanceId?:string;choices?:EffectChoice[]};
+export type RoundEvent={type:'play'|'discard'|'sell_joker';cardIds:string[];drawnCardIds:string[];instanceId?:string;choices?:EffectChoice[];bossDiscardedCardIds?:string[]};
 function checkRound(round:RoundState,use:(id:string)=>void):RoundState{
  if(!round||typeof round!=='object')fail('$round','invalid_round','Falta una ronda creada por beginRound.');
  const game=stateInput(round.game,use),r=resources(game),blind=blindInfo(game),deck=deckCards(game);inventory(game);
@@ -138,10 +138,73 @@ export function beginRound(input:unknown,initialHand:string[],options:EngineOpti
   return{game,hand:[...initialHand],remaining:deck.filter(c=>!initialHand.includes(c.instanceId)).map(c=>c.instanceId),spent:[],handsLeft,discardsLeft,initialHands:handsLeft,initialDiscards:discardsLeft,generatedHandIds:createdInHand,capacityOverflow:0,score:0,status:'active'};
  });
 }
+
+function validateSelectedCards(round:RoundState,cardIds:string[]){
+ if(!Array.isArray(cardIds)||cardIds.length<1||cardIds.length>5||new Set(cardIds).size!==cardIds.length||cardIds.some(id=>!round.hand.includes(id)))fail('$event.cardIds','cards_not_in_hand','Selecciona de una a cinco cartas distintas que estén en mano.');
+}
+
+interface RoundEffects {
+ handsUsed:number;discardsUsed:number;choices:EffectChoice[];
+ generatedLocations:Record<string,'hand'|'deck'>;trace:Trace[];use:(id:string)=>void;
+}
+
+function applyDiscardEffects(round:RoundState,cardIds:string[],effects:RoundEffects,forcedDiscard=false){
+ const {trace,use}=effects;
+ const deck=deckCards(round.game),discarded=cardIds.map(id=>deck.find(c=>c.instanceId===id)!);
+ const event:FullEventInput={...effects,state:round.game,stage:'discard',cards:discarded,hand:classifyHand(discarded,inventory(round.game).map(j=>j.catalogId)).hand,forcedDiscard};
+ const history=historyEvent(event);pay(round.game,history.money+economicEvent(event));generationEvent(event,effectiveJokers(inventory(round.game)));for(const c of discarded)purpleSeal(event,c);
+ for(const joker of [...inventory(round.game)]){
+  if(joker.catalogId==='hit_the_road'){const n=discarded.filter(c=>!c.debuff&&c.enhancement!=='stone'&&c.rank==='J').length;updateCounter(joker,'x100',counterValue(joker,'x100')+50*n,trace);}
+  if(joker.catalogId==='yorick'){let left=counterValue(joker,'remaining'),mult=counterValue(joker,'x100');for(const _ of discarded){left--;if(!left){left=23;mult+=100;}}updateCounter(joker,'remaining',left,trace);updateCounter(joker,'x100',mult,trace);}
+  if(joker.catalogId==='ramen'){const after=counterValue(joker,'x100')-discarded.length;if(after<=100){const list=inventory(round.game);list.splice(list.indexOf(joker),1);trace.push({ruleId:'jokers.context',label:'Ramen consumido',values:{instanceId:joker.instanceId}});}else updateCounter(joker,'x100',after,trace);}
+ }
+ for(const joker of inventory(round.game))if(joker.catalogId==='green_joker'){
+  use('green.changes');const before=greenValue(joker),after=Math.max(0,before-FX.greenPerDiscard);joker.counters.greenMult=valueFact(after);trace.push({ruleId:'green.changes',label:'Un decremento por acción de descarte',values:{instanceId:joker.instanceId,discardedCards:cardIds.length,before,after}});
+ }
+}
+
+type RoundPlay=Pick<RoundEvent,'cardIds'|'bossDiscardedCardIds'|'choices'>;
+
+function scoreRoundPlay(round:RoundState,play:RoundPlay,effects:RoundEffects,copyDiscardState=false){
+ const {cardIds}=play,{handsUsed,discardsUsed,choices,trace,use}=effects;
+ const retained=round.hand.filter(id=>!cardIds.includes(id));
+ const hook=blindInfo(round.game).boss==='the_hook';
+ const required=hook?Math.min(2,retained.length):0;
+ const bossDiscarded=play.bossDiscardedCardIds===undefined?[]:play.bossDiscardedCardIds;
+ if(!Array.isArray(bossDiscarded)||bossDiscarded.length!==required||new Set(bossDiscarded).size!==required||bossDiscarded.some(id=>!retained.includes(id)))
+  fail('$event.bossDiscardedCardIds','invalid_boss_discard',`El efecto de esta ciega requiere indicar ${required} cartas distintas de las que quedan en mano.`);
+ if(bossDiscarded.length){
+  trace.push({ruleId:'blind.effects',label:'El garfio descarta antes de puntuar sin gastar un descarte',values:{cards:bossDiscarded.join(', '),count:bossDiscarded.length}});
+  const jokers=round.game.observed.jokers;
+  if(jokers.status!=='known'||jokers.value.length>0||deckCards(round.game).some(card=>card.seal==='purple'&&bossDiscarded.includes(card.instanceId))){
+   if(copyDiscardState)round={...round,game:structuredClone(round.game)};
+   applyDiscardEffects(round,retained.filter(id=>bossDiscarded.includes(id)),effects,true);
+  }
+ }
+ const handScore=scoreInternal(round.game,{cardIds,discardsRemaining:round.discardsLeft,heldCardIds:retained.filter(id=>!bossDiscarded.includes(id)),remainingCardIds:round.remaining,handsRemaining:round.handsLeft-1,handsUsed,discardsUsed,choices,roundInitialHands:round.initialHands,roundInitialDiscards:round.initialDiscards,generatedHandIds:round.generatedHandIds,capacityOverflow:round.capacityOverflow},trace,use,hook);
+ return {handScore,bossDiscarded};
+}
+
+/** Fast preview for a round already built or validated by the round engine. */
+export function previewProjectedRoundPlay(round:RoundState,play:RoundPlay,trace:Trace[],use:(id:string)=>void):HandScore{
+ validateSelectedCards(round,play.cardIds);
+ return scoreRoundPlay(round,play,{handsUsed:round.initialHands-round.handsLeft,discardsUsed:round.initialDiscards-round.discardsLeft,choices:choicesInput(play.choices??[]),generatedLocations:{},trace,use},true).handScore;
+}
+
+/** Scores an explicit proposed play with its stated boss outcome on a projected copy. */
+export function previewRoundPlay(input:RoundState,play:RoundPlay,options:EngineOptions={}){
+ return run<HandScore>(['round.resources','base.configuration','blind.effects','score.base','hand.classification'],options,(trace,use)=>{
+  const round=checkRound(input,use);if(round.status!=='active')fail('$round.status','round_finished','La ronda terminó; no se conceden acciones posteriores.');
+  if(!play)fail('$event','invalid_event','Falta la jugada que se quiere puntuar.');
+  return previewProjectedRoundPlay(round,play,trace,use);
+ });
+}
+
 export function applyRoundEvent(input:RoundState,event:RoundEvent,mutation:Mutation,options:EngineOptions={}){
  return run<{round:RoundState;handScore:HandScore|null}>(['round.resources','base.configuration','blind.effects'],options,(trace,use)=>{
   const round=checkRound(input,use);if(round.status!=='active')fail('$round.status','round_finished','La ronda terminó; no se conceden acciones posteriores.');
   if(!event||!['play','discard','sell_joker'].includes(event.type))fail('$event','invalid_event','Solo play/discard/sell_joker están implementados.');
+  if(event.type!=='play'&&event.bossDiscardedCardIds!==undefined)fail('$event.bossDiscardedCardIds','invalid_boss_discard','Solo al jugar una mano se resuelve un descarte forzado por la ciega.');
   if(event.type==='sell_joker'){
    if(!event.instanceId||event.cardIds.length||event.drawnCardIds.length)fail('$event','invalid_sale','Indica el comodín vendido y listas de cartas vacías.');
    const before=resources(round.game),oldBlind=blindInfo(round.game),sold=applyShopAction(round.game,{type:'sell',instanceId:event.instanceId,choices:choicesInput(event.choices??[])},mutation,{...options,activeBlind:true});
@@ -153,12 +216,15 @@ export function applyRoundEvent(input:RoundState,event:RoundEvent,mutation:Mutat
    if(round.score>=nextBlind.target)round.status='won';
    return{round,handScore:null};
   }
-  if(!Array.isArray(event.cardIds)||event.cardIds.length<1||event.cardIds.length>5||new Set(event.cardIds).size!==event.cardIds.length||event.cardIds.some(id=>!round.hand.includes(id)))fail('$event.cardIds','cards_not_in_hand','Selecciona de una a cinco cartas distintas que estén en mano.');
+  validateSelectedCards(round,event.cardIds);
   const choices=choicesInput(event.choices??[]),generatedLocations:Record<string,'hand'|'deck'>={},handsUsed=round.initialHands-round.handsLeft,discardsUsed=round.initialDiscards-round.discardsLeft;
+  const effects:RoundEffects={handsUsed,discardsUsed,choices,generatedLocations,trace,use};
   let handScore:HandScore|null=null;
+  let removed=event.cardIds;
   if(event.type==='play'){
    use('score.base');use('hand.classification');
-   handScore=scoreInternal(round.game,{cardIds:event.cardIds,discardsRemaining:round.discardsLeft,heldCardIds:round.hand.filter(id=>!event.cardIds.includes(id)),remainingCardIds:round.remaining,handsRemaining:round.handsLeft-1,handsUsed,discardsUsed,choices,roundInitialHands:round.initialHands,roundInitialDiscards:round.initialDiscards,generatedHandIds:round.generatedHandIds,capacityOverflow:round.capacityOverflow},trace,use);
+   const scored=scoreRoundPlay(round,event,effects);handScore=scored.handScore;
+   removed=[...event.cardIds,...scored.bossDiscarded];
    round.game=handScore.stateAfter;round.lastHand=handScore.hand;Object.assign(generatedLocations,handScore.generatedLocations);round.score=safe(round.score+handScore.score);round.handsLeft--;
    for(const joker of inventory(round.game))if(joker.catalogId==='green_joker')joker.counters.greenMult=valueFact(handScore.greenAfter[joker.instanceId]!);
    const played=event.cardIds.map(id=>deckCards(round.game).find(c=>c.instanceId===id)!).filter(Boolean);
@@ -174,19 +240,9 @@ export function applyRoundEvent(input:RoundState,event:RoundEvent,mutation:Mutat
    }
   }else{
    if(round.discardsLeft===0)fail('$event','no_discards','No quedan descartes.');round.discardsLeft--;
-   const discarded=event.cardIds.map(id=>deckCards(round.game).find(c=>c.instanceId===id)!);
-   const hook:FullEventInput={state:round.game,stage:'discard',cards:discarded,hand:classifyHand(discarded,inventory(round.game).map(j=>j.catalogId)).hand,handsUsed,discardsUsed,choices,generatedLocations,trace,use};
-   const history=historyEvent(hook);pay(round.game,history.money+economicEvent(hook));generationEvent(hook,effectiveJokers(inventory(round.game)));for(const c of discarded)purpleSeal(hook,c);
-   for(const joker of [...inventory(round.game)]){
-    if(joker.catalogId==='hit_the_road'){const n=discarded.filter(c=>!c.debuff&&c.enhancement!=='stone'&&c.rank==='J').length;updateCounter(joker,'x100',counterValue(joker,'x100')+50*n,trace);}
-    if(joker.catalogId==='yorick'){let left=counterValue(joker,'remaining'),mult=counterValue(joker,'x100');for(const _ of discarded){left--;if(!left){left=23;mult+=100;}}updateCounter(joker,'remaining',left,trace);updateCounter(joker,'x100',mult,trace);}
-    if(joker.catalogId==='ramen'){const after=counterValue(joker,'x100')-discarded.length;if(after<=100){const list=inventory(round.game);list.splice(list.indexOf(joker),1);trace.push({ruleId:'jokers.context',label:'Ramen consumido',values:{instanceId:joker.instanceId}});}else updateCounter(joker,'x100',after,trace);}
-   }
-   for(const joker of inventory(round.game))if(joker.catalogId==='green_joker'){
-    use('green.changes');const before=greenValue(joker),after=Math.max(0,before-FX.greenPerDiscard);joker.counters.greenMult=valueFact(after);trace.push({ruleId:'green.changes',label:'Un decremento por acción de descarte',values:{instanceId:joker.instanceId,discardedCards:event.cardIds.length,before,after}});
-   }
+   applyDiscardEffects(round,event.cardIds,effects);
   }
-  round.hand=round.hand.filter(id=>!event.cardIds.includes(id));round.spent.push(...event.cardIds.filter(id=>deckCards(round.game).some(c=>c.instanceId===id)));syncPartitions(round,generatedLocations);syncResourceBases(round.game);
+  round.hand=round.hand.filter(id=>!removed.includes(id));round.spent.push(...removed.filter(id=>deckCards(round.game).some(c=>c.instanceId===id)));syncPartitions(round,generatedLocations);syncResourceBases(round.game);
   const capacity=handCapacityForBoss(resources(round.game).handSize,blindInfo(round.game).boss);
   round.capacityOverflow=Math.max(0,round.hand.length-capacity);
   const count=round.status==='active'?Math.max(0,Math.min(capacity-round.hand.length,round.remaining.length)):0;

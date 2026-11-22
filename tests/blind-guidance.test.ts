@@ -94,6 +94,26 @@ test('Economía20: el salto mejora todos los cobros y la próxima ciega se vence
  assert.match(report.conditions.join(' '),/tienda.*no tienen precio/);assert.equal(report.survival.status,'not_evaluated');
 });
 
+test('el cálculo delegado de Economía se pide solo si puede cambiar el consejo',()=>{
+ const {state,options}=fixture('DV-BLIND-01');
+ const immediate=success(guideBlindChoice(state,options,()=>{throw Error('El cobro ya decide la etiqueta');}));
+ assert.equal(immediate.recommendation.ruleId,'BG-CASH-THRESHOLD');
+ const favorable=fixture('DV-BLIND-02'),previous=success(guideBlindChoice(favorable.state,favorable.options));
+ const estimate=previous.nextBlindEstimate;
+ assert.ok(estimate?.status==='estimated');
+ let calls=0;
+ const delegated=success(guideBlindChoice(favorable.state,favorable.options,(projected,context)=>{
+  calls++;
+  assert.equal(context,'next_blind');
+  assert.equal(projected.phase,'shop');
+  assert.equal(projected.observed.nextBlind.status,'known');
+  if(projected.observed.nextBlind.status==='known')assert.equal(projected.observed.nextBlind.value.kind,'big');
+  return estimate;
+ }));
+ assert.equal(calls,1);
+ assert.deepEqual(delegated.recommendation,previous.recommendation);
+});
+
 function guideEconomySmall(){
  const {state}=fixture('DV-BLIND-02');
  assert.ok(state.phase==='blind_select'&&state.observed.nextBlind.status==='known');

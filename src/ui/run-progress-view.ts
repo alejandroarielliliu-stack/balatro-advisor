@@ -1,5 +1,5 @@
-import {blindComparisonButton,compactBlindGuidance,currentBlindAnswers} from './blind-decision-view.js';
-import {guideBlindChoice} from '../advisor/blind-guidance.js';
+import {blindComparisonButton,compactBlindGuidance,currentBlindAnswers,pendingBlindAdvice} from './blind-decision-view.js';
+import {createBlindGuidanceView} from './blind-guidance-client.js';
 import type {AdvisorScenario} from '../advisor/advisor.js';
 import {TAGS,tagDefinition} from '../catalog/tags.js';
 import type {GameState,Fact} from '../state/model.js';
@@ -18,6 +18,7 @@ const unknown=()=>({status:'unknown',reason:'Todavía no observado.'} as const);
 const manual=<T>(value:T)=>({status:'known' as const,source:'manual' as const,value});
 const preset=<T>(value:T)=>({status:'known' as const,source:'confirmedPreset' as const,value});
 const kindName={small:'Ciega pequeña',big:'Ciega grande',boss:'Ciega jefe'};
+const journeyAdvice=new WeakMap<HTMLElement,{view:ReturnType<typeof createBlindGuidanceView>;onRoute:()=>void}>();
 export interface JourneyOptions {
   record:ConfirmedRecord|null;dirty:boolean;writable:boolean;
   open:(title:string,body:HTMLElement,accept:string,submit:()=>boolean)=>void;
@@ -34,6 +35,13 @@ const number=(input:HTMLInputElement,min:number,optional=false)=>{if(optional&&!
 /** Only renders and submits explicit observations. No game hook or scoring formula lives here. */
 export function renderRunJourney(host:HTMLElement,options:JourneyOptions){
  host.replaceChildren();host.className='run-journey';const record=options.record,state=record?.state;
+ const previousAdvice=journeyAdvice.get(host);
+ if(previousAdvice){
+  window.removeEventListener('hashchange',previousAdvice.onRoute);
+  journeyAdvice.delete(host);
+  const blind=value(state?.observed.nextBlind);
+  if(state?.schemaVersion!=='0.2'||state.phase!=='blind_select'||!blind||blind.kind==='boss')previousAdvice.view.cancel();
+ }
  const toolbar=el('div','','journey-actions journey-main-actions');
  const tools=el('details','','journey-tools'),toolsToggle=el('summary','Más','journey-tools-toggle'),toolsMenu=el('div','','journey-tools-menu');
  tools.id='run-journey-tools';toolsToggle.setAttribute('aria-label','Más acciones de la partida');tools.append(toolsToggle,toolsMenu);
@@ -96,14 +104,18 @@ export function renderRunJourney(host:HTMLElement,options:JourneyOptions){
  }else if(state.phase==='blind_select'){
   action('run-enter-round','Entré en la ciega',()=>openCommand('Entré en la ciega','Registrar entrada',{type:'enter_round'}),true);
   if(blind&&blind.kind!=='boss'){
-   const hint=el('p','','journey-blind-hint');hint.id='run-blind-guidance';
+   const hint=el('p','','journey-blind-hint');hint.id='run-blind-guidance';hint.setAttribute('aria-live','polite');
+   const adviceView=previousAdvice?.view??createBlindGuidanceView();
    const refreshHint=()=>{
-    const guidance=guideBlindChoice(state,currentBlindAnswers(state));
-    const summary=guidance.ok?compactBlindGuidance(guidance.value):null;
-    hint.textContent=summary?`${summary.title} · ${summary.reason}`:'';
+    if(location.hash!=='#table'||!hint.isConnected){adviceView.cancel();return;}
+    const {guidance,pending}=adviceView.read(state,currentBlindAnswers(state),refreshHint);
+    const summary=!pending&&guidance.ok?compactBlindGuidance(guidance.value):null;
+    hint.setAttribute('aria-busy',String(pending));
+    hint.textContent=pending?pendingBlindAdvice:summary?`${summary.title} · ${summary.reason}`:'';
    };
+   window.addEventListener('hashchange',refreshHint);journeyAdvice.set(host,{view:adviceView,onRoute:refreshHint});
    toolbar.append(blindComparisonButton({open:options.open,state:options.comparisonState??(()=>structuredClone(state)),scenarios:options.scenarios??(()=>[]),riskChanged:()=>{refreshHint();options.riskChanged?.();}}));
-   refreshHint();host.append(hint);
+   host.append(hint);refreshHint();
    const current=value(state.phaseData.skipTag),orbitalHand=observedOrbitalHand(state);
    const currentTagName=current?(tagDefinition(current)?.name??current):'Etiqueta de salto sin registrar';
    title.append(el('small',orbitalHand?`${currentTagName} · ${handNames[orbitalHand]}`:currentTagName,'journey-tag'));

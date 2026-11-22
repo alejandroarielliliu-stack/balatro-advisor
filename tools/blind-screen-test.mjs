@@ -15,9 +15,27 @@ let browser,lastPage;
 try{
  if(server)await new Promise((resolve,reject)=>{const timer=setTimeout(()=>reject(Error('Blind screen server timeout')),15000);server.stdout.on('data',s=>{if(String(s).includes('Balatro Advisor local')){clearTimeout(timer);resolve();}});server.on('error',reject);});
  browser=await chromium.launch({channel:'chrome',headless:true});
- const session=async(viewport={width:1280,height:720},saved=null)=>{
+ const session=async(viewport={width:1280,height:720},saved=null,gateWorker=false)=>{
   const context=await browser.newContext({viewport,reducedMotion:'reduce',hasTouch:true,isMobile:true});
   await context.addInitScript(({key,saved})=>{if(saved&&localStorage.getItem(key)===null)localStorage.setItem(key,saved);window.__blindFail=false;const set=Storage.prototype.setItem;Storage.prototype.setItem=function(k,v){if(k===key&&window.__blindFail)throw new DOMException('Synthetic quota failure','QuotaExceededError');return set.call(this,k,v);};},{key,saved});
+  if(gateWorker)await context.addInitScript(()=>{
+   const NativeWorker=Worker;
+   window.__survivalJobs=[];
+   window.Worker=class extends NativeWorker{
+    constructor(url,options){
+     super(url,options);
+     if(new URL(url,location.href).pathname.endsWith('/blind-survival-worker.js')){
+      this.job={worker:this,stopped:false,release:null};
+      window.__survivalJobs.push(this.job);
+     }
+    }
+    postMessage(...args){
+     if(this.job){this.job.release=()=>super.postMessage(...args);return;}
+     super.postMessage(...args);
+    }
+    terminate(){if(this.job)this.job.stopped=true;super.terminate();}
+   };
+  });
   const page=await context.newPage();lastPage=page;page.on('pageerror',e=>report.pageErrors.push(e.message));await page.goto(origin);await page.waitForFunction(()=>location.hash==='#menu'&&document.querySelector('#ownership')?.textContent.includes('Esta pestaña tiene'));return {context,page};
  };
  const raw=p=>p.evaluate(k=>localStorage.getItem(k),key),record=async p=>JSON.parse(await raw(p));
@@ -54,10 +72,13 @@ try{
  assert.equal(await raw(p),investmentSave,'The visible advice and its details never change the saved run');
  await p.locator('#blind-boss-picker').click();await p.locator('[data-boss-choice=the_hook]').click();await p.locator('#blind-picker').waitFor({state:'hidden'});
  assert.equal((await record(p)).state.observed.visibleBoss.value.bossId.value,'the_hook');
- assert.equal(await p.locator('.blind-speech strong').innerText(),'Juega');
- assert.equal(await p.locator('.blind-speech p').innerText(),investmentReason);
+ await p.locator('.blind-speech[aria-busy=false]').waitFor();
+ assert.match(await p.locator('.blind-speech strong').innerText(),/^(Juega|Salta)$/);
+ assert.ok((await p.locator('.blind-speech p').innerText()).length<=120);
+ await p.locator('#blind-compare').click();await p.locator('#blind-boss-estimate[data-status=estimated]').waitFor();
+ await p.locator('#dialog-accept').click();await p.locator('#confirmation').waitFor({state:'hidden'});
  await p.screenshot({path:dir+'/investment-advice.png'});
- pass('early-investment-shows-brief-play-advice-with-unknown-boss-or-hook');
+ pass('early-investment-shows-brief-advice-and-simulates-the-hook-when-known');
  const before=await raw(p);await p.locator('[data-tag-slot=small]').click();await p.evaluate(()=>window.__blindFail=true);await p.locator('[data-tag-choice=tag_uncommon]').click();assert.equal(await raw(p),before);assert.equal(await p.locator('#blind-picker').isVisible(),true);assert.match(await p.locator('#blind-picker .error').innerText(),/guardar|almacenamiento/i);await p.evaluate(()=>window.__blindFail=false);await p.locator('[data-tag-choice=tag_uncommon]').click();await p.locator('#blind-picker').waitFor({state:'hidden'});assert.equal((await record(p)).state.phaseData.skipTag.value,'tag_uncommon');
  pass('current-and-upcoming-tags-stay-independent-atomic-save-failure-and-retry');
  assert.equal(await p.locator('.blind-speech strong').innerText(),'Salta');
@@ -91,6 +112,53 @@ try{
  }
  await orbital.context.close();pass('orbital-matches-the-recorded-hand-to-checkered-composition');
 
+ const pendingRun=createNewRun({runId:'guide-background-worker',updatedAt:'2026-11-10T12:00:00Z',deckId:'red',profileConfirmed:true});
+ assert.equal(pendingRun.ok,true);
+ const strong=pendingRun.value,known=value=>({status:'known',source:'manual',value});
+ strong.phaseData.skipTag=known('tag_investment');
+ strong.observed.visibleBoss=known({ante:1,kind:'boss',bossId:known('the_hook'),target:known(600),reward:known(5)});
+ strong.observed.deck=known({cards:Array.from({length:8},(_,i)=>({instanceId:'ace-'+i,rank:'A',suit:'S',enhancement:'none',seal:'none',edition:'base',extraChips:0}))});
+ const initialStrong=JSON.stringify({schemaVersion:'confirmed-2',initialState:strong,state:strong,history:[]});
+ const worker=await session(undefined,initialStrong,true),w=worker.page;
+ await w.locator('#menu-play').click();await w.locator('#setup-tab-continue').click();await w.locator('#setup-play').click();
+ const workerBubble=w.locator('.blind-speech');
+ await workerBubble.and(w.locator('[aria-busy=true]')).waitFor();
+ assert.equal(await workerBubble.locator('strong').innerText(),'Calculando consejo…');
+ assert.equal(await workerBubble.locator('p').innerText(),'');
+ assert.equal(await w.locator('#blind-select-small').isEnabled(),true);
+ assert.equal(await w.locator('#blind-skip-small').isEnabled(),true);
+ assert.equal(await raw(w),initialStrong);
+ await w.locator('#blind-compare').click();await w.locator('#confirmation [aria-busy=true]').waitFor();
+ assert.match(await w.locator('#confirmation [aria-busy=true]').innerText(),/Calculando consejo/);
+ assert.equal(await w.locator('#blind-guidance').count(),0);
+ await w.locator('#dialog-accept').click();await w.locator('#confirmation').waitFor({state:'hidden'});
+
+ await tag(w,'small','tag_uncommon');
+ assert.equal(await workerBubble.getAttribute('aria-busy'),'false');
+ assert.equal(await workerBubble.locator('strong').innerText(),'Salta');
+ const jobsBeforeHolo=await w.evaluate(()=>{
+  if(!window.__survivalJobs.every(job=>job.stopped))throw new Error('Old worker still running');
+  return window.__survivalJobs.length;
+ });
+ assert.ok(jobsBeforeHolo>=1);
+ await tag(w,'small','tag_holo');
+ await workerBubble.and(w.locator('[aria-busy=true]')).waitFor();
+ const beforeAnswer=await raw(w);
+ await w.evaluate(oldCount=>{
+  const estimates=window.__survivalJobs;
+  if(estimates.length!==oldCount+1)throw new Error('Holographic needs exactly one active calculation');
+  estimates[0].worker.dispatchEvent(new MessageEvent('message',{data:{status:'unavailable',reason:'Stale test answer'}}));
+ },jobsBeforeHolo);
+ assert.equal(await workerBubble.locator('strong').innerText(),'Calculando consejo…');
+ await w.locator('#blind-select-small').focus();
+ await w.evaluate(()=>window.__survivalJobs.at(-1).release());
+ await workerBubble.and(w.locator('[aria-busy=false]')).waitFor();
+ assert.equal(await workerBubble.locator('strong').innerText(),'Juega');
+ assert.match(await workerBubble.locator('p').innerText(),/puntuación alcanza para el jefe/);
+ assert.equal(await w.evaluate(()=>document.activeElement.id),'blind-select-small');
+ assert.equal(await raw(w),beforeAnswer,'A survival result must leave the confirmed state untouched');
+ await worker.context.close();pass('background-advice-stays-interactive-cancels-stale-work-and-never-writes-the-run');
+
  // Without recorded hand levels, Economy keeps the player-declared fallback.
  const guideRun=createNewRun({runId:'guide-xii-067',updatedAt:'2026-11-10T12:00:00Z',deckId:'blue',profileConfirmed:true});
  assert.equal(guideRun.ok,true);const economy=guideRun.value;
@@ -102,6 +170,7 @@ try{
  const compared=await session(undefined,economySave),q=compared.page;
  await q.locator('#menu-play').click();await q.locator('#setup-tab-continue').click();await q.locator('#setup-play').click();
  await q.locator('#blind-compare').click();const plan=q.locator('#blind-next-plan'),detail=q.locator('#blind-guidance');
+ await detail.waitFor();
  assert.equal(await plan.inputValue(),'unknown');assert.equal(await detail.getAttribute('data-preferred'),'none');
  assert.equal(await detail.locator('#blind-next-estimate').getAttribute('data-status'),'unavailable');
  await plan.selectOption('ready');assert.equal(await detail.getAttribute('data-preferred'),'skip');
@@ -109,11 +178,13 @@ try{
  assert.equal(skipTitle,'Salta');assert.equal(await q.locator('.blind-speech strong').innerText(),skipTitle);assert.equal(await q.locator('#blind-money').innerText(),'$40');
  const economyReason=await q.locator('.blind-speech p').innerText();assert.match(economyReason,/\$(28|40)\b/);assert.ok(economyReason.length<=120,'The skip recommendation states the economic benefit briefly');
  await q.locator('#blind-compare').click();assert.equal(await plan.inputValue(),'ready');
+ await detail.waitFor();
  await plan.selectOption('need_shop');assert.equal(await detail.getAttribute('data-preferred'),'play');
  const playTitle=await detail.locator('h3').innerText();await q.locator('#dialog-accept').click();await q.locator('#confirmation').waitFor({state:'hidden'});
  assert.equal(await q.locator('.blind-speech strong').innerText(),playTitle);assert.equal(await raw(q),economySave,'Recommendations do not skip, pay, or modify the saved game');
  await tag(q,'big','tag_rare');const afterTag=await raw(q);
  await q.locator('#blind-compare').click();assert.equal(await plan.inputValue(),'unknown','New observations invalidate the previous answer');
+ await detail.waitFor();
  assert.equal(await detail.getAttribute('data-preferred'),'none');assert.equal(await raw(q),afterTag);
  await compared.context.close();pass('economy-skip-and-play-in-scene-and-detail-without-ever-skipping-or-paying');
 

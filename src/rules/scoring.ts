@@ -54,7 +54,7 @@ function classify(cards: Card[],ids:readonly string[]): { hand: HandId; scoring:
   return { hand, scoring: cards.filter(c => ranksScoring.has(c.rank)) };
 }
 
-export function scoreInternal(original: GameState, input: HandInput, trace: Trace[], use: (id: string) => void): HandScore {
+export function scoreInternal(original: GameState, input: HandInput, trace: Trace[], use: (id: string) => void, hookDiscardResolved=false): HandScore {
   if (!input || typeof input !== 'object') fail('$hand', 'invalid_hand', 'Falta la mano concreta y sus descartes restantes.');
   const state=structuredClone(original),moneyBefore=state.observed.money.status==='known'?state.observed.money.value:undefined;
   const checkedChoices=validateEffectChoices(input.choices??[]);if(!checkedChoices.ok){const e=checkedChoices.errors[0]!;fail(e.path,e.code,e.message);}
@@ -65,6 +65,7 @@ export function scoreInternal(original: GameState, input: HandInput, trace: Trac
   const held=needsHeld?requireCards(context.held,'las cartas retenidas en mano'):context.held??[];
   if(context.deck.some(c=>c.enhancement==='steel'))use(contextRule);
   const baseResources=resources(state),blind=blindInfo(state);
+  if(blind.boss==='the_hook'&&!hookDiscardResolved)fail('$.observed.nextBlind.bossId','unsupported_blind','El garfio requiere resolver el descarte antes de puntuar la jugada.');
   const r={...baseResources,...historyRoundResources(jokers,blind.boss==='the_needle'?1:baseResources.hands,baseResources.discards)};
   if(input.roundInitialHands!==undefined){if(!Number.isSafeInteger(input.roundInitialHands)||input.roundInitialHands<1||input.roundInitialHands>1000)fail('$hand.roundInitialHands','invalid_resources','Manos iniciales de ronda incompatibles.');r.hands=input.roundInitialHands;}
   if(input.capacityOverflow!==undefined&&(!Number.isSafeInteger(input.capacityOverflow)||input.capacityOverflow<0||input.capacityOverflow>200))fail('$hand.capacityOverflow','invalid_resources','Exceso temporal de mano inválido.');

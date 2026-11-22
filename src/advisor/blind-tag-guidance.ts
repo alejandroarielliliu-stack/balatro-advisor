@@ -7,6 +7,7 @@ import type {BlindInfo} from '../run/progress.js';
 import type {Fact,GameStateV02} from '../state/model.js';
 import {assessSkipBudget} from './skip-tag-budget.js';
 import {assessBossMatchup,assessBossScore,inferPrimaryHand} from './skip-tag-strategy.js';
+import type {EvaluateBlindSurvival} from './skip-tag-strategy.js';
 import type {BlindSurvivalEstimate} from './next-blind-survival.js';
 
 const fixedPlayReasons:Readonly<Partial<Record<TagId,string>>>={
@@ -60,7 +61,7 @@ function decideDouble(state:GameStateV02,blind:BlindInfo|null):ConfiguredSkipTag
 
 /** User policy. No next-blind simulation or risk override for rules that only
  * depend on a tag, a recorded ante, or the number of Double Tags. */
-export function decideConfiguredSkipTag(state:GameStateV02,blind:BlindInfo|null,tagId:string|null):ConfiguredSkipTagDecision|null {
+export function decideConfiguredSkipTag(state:GameStateV02,blind:BlindInfo|null,tagId:string|null,evaluate?:EvaluateBlindSurvival):ConfiguredSkipTagDecision|null {
  if(!tagId||blind?.kind==='boss')return null;
  const tag=tagDefinition(tagId);
  if(!tag)return null;
@@ -89,7 +90,7 @@ export function decideConfiguredSkipTag(state:GameStateV02,blind:BlindInfo|null,
    if(!blind)return play(timingUnknown);
    const investment=tag.id==='tag_investment';
    if(!early(blind))return play(`La ventana de ${investment?'Inversión':'Holográfica'} termina en la Pequeña del ante 2. Conserva esta tienda.`);
-   const boss=assessBossScore(state);
+   const boss=assessBossScore(state,evaluate);
    if(boss.status==='unknown'){
     const emptyJokers=value(state.observed.jokers)?.length===0;
     return {
@@ -117,7 +118,7 @@ export function decideConfiguredSkipTag(state:GameStateV02,blind:BlindInfo|null,
    return play(`Orbital sube ${HAND_NAMES[target]}. Tu mano principal es ${HAND_NAMES[primary]}.`);
   }
   case 'tag_boss': {
-   const matchup=assessBossMatchup(state);
+   const matchup=assessBossMatchup(state,evaluate);
    return {skip:matchup.harmful===true,reason:matchup.reason};
   }
   case 'tag_negative': {

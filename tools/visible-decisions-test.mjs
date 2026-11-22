@@ -78,9 +78,10 @@ try{
  pass('first-small-uncommon-recommends-skipping-without-estimate-or-write');
  const sampled=await session('DV-BLIND-02');before=await raw(sampled.p);count=await writes(sampled.p);
  await sampled.p.locator('#run-compare-blind').click();const estimation=sampled.p.locator('#blind-next-estimate');
+ await estimation.waitFor();
  assert.equal(await sampled.p.locator('#blind-guidance').getAttribute('data-rule'),'BG-ESTIMATED-SKIP');assert.equal(await estimation.getAttribute('data-status'),'estimated');
  assert.match(await sampled.p.locator('#blind-guidance').innerText(),/^Salta\s+Economía te da \$20 ahora/);
- assert.match(await estimation.innerText(),/meta 450.*puntos por mano disponible.*rondas simuladas/s);await unchanged(sampled.p,before,count);
+ assert.match(await estimation.innerText(),/meta 450.*puntos por mano jugada.*Rango habitual.*rondas simuladas/s);await unchanged(sampled.p,before,count);
  await sampled.p.locator('#dialog-accept').click();await sampled.context.close();
  pass('economy-skip-shows-sampled-next-blind-with-target-and-hand-budget');
  for(const width of [390,360]){

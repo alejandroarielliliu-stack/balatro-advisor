@@ -3,8 +3,8 @@ import {blindRequirement} from '../catalog/blinds.js';
 import {TAGS,tagDefinition} from '../catalog/tags.js';
 import type {HandId} from '../catalog/initial.js';
 import {DECK_PROFILES} from '../catalog/decks.js';
-import {guideBlindChoice} from '../advisor/blind-guidance.js';
-import {compactBlindGuidance,currentBlindAnswers} from './blind-decision-view.js';
+import {createBlindGuidanceView} from './blind-guidance-client.js';
+import {compactBlindGuidance,currentBlindAnswers,pendingBlindAdvice} from './blind-decision-view.js';
 import {jokerArt,engineArt} from './collection.js';
 import {deckArt} from './deck-art.js';
 import {blindArt,tagArt} from './blind-art.js';
@@ -42,7 +42,7 @@ export function mountBlindScreen(options:BlindScreenOptions){
  const applyMotion=()=>{let preference='system';try{preference=localStorage.getItem('balatro-advisor.menu-motion.v1')??'system';}catch{/* A visual preference does not block the table. */}background.setMotion(preference==='on'||preference==='system'&&!motion.matches);};
  motion.addEventListener('change',applyMotion);document.querySelector('#menu-settings')?.addEventListener('close',applyMotion);applyMotion();
  const side=el('aside','','blind-sidebar'),advisor=el('section','','blind-advisor'),avatar=el('div','','blind-advisor-avatar'),bubble=el('div','','blind-speech');
- avatar.append(jokerArt('j_joker','Comodín asesor'));const title=el('strong'),reason=el('p');bubble.append(title,reason);advisor.append(avatar,bubble);
+ avatar.append(jokerArt('j_joker','Comodín asesor'));const title=el('strong'),reason=el('p');title.setAttribute('aria-live','polite');bubble.append(title,reason);advisor.append(avatar,bubble);
  const compare=el('button','Ver motivos','blind-compare');compare.type='button';compare.id='blind-compare';compare.hidden=true;compare.onclick=options.compareBlind;bubble.append(compare);
  const plan=el('button','Orientar mi compra','blind-compare');plan.type='button';plan.id='game-shop-plan';plan.hidden=true;plan.setAttribute('aria-haspopup','dialog');bubble.append(plan);
  plan.onclick=()=>openShopPlan({state:()=>options.snapshot().state!,quote:()=>{const state=options.snapshot().state;return state?observedRerollQuote(state):null;},observeQuote:options.shop.observeQuote,changed:refresh},plan);
@@ -97,14 +97,24 @@ export function mountBlindScreen(options:BlindScreenOptions){
  const focusCurrentBlind=()=>{if(location.hash==='#blind'&&host.dataset.mode==='select')cards.querySelector<HTMLButtonElement>('[data-active="true"] .blind-select:not(:disabled)')?.focus({preventScroll:true});};
  const finishBlindTransition=()=>{shopPanel.hidden=true;host.classList.remove('shop-to-blind');cards.inert=host.dataset.mode!=='select';focusCurrentBlind();};
  cards.addEventListener('animationend',event=>{if(event.target===cards&&event.animationName==='game-blinds-rise')finishBlindTransition();});
+ const adviceView=createBlindGuidanceView();
+ function refreshAdvice(){
+  const state=options.snapshot().state;
+  if(location.hash!=='#blind'||state?.phase!=='blind_select'){adviceView.cancel();bubble.removeAttribute('aria-busy');return;}
+  const {guidance,pending}=adviceView.read(state,currentBlindAnswers(state),refreshAdvice);
+  const summary=!pending&&guidance.ok?compactBlindGuidance(guidance.value):null;
+  bubble.setAttribute('aria-busy',String(pending));
+  title.textContent=pending?pendingBlindAdvice:summary?.title??'Revisa la ciega';
+  reason.textContent=pending?'':summary?.reason??'Registra los datos de esta ciega.';
+ }
  function refresh(){
   const snapshot=options.snapshot(),state=snapshot.state;
-  if(state&&!['blind_select','in_round','cashout','shop'].includes(state.phase)){if(location.hash==='#blind')location.hash=state.phase==='open_pack'?'pack':'table';return;}
+  if(state&&!['blind_select','in_round','cashout','shop'].includes(state.phase)){adviceView.cancel();if(location.hash==='#blind')location.hash=state.phase==='open_pack'?'pack':'table';return;}
   const answers=state?currentBlindAnswers(state):undefined;
   const token=JSON.stringify([snapshot,answers,state?currentShopPlan(state):null]);if(token===rendered)return;rendered=token;
   compare.hidden=true;
   plan.hidden=state?.phase!=='shop';
-  error.textContent='';if(!state){title.textContent='Elige una baraja';reason.textContent='Inicia la partida desde el menú.';cards.replaceChildren();return;}
+  error.textContent='';if(!state){refreshAdvice();title.textContent='Elige una baraja';reason.textContent='Inicia la partida desde el menú.';cards.replaceChildren();return;}
   const settling=state.phase==='in_round'||state.phase==='cashout',shopping=state.phase==='shop',selecting=state.phase==='blind_select',previousMode=host.dataset.mode,animate=settling&&previousMode==='select',enteringShop=shopping&&previousMode==='cashout'&&!motion.matches,enteringBlinds=selecting&&previousMode==='shop'&&!motion.matches;
   host.dataset.mode=shopping?'shop':settling?'cashout':'select';host.setAttribute('aria-label',shopping?'Tienda':settling?'Cobro de la ronda':'Selección de ciega');
   if(!selecting){clearTimeout(blindTransitionTimer);host.classList.remove('shop-to-blind');}
@@ -115,10 +125,8 @@ export function mountBlindScreen(options:BlindScreenOptions){
   if(animate)host.classList.add('blind-to-cashout');else if(!settling)host.classList.remove('blind-to-cashout');
   const current=value(state.observed.nextBlind),origin=state.schemaVersion==='0.2'&&state.phase==='shop'?value(state.phaseData.origin):undefined,anteValue=origin?.ante??current?.ante,deckId=value(state.observed.deckId)??'',writable=snapshot.writable&&!snapshot.dirty;
   compare.hidden=!selecting||!current||current.kind==='boss';
-  const guidance=guideBlindChoice(state,answers);
-  const summary=guidance.ok?compactBlindGuidance(guidance.value):null;
-  title.textContent=settling?'Cobro':summary?.title??'Revisa la ciega';
-  reason.textContent=settling?'Introduce cuánto ganaste.':summary?.reason??'Registra los datos de esta ciega.';
+  refreshAdvice();
+  if(settling){title.textContent='Cobro';reason.textContent='Introduce cuánto ganaste.';}
   bubble.dataset.basis='heuristic';
   hands.n.textContent=String(state.phase==='in_round'?value(state.phaseData.handsRemaining)??'—':settling?'—':value(state.observed.resources.handsPerRound)??'—');discards.n.textContent=String(state.phase==='in_round'?value(state.phaseData.discardsRemaining)??'—':settling?'—':value(state.observed.resources.discardsPerRound)??'—');money.n.textContent=value(state.observed.money)===undefined?'$—':'$'+value(state.observed.money);money.box.title=settling?'Último saldo registrado. Introduce el saldo actual al cobrar.':'';ante.n.textContent=(anteValue??'—')+'/8';
   const skipped=value(value(state.observed.jokerContext)?.blindsSkipped),roundRef=origin??current;round.n.textContent=roundRef&&skipped!==undefined?String(Math.max(0,(roundRef.ante-1)*3+({small:0,big:1,boss:2}[roundRef.kind])-skipped+(settling||origin?1:0))):'—';round.box.title='Ciegas anteriores menos saltos registrados, incluida la ronda actual al seleccionarla. Desconocido si falta el total de saltos.';
@@ -182,6 +190,6 @@ export function mountBlindScreen(options:BlindScreenOptions){
   stage.style.setProperty('--blind-stage-height',`${height/scale}px`);
  };
  touchLayout.addEventListener('change',resize);
- const observer=new ResizeObserver(resize);observer.observe(document.getElementById('app-viewport')!);window.addEventListener('hashchange',()=>{const active=location.hash==='#blind';background.setActive(active);if(!active&&picker.open)picker.close();if(active){refresh();resize();}});resize();
+ const observer=new ResizeObserver(resize);observer.observe(document.getElementById('app-viewport')!);window.addEventListener('hashchange',()=>{const active=location.hash==='#blind';background.setActive(active);if(!active&&picker.open)picker.close();if(active){refresh();resize();}refreshAdvice();});resize();
  return {refresh};
 }

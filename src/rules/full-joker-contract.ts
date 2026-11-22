@@ -23,6 +23,6 @@ export interface FullJokerInput {
 export interface EffectBonus {chips?:number|undefined;mult?:number|undefined;xmult?:number|undefined;money?:number}
 export interface FullEventInput {
  state:GameState;stage:'select_blind'|'before_hand'|'after_hand'|'discard'|'end_round'|'end_shop'|'reroll'|'skip_pack'|'open_pack'|'use_consumable'|'sell';
- cards:Card[];hand?:HandId;handsUsed?:number|undefined;discardsUsed?:number|undefined;won?:boolean|undefined;
+ cards:Card[];hand?:HandId;handsUsed?:number|undefined;discardsUsed?:number|undefined;won?:boolean|undefined;forcedDiscard?:boolean;
  consumable?:Consumable;soldJoker?:JokerInstance;activeBlind?:boolean|undefined;choices?:readonly EffectChoice[];generatedLocations?:Record<string,'hand'|'deck'>;trace:Trace[];use:(id:string)=>void;
 }

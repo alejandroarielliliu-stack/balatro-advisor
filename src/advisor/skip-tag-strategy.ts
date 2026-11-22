@@ -1,4 +1,4 @@
-import {blindRequirement} from '../catalog/blinds.js';
+import {blindRequirement,implementedBossEffects} from '../catalog/blinds.js';
 import {bossDefinition} from '../catalog/bosses.js';
 import {HAND_BASES} from '../catalog/initial.js';
 import type {Card,HandId} from '../catalog/initial.js';
@@ -109,29 +109,35 @@ export interface BossScoreAssessment{
  estimate?:BlindSurvivalEstimate;
 }
 
+export type EvaluateBlindSurvival=(state:GameStateV02,context:'boss'|'next_blind')=>BlindSurvivalEstimate;
+
 let recentBossScore:{key:string;result:BossScoreAssessment}|undefined;
 
 /** Score the registered boss with the current build, without assuming purchases or the tag payout. */
-export function assessBossScore(state:GameStateV02):BossScoreAssessment{
+export function assessBossScore(state:GameStateV02,evaluate?:EvaluateBlindSurvival):BossScoreAssessment{
  const context=currentBoss(state),deckId=value(state.observed.deckId);
  if(!context||state.phase!=='blind_select')return {status:'unknown',reason:'Registra el jefe de este ante para calcular la puntuación.'};
  if(deckId===undefined)return {status:'unknown',reason:'Registra tu baraja para calcular la puntuación contra el jefe.'};
  const {blind,boss}=context;
  const definition=blindRequirement(blind.ante,'boss',boss.id,deckId);
  if(!definition.ok)return {status:'unknown',reason:definition.error.message};
- const key=JSON.stringify(state);
- if(recentBossScore?.key===key)return structuredClone(recentBossScore.result);
+ if(evaluate&&!implementedBossEffects(boss.id)){
+  const reason=`La estimación de puntuación aún no incluye el efecto de ${boss.name}.`;
+  return {status:'unknown',reason,estimate:{status:'unavailable',reason}};
+ }
+ const key=evaluate?null:JSON.stringify(state);
+ if(key!==null&&recentBossScore?.key===key)return structuredClone(recentBossScore.result);
  const projected=selectionScenarioState(state);
  projected.observed.nextBlind=valueFact({
   ...blind,target:blind.target.status==='known'?blind.target:valueFact(definition.target),
   reward:blind.reward.status==='known'?blind.reward:valueFact(definition.reward)
  });
- const estimate=estimateBlindSurvival(projected);
+ const estimate=evaluate?evaluate(projected,'boss'):estimateBlindSurvival(projected);
  let result:BossScoreAssessment;
  if(estimate.status==='unavailable')result={status:'unknown',reason:estimate.reason,estimate};
  else if(estimate.estimatedPoints>=estimate.target)result={status:'sufficient',reason:`La puntuación media estimada alcanza la meta de ${boss.name}.`,estimate};
  else result={status:'insufficient',reason:`La puntuación media estimada queda por debajo de la meta de ${boss.name}.`,estimate};
- recentBossScore={key,result:structuredClone(result)};
+ if(key!==null)recentBossScore={key,result:structuredClone(result)};
  return result;
 }
 
@@ -140,7 +146,7 @@ const suitBoss:Readonly<Record<string,Card['suit']>>={the_club:'C',the_goad:'S',
 const knownHarm=(reason:string):BossMatchup=>({harmful:true,reason});
 
 /** Relate the actual boss restriction to the available deck, jokers and ranked hand strategy. */
-export function assessBossMatchup(state:GameStateV02):BossMatchup{
+export function assessBossMatchup(state:GameStateV02,evaluate?:EvaluateBlindSurvival):BossMatchup{
  const context=currentBoss(state);
  if(!context)return {harmful:null,reason:'Registra el jefe para valorar su efecto contra tu estrategia.'};
  const {boss}=context,jokers=value(state.observed.jokers),ids=jokers?.map(joker=>joker.catalogId)??[];
@@ -183,7 +189,10 @@ export function assessBossMatchup(state:GameStateV02):BossMatchup{
  if(boss.id==='verdant_leaf'&&jokers&&jokers.every(joker=>value(joker.stickers)?.includes('eternal')))
   return knownHarm(`${boss.name} debilita todas las cartas y no tienes un comodín que puedas vender.`);
 
- const score=assessBossScore(state);
+ // Only these unresolved boss matchups can change their advice from a score.
+ if(evaluate&&boss.id!=='the_wall'&&boss.id!=='violet_vessel'&&boss.id!=='the_needle')
+  return {harmful:null,reason:`No se detectó un perjuicio significativo de ${boss.name} para tu estrategia.`};
+ const score=assessBossScore(state,evaluate);
  if(score.status==='sufficient')return {harmful:false,reason:`La puntuación media estimada alcanza la meta de ${boss.name}.`};
  if(score.estimate?.status==='estimated'){
   const {estimatedPoints,target}=score.estimate;

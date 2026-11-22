@@ -6,7 +6,7 @@ import {fileURLToPath} from 'node:url';
 // Node demos enter the web root. Run after the existing TypeScript build.
 const root=fileURLToPath(new URL('../',import.meta.url));
 const output=path.resolve(root,'out'),pending=path.resolve(root,'out.pending');
-const allowed=new Set(),entry='dist/src/ui/app.js';
+const allowed=new Set(),entries=['dist/src/ui/app.js','dist/src/ui/blind-survival-worker.js'];
 async function collect(relative){
  if(allowed.has(relative))return;
  if(!relative.startsWith('dist/src/')||!relative.endsWith('.js'))throw Error('Browser import outside the compiled client: '+relative);
@@ -29,7 +29,7 @@ async function webFiles(relative='web'){
   else if(/\.(css|png|ttf|json)$/.test(file)||file==='web/assets/efhiii/balatro-sim.js'||file==='web/assets/efhiii/LICENSE'||file==='web/assets/fonts/README.md')await copyFile(file);
  }
 }
-await collect(entry);
+for(const entry of entries)await collect(entry);
 // Only fixed paths under this project can be replaced by this builder.
 if(path.dirname(output)!==path.resolve(root)||path.dirname(pending)!==path.resolve(root))throw Error('Unsafe artifact path.');
 await rm(pending,{recursive:true,force:true});await mkdir(pending,{recursive:true});

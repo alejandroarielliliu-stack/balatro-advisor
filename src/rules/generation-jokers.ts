@@ -120,7 +120,7 @@ export function generationEvent(input:FullEventInput,effective?:readonly JokerIn
  if(input.stage==='discard'&&jokers.some(j=>j.catalogId==='burnt'||j.catalogId==='trading')){
   if(input.discardsUsed===undefined)fail('$round.discardsUsed','unknown_data','Falta saber si es el primer descarte.');
   if(input.discardsUsed===0){let destroyed=false;for(const j of [...(effective??jokers)]){
-   if(j.catalogId==='burnt'){if(!input.hand)fail('$event.hand','unknown_data','Burnt Joker requiere clasificar la mano descartada.');upgradeHand(input,input.hand);}
+   if(j.catalogId==='burnt'&&!input.forcedDiscard){if(!input.hand)fail('$event.hand','unknown_data','Burnt Joker requiere clasificar la mano descartada.');upgradeHand(input,input.hand);}
    if(j.catalogId==='trading'&&input.cards.length===1&&jokers.some(p=>p.instanceId===j.instanceId&&p.catalogId===j.catalogId)){if(!destroyed){destroyCards(input,input.cards);destroyed=true;}addMoney(input,3,'Trading Card · primer descarte');}
   }}
  }

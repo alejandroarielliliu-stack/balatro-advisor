@@ -76,7 +76,7 @@ test('boss strength distinguishes supported wins, supported shortfalls and unava
  assert.equal(lost.status,'insufficient');
  assert.equal(lost.estimate?.status,'estimated');
  if(lost.estimate?.status==='estimated'){assert.equal(lost.estimate.hands,1);assert.equal(lost.estimate.target,800);}
- const unsupported=fixture(1,'the_hook');
+ const unsupported=fixture(1,'the_window');
  assert.equal(assessBossScore(unsupported).status,'unknown');
  unsupported.observed.visibleBoss={status:'unknown',reason:'Jefe oculto'};
  assert.match(assessBossScore(unsupported).reason,/Registra el jefe/);

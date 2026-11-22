@@ -5,12 +5,14 @@ import type {BlindDecision} from '../advisor/blind-decision.js';
 import type {ShopDecision} from '../advisor/decision.js';
 import type {Result} from '../state/model.js';
 import {tagDefinition} from '../catalog/tags.js';
-import {BLIND_GUIDANCE_POLICY,guideBlindChoice} from '../advisor/blind-guidance.js';
+import {BLIND_GUIDANCE_POLICY} from '../advisor/blind-guidance.js';
 import type {BlindGuidance,BlindGuidanceOptions} from '../advisor/blind-guidance.js';
+import {createBlindGuidanceView} from './blind-guidance-client.js';
 const el=<K extends keyof HTMLElementTagNameMap>(tag:K,text='',cl='')=>{const e=document.createElement(tag);e.textContent=text;e.className=cl;return e;};
 const amount=(n:number|null)=>n===null?'Sin dato':'$'+n;
 const signed=(n:number)=>n>0?'+'+n:String(n);
 const points=new Intl.NumberFormat('es',{maximumFractionDigits:2});
+export const pendingBlindAdvice='Calculando consejo…';
 // These answers describe one observed decision. Opening another revision or
 // reloading the document starts the comparison with both answers unknown.
 type BlindAnswers=Required<Pick<BlindGuidanceOptions,'risk'|'nextBlindPlan'>>;
@@ -98,9 +100,10 @@ export function renderBlindGuidance(guidance:BlindGuidance):HTMLElement{
   const panel=el('section');panel.id=guidance.bossEstimate?'blind-boss-estimate':'blind-next-estimate';panel.dataset.status=estimate.status;
   panel.append(el('h4',guidance.bossEstimate?'Estimación contra el jefe':'Siguiente ciega tras saltar'));
   if(estimate.status==='estimated'){
+   panel.append(el('p',`${points.format(estimate.estimatedPoints)} puntos medios por ronda · meta ${points.format(estimate.target)}.`));
+   if(estimate.pointsPerPlayedHand!==null)panel.append(el('p',`${points.format(estimate.pointsPerPlayedHand)} puntos por mano jugada.`));
    panel.append(
-    el('p',`${points.format(estimate.estimatedPoints)} puntos estimados · meta ${points.format(estimate.target)}.`),
-    el('p',`${points.format(estimate.pointsPerHand)} puntos por mano disponible · ${estimate.hands} ${estimate.hands===1?'mano en total':'manos en total'}.`),
+    el('p',`Rango habitual de ${points.format(estimate.p10Points)} a ${points.format(estimate.p90Points)} puntos · mediana ${points.format(estimate.medianPoints)}.`),
     el('p',`Se alcanzó la meta en ${estimate.reachedCount} de ${estimate.sampleCount} rondas simuladas.`));
    host.append(panel);
   }else{
@@ -149,7 +152,9 @@ export function blindComparisonButton(options:BlindViewOptions):HTMLButtonElemen
   for(const [value,text] of [['unknown','No lo sé'],['ready','Puedo pasarla con lo que tengo ahora'],['need_shop','Necesito jugar y pasar por la tienda']] as const){
    const choice=el('option',text);choice.value=value;nextPlan.append(choice);
   }
-  const result=el('div'),advanced=el('div','','blind-plan-controls');advanced.append(label,strictLabel);body.append(riskLabel,planLabel,result,advanced);
+  const result=el('div'),advanced=el('div','','blind-plan-controls');result.setAttribute('aria-live','polite');advanced.append(label,strictLabel);body.append(riskLabel,planLabel,result,advanced);
+  const adviceView=createBlindGuidanceView();
+  const refreshAdvice=()=>{if(body.closest('dialog')?.open)calculate();};
   let evaluatedState='';
   const calculate=(rememberAnswers=false)=>{result.replaceChildren();try{
    const state=options.state(),stateToken=JSON.stringify(state);
@@ -162,10 +167,12 @@ export function blindComparisonButton(options:BlindViewOptions):HTMLButtonElemen
     declaration={runId:state.runId,revision:state.revision,answers};
     options.riskChanged?.();
    }
-   const guidance=guideBlindChoice(state,{...answers,requireObserved:strict.checked});
+   const {guidance,pending}=adviceView.read(state,{...answers,requireObserved:strict.checked},refreshAdvice);
    const configured=guidance.ok&&guidance.value.recommendation.ruleId===BLIND_GUIDANCE_POLICY.rules.tagRule;
    riskLabel.hidden=configured;risk.disabled=configured;
-   planLabel.hidden=!guidance.ok||!guidance.value.askNextBlindPlan;nextPlan.disabled=planLabel.hidden;
+   planLabel.hidden=pending||!guidance.ok||!guidance.value.askNextBlindPlan;nextPlan.disabled=planLabel.hidden;
+   result.setAttribute('aria-busy',String(pending));
+   if(pending){result.append(el('p',pendingBlindAdvice));return;}
    const scenarios=scope.value==='none'?undefined:options.scenarios();
    if(scopesNeedPlan(scope.value)&&!scenarios?.length){result.append(el('p','Añade jugadas en Análisis y declara sus cartas y robos.','error'));return;}
    const report=compareBlindChoices(state,{requireObserved:strict.checked,...(scope.value==='play'?{playScenarios:scenarios!}:scope.value==='skip'?{afterSkipScenarios:scenarios!}:{})});
@@ -174,10 +181,12 @@ export function blindComparisonButton(options:BlindViewOptions):HTMLButtonElemen
     if(guidance.ok)result.append(renderBlindGuidance(guidance.value));
     if(!configured||scope.value!=='none')for(const e of report.errors)result.append(el('p',e.message,'error'));
    }
-  }catch(e){planLabel.hidden=true;nextPlan.disabled=true;result.append(el('p',e instanceof Error?e.message:'Revisa los datos.','error'));}};
+  }catch(e){adviceView.cancel();result.removeAttribute('aria-busy');planLabel.hidden=true;nextPlan.disabled=true;result.append(el('p',e instanceof Error?e.message:'Revisa los datos.','error'));}};
   scope.onchange=()=>calculate();strict.onchange=()=>calculate();risk.onchange=nextPlan.onchange=()=>calculate(true);
   const link=el('a','Editar jugadas en Análisis →');link.href='#evaluation';link.onclick=()=>document.querySelector<HTMLDialogElement>('#confirmation')?.close();body.append(link);
-  calculate();options.open('Jugar o saltar',body,'Cerrar',()=>true);
+  options.open('Jugar o saltar',body,'Cerrar',()=>true);
+  body.closest('dialog')?.addEventListener('close',()=>adviceView.cancel(),{once:true});
+  calculate();
  };
  return button;
 }

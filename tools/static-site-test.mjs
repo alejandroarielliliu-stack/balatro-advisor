@@ -37,6 +37,7 @@ try{
   await visit(artifact);
   assert.ok(files.includes('index.html'));
   assert.ok(files.includes('dist/src/ui/app.js'));
+  assert.ok(files.includes('dist/src/ui/blind-survival-worker.js'));
   assert.deepEqual(files.filter(f=>f.startsWith('examples/')).sort(),['examples/round-plan.json','examples/shop-purchase.json']);
   const forbidden=files.filter(f=>/\.(?:ts|log)$/i.test(f)||/(?:^|\/)(?:docs|tests|tools|node_modules|\.git|logs)(?:\/|$)/.test(f)||/(?:^|\/)\.env(?:\.|$)/.test(f)||/(?:counter[-_]?report|report\.json)/i.test(f));
   assert.deepEqual(forbidden,[],'Source declarations, evidence/logs and reports must not ship in the site artifact.');
@@ -166,6 +167,23 @@ try{
     await go(e,'evaluation');await e.locator('#demo').click();await e.locator('.demo-banner').waitFor();assert.equal(await stored(e),before);
     pass('persistence','Explicit H1 example import creates T09 record; reload recovers money/revision; consulting fit/demo leaves record byte-for-byte unchanged',{runId:record.state.runId,revision:record.state.revision,money:7,history:0,storedOnConfirmationOnly:true});
   }finally{await exactCtx.close();}
+  const blindCtx=await browser.newContext({viewport:{width:1280,height:720},reducedMotion:'reduce'});
+  try{
+    const b=await blindCtx.newPage();instrument(b);await b.goto(base);await ready(b);
+    await b.locator('#menu-play').click();await b.locator('#setup-deck-dots input[value=red]').check();
+    await b.locator('#setup-play').click();
+    await b.locator('[data-tag-slot=small]').click();await b.locator('[data-tag-choice=tag_investment]').click();
+    await b.locator('#blind-picker').waitFor({state:'hidden'});
+    const workerStarted=b.waitForEvent('worker',worker=>worker.url()===base+'dist/src/ui/blind-survival-worker.js');
+    await b.locator('#blind-boss-picker').click();await b.locator('[data-boss-choice=the_psychic]').click();
+    await b.locator('#blind-picker').waitFor({state:'hidden'});
+    const before=await stored(b);await workerStarted;
+    await b.locator('#blind-compare').click();
+    await b.locator('#blind-boss-estimate[data-status=estimated]').waitFor({state:'visible'});
+    assert.match(await b.locator('#blind-guidance h3').innerText(),/^(Juega|Salta)$/);
+    assert.equal(await stored(b),before);
+    pass('blind-survival-worker','The project subpath loads its module worker, resolves the boss estimate and preserves the recorded run',{worker:true,consultationWrites:0});
+  }finally{await blindCtx.close();}
   assert.deepEqual(pageErrors,[]);assert.deepEqual(failed,[]);assert.deepEqual(external,[]);
   report.requests={internalLoaded:loaded.size,externalCount:external.length,failed,pageErrors};
   report.status='passed';

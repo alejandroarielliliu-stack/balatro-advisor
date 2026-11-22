@@ -16,6 +16,7 @@ import {BLIND_POLICY} from './blind-decision.js';
 import {assessBlindTag,decideConfiguredSkipTag,isAutomaticPlayTag} from './blind-tag-guidance.js';
 import {estimateBlindSurvival} from './next-blind-survival.js';
 import type {BlindSurvivalEstimate} from './next-blind-survival.js';
+import type {EvaluateBlindSurvival} from './skip-tag-strategy.js';
 
 export const BLIND_GUIDANCE_POLICY={version:'blind-guidance-4',rules:{
  opportunity:'BG-ROUND-AND-SHOP',cashThreshold:'BG-CASH-THRESHOLD',rewardTradeoff:'BG-REWARD-TRADEOFF',
@@ -117,7 +118,7 @@ function afterSkipForScoring(state:GameStateV02,tagId:string):GameStateV02|strin
  const projection=projectSkipBlind(state);
  if(!projection.ok)return projection.errors[0]?.message??'Falta resolver el efecto del salto.';
  const next=value(projection.value.state.observed.nextBlind),boss=value(next?.bossId);
- if(next?.kind==='boss'&&(boss==='the_needle'||boss==='the_manacle'||boss==='the_flint')){
+ if(next?.kind==='boss'&&(boss==='the_needle'||boss==='the_manacle'||boss==='the_flint'||boss==='the_hook')){
   return 'La política de Economía no incluye la simulación de este jefe.';
  }
  return selectionScenarioState(projection.value.state);
@@ -125,16 +126,18 @@ function afterSkipForScoring(state:GameStateV02,tagId:string):GameStateV02|strin
 
 // The sidebar and its dialog may request the same estimate at one revision.
 let recentEstimate:{token:string;estimate:BlindSurvivalEstimate}|undefined;
-function sampledNextBlind(state:GameStateV02,tagId:string,stateToken:string):BlindSurvivalEstimate {
- if(recentEstimate?.token===stateToken)return {...recentEstimate.estimate};
+function sampledNextBlind(state:GameStateV02,tagId:string,stateToken:string,evaluate?:EvaluateBlindSurvival):BlindSurvivalEstimate {
+ if(!evaluate&&recentEstimate?.token===stateToken)return {...recentEstimate.estimate};
  const projected=afterSkipForScoring(state,tagId);
- const estimate:BlindSurvivalEstimate=typeof projected==='string'?{status:'unavailable',reason:projected}:estimateBlindSurvival(projected);
- recentEstimate={token:stateToken,estimate};
+ if(typeof projected==='string')return {status:'unavailable',reason:projected};
+ if(evaluate)return evaluate(projected,'next_blind');
+ const estimate=estimateBlindSurvival(projected);
+ recentEstimate={token:stateToken,estimate:structuredClone(estimate)};
  return {...estimate};
 }
 
 /** Read-only advice. A sampled round is a model with concrete assumptions, not a confirmed run. */
-export function guideBlindChoice(input:unknown,options:BlindGuidanceOptions={}):Result<BlindGuidance> {
+export function guideBlindChoice(input:unknown,options:BlindGuidanceOptions={},evaluate?:EvaluateBlindSurvival):Result<BlindGuidance> {
  const checked=validateState(input);if(!checked.ok)return checked;
  const parsed=parsedOptions(options);if(!parsed.ok)return parsed;
  const state=checked.value,settings=parsed.value;
@@ -155,7 +158,7 @@ export function guideBlindChoice(input:unknown,options:BlindGuidanceOptions={}):
  }
  // Explicit tag rules need only the facts in their own condition. Legacy
  // simulation, declared risk and queue overrides must not veto their verdict.
- const configured=decideConfiguredSkipTag(state,blind,tagId);
+ const configured=decideConfiguredSkipTag(state,blind,tagId,evaluate);
  if(configured){
   recommend('conditional',configured.skip?'skip':'play',policy.tagRule,configured.skip?'Salta':'Juega',configured.reason);
   result.survival={status:'not_evaluated',risk:'unknown',source:null};
@@ -180,7 +183,15 @@ export function guideBlindChoice(input:unknown,options:BlindGuidanceOptions={}):
  }
  const money=value(state.observed.money),reward=value(blind.reward),deck=value(state.observed.deckId),jokers=value(state.observed.jokers),context=value(state.observed.jokerContext),queue=value(context?.tags);
  const tagAssessment=tagId?assessBlindTag(state,tagId):null;
- if(tagId)result.nextBlindEstimate=sampledNextBlind(state,tagId,result.stateToken);
+ const economy=profile?.id==='tag_economy';
+ const ref=economy?cashflowReference(state):null;
+ const bestEarned=ref?Math.max(...ref.rows.map(row=>row.earned)):null;
+ const economyLimit=ref?.minimumHandsToMatchSkip===null?economySkipLimit(state):null;
+ const cashAdvantage=ref&&bestEarned!==null&&ref.skipImmediateIncome>bestEarned&&economyLimit===null
+  ?`Economía da $${ref.skipImmediateIncome} ahora frente a un cobro de hasta $${bestEarned} si ganas con los supuestos indicados.`:null;
+ const stableInputs=queue?.length===0&&jokers?.every(joker=>
+  (BLIND_POLICY.cashEligibleJokers as readonly string[]).includes(joker.catalogId)&&joker.catalogId!=='green_joker'&&value(joker.stickers)?.length===0);
+ if(tagId&&(!evaluate||!economy||(cashAdvantage&&stableInputs)))result.nextBlindEstimate=sampledNextBlind(state,tagId,result.stateToken,evaluate);
  const estimate=result.nextBlindEstimate;
  if(estimate?.status==='estimated'){
   result.limitations=result.limitations.filter(message=>!message.startsWith('No se puntúan manos'));
@@ -200,9 +211,8 @@ export function guideBlindChoice(input:unknown,options:BlindGuidanceOptions={}):
  if(tagAssessment)result.conditions.push(...tagAssessment.conditions);
  if(settings.risk==='comfortable')result.conditions.push('Has indicado que la sueles superar; es tu valoración declarada, no una certificación del motor.');
  if(jokers?.some(joker=>joker.catalogId==='green_joker'))result.reasons.push('Green Joker puede desarrollarse al jugar manos y reducirse al descartar; no se presupone qué acciones harás ni cuánto crecerá.');
- if(profile?.id==='tag_economy'){
-  result.cashflowReference=cashflowReference(state);
-  const ref=result.cashflowReference;
+ if(economy){
+  result.cashflowReference=ref;
   if(ref&&ref.minimumHandsToMatchSkip!==null){
    const n=ref.minimumHandsToMatchSkip;
    const condition=n===0?'si superas la ciega':`si superas la ciega dejando al menos ${n} ${n===1?'mano':'manos'} sin usar`;
@@ -211,7 +221,7 @@ export function guideBlindChoice(input:unknown,options:BlindGuidanceOptions={}):
   }else if(ref&&money!==null){
    const best=ref.rows.reduce((highest,row)=>row.balanceAfter>highest.balanceAfter?row:highest);
    const afterSkip=money+ref.skipImmediateIncome;
-   const limit=economySkipLimit(state);
+   const limit=economyLimit;
    result.askNextBlindPlan=limit===null;
    result.conditions.push(...ref.assumptions);
    if(limit){
@@ -252,12 +262,6 @@ export function guideBlindChoice(input:unknown,options:BlindGuidanceOptions={}):
   recommend('tradeoff',null,policy.queue,'Revisa las etiquetas pendientes','La cola puede cambiar la recompensa de saltar; las oportunidades de jugar siguen visibles, pero no se ignora esa condición.');
  }
  // Economy keeps its existing conditional cash comparison and sample gate.
- const ref=result.cashflowReference;
- const bestEarned=ref?Math.max(...ref.rows.map(row=>row.earned)):null;
- const cashAdvantage=tagId==='tag_economy'&&ref&&bestEarned!==null&&ref.skipImmediateIncome>bestEarned&&economySkipLimit(state)===null
-  ?`Economía da $${ref.skipImmediateIncome} ahora frente a un cobro de hasta $${bestEarned} si ganas con los supuestos indicados.`:null;
- const stableInputs=queue?.length===0&&jokers?.every(joker=>
-  (BLIND_POLICY.cashEligibleJokers as readonly string[]).includes(joker.catalogId)&&joker.catalogId!=='green_joker'&&value(joker.stickers)?.length===0);
  if(cashAdvantage&&stableInputs&&estimate?.status==='estimated'){
   if(estimate.estimatedPoints<estimate.target){
    recommend('conditional','play',policy.estimatedPlay,'Juega para prepararte',`La proyección de ${Math.floor(estimate.estimatedPoints).toLocaleString('es')} puntos queda por debajo de los ${estimate.target.toLocaleString('es')} que pide la siguiente ciega. Conserva la opción de mejorar en la tienda.`);

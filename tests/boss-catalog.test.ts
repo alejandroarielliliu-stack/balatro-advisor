@@ -3,8 +3,12 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {BOSS_CATALOG,bossDefinition} from '../src/catalog/bosses.js';
 import {blindRequirement,implementedBossEffects} from '../src/catalog/blinds.js';
+import {standardDeck} from '../src/catalog/initial.js';
+import {createNewRun} from '../src/run/start.js';
 import {parseState} from '../src/state/validation.js';
 import {scoreHand} from '../src/rules/scoring.js';
+import {applyRoundEvent,beginRound,previewProjectedRoundPlay,previewRoundPlay} from '../src/rules/round.js';
+import {selectionScenarioState} from '../src/rules/tags.js';
 import {known,success} from './helpers.js';
 
 // Independent fixed oracles transcribed from pinned game.lua P_BLINDS,
@@ -57,7 +61,7 @@ test('boss pool availability is separate from raw source min10/max10 and never e
 });
 
 test('numeric metadata for an unimplemented boss never silently enables exact scoring, even when disabled',()=>{
- assert.deepEqual(BOSS_CATALOG.filter(b=>implementedBossEffects(b.id)).map(b=>b.id).sort(),['the_psychic','the_water','the_wall','violet_vessel','the_needle','the_manacle','the_flint'].sort());
+ assert.deepEqual(BOSS_CATALOG.filter(b=>implementedBossEffects(b.id)).map(b=>b.id).sort(),['the_psychic','the_water','the_wall','violet_vessel','the_needle','the_manacle','the_flint','the_hook'].sort());
  for(const disabled of [false,true]){
   const state=success(parseState(readFileSync('examples/shop-purchase.json','utf8')));
   state.observed.nextBlind=known({ante:1,kind:'boss',bossId:known('the_window'),target:known(600),reward:known(5)});
@@ -67,4 +71,78 @@ test('numeric metadata for an unimplemented boss never silently enables exact sc
   if(!scored.ok)assert.ok(scored.errors.some(e=>e.code==='unsupported_blind'),JSON.stringify(scored));
   assert.deepEqual(state,before);
  }
+});
+
+const hookHand=['2S','3S','4S','5S','6S','7S','8S','9S'];
+
+function hookState(){
+ const state=success(createNewRun({runId:'hook-fixture',deckId:'red',updatedAt:'2026-11-20T00:00:00.000Z',profileConfirmed:true}));
+ state.observed.nextBlind=known({ante:1,kind:'boss',bossId:known('the_hook'),target:known(600),reward:known(5)});
+ return selectionScenarioState(state);
+}
+
+test('Hook discards two retained cards before scoring and refills without using a discard',()=>{
+ const state=hookState(),cards=standardDeck();
+ for(const card of cards)if(card.instanceId==='3S'||card.instanceId==='4S')card.enhancement='steel';
+ state.observed.deck=known({cards});
+ const round=success(beginRound(state,hookHand)),before=structuredClone(round);
+ const cardIds=['2S'],bossDiscardedCardIds=['3S','4S'];
+ const play={cardIds,bossDiscardedCardIds};
+ const otherOutcome=success(previewRoundPlay(round,{cardIds,bossDiscardedCardIds:['5S','6S']}));
+ assert.equal(otherOutcome.score,15,'both held Steel cards still score');
+ assert.equal(success(previewRoundPlay(round,play)).score,7,'discarded Steel cards are not held when scoring');
+ const drawnCardIds=round.remaining.slice(0,3);
+ const applied=success(applyRoundEvent(round,{type:'play',...play,drawnCardIds},{expectedRevision:round.game.revision,updatedAt:round.game.updatedAt}));
+ assert.equal(applied.handScore?.score,7);
+ assert.deepEqual(applied.round.spent,['2S','3S','4S']);
+ assert.deepEqual(applied.round.hand,['5S','6S','7S','8S','9S',...drawnCardIds]);
+ assert.equal(applied.round.discardsLeft,round.discardsLeft);
+ assert.deepEqual(round,before,'query and simulation leave the source round intact');
+});
+
+test('Hook requires legal distinct cards and applies the discard on the winning play',()=>{
+ const round=success(beginRound(hookState(),hookHand));
+ const winning={...round,score:599},cardIds=['2S'];
+ for(const bossDiscardedCardIds of [undefined,['3S'],['3S','3S'],['2S','3S'],[round.remaining[0]!,'3S']]){
+  const checked=previewRoundPlay(winning,{cardIds,...(bossDiscardedCardIds===undefined?{}:{bossDiscardedCardIds})});
+  assert.ok(!checked.ok);
+  assert.equal(checked.errors[0]?.code,'invalid_boss_discard');
+ }
+ const result=success(applyRoundEvent(winning,{type:'play',cardIds,bossDiscardedCardIds:['3S','4S'],drawnCardIds:[]},{expectedRevision:round.game.revision,updatedAt:round.game.updatedAt}));
+ assert.equal(result.round.status,'won');
+ assert.equal(result.round.score,606);
+ assert.deepEqual(result.round.hand,['5S','6S','7S','8S','9S']);
+});
+
+test('Hook discards only the one card still in hand and is disabled by Chicot',()=>{
+ const state=hookState(),cards=standardDeck().filter(card=>hookHand.slice(0,6).includes(card.instanceId));
+ state.observed.deck=known({cards});
+ const round=success(beginRound(state,hookHand.slice(0,6)));
+ const cardIds=hookHand.slice(0,5);
+ const result=success(applyRoundEvent(round,{type:'play',cardIds,bossDiscardedCardIds:['7S'],drawnCardIds:[]},{expectedRevision:round.game.revision,updatedAt:round.game.updatedAt}));
+ assert.deepEqual(result.round.hand,[]);
+ assert.deepEqual(result.round.spent,hookHand.slice(0,6));
+
+ state.observed.jokers=known([{instanceId:'chicot',catalogId:'chicot',edition:known('base'),stickers:known([]),sellValue:known(10),counters:{}}]);
+ const disabled=success(beginRound(state,hookHand.slice(0,6)));
+ assert.equal(previewRoundPlay(disabled,{cardIds}).ok,true);
+ const incorrect=previewRoundPlay(disabled,{cardIds,bossDiscardedCardIds:['7S']});
+ assert.ok(!incorrect.ok);
+ assert.equal(incorrect.errors[0]?.code,'invalid_boss_discard');
+});
+
+test('Hook updates discard-triggered Green Joker without activating Burnt Joker',()=>{
+ const state=hookState();
+ state.observed.jokers=known([
+  {instanceId:'green',catalogId:'green_joker',edition:known('base'),stickers:known([]),sellValue:known(2),counters:{greenMult:known(4)}},
+  {instanceId:'burnt',catalogId:'burnt',edition:known('base'),stickers:known([]),sellValue:known(2),counters:{}}
+ ]);
+ const round=success(beginRound(state,hookHand));
+ const before=structuredClone(round),play={cardIds:['2S'],bossDiscardedCardIds:['3S','4S']};
+ const score=success(previewRoundPlay(round,play));
+ assert.equal(previewProjectedRoundPlay(round,play,[],()=>{}).score,score.score);
+ assert.deepEqual(score.stateAfter.observed.handBases,round.game.observed.handBases);
+ assert.equal(score.greenAfter.green,4,'forced discard subtracts before the played hand adds');
+ assert.equal(score.score,35);
+ assert.deepEqual(round,before);
 });
