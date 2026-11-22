@@ -34,7 +34,8 @@ try{
  const beforeAdvice=await raw(p);
  await p.locator('#blind-compare').click();await p.locator('#blind-risk').selectOption('tight');
  await p.locator('#dialog-accept').click();await p.locator('#confirmation').waitFor({state:'hidden'});
- assert.equal(await p.locator('.blind-speech strong').innerText(),'Valora el salto');
+ assert.equal(await p.locator('.blind-speech strong').innerText(),'Juega');
+ assert.match(await p.locator('.blind-speech p').innerText(),/justo/i);
  assert.equal(await p.locator('.blind-speech small').count(),0,'The brief advice has no orientation footer');
  assert.equal(await p.locator('.blind-speech').getAttribute('title'),null,'Hovering does not open the removed wall of text');
  assert.ok((await p.locator('.blind-speech p').innerText()).length<=120,'The advice stays short enough for the fixed speech bubble');
@@ -45,6 +46,15 @@ try{
 
  await tag(p,'big','tag_rare');let saved=await record(p);assert.equal(saved.state.phaseData.skipTag.status,'unknown');assert.equal(saved.state.blindTags[0].kind,'big');assert.equal(saved.state.blindTags[0].tag.value,'tag_rare');assert.equal(saved.state.observed.money.value,4);assert.equal(saved.state.phase,'blind_select');assert.equal(await p.locator('#blind-round').innerText(),'0');
  await tag(p,'small','tag_investment');saved=await record(p);assert.equal(saved.state.phaseData.skipTag.value,'tag_investment');assert.equal(saved.state.observed.money.value,4);assert.equal(saved.state.blindTags.find(t=>t.kind==='big').tag.value,'tag_rare');
+ assert.equal(saved.state.observed.nextBlind.value.ante,1);assert.equal(saved.state.observed.nextBlind.value.kind,'small');assert.equal(saved.state.observed.visibleBoss.status,'unknown');
+ const investmentSave=await raw(p),investmentReason=await p.locator('.blind-speech p').innerText();
+ assert.equal(await p.locator('.blind-speech strong').innerText(),'Juega');
+ assert.match(investmentReason,/\$25/);assert.match(investmentReason,/jefe/i);assert.match(investmentReason,/tienda/i);
+ assert.ok(investmentReason.length<=120,'The Investment advice fits in the brief speech bubble');
+ await p.screenshot({path:dir+'/investment-advice.png'});
+ await p.locator('#blind-compare').click();await p.locator('#dialog-accept').click();await p.locator('#confirmation').waitFor({state:'hidden'});
+ assert.equal(await raw(p),investmentSave,'The visible advice and its details never change the saved run');
+ pass('small-blind-investment-with-unknown-boss-shows-play-and-short-reason');
  const before=await raw(p);await p.locator('[data-tag-slot=small]').click();await p.evaluate(()=>window.__blindFail=true);await p.locator('[data-tag-choice=tag_uncommon]').click();assert.equal(await raw(p),before);assert.equal(await p.locator('#blind-picker').isVisible(),true);assert.match(await p.locator('#blind-picker .error').innerText(),/guardar|almacenamiento/i);await p.evaluate(()=>window.__blindFail=false);await p.locator('[data-tag-choice=tag_uncommon]').click();await p.locator('#blind-picker').waitFor({state:'hidden'});assert.equal((await record(p)).state.phaseData.skipTag.value,'tag_uncommon');
  pass('current-and-upcoming-tags-stay-independent-atomic-save-failure-and-retry');
 
@@ -74,7 +84,8 @@ try{
  assert.equal(await detail.locator('#blind-next-estimate').getAttribute('data-status'),'unavailable');
  await plan.selectOption('ready');assert.equal(await detail.getAttribute('data-preferred'),'skip');
  const skipTitle=await detail.locator('h3').innerText();await q.locator('#dialog-accept').click();await q.locator('#confirmation').waitFor({state:'hidden'});
- assert.equal(await q.locator('.blind-speech strong').innerText(),skipTitle);assert.equal(await q.locator('#blind-money').innerText(),'$40');
+ assert.equal(skipTitle,'Salta');assert.equal(await q.locator('.blind-speech strong').innerText(),skipTitle);assert.equal(await q.locator('#blind-money').innerText(),'$40');
+ const economyReason=await q.locator('.blind-speech p').innerText();assert.match(economyReason,/\$(28|40)\b/);assert.ok(economyReason.length<=120,'The skip recommendation states the economic benefit briefly');
  await q.locator('#blind-compare').click();assert.equal(await plan.inputValue(),'ready');
  await plan.selectOption('need_shop');assert.equal(await detail.getAttribute('data-preferred'),'play');
  const playTitle=await detail.locator('h3').innerText();await q.locator('#dialog-accept').click();await q.locator('#confirmation').waitFor({state:'hidden'});

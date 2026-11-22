@@ -16,7 +16,7 @@ La [guía de Balatro University](https://www.youtube.com/watch?v=q4YAHDuRUcQ) in
 
 En **Mesa → Tienda**, transcribir las ofertas como antes. **Comparar opciones** lleva a la tabla visible: acción, coste neto/ingreso, saldo resultante y cambio pertinente. Conservar permanece como referencia al filtrar. Pulsar una fila abre consecuencias y condiciones; **Registrar lo que hice** inicia la confirmación T09b. Elegir o consultar una fila no escribe ni marca una edición real. Una venta puede registrarse sola, conservando la oferta para una compra posterior.
 
-En **selección de ciega**, aparece una orientación breve. **Jugar / saltar** amplía motivos y consecuencias. No exige jugadas. La pregunta opcional sobre cómo llega el jugador a la ciega es una declaración temporal; al cerrar no se guarda, y un cambio de estado la invalida al recalcular. Las jugadas de Análisis siguen siendo opcionales y mantienen sus resultados separados.
+En **selección de ciega**, el recuadro muestra **Juega** o **Salta** con un motivo breve. Si el análisis deja el salto abierto, la orientación visible propone conservar el cobro y la tienda al ganar. Por ejemplo, Inversión en la ciega pequeña explica que los $25 llegan tras vencer al jefe y que ganar la ciega da una visita a la tienda antes. **Ver motivos** abre los datos, límites y la comparación. La valoración opcional del jugador es temporal y se invalida al cambiar el estado. Las jugadas de Análisis siguen siendo opcionales y mantienen sus resultados separados.
 
 ## Contratos y cobertura
 

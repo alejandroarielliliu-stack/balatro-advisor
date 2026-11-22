@@ -40,7 +40,7 @@ export function mountBlindScreen(options:BlindScreenOptions){
  motion.addEventListener('change',applyMotion);document.querySelector('#menu-settings')?.addEventListener('close',applyMotion);applyMotion();
  const side=el('aside','','blind-sidebar'),advisor=el('section','','blind-advisor'),avatar=el('div','','blind-advisor-avatar'),bubble=el('div','','blind-speech');
  avatar.append(jokerArt('j_joker','Comodín asesor'));const title=el('strong'),reason=el('p');bubble.append(title,reason);advisor.append(avatar,bubble);
- const compare=el('button','Comparar jugar o saltar','blind-compare');compare.type='button';compare.id='blind-compare';compare.hidden=true;compare.onclick=options.compareBlind;bubble.append(compare);
+ const compare=el('button','Ver motivos','blind-compare');compare.type='button';compare.id='blind-compare';compare.hidden=true;compare.onclick=options.compareBlind;bubble.append(compare);
  const plan=el('button','Orientar mi compra','blind-compare');plan.type='button';plan.id='game-shop-plan';plan.hidden=true;plan.setAttribute('aria-haspopup','dialog');bubble.append(plan);
  plan.onclick=()=>openShopPlan({state:()=>options.snapshot().state!,quote:()=>{const state=options.snapshot().state;return state?observedRerollQuote(state):null;},observeQuote:options.shop.observeQuote,changed:refresh},plan);
  document.addEventListener('shop-plan-change',refresh);
@@ -94,7 +94,6 @@ export function mountBlindScreen(options:BlindScreenOptions){
   const current=value(state.observed.nextBlind),origin=state.schemaVersion==='0.2'&&state.phase==='shop'?value(state.phaseData.origin):undefined,anteValue=origin?.ante??current?.ante,deckId=value(state.observed.deckId)??'',writable=snapshot.writable&&!snapshot.dirty;
   compare.hidden=!selecting||!current||current.kind==='boss';
   const guidance=guideBlindChoice(state,answers);
-  compare.textContent=guidance.ok&&guidance.value.askNextBlindPlan&&answers?.nextBlindPlan==='unknown'?'Valorar la próxima ciega':'Comparar jugar o saltar';
   const summary=guidance.ok?compactBlindGuidance(guidance.value):null;
   title.textContent=settling?'Cobro':summary?.title??'Revisa la ciega';
   reason.textContent=settling?'Introduce cuánto ganaste.':summary?.reason??'Registra los datos de esta ciega.';

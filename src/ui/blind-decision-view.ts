@@ -5,6 +5,7 @@ import type {BlindDecision} from '../advisor/blind-decision.js';
 import type {ShopDecision} from '../advisor/decision.js';
 import type {Result} from '../state/model.js';
 import {tagDefinition} from '../catalog/tags.js';
+import {TAG_EFFECTS} from '../catalog/tag-effects.js';
 import {BLIND_GUIDANCE_POLICY,guideBlindChoice} from '../advisor/blind-guidance.js';
 import type {BlindGuidance,BlindGuidanceOptions} from '../advisor/blind-guidance.js';
 const el=<K extends keyof HTMLElementTagNameMap>(tag:K,text='',cl='')=>{const e=document.createElement(tag);e.textContent=text;e.className=cl;return e;};
@@ -38,44 +39,80 @@ function route(host:HTMLElement,title:string,decision:Result<ShopDecision>|null)
  }
  host.append(section);
 }
-export function compactBlindGuidance(guidance:BlindGuidance):{title:string;reason:string}{
- const {preferred,ruleId}=guidance.recommendation,rules=BLIND_GUIDANCE_POLICY.rules;
+const playReasons:Readonly<Record<string,string>>={
+ tag_investment:`Inversión paga $${TAG_EFFECTS.investment.dollars} después del jefe. Si ganas aquí, tienes una tienda para reforzarte.`,
+ tag_uncommon:'El joker inusual llega en otra tienda. Si ganas aquí, cobras y tienes una tienda antes de la próxima ciega.',
+ tag_meteor:'Meteoro da planetas al azar. Si ganas aquí, cobras y puedes elegir qué comprar.',
+ tag_skip:'La etiqueta veloz paga por saltos acumulados. Juega para cobrar y visitar la tienda.',
+ tag_standard:'La etiqueta da un sobre de cartas. Jugar te permite cobrar y ver todas las ofertas de la tienda.',
+ tag_double:'La etiqueta doble requiere otro salto. Si ganas aquí, cobras y tienes una tienda.',
+ tag_garbage:'Basura paga por descartes sin usar. Juega para cobrar y visitar la tienda.',
+ tag_d_six:'D6 abarata los rerolls de otra tienda. Si ganas aquí, conservas el cobro y una visita más.',
+ tag_coupon:'Cupón se aplica en otra tienda. Juega para reforzarte antes de la próxima ciega.',
+ tag_voucher:'El vale extra se paga en otra tienda. Si ganas aquí, cobras y ves una tienda antes.',
+ tag_rare:'El joker raro llega en otra tienda y aún no sabes cuál será. Si ganas aquí, puedes buscar refuerzos.',
+ tag_boss:'Cambiar el jefe puede traer otro que también te complique. Jugar conserva una tienda antes del jefe.',
+ tag_charm:'El sobre de tarot puede mejorar el mazo. Si ganas aquí, puedes usar el cobro en una mejora que veas.',
+ tag_buffoon:'El sobre ofrece jokers al azar. Si ganas aquí, cobras y puedes elegir entre las ofertas de tienda.',
+ tag_ethereal:'El sobre espectral tiene contenido incierto. Si ganas aquí, cobras y eliges qué comprar.',
+ tag_handy:'Handy solo da dinero. Si ganas aquí, cobras y además puedes comprar antes de la próxima ciega.',
+ tag_juggle:'Las tres cartas extra solo sirven una ronda. Si ganas aquí, puedes comprar una mejora que dure más.',
+ tag_top_up:'La etiqueta crea jokers comunes al azar. Si ganas aquí, cobras y puedes buscar el efecto que necesitas.',
+ tag_orbital:'Orbital compensa si sube una mano que usas. Si ganas aquí, conservas el cobro y la tienda.',
+ tag_economy:'Economía da dinero sin una tienda. Si ganas aquí, puedes gastar el cobro en reforzarte.',
+};
+
+function skipReason(guidance:BlindGuidance):string{
+ const reference=guidance.cashflowReference;
+ if(guidance.tag.id==='tag_economy'&&reference){
+  const best=Math.max(...reference.rows.map(row=>row.earned));
+  const difference=reference.skipImmediateIncome-best;
+  return guidance.recommendation.ruleId===BLIND_GUIDANCE_POLICY.rules.estimatedSkip
+   ?`Economía te da $${reference.skipImmediateIncome} ahora. La siguiente ciega se supera en las pruebas.`
+   :`Economía te da $${difference} más y puedes seguir sin esta tienda.`;
+ }
+ if(guidance.tag.id==='tag_coupon')return 'Supera la Grande y las cartas y los sobres iniciales de la próxima tienda serán gratis.';
+ if(guidance.tag.id==='tag_investment')return `El jefe se supera en las pruebas. Si lo vences, cobras $${TAG_EFFECTS.investment.dollars} para el próximo ante.`;
+ return 'La etiqueta compensa perder esta visita a la tienda.';
+}
+
+function playReason(guidance:BlindGuidance):string{
+ const {ruleId,preferred,reason}=guidance.recommendation,rules=BLIND_GUIDANCE_POLICY.rules;
  const estimate=guidance.nextBlindEstimate;
- if(ruleId===rules.autoPlay)return {title:'Juega',reason:'Esta etiqueta tiene recomendación directa de jugar.'};
- if(estimate?.status==='estimated'&&ruleId===rules.estimatedSkip)return {title:'Salta',reason:`La estimación alcanza los ${points.format(estimate.target)} puntos de la siguiente ciega.`};
- if(estimate?.status==='estimated'&&ruleId===rules.estimatedPlay)return {title:'Juega',reason:'La estimación tras saltar no da una base suficiente para superar la siguiente ciega.'};
- if(ruleId===rules.tagContext)return preferred==='play'
-  ?{title:'Juega',reason:'Conserva el cobro y la tienda de esta ciega.'}
-  :{title:'Compara',reason:'Revisa cuándo puedes aprovechar el efecto de esta etiqueta.'};
- if(preferred==='skip'){
-  const reference=guidance.cashflowReference;
-  const best=reference?.rows.reduce((maximum,row)=>Math.max(maximum,row.earned),0);
-  return {title:'Salta',reason:reference&&best!==undefined?`Economía te da $${reference.skipImmediateIncome-best} más y puedes seguir sin tienda.`:'Aprovecha la etiqueta y sigue a la próxima ciega.'};
+ if(ruleId===rules.boss)return 'La ciega jefe es obligatoria.';
+ if(ruleId===rules.risk)return 'Vas justo. Si consigues ganar esta ciega, podrás reforzarte en la tienda.';
+ if(ruleId===rules.estimatedPlay&&estimate?.status==='estimated'){
+  return `Tras saltar, la estimación queda en ${points.format(estimate.estimatedPoints)} de ${points.format(estimate.target)}. Conserva la tienda.`;
  }
- if(preferred==='play'){
-  if(ruleId===rules.boss)return {title:'Juega',reason:'La ciega jefe es obligatoria.'};
-  if(ruleId===rules.shopNeeded)return {title:'Juega',reason:'Necesitas la tienda para reforzarte.'};
-  if(ruleId===rules.cashThreshold){
-   const hands=guidance.cashflowReference?.minimumHandsToMatchSkip;
-   return {title:'Juega',reason:hands? `Con ${hands} ${hands===1?'mano sobrante':'manos sobrantes'}, igualas o mejoras el salto y conservas la tienda.`:'Si ganas, igualas o mejoras el salto y conservas la tienda.'};
-  }
-  return {title:'Juega',reason:'Si ganas, cobras y visitas la tienda.'};
+ if(ruleId===rules.shopNeeded)return 'Si ganas, puedes reforzarte en la tienda antes de la próxima ciega.';
+ if(ruleId===rules.cashThreshold){
+  const hands=guidance.cashflowReference?.minimumHandsToMatchSkip;
+  return hands?`Si ganas con ${hands} ${hands===1?'mano sobrante':'manos sobrantes'}, igualas o mejoras el salto y conservas la tienda.`:'Si ganas, igualas o mejoras el salto y conservas la tienda.';
  }
- if(ruleId===rules.rewardTradeoff)return guidance.askNextBlindPlan
-  ?{title:'¿Puedes saltar?',reason:'El salto da más dinero, pero pierdes esta tienda.'}
-  :{title:'Compara',reason:`Al saltar, cambias cobro y tienda por ${guidance.tag.name}.`};
- if(ruleId===rules.risk)return {title:'Valora el salto',reason:'Vas justo. Comprueba que puedes superar la siguiente.'};
- if(ruleId===rules.queue)return {title:'Revisa las etiquetas',reason:'Las etiquetas pendientes pueden cambiar el premio.'};
- if(ruleId===rules.persistent)return {title:'Revisa tus Jokers',reason:'Sus efectos pueden cambiar si conviene saltar.'};
- return {title:'Faltan datos',reason:'Completa los datos de esta ciega.'};
+ if(ruleId===rules.tagContext&&preferred==='play')return reason;
+ if(ruleId===rules.queue)return 'Si ganas, conservas la tienda. Las etiquetas pendientes pueden cambiar el premio del salto.';
+ if(ruleId===rules.persistent)return 'Si ganas, conservas la tienda. Los efectos de tus jokers dejan abierta la utilidad del salto.';
+ if(guidance.askNextBlindPlan)return 'Conserva la tienda hasta confirmar que puedes superar la siguiente ciega sin comprar aquí.';
+ const tag=guidance.tag.id?tagDefinition(guidance.tag.id):undefined;
+ if(tag?.trigger==='store_joker_modify')return 'El joker con edición llega en otra tienda. Si ganas aquí, puedes reforzarte antes de la próxima ciega.';
+ const tagReason=tag?playReasons[tag.id]:undefined;
+ return tagReason??'Si ganas, cobras y visitas la tienda antes de la próxima ciega.';
+}
+
+export function compactBlindGuidance(guidance:BlindGuidance):{title:string;reason:string}{
+ const recommendation=guidance.recommendation;
+ if(recommendation.status==='abstain')return {title:'Faltan datos',reason:'Completa los datos de esta ciega.'};
+ if(recommendation.preferred==='skip')return {title:'Salta',reason:skipReason(guidance)};
+ // The detailed comparison can leave the tradeoff open. The visible advice
+ // defaults to keeping the shop while the advantage of skipping is unresolved.
+ return {title:'Juega',reason:playReason(guidance)};
 }
 export function renderBlindGuidance(guidance:BlindGuidance):HTMLElement{
  const host=el('section','','blind-guidance');host.id='blind-guidance';host.dataset.status=guidance.recommendation.status;host.dataset.preferred=guidance.recommendation.preferred??'none';host.dataset.rule=guidance.recommendation.ruleId;
  const summary=compactBlindGuidance(guidance);
- const rules=BLIND_GUIDANCE_POLICY.rules,rule=guidance.recommendation.ruleId;
- const fullReason=rule===rules.autoPlay||rule===rules.estimatedSkip||rule===rules.estimatedPlay||rule===rules.tagContext;
- host.append(el('h3',summary.title),el('p',fullReason?guidance.recommendation.reason:summary.reason));
+ host.append(el('h3',summary.title),el('p',summary.reason));
  const detail=el('details');detail.append(el('summary','Motivos y condiciones'));
+ if(guidance.recommendation.reason!==summary.reason)detail.append(el('p',guidance.recommendation.reason));
  const estimate=guidance.nextBlindEstimate;
  if(estimate){
   const panel=el('section');panel.id='blind-next-estimate';panel.dataset.status=estimate.status;
