@@ -2,8 +2,10 @@ import assert from 'node:assert/strict';
 import {chromium} from 'playwright';
 import {spawn} from 'node:child_process';
 import {mkdir,writeFile} from 'node:fs/promises';
+import {blindRequirement} from '../dist/src/catalog/blinds.js';
 import {createNewRun} from '../dist/src/run/start.js';
 import {applyRunProgress} from '../dist/src/run/progress.js';
+import {freshJokerInstance} from '../dist/src/rules/shop.js';
 import {logicalBounds} from './ui-logical-bounds.mjs';
 
 // Synthetic browser/recording checks, not a game observation or a physical phone test.
@@ -14,10 +16,32 @@ const report={date:new Date().toISOString(),origin,gameObservation:false,physica
 const pass=id=>{report.cases.push({id,status:'passed'});console.log('PASS',id);};
 const generated=createNewRun({runId:'game-shop-fixture',updatedAt:'2026-11-08T05:00:00Z',deckId:'red',profileConfirmed:true});
 assert.equal(generated.ok,true);
+const known=value=>({status:'known',source:'manual',value});
 const progress=(state,command)=>{const changed=applyRunProgress(state,command,{expectedRevision:state.revision,updatedAt:'2026-11-08T05:01:00Z',inventory:{unchanged:true}});assert.equal(changed.ok,true,JSON.stringify(changed.errors));return changed.value.state;};
-const shopFixture=()=>{
- const state=progress(progress(structuredClone(generated.value),{type:'enter_round'}),{type:'record_cashout',amount:21,jokerUpdates:[]});
+const shopFixture=(beforeUnknownBoss=false)=>{
+ let state=progress(progress(structuredClone(generated.value),{type:'enter_round'}),{type:'record_cashout',amount:21,jokerUpdates:[]});
+ if(beforeUnknownBoss){
+  state=progress(state,{type:'leave_shop'});
+  state=progress(state,{type:'enter_round'});
+  state=progress(state,{type:'record_cashout',amount:0,jokerUpdates:[]});
+  assert.equal(state.observed.nextBlind.value.kind,'boss');
+  assert.equal(state.observed.nextBlind.value.bossId.status,'unknown');
+ }
  return JSON.stringify({schemaVersion:'confirmed-2',initialState:state,state,history:[]});
+};
+const survivalShopFixture=(rank,extraChips,ownedId)=>{
+ const saved=JSON.parse(shopFixture());
+ for(const state of [saved.state,saved.initialState]){
+  const nextBlind=state.observed.nextBlind.value;
+  const requirement=blindRequirement(nextBlind.ante,nextBlind.kind,nextBlind.bossId.value,state.observed.deckId.value);
+  assert.ok(requirement.ok);
+  nextBlind.target=known(requirement.target);
+  nextBlind.reward=known(requirement.reward);
+  state.observed.deck=known({cards:[{instanceId:'scoring-card',rank,suit:'S',enhancement:'none',seal:'none',edition:'base',extraChips}]});
+  if(ownedId)state.observed.jokers=known([freshJokerInstance(ownedId,'owned','base',state)]);
+  state.observed.shop=known({shopId:'compared-offers',cardOffers:[],ignoredOtherOffers:[]});
+ }
+ return JSON.stringify(saved);
 };
 const server=process.env.GAME_SHOP_ORIGIN?null:spawn(process.execPath,['dist/src/server.js'],{env:{...process.env,PORT:port},stdio:'pipe',windowsHide:true});
 let browser,lastPage;
@@ -75,6 +99,8 @@ try{
   await page.locator('#shop-joker-detail').waitFor({state:'visible'});
  };
  const shopReady=async page=>{await page.waitForFunction(()=>document.body.dataset.view==='blind'&&document.querySelector('#blind-screen')?.dataset.mode==='shop');await page.locator('#game-shop').waitFor({state:'visible'});};
+ const shopAdviceReady=async page=>page.locator('#game-shop[aria-busy="false"]').waitFor({state:'visible'});
+ const preferredOffer=async(page,id)=>page.locator(`[data-game-shop-offer="${id}"][data-offer-preference="compared"]`).waitFor({state:'visible'});
  const start=async page=>{await page.locator('#menu-play').click();await page.locator('#setup-deck-dots input[value="red"]').check();await page.locator('#setup-play').click();await page.waitForFunction(()=>document.body.dataset.view==='blind');};
  const continueRun=async page=>{await page.locator('#menu-play').click();await page.locator('#setup-tab-continue').click();await page.locator('#setup-play').click();await shopReady(page);};
  const enterCashout=async page=>{await page.locator('#blind-select-small').click();await page.locator('#round-cashout').waitFor({state:'visible'});};
@@ -299,26 +325,60 @@ try{
  assert.ok(shelfScroll.scrollWidth>shelfScroll.clientWidth,'Additional imported offers remain reachable through the shelf scroll area');
  await crowded.context.close();pass('third-imported-joker-modifiers-fit-desktop-and-extra-wrapped-offers-scroll');
 
- const comparedSave=JSON.parse(shopFixture());
- for(const state of [comparedSave.state,comparedSave.initialState])state.observed.shop={status:'known',source:'manual',value:{shopId:'compared-offers',cardOffers:[],ignoredOtherOffers:[]}};
- const compared=await session(undefined,JSON.stringify(comparedSave)),q=compared.page;await continueRun(q);
- const plain=await observe(q,'joker','joker',2);await observe(q,'joker','abstract_joker',4);
+ // One 100-chip ace cannot clear 450. Joker adds +4 Mult to reach 500;
+ // Golden Joker only adds income after a win.
+ const compared=await session(undefined,survivalShopFixture('A',84)),q=compared.page;await continueRun(q);
+ const plain=await observe(q,'joker','joker',2);await observe(q,'joker','golden_joker',6);
  const tile=q.locator(`[data-game-shop-offer="${plain}"]`);
- assert.equal(await tile.getAttribute('data-offer-preference'),'compared');
+ await preferredOffer(q,plain);
+ await shopAdviceReady(q);
+ assert.equal(await q.locator('[data-offer-preference]').count(),1);
+ assert.equal(await q.locator('#game-shop [data-advised-action]').count(),0,'The suggested Joker gets the only green recommendation in the shop');
  assert.equal(await tile.locator('.game-shop-preferred-mark').innerText(),'✓','A complete comparison retains its verified check mark');
  await observe(q,'pack','buffoon-normal',4);
- assert.equal(await tile.getAttribute('data-offer-preference'),'conditional');
- assert.equal(await q.locator('.game-shop-preferred-mark').count(),0,'Partial comparisons have no question-mark badge');
+ await preferredOffer(q,plain);
+ await shopAdviceReady(q);
+ assert.equal(await q.locator('.game-shop-preferred-mark').count(),1,'An unopened pack does not narrow the Joker comparison');
  assert.equal(await q.locator('[data-game-shop-kind="pack"][data-offer-preference]').count(),0);
  const beforeReason=await raw(q);await openOffer(q,plain);assert.match(await activeEditor(q).innerText(),/\+4\s+(?:mult|multi)/i,'The card detail shows the catalog effect');
  assert.equal(await raw(q),beforeReason);await modifier(q,'edition','unknown');await closeInline(q);await q.locator('#shop-joker-detail').waitFor({state:'hidden'});
+ await shopAdviceReady(q);
  assert.equal(await q.locator('[data-offer-preference]').count(),0,'An unknown edition removes the price comparison');
- pass('shop-mark-belongs-to-a-supported-comparison-and-expires-with-unknown-price-data');await compared.context.close();
+ pass('automatic-shop-mark-prefers-survival-over-income-and-needs-known-price-data');await compared.context.close();
+
+ // Three triggers from Hanging Chad make the sole king worth 65 Chips:
+ // Joker reaches 325, and Photograph reaches 520.
+ const synergy=await session(desktop,survivalShopFixture('K',10,'hanging_chad'),'reduce',false),sy=synergy.page;await continueRun(sy);
+ await observe(sy,'joker','joker',2);
+ await shopAdviceReady(sy);
+ const workerPath='**/shop-joker-worker.js';
+ let releaseWorker;
+ const workerGate=new Promise(resolve=>{releaseWorker=resolve;});
+ await synergy.context.route(workerPath,async route=>{await workerGate;await route.continue();});
+ try{
+  const photo=await observe(sy,'joker','photograph',5);
+  await sy.locator('#game-shop[aria-busy="true"]').waitFor({state:'visible'});
+  assert.equal(await sy.locator('[data-offer-preference]').count(),0,'Pending scoring clears the prior green mark');
+  await openOffer(sy,photo);
+  const editor=await activeEditor(sy).elementHandle(),beforeEstimate=await raw(sy);
+  releaseWorker();
+  await preferredOffer(sy,photo);
+  await shopAdviceReady(sy);
+  assert.equal(await sy.locator('[data-offer-preference]').count(),1);
+  assert.equal(await editor.evaluate(node=>node===document.getElementById('shop-joker-detail')),true,'The background result updates the tile without replacing its open editor');
+  assert.ok(await activeEditor(sy).isVisible());
+  assert.equal(await raw(sy),beforeEstimate,'The hypothetical comparison does not buy the highlighted offer');
+ }finally{
+  releaseWorker();
+  await synergy.context.unroute(workerPath);
+  await synergy.context.close();
+ }
+ pass('automatic-shop-mark-uses-deck-and-owned-joker-synergy-with-the-editor-open');
 
  // The normal cashout/continue path begins with an unobserved shop, including the
- // legacy annotation for offers still pending. The plan can confirm transcription.
- const guide=await session(desktop,shopFixture(),'reduce',false),g=guide.page;await continueRun(g);
- const basic=await observe(g,'joker','joker',2),golden=await observe(g,'joker','golden_joker',6);
+ // legacy annotation for offers still pending. An unknown boss leaves room for an explicit plan.
+ const guide=await session(desktop,shopFixture(true),'reduce',false),g=guide.page;await continueRun(g);
+ await observe(g,'joker','joker',2);await observe(g,'joker','golden_joker',6);
  const plan=async(page,need,reserve='',quote='5',complete=true)=>{
   await page.locator('#game-shop-plan').click();await page.locator('#shop-plan-dialog').waitFor({state:'visible'});
   await page.locator('#shop-plan-need').selectOption(need);
@@ -332,13 +392,16 @@ try{
   await page.locator('#shop-plan-apply').click();await page.locator('#shop-plan-dialog').waitFor({state:'hidden'});
  };
  await plan(g,'score');
+ await shopAdviceReady(g);
  assert.match(await g.locator('.blind-speech strong').innerText(),/Compra Joker/);
- assert.equal(await g.locator(`[data-game-shop-offer="${basic}"]`).getAttribute('data-offer-preference'),'compared');
+ assert.equal(await g.locator('[data-offer-preference]').count(),0,'The explicit score plan guides without a simulated green mark for an unknown boss');
  const advised=await raw(g);await plan(g,'economy');
+ await shopAdviceReady(g);
  assert.match(await g.locator('.blind-speech strong').innerText(),/Compra Golden/);
- assert.equal(await g.locator(`[data-game-shop-offer="${golden}"]`).getAttribute('data-offer-preference'),'compared');
+ assert.equal(await g.locator('[data-offer-preference]').count(),0,'The explicit income plan also leaves the simulated comparison unmarked');
  assert.equal(await raw(g),advised,'Changing the buying goal consults the same record');
  await plan(g,'save');
+ await shopAdviceReady(g);
  assert.match(await g.locator('.blind-speech strong').innerText(),/Ahorra/);
  assert.equal(await g.locator('[data-offer-preference]').count(),0);
  assert.equal(await g.locator('#game-shop-next').getAttribute('data-advised-action'),'');
@@ -346,15 +409,16 @@ try{
  await g.screenshot({path:dir+'/guide-save-desktop.png'});await guide.context.close();
  pass('guide-picks-points-income-or-saving-from-normal-recorded-shop');
 
- const search=await session(undefined,shopFixture()),h=search.page;await continueRun(h);
+ const search=await session(undefined,shopFixture(true)),h=search.page;await continueRun(h);
  await observe(h,'joker','steel_joker',7);await observe(h,'joker','credit_card',1);
  await plan(h,'score','8','5');
+ await shopAdviceReady(h);
  assert.match(await h.locator('.blind-speech strong').innerText(),/Renueva/);
  assert.equal(await h.locator('#game-shop-reroll').getAttribute('data-advised-action'),'');
  const budget=await raw(h),budgetState=await record(h);
  assert.equal(budgetState.state.observed.money.value,25);assert.equal(budgetState.state.observed.shop.value.cardOffers.length,2);
  assert.equal(await h.locator('#game-shop-reroll b').innerText(),'$5');
- await plan(h,'score','24','5');assert.match(await h.locator('.blind-speech strong').innerText(),/Ahorra/);
+ await plan(h,'score','24','5');await shopAdviceReady(h);assert.match(await h.locator('.blind-speech strong').innerText(),/Ahorra/);
  assert.equal(await raw(h),budget,'Only the search budget changed');
  await h.locator('#game-shop-details').click();await h.locator('#shop-recommendation').waitFor({state:'visible'});
  assert.match(await h.locator('#shop-recommendation').innerText(),/Guarda/);
@@ -362,9 +426,11 @@ try{
  await h.locator('#shop-recommendation').click();assert.match(await h.locator('#shop-advice-summary').innerText(),/Renueva una vez/);
  await h.locator('#shop-advice-dialog').getByRole('button',{name:'Cerrar',exact:true}).click();
  await h.evaluate(()=>location.hash='blind');await shopReady(h);
- assert.match(await h.locator('.blind-speech strong').innerText(),/Renueva/);
+ await h.locator('.blind-speech strong').filter({hasText:/Renueva/}).waitFor({state:'visible'});
+ await shopAdviceReady(h);
  assert.equal(await raw(h),budget,'Scene and detail consult the same plan and saved balance');
  await plan(h,'score','8','0');assert.equal((await record(h)).state.observed.money.value,25);
+ await shopAdviceReady(h);
  assert.match(await h.locator('#game-shop-reroll').innerText(),/\$0/);
  await h.screenshot({path:dir+'/guide-search-mobile.png'});await search.context.close();
  pass('guide-renews-with-purchase-budget-and-shares-plan-with-table-without-spending');

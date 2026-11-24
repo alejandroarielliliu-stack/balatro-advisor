@@ -1,11 +1,12 @@
 import type {Fact,GameState} from '../state/model.js';
 import type {ShopSnapshot} from '../advisor/shop-context.js';
+import type {ShopJokerAssessment,ShopJokerPreference} from '../advisor/shop-joker-survival.js';
 import {ALL_JOKER_FACTS} from '../catalog/all-joker-facts.js';
 import {VOUCHER_CATALOG} from '../catalog/voucher-catalog.js';
 import {BOOSTER_CATALOG} from '../catalog/booster-catalog.js';
 import {engineArt,jokerArt} from './collection.js';
 import {inspectShopDecision} from '../advisor/decision.js';
-import {buildShopAdviceSummary,comparedShopPurchase} from './shop-advice-summary.js';
+import {buildShopAdviceSummary} from './shop-advice-summary.js';
 import {currentShopPlan} from './shop-plan-view.js';
 import {observedRerollQuote} from '../rules/reroll-quote.js';
 import {openShopJokerPicker,previewShopJoker} from './shop-joker-picker.js';
@@ -31,7 +32,7 @@ interface GameShopOptions {
 }
 
 /** A view of manually observed offers. Rendering and opening an editor never acquire them. */
-export function mountGameShop(stage:HTMLElement,options:GameShopOptions){
+export function mountGameShop(stage:HTMLElement,options:GameShopOptions,onAdviceChanged:()=>void){
  const section=el('section','','game-shop');section.id='game-shop';section.hidden=true;section.setAttribute('aria-label','Tienda');
  const controls=el('div','','game-shop-controls'),next=el('button','Siguiente\nronda','game-shop-next'),reroll=el('button','','game-shop-reroll');
  next.id='game-shop-next';next.type='button';reroll.id='game-shop-reroll';reroll.type='button';
@@ -44,7 +45,68 @@ export function mountGameShop(stage:HTMLElement,options:GameShopOptions){
  section.append(controls,cards,voucher,packs,detail,error);stage.append(section);
  let state:GameState|null=null,snapshot:ShopSnapshot={id:crypto.randomUUID(),jokers:[],vouchers:[],packs:[],rerollCost:null},writable=false,rendered='';
  let syncCatalogControls=()=>{};
- let advice:ReturnType<typeof buildShopAdviceSummary>|null=null,preferred:ReturnType<typeof comparedShopPurchase>=null;
+ let advice:ReturnType<typeof buildShopAdviceSummary>|null=null;
+ let assessment:ShopJokerAssessment|{status:'pending'}|null=null;
+ let releaseWorker:(()=>void)|undefined;
+
+ function paintPreference(preference:ShopJokerPreference|null){
+  for(const button of cardShelf.querySelectorAll<HTMLButtonElement>('[data-game-shop-offer]')){
+   const selected=preference?.offerId===button.dataset.gameShopOffer;
+   button.title=button.dataset.offerName??'';
+   button.removeAttribute('data-offer-preference');
+   button.removeAttribute('aria-description');
+   button.querySelector('.game-shop-preferred-mark')?.remove();
+   if(selected&&preference){
+    button.dataset.offerPreference='compared';
+    button.title=preference.reason;
+    button.setAttribute('aria-description','Comodín recomendado. '+preference.reason);
+    const mark=el('span','✓','game-shop-preferred-mark');mark.setAttribute('aria-hidden','true');button.append(mark);
+   }
+  }
+ }
+
+ function paintControlAdvice(){
+  const comparing=assessment?.status==='pending'||(assessment?.status==='ready'&&assessment.preference!==null);
+  const choice=!comparing&&advice?.choices.length===1&&advice.status==='conditional'?advice.choices[0]?.id:null;
+  for(const [button,id] of [[reroll,'reroll'],[next,'hold']] as const){
+   button.toggleAttribute('data-advised-action',choice===id);
+   if(choice===id)button.setAttribute('aria-description',advice?.planReason??advice!.title);
+   else button.removeAttribute('aria-description');
+  }
+ }
+
+ function cancelAdvice(){
+  releaseWorker?.();releaseWorker=undefined;
+  assessment=null;rendered='';
+  section.setAttribute('aria-busy','false');
+  paintPreference(null);
+ }
+
+ function startAssessment(current:GameState){
+  const unavailable:ShopJokerAssessment={status:'unavailable',reason:'La estimación no está disponible en este momento.'};
+  let worker:Worker;
+  try{worker=new Worker(new URL('./shop-joker-worker.js',import.meta.url),{type:'module'});}
+  catch{assessment=unavailable;return;}
+  const finish=(result:ShopJokerAssessment)=>{
+   if(releaseWorker!==release)return;
+   release();releaseWorker=undefined;
+   assessment=result;
+   section.setAttribute('aria-busy','false');
+   paintPreference(result.status==='ready'?result.preference:null);
+   paintControlAdvice();
+   onAdviceChanged();
+  };
+  const timer=setTimeout(()=>finish(unavailable),15_000);
+  const release=()=>{clearTimeout(timer);worker.terminate();};
+  releaseWorker=release;
+  assessment={status:'pending'};
+  section.setAttribute('aria-busy','true');
+  worker.onmessage=({data}:MessageEvent<ShopJokerAssessment>)=>finish(data);
+  worker.onerror=event=>{event.preventDefault();finish(unavailable);};
+  worker.onmessageerror=()=>finish(unavailable);
+  try{worker.postMessage(current);}
+  catch{finish(unavailable);}
+ }
  const fail=(message:string|null)=>{error.textContent=message??'';};
  next.onclick=()=>{if(!state||!writable)return;fail(options.next({runId:state.runId,revision:state.revision}));};
  reroll.onclick=()=>{if(state&&writable)options.reroll({runId:state.runId,revision:state.revision});};
@@ -132,11 +194,7 @@ export function mountGameShop(stage:HTMLElement,options:GameShopOptions){
    portrait.append(art);
    if(kind==='joker')for(const id of (offer as JokerOffer).stickers){const sticker=jokerStickerArt(id);if(sticker)portrait.append(sticker);}
    const price=el('strong',offer.price===null?'$?':'$'+offer.price,'game-shop-price-tag');button.append(price,portrait);button.setAttribute('aria-label',`${name} · ${offer.price===null?'precio desconocido':'$'+offer.price}`);button.title=name;
-   if(preferred?.offerId===offer.offerId){
-    button.dataset.offerPreference=preferred.partial?'conditional':'compared';button.title=preferred.reason;
-    button.setAttribute('aria-description','Comodín preferido entre las compras comparadas. '+preferred.reason);
-    if(!preferred.partial){const mark=el('span','✓','game-shop-preferred-mark');mark.setAttribute('aria-hidden','true');button.append(mark);}
-   }
+   button.dataset.offerName=name;
   }
   button.onclick=()=>inspect(kind,kind==='joker'&&offer?snapshot.jokers.find(item=>item.offerId===offer.offerId):offer,button);
   if(kind==='joker'&&offer){
@@ -153,18 +211,13 @@ export function mountGameShop(stage:HTMLElement,options:GameShopOptions){
   state=current;writable=canWrite&&current.phase==='shop';next.disabled=!writable;reroll.disabled=!writable;
   section.querySelectorAll<HTMLButtonElement>('[data-game-shop-empty="true"]').forEach(button=>button.disabled=!writable);
   syncCatalogControls();
-  const plan=currentShopPlan(current),token=JSON.stringify([current,dirty,plan]);if(token===rendered)return;rendered=token;snapshot=readSnapshot(current);
+  const plan=currentShopPlan(current),token=JSON.stringify([current,dirty,plan]);if(token===rendered)return;
+  cancelAdvice();rendered=token;snapshot=readSnapshot(current);
   const saved=current.observed.shop.status==='known'?current.observed.shop.value:undefined;
   const hasOffers=snapshot.jokers.length||snapshot.vouchers.length||snapshot.packs.length||saved?.cardOffers.length||saved?.ignoredOtherOffers.length||
    (current.schemaVersion==='0.2'&&current.observed.shop.status==='known'&&current.observed.shop.value.packOffers?.length);
   const result=!dirty&&(hasOffers||plan)?inspectShopDecision(current,snapshot,plan?{shopPlan:plan}:{}):null;
   advice=result?.ok?buildShopAdviceSummary(result.value):null;
-  preferred=result?.ok?comparedShopPurchase(result.value):null;
-  const choice=advice?.choices.length===1&&advice.status==='conditional'?advice.choices[0]?.id:null;
-  for(const [button,id] of [[reroll,'reroll'],[next,'hold']] as const){
-   button.toggleAttribute('data-advised-action',choice===id);
-   if(choice===id)button.setAttribute('aria-description',advice?.planReason??advice!.title);else button.removeAttribute('aria-description');
-  }
   error.textContent='';rerollPrice.textContent=snapshot.rerollCost===null?'$—':'$'+snapshot.rerollCost;reroll.title=snapshot.rerollCost===null?'Registra la renovación con el saldo que ves en Balatro.':`Registrar renovación · $${snapshot.rerollCost}`;
   const selected=cardShelf.querySelector<HTMLElement>('.game-shop-joker.is-selected'),selectedId=selected?.dataset.jokerOffer;
   if(selected&&!snapshot.jokers.some(offer=>offer.offerId===selectedId))(selected.querySelector('dialog') as HTMLDialogElement|null)?.close();
@@ -175,13 +228,6 @@ export function mountGameShop(stage:HTMLElement,options:GameShopOptions){
     if(price)price.textContent=offer.price===null?'$?':'$'+offer.price;if(art)art.dataset.jokerEdition=offer.edition;
     art?.querySelectorAll('.joker-sticker-art').forEach(node=>node.remove());
     if(art)for(const id of offer.stickers){const sticker=jokerStickerArt(id);if(sticker)art.append(sticker);}
-    const button=selected.querySelector<HTMLElement>('.game-shop-offer')!;
-    button.removeAttribute('data-offer-preference');button.removeAttribute('aria-description');button.querySelector('.game-shop-preferred-mark')?.remove();
-    if(preferred?.offerId===offer.offerId){
-     button.dataset.offerPreference=preferred.partial?'conditional':'compared';button.title=preferred.reason;
-     button.setAttribute('aria-description','Comodín preferido entre las compras comparadas. '+preferred.reason);
-     if(!preferred.partial){const mark=el('span','✓','game-shop-preferred-mark');mark.setAttribute('aria-hidden','true');button.append(mark);}
-    }
     cardShelf.append(selected);
    }else cardShelf.append(tile('joker',offer));
   }
@@ -189,6 +235,8 @@ export function mountGameShop(stage:HTMLElement,options:GameShopOptions){
   for(const offer of snapshot.vouchers)voucherShelf.append(tile('voucher',offer));if(!snapshot.vouchers.length)voucherShelf.append(tile('voucher'));
   for(const offer of snapshot.packs)packShelf.append(tile('pack',offer));for(let i=snapshot.packs.length;i<2;i++)packShelf.append(tile('pack'));
   const origin=current.schemaVersion==='0.2'&&current.phase==='shop'?value(current.phaseData.origin):undefined;voucherCaption.textContent=(origin?'ANTE '+origin.ante+' · ':'')+'VALE';
+  if(!dirty&&current.phase==='shop'&&snapshot.jokers.length&&plan?.need!=='save')startAssessment(current);
+  paintControlAdvice();
  }
- return {refresh,focus:()=>next.focus({preventScroll:true}),advice:()=>advice};
+ return {refresh,cancelAdvice,focus:()=>next.focus({preventScroll:true}),advice:()=>advice,assessment:()=>assessment};
 }

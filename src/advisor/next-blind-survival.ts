@@ -14,10 +14,11 @@ import {currentDeckCards} from '../state/deck-material.js';
 import type {GameStateV02} from '../state/model.js';
 
 export type BlindSurvivalEstimate={status:'estimated';target:number;hands:number;pointsPerHand:number;pointsPerPlayedHand:number|null;
- estimatedPoints:number;medianPoints:number;p10Points:number;p90Points:number;sampleCount:number;reachedCount:number}
+ estimatedPoints:number;medianPoints:number;p10Points:number;p90Points:number;sampleCount:number;reachedCount:number;
+ margin?:{rescuedCount:number;winsWithSpareHand:number;meanRelativeDeficit:number}}
  |{status:'unavailable';reason:string};
 
-export interface BlindSurvivalOptions {sampling?:'adaptive'}
+export interface BlindSurvivalOptions {sampling?:'adaptive'|'comparison';enteringFromShop?:boolean}
 
 const samples=8,initialAdaptiveSamples=32,maxAdaptiveSamples=128,maxHandSize=10,maxActions=18;
 const unavailable=(reason:string):BlindSurvivalEstimate=>({status:'unavailable',reason});
@@ -268,7 +269,8 @@ function needsMoreSamples(totals:readonly number[],reachedCount:number,target:nu
  * The points per hand are normalized by all available hands, including hands
  * saved on early wins, so multiplying yields the sampled mean total. */
 export function estimateBlindSurvival(state:GameStateV02,options:BlindSurvivalOptions={}):BlindSurvivalEstimate {
- const adaptive=options.sampling==='adaptive';
+ const comparison=options.sampling==='comparison',adaptive=options.sampling!==undefined;
+ const sampleLimit=comparison?initialAdaptiveSamples:adaptive?maxAdaptiveSamples:samples;
  const cards=currentDeckCards(state);
  if(!cards?.length)return unavailable('Registra el mazo actual para estimar los robos de la siguiente ciega.');
  if(cards.some(card=>card.debuff))return unavailable('Confirma qué cartas estarán activas en la siguiente ciega; el mazo registra debilitamientos.');
@@ -279,12 +281,11 @@ export function estimateBlindSurvival(state:GameStateV02,options:BlindSurvivalOp
  const bossId=next.status==='known'&&next.value.bossId.status==='known'?next.value.bossId.value:'none';
  const disablesBoss=jokers.status==='known'&&jokers.value.some(joker=>joker.catalogId==='chicot');
  const initialSize=handCapacityForBoss(handSize.value,disablesBoss?'none':bossId);
- let target=0,hands=0,reachedCount=0,playedHands=0;
+ let target=0,hands=0,reachedCount=0,playedHands=0,rescuedCount=0,winsWithSpareHand=0,relativeDeficit=0;
  const totals:number[]=[];
- for(let trial=0;trial<(adaptive?maxAdaptiveSamples:samples);trial++){
+ for(let trial=0;trial<sampleLimit;trial++){
   const order=shuffledDeck(cards,trial);
-  // A skipped blind has no intervening shop; do not replay end-of-shop events.
-  const started=beginRound(state,order.slice(0,initialSize),{enteringFromShop:false});
+  const started=beginRound(state,order.slice(0,initialSize),{enteringFromShop:options.enteringFromShop??false});
   if(!started.ok)return unavailable(started.errors[0]!.message);
   let round=started.value;
   const blind=blindInfo(round.game);
@@ -338,14 +339,19 @@ export function estimateBlindSurvival(state:GameStateV02,options:BlindSurvivalOp
    if(type==='play')playedHands++;
    if(round.remaining.some(id=>!order.includes(id)))return unavailable('Un efecto añade cartas en una posición que la estimación no puede resolver.');
   }
-  if(round.score>=target)reachedCount++;
+  if(round.score>=target){
+   reachedCount++;
+   if(round.handsLeft>0)winsWithSpareHand++;
+  }else if(round.status==='rescued')rescuedCount++;
+  else relativeDeficit+=Math.max(0,1-round.score/target);
   totals.push(round.score);
-  if(adaptive&&(totals.length===initialAdaptiveSamples||totals.length===2*initialAdaptiveSamples)&&
+  if(options.sampling==='adaptive'&&(totals.length===initialAdaptiveSamples||totals.length===2*initialAdaptiveSamples)&&
      !needsMoreSamples(totals,reachedCount,target))break;
  }
  const sampleCount=totals.length,estimatedPoints=totals.reduce((sum,score)=>sum+score/sampleCount,0);
  const sorted=[...totals].sort((a,b)=>a-b);
  return {status:'estimated',target,hands,pointsPerHand:estimatedPoints/hands,
   pointsPerPlayedHand:playedHands?estimatedPoints/(playedHands/sampleCount):null,estimatedPoints,
-  medianPoints:quantile(sorted,.5),p10Points:quantile(sorted,.1),p90Points:quantile(sorted,.9),sampleCount,reachedCount};
+  medianPoints:quantile(sorted,.5),p10Points:quantile(sorted,.1),p90Points:quantile(sorted,.9),sampleCount,reachedCount,
+  ...(comparison?{margin:{rescuedCount,winsWithSpareHand,meanRelativeDeficit:relativeDeficit/sampleCount}}:{})};
 }

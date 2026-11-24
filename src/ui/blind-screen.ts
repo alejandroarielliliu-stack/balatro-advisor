@@ -10,6 +10,7 @@ import {deckArt} from './deck-art.js';
 import {blindArt,tagArt} from './blind-art.js';
 import {mountMenuBackground} from './menu-background.js';
 import {BOSS_CATALOG,bossDefinition} from '../catalog/bosses.js';
+import {ALL_JOKER_FACTS} from '../catalog/all-joker-facts.js';
 import {mountRoundCashout} from './round-cashout-view.js';
 import type {RoundCashoutSubmission} from './round-cashout-view.js';
 import {mountGameShop} from './game-shop-view.js';
@@ -57,7 +58,7 @@ export function mountBlindScreen(options:BlindScreenOptions){
  const error=el('p','','blind-screen-error');error.id='blind-screen-error';error.setAttribute('role','alert');
  const menu=el('a','Menú','blind-menu-link');menu.href='#menu';stage.append(side,tray,consumables,cards,deck,error,menu);
  const cashout=mountRoundCashout(stage,{submit:options.cashout,lost:options.lost}),cashoutPanel=stage.querySelector<HTMLElement>('#round-cashout')!;cashoutPanel.hidden=true;
- const shop=mountGameShop(stage,options.shop),shopPanel=stage.querySelector<HTMLElement>('#game-shop')!;shopPanel.hidden=true;
+ const shop=mountGameShop(stage,options.shop,refreshShopAdvice),shopPanel=stage.querySelector<HTMLElement>('#game-shop')!;shopPanel.hidden=true;
  const picker=el('dialog','','blind-picker');picker.id='blind-picker';const heading=el('h2'),close=el('button','Volver','blind-picker-back');heading.id='blind-picker-title';heading.tabIndex=-1;picker.setAttribute('aria-labelledby',heading.id);close.type='button';const grid=el('div','','blind-picker-grid'),pickerError=el('p','','error');pickerError.setAttribute('role','alert');picker.append(heading,grid,pickerError,close);host.append(picker);close.onclick=()=>picker.close();
  picker.addEventListener('click',e=>{if(e.target===picker){const r=picker.getBoundingClientRect();if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)picker.close();}});
  let returnFocus:HTMLElement|null=null,returnSelector='';picker.addEventListener('close',()=>{if(returnFocus?.isConnected)returnFocus.focus();else host.querySelector<HTMLElement>(returnSelector||'[data-tag-slot],#blind-boss-picker')?.focus();});
@@ -107,8 +108,35 @@ export function mountBlindScreen(options:BlindScreenOptions){
   title.textContent=pending?pendingBlindAdvice:summary?.title??'Revisa la ciega';
   reason.textContent=pending?'':summary?.reason??'Registra los datos de esta ciega.';
  }
+ function refreshShopAdvice(){
+  const snapshot=options.snapshot(),state=snapshot.state;
+  if(location.hash!=='#blind'||state?.phase!=='shop')return;
+  const advice=shop.advice(),assessment=shop.assessment(),plan=currentShopPlan(state);
+  const choice=advice?.status==='conditional'&&advice.choices.length===1?advice.choices[0]:null;
+  const preference=assessment?.status==='ready'?assessment.preference:null;
+  bubble.setAttribute('aria-busy',String(assessment?.status==='pending'));
+  if(snapshot.dirty){title.textContent='Guarda los cambios';reason.textContent='Actualiza los datos para ver el consejo.';}
+  else if(assessment?.status==='pending'){title.textContent=pendingBlindAdvice;reason.textContent='';}
+  else if(preference){
+   const offer=value(state.observed.shop)?.cardOffers.find(item=>item.offerId===preference.offerId);
+   const name=offer?(ALL_JOKER_FACTS[offer.catalogId]?.name??offer.label):'comodín';
+   title.textContent=(preference.improvesSurvival?'Compra ':'Mejor opción · ')+name;
+   reason.textContent=preference.reason+` Te quedan $${preference.moneyAfter}.`;
+  }
+  else if(choice?.id==='hold'){title.textContent='Ahorra';reason.textContent=choice.moneyAfter===null?'Conserva el dinero para otra tienda.':`Conserva $${choice.moneyAfter} para otra tienda.`;}
+  else if(choice?.id==='reroll'){title.textContent='Renueva';reason.textContent=`Cuesta $${choice.price} y quedarían $${choice.moneyAfter} para comprar.`;}
+  else if(choice&&(!assessment||plan&&assessment.status==='unavailable')){
+   title.textContent='Compra '+choice.title;reason.textContent=choice.moneyAfter===null?'Encaja con tu equipo.':`Encaja con tu equipo. Te quedan $${choice.moneyAfter}.`;
+  }
+  else if(assessment?.status==='unavailable'){title.textContent='Compara las ofertas';reason.textContent=assessment.reason;}
+  else if(assessment?.status==='ready'){title.textContent='Compara las ofertas';reason.textContent='Ningún comodín destaca para la próxima ciega.';}
+  else {title.textContent=advice?.status==='tie'?'Compara las ofertas':'Registra las ofertas';reason.textContent=advice?.status==='tie'?'Elige el efecto que necesita tu equipo.':'Añade las cartas que ves en la tienda.';}
+  bubble.scrollTop=0;
+ }
  function refresh(){
   const snapshot=options.snapshot(),state=snapshot.state;
+  if(location.hash!=='#blind'){shop.cancelAdvice();rendered='';return;}
+  if(state?.phase!=='shop')shop.cancelAdvice();
   if(state&&!['blind_select','in_round','cashout','shop'].includes(state.phase)){adviceView.cancel();if(location.hash==='#blind')location.hash=state.phase==='open_pack'?'pack':'table';return;}
   const answers=state?currentBlindAnswers(state):undefined;
   const token=JSON.stringify([snapshot,answers,state?currentShopPlan(state):null]);if(token===rendered)return;rendered=token;
@@ -134,15 +162,7 @@ export function mountBlindScreen(options:BlindScreenOptions){
   const context=value(state.observed.jokerContext);consumableCount.textContent=(value(context?.consumables)?.length??'—')+'/'+(value(context?.consumableSlots)??'—');
   deck.querySelector('.deck-art')?.remove();deck.prepend(deckArt(deckId,DECK_PROFILES[deckId as keyof typeof DECK_PROFILES]?.name??'Baraja'));const composition=value(state.observed.deck);deckCount.textContent=composition?String('cards'in composition?composition.cards.length:52):'—';
   if(shopping){
-   shop.refresh(state,writable,snapshot.dirty);
-   const advice=shop.advice();
-   const choice=advice?.status==='conditional'&&advice.choices.length===1?advice.choices[0]:null;
-   if(snapshot.dirty){title.textContent='Guarda los cambios';reason.textContent='Actualiza los datos para ver el consejo.';}
-   else if(choice?.id==='hold'){title.textContent='Ahorra';reason.textContent=choice.moneyAfter===null?'Conserva el dinero para otra tienda.':`Conserva $${choice.moneyAfter} para otra tienda.`;}
-   else if(choice?.id==='reroll'){title.textContent='Renueva';reason.textContent=`Cuesta $${choice.price} y quedarían $${choice.moneyAfter} para comprar.`;}
-   else if(choice){title.textContent='Compra '+choice.title;reason.textContent=choice.moneyAfter===null?'Encaja con tu equipo.':`Encaja con tu equipo. Te quedan $${choice.moneyAfter}.`;}
-   else {title.textContent=advice?.status==='tie'?'Compara las ofertas':'Registra las ofertas';reason.textContent=advice?.status==='tie'?'Elige el efecto que necesita tu equipo.':'Añade las cartas que ves en la tienda.';}
-   bubble.scrollTop=0;
+   shop.refresh(state,writable,snapshot.dirty);refreshShopAdvice();
    if(picker.open)picker.close();
    if(snapshot.dirty)error.textContent='Termina la edición pendiente antes de registrar la tienda.';
    return;
@@ -190,6 +210,18 @@ export function mountBlindScreen(options:BlindScreenOptions){
   stage.style.setProperty('--blind-stage-height',`${height/scale}px`);
  };
  touchLayout.addEventListener('change',resize);
- const observer=new ResizeObserver(resize);observer.observe(document.getElementById('app-viewport')!);window.addEventListener('hashchange',()=>{const active=location.hash==='#blind';background.setActive(active);if(!active&&picker.open)picker.close();if(active){refresh();resize();}refreshAdvice();});resize();
+ const observer=new ResizeObserver(resize);observer.observe(document.getElementById('app-viewport')!);window.addEventListener('hashchange',()=>{
+  const active=location.hash==='#blind';
+  background.setActive(active);
+  if(active){
+   refresh();resize();
+   if(options.snapshot().state?.phase==='shop')refreshShopAdvice();
+   else refreshAdvice();
+  }else{
+   if(picker.open)picker.close();
+   shop.cancelAdvice();rendered='';
+   refreshAdvice();
+  }
+ });resize();
  return {refresh};
 }
