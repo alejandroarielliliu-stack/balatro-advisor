@@ -3,9 +3,10 @@ import {handCapacityForBoss} from '../catalog/blinds.js';
 import type {Card,HandId} from '../catalog/initial.js';
 import {simpleJoker} from '../catalog/simple-jokers.js';
 import {blindInfo,deckCards,run} from '../rules/core.js';
+import type {Cashout} from '../rules/economy.js';
 import {suitMatches} from '../rules/hand-patterns.js';
 import {face} from '../rules/joker-context.js';
-import {applyRoundEvent,beginRound,previewProjectedRoundPlay} from '../rules/round.js';
+import {applyRoundEvent,beginRound,finishRound,previewProjectedRoundPlay} from '../rules/round.js';
 import type {RoundEvent,RoundState} from '../rules/round.js';
 import {classifyHand,scoreInternal} from '../rules/scoring.js';
 import type {HandScore} from '../rules/scoring.js';
@@ -13,12 +14,32 @@ import {cardMatches} from '../rules/simple-jokers.js';
 import {currentDeckCards} from '../state/deck-material.js';
 import type {GameStateV02} from '../state/model.js';
 
+export interface BlindSurvivalTrial {
+ trial:number;
+ outcome:'win'|'rescued'|'loss';
+ score:number;
+ target:number;
+ relativeDeficit:number;
+ handsLeft:number;
+ initialHands:number;
+ discardsLeft:number;
+ initialDiscards:number;
+ settlement:'settled'|'unavailable'|'not_applicable';
+ settlementReason:string|null;
+ balanceAfter:number|null;
+ cashout:Cashout|null;
+}
+
 export type BlindSurvivalEstimate={status:'estimated';target:number;hands:number;pointsPerHand:number;pointsPerPlayedHand:number|null;
  estimatedPoints:number;medianPoints:number;p10Points:number;p90Points:number;sampleCount:number;reachedCount:number;
- margin?:{rescuedCount:number;winsWithSpareHand:number;meanRelativeDeficit:number}}
+ margin?:{rescuedCount:number;winsWithSpareHand:number;meanRelativeDeficit:number};trials?:BlindSurvivalTrial[]}
  |{status:'unavailable';reason:string};
 
-export interface BlindSurvivalOptions {sampling?:'adaptive'|'comparison';enteringFromShop?:boolean}
+export interface BlindSurvivalOptions {
+ sampling?:'adaptive'|'comparison';
+ comparisonSamples?:32|64|128;
+ enteringFromShop?:boolean;
+}
 
 const samples=8,initialAdaptiveSamples=32,maxAdaptiveSamples=128,maxHandSize=10,maxActions=18;
 const unavailable=(reason:string):BlindSurvivalEstimate=>({status:'unavailable',reason});
@@ -37,6 +58,23 @@ function shuffledIds(ids:readonly string[],seed:number):string[]{
 /** Fixed, independent shuffles for repeatable comparisons. Never reads the run's seed. */
 function shuffledDeck(cards:readonly Card[],sample:number):string[]{
  return shuffledIds(cards.map(card=>card.instanceId),Math.imul(sample+1,0x9e3779b9));
+}
+
+function cardSeed(id:string):number {
+ let seed=0x811c9dc5;
+ for(let index=0;index<id.length;index++)seed=Math.imul(seed^id.charCodeAt(index),0x01000193);
+ return seed;
+}
+
+/** Use the same random priority for the same physical card in every branch. */
+function comparisonDeckOrder(cards:readonly {id:string;seed:number}[],trial:number):string[]{
+ const salt=Math.imul(trial+1,0x9e3779b9);
+ return cards.map(({id,seed})=>{
+  let priority=seed^salt;
+  priority=Math.imul(priority^(priority>>>16),0x85ebca6b);
+  priority=Math.imul(priority^(priority>>>13),0xc2b2ae35);
+  return {id,priority:(priority^(priority>>>16))>>>0};
+ }).sort((a,b)=>a.priority-b.priority||(a.id<b.id?-1:a.id>b.id?1:0)).map(card=>card.id);
 }
 
 function hookDiscardOrder(hand:readonly string[],sample:number,action:number,stream:number):string[]{
@@ -142,7 +180,7 @@ function shortlist(round:RoundState,held:readonly Card[],psychic:boolean,adaptiv
 
 interface RankedPlay { hand:HandScore; expectedScore:number }
 
-function rankPlays(round:RoundState,candidates:readonly Candidate[],hookOrders:readonly string[][]){
+function rankPlays(round:RoundState,candidates:readonly Candidate[],hookOrders:readonly string[][],comparison:boolean){
  return run<RankedPlay>([],{},()=>{
   let best:RankedPlay|undefined;
   for(const candidate of candidates){
@@ -162,7 +200,10 @@ function rankPlays(round:RoundState,candidates:readonly Candidate[],hookOrders:r
      capacityOverflow:round.capacityOverflow},[],()=>{});
     expectedScore=hand.score;
    }
-   if(!best||expectedScore>best.expectedScore||expectedScore===best.expectedScore&&round.remaining.length>0&&cardIds.length>best.hand.playedCardIds.length)
+   const otherSize=best?.hand.playedCardIds.length??0;
+   // Once the deck is exhausted, conserve equally scoring cards for later hands.
+   const betterTie=round.remaining.length>0?cardIds.length>otherSize:comparison&&cardIds.length<otherSize;
+   if(!best||expectedScore>best.expectedScore||expectedScore===best.expectedScore&&betterTie)
     best={hand,expectedScore};
   }
   return best!; // Only used when the shortlist has at least one candidate.
@@ -264,13 +305,27 @@ function needsMoreSamples(totals:readonly number[],reachedCount:number,target:nu
  return Math.abs(mean-target)<=Math.max(target*.05,2*meanError)||count===initialAdaptiveSamples&&reachedCount>0&&reachedCount<count;
 }
 
+function compareTrial(round:RoundState,trial:number,target:number,hasNextCashout:boolean):BlindSurvivalTrial {
+ const outcome=round.score>=target?'win':round.status==='rescued'?'rescued':'loss';
+ const result=outcome!=='loss'&&hasNextCashout
+  ?finishRound(round,{expectedRevision:round.game.revision,updatedAt:round.game.updatedAt})
+  :null;
+ // A missing end-of-round outcome affects the cash projection only. The
+ // simulator already observed whether this projected round reached its target.
+ const cashout=result?.ok?result.value.cashout:null;
+ return {trial,outcome,score:round.score,target,relativeDeficit:Math.max(0,1-round.score/target),
+  handsLeft:round.handsLeft,initialHands:round.initialHands,discardsLeft:round.discardsLeft,initialDiscards:round.initialDiscards,
+  settlement:cashout?'settled':result&&!result.ok?'unavailable':'not_applicable',
+  settlementReason:result&&!result.ok?result.errors[0]!.message:null,balanceAfter:cashout?.balanceAfter??null,cashout};
+}
+
 /** Compare legal rounds from a scoring-ready, hypothetical shop-shaped state.
  * Samples stop on a win, at budget exhaustion or when no legal play remains.
  * The points per hand are normalized by all available hands, including hands
  * saved on early wins, so multiplying yields the sampled mean total. */
 export function estimateBlindSurvival(state:GameStateV02,options:BlindSurvivalOptions={}):BlindSurvivalEstimate {
  const comparison=options.sampling==='comparison',adaptive=options.sampling!==undefined;
- const sampleLimit=comparison?initialAdaptiveSamples:adaptive?maxAdaptiveSamples:samples;
+ const sampleLimit=comparison?(options.comparisonSamples??initialAdaptiveSamples):adaptive?maxAdaptiveSamples:samples;
  const cards=currentDeckCards(state);
  if(!cards?.length)return unavailable('Registra el mazo actual para estimar los robos de la siguiente ciega.');
  if(cards.some(card=>card.debuff))return unavailable('Confirma qué cartas estarán activas en la siguiente ciega; el mazo registra debilitamientos.');
@@ -283,8 +338,10 @@ export function estimateBlindSurvival(state:GameStateV02,options:BlindSurvivalOp
  const initialSize=handCapacityForBoss(handSize.value,disablesBoss?'none':bossId);
  let target=0,hands=0,reachedCount=0,playedHands=0,rescuedCount=0,winsWithSpareHand=0,relativeDeficit=0;
  const totals:number[]=[];
+ const comparisonCards=comparison?cards.map(card=>({id:card.instanceId,seed:cardSeed(card.instanceId)})):null;
+ const trials:BlindSurvivalTrial[]=[];
  for(let trial=0;trial<sampleLimit;trial++){
-  const order=shuffledDeck(cards,trial);
+  const order=comparisonCards?comparisonDeckOrder(comparisonCards,trial):shuffledDeck(cards,trial);
   const started=beginRound(state,order.slice(0,initialSize),{enteringFromShop:options.enteringFromShop??false});
   if(!started.ok)return unavailable(started.errors[0]!.message);
   let round=started.value;
@@ -307,7 +364,7 @@ export function estimateBlindSurvival(state:GameStateV02,options:BlindSurvivalOp
    const plainHook=hook&&inventory.status==='known'&&inventory.value.length===0&&held.every(card=>card.enhancement!=='steel'&&card.seal!=='purple');
    const hookOrders=hook?[hookDiscardOrder(round.hand,trial,action,0)]:[];
    if(hook&&!plainHook)hookOrders.push(hookDiscardOrder(round.hand,trial,action,1));
-   const preview=rankPlays(round,candidates,hookOrders);
+   const preview=rankPlays(round,candidates,hookOrders,comparison);
    if(!preview.ok)return unavailable(preview.errors[0]!.message);
    const {hand:best,expectedScore}=preview.value;
    const pace=(target-round.score)/round.handsLeft;
@@ -345,6 +402,7 @@ export function estimateBlindSurvival(state:GameStateV02,options:BlindSurvivalOp
   }else if(round.status==='rescued')rescuedCount++;
   else relativeDeficit+=Math.max(0,1-round.score/target);
   totals.push(round.score);
+  if(comparison)trials.push(compareTrial(round,trial,target,blind.kind!=='boss'||blind.ante!==8));
   if(options.sampling==='adaptive'&&(totals.length===initialAdaptiveSamples||totals.length===2*initialAdaptiveSamples)&&
      !needsMoreSamples(totals,reachedCount,target))break;
  }
@@ -353,5 +411,5 @@ export function estimateBlindSurvival(state:GameStateV02,options:BlindSurvivalOp
  return {status:'estimated',target,hands,pointsPerHand:estimatedPoints/hands,
   pointsPerPlayedHand:playedHands?estimatedPoints/(playedHands/sampleCount):null,estimatedPoints,
   medianPoints:quantile(sorted,.5),p10Points:quantile(sorted,.1),p90Points:quantile(sorted,.9),sampleCount,reachedCount,
-  ...(comparison?{margin:{rescuedCount,winsWithSpareHand,meanRelativeDeficit:relativeDeficit/sampleCount}}:{})};
+  ...(comparison?{margin:{rescuedCount,winsWithSpareHand,meanRelativeDeficit:relativeDeficit/sampleCount},trials}:{})};
 }

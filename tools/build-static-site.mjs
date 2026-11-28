@@ -6,7 +6,7 @@ import {fileURLToPath} from 'node:url';
 // Node demos enter the web root. Run after the existing TypeScript build.
 const root=fileURLToPath(new URL('../',import.meta.url));
 const output=path.resolve(root,'out'),pending=path.resolve(root,'out.pending');
-const allowed=new Set(),entries=['dist/src/ui/app.js','dist/src/ui/blind-survival-worker.js','dist/src/ui/shop-joker-worker.js'];
+const allowed=new Set(),entries=['dist/src/ui/app.js','dist/src/ui/blind-survival-worker.js','dist/src/ui/run-diagnosis-worker.js'];
 async function collect(relative){
  if(allowed.has(relative))return;
  if(!relative.startsWith('dist/src/')||!relative.endsWith('.js'))throw Error('Browser import outside the compiled client: '+relative);

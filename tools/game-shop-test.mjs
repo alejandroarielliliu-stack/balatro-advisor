@@ -43,6 +43,20 @@ const survivalShopFixture=(rank,extraChips,ownedId)=>{
  }
  return JSON.stringify(saved);
 };
+const extraHandShopFixture=()=>{
+ const saved=JSON.parse(shopFixture()),next=blindRequirement(5,'big','none','red');
+ assert.ok(next.ok);
+ for(const state of [saved.state,saved.initialState]){
+  state.phaseData.origin=known({ante:5,kind:'small'});
+  state.observed.lastCleared=known({ante:5,kind:'small'});
+  state.observed.nextBlind=known({ante:5,kind:'big',bossId:known('none'),target:known(next.target),reward:known(next.reward)});
+  state.observed.deck=known({cards:Array.from({length:25},(_,index)=>({
+   instanceId:'copied-king-'+index,rank:'K',suit:'S',enhancement:'none',seal:'none',edition:'base',extraChips:5
+  }))});
+  state.observed.shop=known({shopId:'extra-hand',cardOffers:[],ignoredOtherOffers:[]});
+ }
+ return JSON.stringify(saved);
+};
 const server=process.env.GAME_SHOP_ORIGIN?null:spawn(process.execPath,['dist/src/server.js'],{env:{...process.env,PORT:port},stdio:'pipe',windowsHide:true});
 let browser,lastPage;
 try{
@@ -346,22 +360,87 @@ try{
  assert.equal(await q.locator('[data-offer-preference]').count(),0,'An unknown edition removes the price comparison');
  pass('automatic-shop-mark-prefers-survival-over-income-and-needs-known-price-data');await compared.context.close();
 
+ // 25 suited kings score 3,760 per five-card hand. Four hands cannot clear
+ // 16,500; a fifth hand from Grabber can. Golden Joker cannot add points.
+ const voucherComparison=await session(undefined,extraHandShopFixture()),vc=voucherComparison.page;await continueRun(vc);
+ const emptyAdviceRaw=await raw(vc);
+ await vc.locator('#run-diagnosis-priority').filter({hasText:'Supervivencia'}).waitFor({state:'visible'});
+ assert.equal(await vc.locator('[data-game-shop-empty="false"]').count(),0);
+ assert.equal(await raw(vc),emptyAdviceRaw,'Diagnosing the blind in an empty shop does not write');
+ await observe(vc,'joker','golden_joker',6);
+ const grabber=await observe(vc,'voucher','v_grabber',10);
+ const voucherAdviceRaw=await raw(vc);
+ await preferredOffer(vc,grabber);
+ await shopAdviceReady(vc);
+ assert.equal(await vc.locator('[data-offer-preference]').count(),1);
+ assert.equal(await vc.locator('[data-game-shop-kind="joker"][data-offer-preference]').count(),0);
+ assert.match(await vc.locator('.blind-speech strong').innerText(),/Compra Agarrador/);
+ assert.equal(await raw(vc),voucherAdviceRaw,'Recommending a voucher does not spend money or change hands');
+ await voucherComparison.context.close();pass('empty-shop-diagnosis-and-voucher-beating-an-income-joker');
+
+ const safeShop=await session(undefined,survivalShopFixture('A',500)),ss=safeShop.page;await continueRun(ss);
+ const surplusJoker=await observe(ss,'joker','joker',2);
+ const safeAdviceRaw=await raw(ss);
+ await ss.locator('.blind-speech strong').filter({hasText:'Ahorra'}).waitFor({state:'visible'});
+ assert.equal(await ss.locator('[data-offer-preference]').count(),0,'More points already above target do not justify spending');
+ assert.equal(await ss.locator('#game-shop-next').getAttribute('data-advised-action'),'');
+ assert.equal(await raw(ss),safeAdviceRaw);
+ pass('saving-beats-an-upgrade-that-does-not-help-clear-the-blind');
+
+ // Deliver a response for the previous shop revision even if its worker has
+ // been stopped. A later offer must already have replaced that request.
+ await ss.evaluate(offerId=>{
+  const postMessage=Worker.prototype.postMessage;
+  Worker.prototype.postMessage=function(request,...rest){
+   if(!request?.state?.observed?.shop?.value?.packOffers?.length){
+    postMessage.call(this,request,...rest);return;
+   }
+   Worker.prototype.postMessage=postMessage;
+   const receive=this.onmessage;
+   window.deliverOutdatedDiagnosis=()=>receive.call(this,{data:{
+    requestId:request.requestId,key:request.key,result:{
+     diagnosis:{priority:'survival',reason:'Consejo anterior',next:null,later:null,limitations:[]},
+     shop:{kind:'buy',offerKind:'joker',offerId,moneyAfter:23,reason:'Consejo anterior'}
+    }
+   }});
+  };
+ },surplusJoker);
+ await observe(ss,'pack','buffoon-normal',4);
+ await ss.waitForFunction(()=>typeof window.deliverOutdatedDiagnosis==='function');
+ await observe(ss,'voucher','v_grabber',10);
+ const freshAdviceRaw=await raw(ss);
+ await shopAdviceReady(ss);
+ await ss.locator('.blind-speech strong').filter({hasText:'Ahorra'}).waitFor({state:'visible'});
+ await ss.evaluate(()=>window.deliverOutdatedDiagnosis());
+ assert.match(await ss.locator('.blind-speech strong').innerText(),/^Ahorra$/);
+ assert.equal(await ss.locator('[data-offer-preference]').count(),0);
+ assert.equal(await raw(ss),freshAdviceRaw);
+ await safeShop.context.close();pass('late-shop-response-does-not-replace-the-newer-recommendation');
+
  // Three triggers from Hanging Chad make the sole king worth 65 Chips:
  // Joker reaches 325, and Photograph reaches 520.
  const synergy=await session(desktop,survivalShopFixture('K',10,'hanging_chad'),'reduce',false),sy=synergy.page;await continueRun(sy);
  await observe(sy,'joker','joker',2);
  await shopAdviceReady(sy);
- const workerPath='**/shop-joker-worker.js';
- let releaseWorker;
- const workerGate=new Promise(resolve=>{releaseWorker=resolve;});
- await synergy.context.route(workerPath,async route=>{await workerGate;await route.continue();});
+ // The controller can reuse an idle worker. Hold its next shop request
+ // rather than a static URL, which may have already been loaded.
+ await sy.evaluate(()=>{
+  const postMessage=Worker.prototype.postMessage;
+  Worker.prototype.postMessage=function(request,...rest){
+   if(request?.state?.observed?.shop?.value?.cardOffers?.some(offer=>offer.catalogId==='photograph')){
+    Worker.prototype.postMessage=postMessage;
+    window.releaseShopDiagnosis=()=>postMessage.call(this,request,...rest);
+   }else postMessage.call(this,request,...rest);
+  };
+ });
  try{
   const photo=await observe(sy,'joker','photograph',5);
   await sy.locator('#game-shop[aria-busy="true"]').waitFor({state:'visible'});
+  await sy.waitForFunction(()=>typeof window.releaseShopDiagnosis==='function');
   assert.equal(await sy.locator('[data-offer-preference]').count(),0,'Pending scoring clears the prior green mark');
   await openOffer(sy,photo);
   const editor=await activeEditor(sy).elementHandle(),beforeEstimate=await raw(sy);
-  releaseWorker();
+  await sy.evaluate(()=>window.releaseShopDiagnosis());
   await preferredOffer(sy,photo);
   await shopAdviceReady(sy);
   assert.equal(await sy.locator('[data-offer-preference]').count(),1);
@@ -369,8 +448,6 @@ try{
   assert.ok(await activeEditor(sy).isVisible());
   assert.equal(await raw(sy),beforeEstimate,'The hypothetical comparison does not buy the highlighted offer');
  }finally{
-  releaseWorker();
-  await synergy.context.unroute(workerPath);
   await synergy.context.close();
  }
  pass('automatic-shop-mark-uses-deck-and-owned-joker-synergy-with-the-editor-open');

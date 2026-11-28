@@ -11,6 +11,8 @@ import {blindArt,tagArt} from './blind-art.js';
 import {mountMenuBackground} from './menu-background.js';
 import {BOSS_CATALOG,bossDefinition} from '../catalog/bosses.js';
 import {ALL_JOKER_FACTS} from '../catalog/all-joker-facts.js';
+import {VOUCHER_CATALOG} from '../catalog/voucher-catalog.js';
+import {BOOSTER_CATALOG} from '../catalog/booster-catalog.js';
 import {mountRoundCashout} from './round-cashout-view.js';
 import type {RoundCashoutSubmission} from './round-cashout-view.js';
 import {mountGameShop} from './game-shop-view.js';
@@ -18,14 +20,17 @@ import {currentShopPlan,openShopPlan} from './shop-plan-view.js';
 import {observedRerollQuote} from '../rules/reroll-quote.js';
 import {observedOrbitalHand} from '../run/progress.js';
 import {handNames} from './full-joker-data.js';
+import type {RunDiagnosisView} from './run-diagnosis-client.js';
 
 const el=<K extends keyof HTMLElementTagNameMap>(tag:K,text='',className='')=>{const e=document.createElement(tag);e.textContent=text;e.className=className;return e;};
 const value=<T>(f:Fact<T>|undefined)=>f?.status==='known'?f.value:undefined;
 const labels={small:'Ciega pequeña',big:'Ciega grande',boss:'Ciega jefe'};
+const priorities={survival:'Supervivencia',consistency:'Consistencia',economy:'Economía',scaling:'Escalabilidad',optimization:'Optimización'};
 type Kind=keyof typeof labels;
 type ObservationBinding=Pick<GameState,'runId'|'revision'>;
 export interface BlindScreenOptions {
  snapshot():{state:GameState|null;writable:boolean;dirty:boolean};
+ diagnosis():RunDiagnosisView;
  observeTag(kind:'small'|'big',tag:string|null,binding:ObservationBinding,orbitalHand?:HandId):string|null;
  observeBoss(id:string,binding:ObservationBinding):string|null;
  select(binding:ObservationBinding):string|null;
@@ -43,7 +48,7 @@ export function mountBlindScreen(options:BlindScreenOptions){
  const applyMotion=()=>{let preference='system';try{preference=localStorage.getItem('balatro-advisor.menu-motion.v1')??'system';}catch{/* A visual preference does not block the table. */}background.setMotion(preference==='on'||preference==='system'&&!motion.matches);};
  motion.addEventListener('change',applyMotion);document.querySelector('#menu-settings')?.addEventListener('close',applyMotion);applyMotion();
  const side=el('aside','','blind-sidebar'),advisor=el('section','','blind-advisor'),avatar=el('div','','blind-advisor-avatar'),bubble=el('div','','blind-speech');
- avatar.append(jokerArt('j_joker','Comodín asesor'));const title=el('strong'),reason=el('p');title.setAttribute('aria-live','polite');bubble.append(title,reason);advisor.append(avatar,bubble);
+ avatar.append(jokerArt('j_joker','Comodín asesor'));const title=el('strong'),reason=el('p'),need=el('small');need.id='run-diagnosis-priority';title.setAttribute('aria-live','polite');bubble.append(title,reason);advisor.append(avatar,bubble);
  const compare=el('button','Ver motivos','blind-compare');compare.type='button';compare.id='blind-compare';compare.hidden=true;compare.onclick=options.compareBlind;bubble.append(compare);
  const plan=el('button','Orientar mi compra','blind-compare');plan.type='button';plan.id='game-shop-plan';plan.hidden=true;plan.setAttribute('aria-haspopup','dialog');bubble.append(plan);
  plan.onclick=()=>openShopPlan({state:()=>options.snapshot().state!,quote:()=>{const state=options.snapshot().state;return state?observedRerollQuote(state):null;},observeQuote:options.shop.observeQuote,changed:refresh},plan);
@@ -58,7 +63,7 @@ export function mountBlindScreen(options:BlindScreenOptions){
  const error=el('p','','blind-screen-error');error.id='blind-screen-error';error.setAttribute('role','alert');
  const menu=el('a','Menú','blind-menu-link');menu.href='#menu';stage.append(side,tray,consumables,cards,deck,error,menu);
  const cashout=mountRoundCashout(stage,{submit:options.cashout,lost:options.lost}),cashoutPanel=stage.querySelector<HTMLElement>('#round-cashout')!;cashoutPanel.hidden=true;
- const shop=mountGameShop(stage,options.shop,refreshShopAdvice),shopPanel=stage.querySelector<HTMLElement>('#game-shop')!;shopPanel.hidden=true;
+ const shop=mountGameShop(stage,options.shop),shopPanel=stage.querySelector<HTMLElement>('#game-shop')!;shopPanel.hidden=true;
  const picker=el('dialog','','blind-picker');picker.id='blind-picker';const heading=el('h2'),close=el('button','Volver','blind-picker-back');heading.id='blind-picker-title';heading.tabIndex=-1;picker.setAttribute('aria-labelledby',heading.id);close.type='button';const grid=el('div','','blind-picker-grid'),pickerError=el('p','','error');pickerError.setAttribute('role','alert');picker.append(heading,grid,pickerError,close);host.append(picker);close.onclick=()=>picker.close();
  picker.addEventListener('click',e=>{if(e.target===picker){const r=picker.getBoundingClientRect();if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)picker.close();}});
  let returnFocus:HTMLElement|null=null,returnSelector='';picker.addEventListener('close',()=>{if(returnFocus?.isConnected)returnFocus.focus();else host.querySelector<HTMLElement>(returnSelector||'[data-tag-slot],#blind-boss-picker')?.focus();});
@@ -108,29 +113,53 @@ export function mountBlindScreen(options:BlindScreenOptions){
   title.textContent=pending?pendingBlindAdvice:summary?.title??'Revisa la ciega';
   reason.textContent=pending?'':summary?.reason??'Registra los datos de esta ciega.';
  }
- function refreshShopAdvice(){
+ function refreshDiagnosis(){
   const snapshot=options.snapshot(),state=snapshot.state;
-  if(location.hash!=='#blind'||state?.phase!=='shop')return;
-  const advice=shop.advice(),assessment=shop.assessment(),plan=currentShopPlan(state);
+  if(location.hash!=='#blind')return;
+  const view=options.diagnosis(),result=view.status==='ready'?view.result:null;
+  const priority=result?.diagnosis.priority;
+  const visible=!snapshot.dirty&&(state?.phase==='shop'||state?.phase==='blind_select');
+  if(visible&&priority&&state?.phase==='shop'){
+   need.textContent='Prioridad · '+priorities[priority];
+   need.title=result?.diagnosis.reason??'';
+   if(!need.isConnected)bubble.insertBefore(need,compare);
+  }else need.remove();
+  bubble.dataset.diagnosisState=visible?view.status:'idle';
+  if(!visible||!priority)delete bubble.dataset.runPriority;
+  else bubble.dataset.runPriority=priority;
+  if(state?.phase!=='shop')return;
+  const advice=shop.advice(),plan=currentShopPlan(state);
   const choice=advice?.status==='conditional'&&advice.choices.length===1?advice.choices[0]:null;
-  const preference=assessment?.status==='ready'?assessment.preference:null;
-  bubble.setAttribute('aria-busy',String(assessment?.status==='pending'));
+  const shelf=state.schemaVersion==='0.2'?value(state.observed.shop):undefined;
+  const hasOffers=Boolean(shelf?.cardOffers.length||shelf?.voucherOffers?.length||shelf?.packOffers?.length);
+  const pending=view.status==='pending'&&!snapshot.dirty&&plan?.need!=='save';
+  const manual=!snapshot.dirty&&!pending&&!!plan&&(plan.need==='save'||!result?.shop);
+  const recommendation=!snapshot.dirty&&!pending&&!manual&&hasOffers?result?.shop??null:null;
+  shop.paintAdvice(recommendation,pending,manual);
+  bubble.setAttribute('aria-busy',String(pending));
   if(snapshot.dirty){title.textContent='Guarda los cambios';reason.textContent='Actualiza los datos para ver el consejo.';}
-  else if(assessment?.status==='pending'){title.textContent=pendingBlindAdvice;reason.textContent='';}
-  else if(preference){
-   const offer=value(state.observed.shop)?.cardOffers.find(item=>item.offerId===preference.offerId);
-   const name=offer?(ALL_JOKER_FACTS[offer.catalogId]?.name??offer.label):'comodín';
-   title.textContent=(preference.improvesSurvival?'Compra ':'Mejor opción · ')+name;
-   reason.textContent=preference.reason+` Te quedan $${preference.moneyAfter}.`;
+  else if(pending){title.textContent=pendingBlindAdvice;reason.textContent='';}
+  else if(recommendation?.kind==='buy'){
+   const offer=shelf?.cardOffers.find(item=>item.offerId===recommendation.offerId);
+   const voucher=shelf?.voucherOffers?.find(item=>item.offerId===recommendation.offerId);
+   const name=offer?ALL_JOKER_FACTS[offer.catalogId]?.name??offer.label:VOUCHER_CATALOG.find(entry=>entry.id===voucher?.catalogId)?.name??'el vale';
+   title.textContent='Compra '+name;
+   reason.textContent=recommendation.reason+` Te quedan $${recommendation.moneyAfter}.`;
   }
-  else if(choice?.id==='hold'){title.textContent='Ahorra';reason.textContent=choice.moneyAfter===null?'Conserva el dinero para otra tienda.':`Conserva $${choice.moneyAfter} para otra tienda.`;}
-  else if(choice?.id==='reroll'){title.textContent='Renueva';reason.textContent=`Cuesta $${choice.price} y quedarían $${choice.moneyAfter} para comprar.`;}
-  else if(choice&&(!assessment||plan&&assessment.status==='unavailable')){
+  else if(recommendation?.kind==='hold'){title.textContent='Ahorra';reason.textContent=recommendation.reason;}
+  else if(recommendation?.kind==='compare'){title.textContent='Compara las ofertas';reason.textContent=recommendation.reason;}
+  else if(recommendation?.kind==='pack'){
+   const offer=shelf?.packOffers?.find(item=>item.offerId===recommendation.offerId);
+   title.textContent='Considera '+(BOOSTER_CATALOG.find(pack=>pack.id===offer?.catalogId)?.name??'el sobre');
+   reason.textContent=recommendation.reason;
+  }
+  else if(manual&&choice?.id==='hold'){title.textContent='Ahorra';reason.textContent=advice?.planReason??'Conserva el dinero para otra tienda.';}
+  else if(manual&&choice?.id==='reroll'){title.textContent='Renueva';reason.textContent=`Cuesta $${choice.price} y quedarían $${choice.moneyAfter} para comprar.`;}
+  else if(manual&&choice){
    title.textContent='Compra '+choice.title;reason.textContent=choice.moneyAfter===null?'Encaja con tu equipo.':`Encaja con tu equipo. Te quedan $${choice.moneyAfter}.`;
   }
-  else if(assessment?.status==='unavailable'){title.textContent='Compara las ofertas';reason.textContent=assessment.reason;}
-  else if(assessment?.status==='ready'){title.textContent='Compara las ofertas';reason.textContent='Ningún comodín destaca para la próxima ciega.';}
-  else {title.textContent=advice?.status==='tie'?'Compara las ofertas':'Registra las ofertas';reason.textContent=advice?.status==='tie'?'Elige el efecto que necesita tu equipo.':'Añade las cartas que ves en la tienda.';}
+  else if(!hasOffers){title.textContent='Registra las ofertas';reason.textContent=result?.diagnosis.reason??'Añade las cartas que ves en la tienda.';}
+  else {title.textContent='Compara las ofertas';reason.textContent=view.status==='unavailable'?view.reason:result?.diagnosis.reason??'Faltan datos para comparar la próxima ciega.';}
   bubble.scrollTop=0;
  }
  function refresh(){
@@ -162,11 +191,12 @@ export function mountBlindScreen(options:BlindScreenOptions){
   const context=value(state.observed.jokerContext);consumableCount.textContent=(value(context?.consumables)?.length??'—')+'/'+(value(context?.consumableSlots)??'—');
   deck.querySelector('.deck-art')?.remove();deck.prepend(deckArt(deckId,DECK_PROFILES[deckId as keyof typeof DECK_PROFILES]?.name??'Baraja'));const composition=value(state.observed.deck);deckCount.textContent=composition?String('cards'in composition?composition.cards.length:52):'—';
   if(shopping){
-   shop.refresh(state,writable,snapshot.dirty);refreshShopAdvice();
+   shop.refresh(state,writable,snapshot.dirty);refreshDiagnosis();
    if(picker.open)picker.close();
    if(snapshot.dirty)error.textContent='Termina la edición pendiente antes de registrar la tienda.';
    return;
   }
+  refreshDiagnosis();
   if(settling){cashout.refresh(state,writable);if(picker.open)picker.close();if(snapshot.dirty)error.textContent='Termina la edición pendiente antes de registrar el cobro.';return;}
   cards.replaceChildren();const boss=value(state.observed.visibleBoss),visibleBoss=boss?.ante===anteValue?boss:current?.kind==='boss'?current:undefined;
   for(const kind of ['small','big','boss'] as const){
@@ -215,13 +245,13 @@ export function mountBlindScreen(options:BlindScreenOptions){
   background.setActive(active);
   if(active){
    refresh();resize();
-   if(options.snapshot().state?.phase==='shop')refreshShopAdvice();
-   else refreshAdvice();
+   refreshDiagnosis();
+   if(options.snapshot().state?.phase!=='shop')refreshAdvice();
   }else{
    if(picker.open)picker.close();
    shop.cancelAdvice();rendered='';
    refreshAdvice();
   }
  });resize();
- return {refresh};
+ return {refresh,refreshDiagnosis};
 }

@@ -38,6 +38,7 @@ try{
   assert.ok(files.includes('index.html'));
   assert.ok(files.includes('dist/src/ui/app.js'));
   assert.ok(files.includes('dist/src/ui/blind-survival-worker.js'));
+  assert.ok(files.includes('dist/src/ui/run-diagnosis-worker.js'));
   assert.deepEqual(files.filter(f=>f.startsWith('examples/')).sort(),['examples/round-plan.json','examples/shop-purchase.json']);
   const forbidden=files.filter(f=>/\.(?:ts|log)$/i.test(f)||/(?:^|\/)(?:docs|tests|tools|node_modules|\.git|logs)(?:\/|$)/.test(f)||/(?:^|\/)\.env(?:\.|$)/.test(f)||/(?:counter[-_]?report|report\.json)/i.test(f));
   assert.deepEqual(forbidden,[],'Source declarations, evidence/logs and reports must not ship in the site artifact.');

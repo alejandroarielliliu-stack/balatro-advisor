@@ -37,13 +37,13 @@ function compareSurvival(a:Estimate,b:Estimate):number {
   ||b.margin!.meanRelativeDeficit-a.margin!.meanRelativeDeficit;
 }
 
-function projectedRound(state:GameStateV02):GameStateV02|string {
+export function projectUpcomingRound(state:GameStateV02):GameStateV02|string {
  const blind=value(state.observed.nextBlind),deck=value(state.observed.deckId);
  if(!blind||!deck)return 'Faltan los datos de la próxima ciega o del mazo.';
  const visible=value(state.observed.visibleBoss);
  const sameBoss=blind.kind==='boss'&&visible?.kind==='boss'&&visible.ante===blind.ante?visible:undefined;
  const boss=value(blind.bossId)??(blind.kind==='boss'?value(sameBoss?.bossId):'none');
- if(!boss)return 'Registra el próximo jefe para comparar los comodines.';
+ if(!boss)return 'Registra el próximo jefe para estimar la ciega.';
  const requirement=blindRequirement(blind.ante,blind.kind,boss,deck);
  if(!requirement.ok)return requirement.error.message;
  const target=value(blind.target)??value(sameBoss?.target)??requirement.target;
@@ -75,7 +75,7 @@ export function assessShopJokers(state:GameState):ShopJokerAssessment {
  if(!candidates.length)return kept;
 
  const project=(input:GameStateV02)=>{
-  const round=projectedRound(input);
+  const round=projectUpcomingRound(input);
   if(typeof round==='string')return {estimate:{status:'unavailable' as const,reason:round},cashoutBalance:null};
   const estimate=estimateBlindSurvival(round,{sampling:'comparison',enteringFromShop:true});
   const cashout=estimate.status==='estimated'?projectNextRoundCashout(round,false):null;

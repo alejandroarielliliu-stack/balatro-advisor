@@ -98,3 +98,67 @@ test('a skip does not trigger Perkeo by simulating another shop exit',()=>{
  assert.equal(estimate.status,'estimated');
  assert.equal(context.value.consumables.status==='known'&&context.value.consumables.value.length,1);
 });
+
+test('comparison trials settle the observed hands and effects, with a stable sampling prefix',()=>{
+ const state=fixture();
+ const deck=state.observed.deck;
+ assert.ok(deck.status==='known'&&'cards' in deck.value);
+ state.observed.deck=known({cards:deck.value.cards.map(card=>({...card,enhancement:'gold'}))});
+ state.observed.money=known(14);
+ const before=structuredClone(state);
+ const first=estimateBlindSurvival(state,{sampling:'comparison'});
+ const extended=estimateBlindSurvival(state,{sampling:'comparison',comparisonSamples:64});
+ assert.equal(first.status,'estimated');
+ assert.equal(extended.status,'estimated');
+ assert.equal(first.trials?.length,32);
+ assert.equal(extended.trials?.length,64);
+ assert.deepEqual(extended.trials?.slice(0,32),first.trials);
+ assert.deepEqual(first.trials?.[0],{
+  trial:0,outcome:'win',score:3440,target:450,relativeDeficit:0,
+  handsLeft:4,initialHands:5,discardsLeft:3,initialDiscards:3,settlement:'settled',settlementReason:null,
+  balanceAfter:35,cashout:{balanceBefore:23,blindReward:4,unusedHands:4,goldenIncome:0,interest:4,earned:12,balanceAfter:35}
+ });
+ assert.deepEqual(state,before);
+});
+
+test('comparison samples depend on physical cards and ignore their recorded listing order',()=>{
+ const state=fixture();
+ const cards:Card[]=([
+  ['A','S'],['K','S'],['Q','S'],['10','S'],['8','S'],['7','S'],['4','S'],['2','S'],
+  ['A','H'],['K','C'],['Q','D'],['5','C']
+ ] as const).map(([rank,suit],index)=>({instanceId:'observed-'+index,rank,suit,
+  enhancement:'none',edition:'base',seal:'none',extraChips:0}));
+ state.observed.deck=known({cards});
+ const first=estimateBlindSurvival(state,{sampling:'comparison'});
+ state.observed.deck=known({cards:[...cards].reverse()});
+ const reordered=estimateBlindSurvival(state,{sampling:'comparison'});
+ assert.equal(first.status,'estimated');
+ assert.ok(first.trials&&new Set(first.trials.map(trial=>trial.score)).size>1);
+ assert.deepEqual(reordered,first);
+});
+
+test('a comparison separates losses from rescues and does not pay a rescued blind reward',()=>{
+ const state=fixture();
+ state.observed.deck=known({cards:[{instanceId:'ace',rank:'A',suit:'S',enhancement:'none',edition:'base',seal:'none',extraChips:200}]});
+ state.observed.nextBlind=known({ante:2,kind:'boss',bossId:known('the_needle'),target:known(800),reward:known(5)});
+ const loss=estimateBlindSurvival(state,{sampling:'comparison'});
+ assert.equal(loss.status,'estimated');
+ assert.ok(loss.trials?.every(trial=>trial.outcome==='loss'&&trial.settlement==='not_applicable'&&trial.balanceAfter===null));
+ state.observed.jokers=known([{instanceId:'bones',catalogId:'mr_bones',edition:known('base'),stickers:known([]),sellValue:known(2),counters:{}}]);
+ const rescue=estimateBlindSurvival(state,{sampling:'comparison'});
+ assert.equal(rescue.status,'estimated');
+ assert.equal(rescue.reachedCount,0);
+ assert.equal(rescue.margin?.rescuedCount,32);
+ assert.ok(rescue.trials?.every(trial=>trial.outcome==='rescued'&&trial.handsLeft===0&&
+  trial.settlement==='settled'&&trial.cashout?.blindReward===0&&trial.balanceAfter===4));
+});
+
+test('an unknown end-of-round effect limits cashout without hiding a scored win',()=>{
+ const state=fixture();
+ state.observed.jokers=known([{instanceId:'banana',catalogId:'gros_michel',edition:known('base'),stickers:known([]),sellValue:known(2),counters:{}}]);
+ const estimate=estimateBlindSurvival(state,{sampling:'comparison'});
+ assert.equal(estimate.status,'estimated');
+ assert.equal(estimate.reachedCount,32);
+ assert.ok(estimate.trials?.every(trial=>trial.outcome==='win'&&trial.settlement==='unavailable'&&
+  trial.balanceAfter===null&&trial.cashout===null&&trial.settlementReason?.includes('gros_michel')));
+});

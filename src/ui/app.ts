@@ -7,6 +7,7 @@ import {renderRunJourney} from './run-progress-view.js';
 import {createNewRun} from '../run/start.js';
 import {createRunStartBridge} from './run-start-bridge.js';
 import {mountBlindScreen} from './blind-screen.js';
+import {createRunDiagnosisController} from './run-diagnosis-client.js';
 import {nextBlindAfter} from '../run/progress.js';
 import type {BlindInfo} from '../run/progress.js';
 import {observationPatch} from '../state/observations.js';
@@ -91,6 +92,8 @@ let preserveBasicDraft=(_text:string)=>{};
 function liveState(quick=false){quietRead=true;try{if(!readLiveState)throw new Error('Completa los datos de la partida.');return readLiveState(quick);}finally{quietRead=false;}}
 let dialogAction:(()=>boolean)|null=null;
 let refreshBlindScreen=()=>{};
+let refreshRunDiagnosis=()=>{};
+const runDiagnosis=createRunDiagnosisController(()=>refreshRunDiagnosis());
 let observeGameShop:(snapshot:ShopSnapshot)=>string|null=()=>'La tienda se está recuperando. Inténtalo de nuevo.';
 const lock=new WriterLock(()=>updateOwnership());
 const store=createConfirmedStore(()=>({getItem:k=>localStorage.getItem(k),setItem:(k,v)=>{lock.assert();localStorage.setItem(k,v);}}));
@@ -110,7 +113,10 @@ function select(id:string,label:string,choices:Record<string,string>,selected=''
 function checkbox(id:string,label:string,checked=false){const wrap=node('label','','check');const input=node('input');input.type='checkbox';input.id=id;input.checked=checked;wrap.append(input,node('span',label));return {wrap,input};}
 function button(text:string,fn:()=>void,className='secondary'){const b=node('button',text,className);b.type='button';b.onclick=fn;return b;}
 function details(title:string,data:unknown){const d=node('details');d.append(node('summary',title),node('pre',typeof data==='string'?data:JSON.stringify(data,null,2)));return d;}
-function invalidate(text='Los datos cambiaron. Vuelve a consultar las recomendaciones.',refreshShop=true) {handRequest++;if(refreshShop)invalidateCandidates();refreshOwnedFits();$('hand-results')?.replaceChildren();clearTimeout(cashoutTimer);cashoutTimer=setTimeout(()=>refreshCashout(),230);$('draft-status').hidden=!dirty;advice=null;demoMode=false;$('advice').replaceChildren(node('p',text,'empty'));$('bounds')?.replaceChildren();$('horizon-results')?.replaceChildren();$('exit-demo').hidden=true;updateMigrationButton();renderJourney();}
+function invalidate(text='Los datos cambiaron. Vuelve a consultar las recomendaciones.',refreshShop=true) {
+  runDiagnosis.update(dirty||loadFailed?null:record?.state??null);
+  handRequest++;if(refreshShop)invalidateCandidates();refreshOwnedFits();$('hand-results')?.replaceChildren();clearTimeout(cashoutTimer);cashoutTimer=setTimeout(()=>refreshCashout(),230);$('draft-status').hidden=!dirty;advice=null;demoMode=false;$('advice').replaceChildren(node('p',text,'empty'));$('bounds')?.replaceChildren();$('horizon-results')?.replaceChildren();$('exit-demo').hidden=true;updateMigrationButton();renderJourney();
+}
 function canWrite(){
   if(!lock.owned){message('Esta pestaña es de lectura. Solicita el control para guardar.',true);return false;}
   try{if(localStorage.getItem(CONFIRMED_STORAGE_KEY)!==seenRaw){reload();message('La partida cambió. Revisa los datos y vuelve a calcular.',true);return false;}}
@@ -713,7 +719,7 @@ $<HTMLInputElement>('import-file').onchange=async()=>{
   }catch{message('No se pudo leer la copia o el almacenamiento. No se anunció un guardado exitoso.',true);}
 };
 $('legacy').dataset.write='true';$('legacy').onclick=()=>commit(()=>store.migrateLegacy());
-window.addEventListener('storage',e=>{if(e.key===CONFIRMED_STORAGE_KEY || e.key===null){if(dirty){preserveBasicDraft('La partida cambió en otra pestaña. El borrador se conserva sin aplicar; recarga para revisar la copia actual.');return;}reload();message('Se recibió un cambio de otra pestaña. Se invalidaron los consejos y formularios anteriores.');}});
+window.addEventListener('storage',e=>{if(e.key===CONFIRMED_STORAGE_KEY || e.key===null){if(dirty){runDiagnosis.update(null);refreshRunDiagnosis();preserveBasicDraft('La partida cambió en otra pestaña. El borrador se conserva sin aplicar; recarga para revisar la copia actual.');return;}reload();message('Se recibió un cambio de otra pestaña. Se invalidaron los consejos y formularios anteriores.');}});
 window.addEventListener('pagehide',()=>lock.release());window.addEventListener('pageshow',()=>{if(!lock.owned)lock.acquire();});
 const boundsHost=node('div');boundsHost.id='bounds';$('advice').after(boundsHost);
 const boundsButton=button('Comprobar límite de puntuación',()=>{
@@ -788,6 +794,7 @@ function observeShopQuote(price:number|null,binding:Pick<GameState,'runId'|'revi
 const blindScreen=mountBlindScreen({
  compareBlind:()=>$('run-compare-blind')?.click(),
  snapshot:()=>({state:record?structuredClone(record.state):null,writable:lock.owned&&!loadFailed,dirty}),
+ diagnosis:runDiagnosis.read,
  observeTag:(kind,tag,binding,orbitalHand)=>{
   if(!record||record.state.revision!==binding.revision||record.state.runId!==binding.runId)return 'La partida cambió. Abre de nuevo la etiqueta.';
   if(dirty||!lock.owned||loadFailed)return 'Termina la edición o recupera el control de escritura antes de registrar la etiqueta.';
@@ -865,6 +872,7 @@ const blindScreen=mountBlindScreen({
  lost:()=>{$('run-report-result')?.click();const outcome=$<HTMLSelectElement>('progress-outcome');if(outcome)outcome.value='lost';},skip:()=>$('run-skip-blind')?.click(),options:()=>{const dialog=$<HTMLDialogElement>('menu-settings');dialog.addEventListener('close',()=>$('blind-screen').focus(),{once:true});$('menu-options').click();}
 });
 refreshBlindScreen=blindScreen.refresh;
+refreshRunDiagnosis=blindScreen.refreshDiagnosis;
 mountWorkspace(runStartBridge);mountCollection();renderScenarios();reload();lock.acquire();
 
 
