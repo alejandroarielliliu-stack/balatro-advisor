@@ -14,7 +14,7 @@ import {estimateBlindSurvival} from './next-blind-survival.js';
 import type {BlindSurvivalEstimate,BlindSurvivalTrial} from './next-blind-survival.js';
 import {projectUpcomingRound} from './shop-joker-survival.js';
 
-export const RUN_DIAGNOSIS_POLICY='run-diagnosis-1';
+export const RUN_DIAGNOSIS_POLICY='run-diagnosis-1.1';
 export type RunPriority='survival'|'consistency'|'economy'|'scaling'|'optimization';
 type Samples=32|64|128;
 type Estimate=Extract<BlindSurvivalEstimate,{status:'estimated'}>;
@@ -209,7 +209,7 @@ function recommend(state:GameStateV02,baseline:Evaluated,all:Evaluated[],unresol
   moneyAfter:value(best.candidate.state.observed.money)!,reason};
 }
 
-export function assessRun(state:GameState,estimate:EstimateRound=estimateBlindSurvival):RunAssessment {
+export function assessRun(state:GameState,estimate:EstimateRound=estimateBlindSurvival,timeBudgetMs=Infinity):RunAssessment {
  const unavailable=(reason:string):RunAssessment=>({diagnosis:{priority:null,reason,next:null,later:null,limitations:[reason]},shop:null});
  if(state.schemaVersion!=='0.2'||state.phase!=='shop'&&state.phase!=='blind_select')return unavailable('La estimación necesita una próxima ciega registrada.');
  const fromShop=state.phase==='shop',initial=fromShop?state:selectionScenarioState(state);
@@ -217,6 +217,7 @@ export function assessRun(state:GameState,estimate:EstimateRound=estimateBlindSu
  if(typeof projected==='string')return unavailable(projected);
  const {candidates,unresolved:initialUnresolved}=fromShop?enumerate(initial):{candidates:[{kind:'hold',state:initial} as const],unresolved:false};
  let baseline:Evaluated|undefined,evaluated:Evaluated[]=[],unresolved=initialUnresolved;
+ const started=performance.now();
  for(const samples of [32,64,128] as const){
   const held=estimate(projected,{sampling:'comparison',comparisonSamples:samples,enteringFromShop:fromShop});
   if(held.status==='unavailable')return unavailable(held.reason);
@@ -231,6 +232,9 @@ export function assessRun(state:GameState,estimate:EstimateRound=estimateBlindSu
   const [first,second]=[...evaluated].sort((a,b)=>rank(b,a));
   if(unresolved||!first||!second||(!needsMore(first,second)&&!needsMore(first,baseline)))break;
   if(samples===64&&evaluated.length>3)break;
+  // Doubling the sample count adds no more trials than we just accumulated.
+  // Keep sufficient space for the already usable comparison and its display.
+  if(2*(performance.now()-started)>timeBudgetMs)break;
  }
  const metrics=baseline!.metrics,limitations:string[]=[];
  if(unresolved)limitations.push('Hay ofertas o efectos sin una simulación comparable.');
@@ -244,14 +248,19 @@ export function assessRun(state:GameState,estimate:EstimateRound=estimateBlindSu
 /** The scoring cache is separate from the offer list. Preserve the original
  * facts in the key when they carry information about engine coverage. */
 export function cachedRunEstimator():EstimateRound {
- const cache=new Map<string,BlindSurvivalEstimate>();
+ const cache=new Map<string,Map<Samples,BlindSurvivalEstimate>>();
  return (state,options)=>{
   const {shop:_offers,...observed}=state.observed;
-  const key=JSON.stringify(canonical([RUN_DIAGNOSIS_POLICY,state.rulesetId,state.schemaVersion,state.phase,observed,options]));
-  const saved=cache.get(key);
+  const key=JSON.stringify(canonical([RUN_DIAGNOSIS_POLICY,state.rulesetId,state.schemaVersion,state.phase,observed,options.enteringFromShop]));
+  const series=cache.get(key)??new Map<Samples,BlindSurvivalEstimate>();
+  const saved=series.get(options.comparisonSamples);
   if(saved)return saved;
-  const result=estimateBlindSurvival(state,options);
-  cache.set(key,result);
+  // Each comparison batch starts with the same deterministic draws, so an
+  // earlier batch is a valid prefix and does not need to be simulated again.
+  const prefix=([128,64,32] as const).map(samples=>series.get(samples)).find(estimate=>estimate?.status==='estimated');
+  const result=estimateBlindSurvival(state,options,prefix?.trials);
+  series.set(options.comparisonSamples,result);
+  cache.set(key,series);
   if(cache.size>24)cache.delete(cache.keys().next().value!);
   return result;
  };

@@ -11,4 +11,4 @@ const worker=self as unknown as {
 };
 const estimate=cachedRunEstimator();
 
-worker.onmessage=({data:{requestId,key,state}})=>worker.postMessage({requestId,key,result:assessRun(state,estimate)});
+worker.onmessage=({data:{requestId,key,state}})=>worker.postMessage({requestId,key,result:assessRun(state,estimate,11_000)});

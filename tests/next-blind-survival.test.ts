@@ -113,6 +113,7 @@ test('comparison trials settle the observed hands and effects, with a stable sam
  assert.equal(first.trials?.length,32);
  assert.equal(extended.trials?.length,64);
  assert.deepEqual(extended.trials?.slice(0,32),first.trials);
+ assert.deepEqual(estimateBlindSurvival(state,{sampling:'comparison',comparisonSamples:64},first.trials),extended);
  assert.deepEqual(first.trials?.[0],{
   trial:0,outcome:'win',score:3440,target:450,relativeDeficit:0,
   handsLeft:4,initialHands:5,discardsLeft:3,initialDiscards:3,settlement:'settled',settlementReason:null,

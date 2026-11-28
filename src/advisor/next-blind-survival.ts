@@ -323,7 +323,7 @@ function compareTrial(round:RoundState,trial:number,target:number,hasNextCashout
  * Samples stop on a win, at budget exhaustion or when no legal play remains.
  * The points per hand are normalized by all available hands, including hands
  * saved on early wins, so multiplying yields the sampled mean total. */
-export function estimateBlindSurvival(state:GameStateV02,options:BlindSurvivalOptions={}):BlindSurvivalEstimate {
+export function estimateBlindSurvival(state:GameStateV02,options:BlindSurvivalOptions={},comparisonPrefix:readonly BlindSurvivalTrial[]=[]):BlindSurvivalEstimate {
  const comparison=options.sampling==='comparison',adaptive=options.sampling!==undefined;
  const sampleLimit=comparison?(options.comparisonSamples??initialAdaptiveSamples):adaptive?maxAdaptiveSamples:samples;
  const cards=currentDeckCards(state);
@@ -336,11 +336,19 @@ export function estimateBlindSurvival(state:GameStateV02,options:BlindSurvivalOp
  const bossId=next.status==='known'&&next.value.bossId.status==='known'?next.value.bossId.value:'none';
  const disablesBoss=jokers.status==='known'&&jokers.value.some(joker=>joker.catalogId==='chicot');
  const initialSize=handCapacityForBoss(handSize.value,disablesBoss?'none':bossId);
- let target=0,hands=0,reachedCount=0,playedHands=0,rescuedCount=0,winsWithSpareHand=0,relativeDeficit=0;
- const totals:number[]=[];
+ const trials=comparison?comparisonPrefix.slice(0,sampleLimit):[];
+ let target=trials[0]?.target??0,hands=trials[0]?.initialHands??0,reachedCount=0,playedHands=0,rescuedCount=0,winsWithSpareHand=0,relativeDeficit=0;
+ for(const trial of trials){
+  playedHands+=trial.initialHands-trial.handsLeft;
+  if(trial.outcome==='win'){
+   reachedCount++;
+   if(trial.handsLeft>0)winsWithSpareHand++;
+  }else if(trial.outcome==='rescued')rescuedCount++;
+  else relativeDeficit+=trial.relativeDeficit;
+ }
+ const totals=trials.map(trial=>trial.score);
  const comparisonCards=comparison?cards.map(card=>({id:card.instanceId,seed:cardSeed(card.instanceId)})):null;
- const trials:BlindSurvivalTrial[]=[];
- for(let trial=0;trial<sampleLimit;trial++){
+ for(let trial=trials.length;trial<sampleLimit;trial++){
   const order=comparisonCards?comparisonDeckOrder(comparisonCards,trial):shuffledDeck(cards,trial);
   const started=beginRound(state,order.slice(0,initialSize),{enteringFromShop:options.enteringFromShop??false});
   if(!started.ok)return unavailable(started.errors[0]!.message);
